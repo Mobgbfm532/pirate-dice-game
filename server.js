@@ -2,11 +2,18 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const path = require('path'); // NEW: Helps find files safely
 
 app.use(express.static(__dirname));
 
+// NEW: Explicitly tell the server to load index.html when people visit the link
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 let players = {}; 
 let playerOrder = []; 
+// ... the rest of your server.js code stays exactly the same!
 let currentTurnIndex = 0;
 let isMusicPlaying = false; // NEW: Track global music state
 
@@ -120,4 +127,5 @@ io.on('connection', (socket) => {
 
 // This tells the code to use the Cloud Server's official port, or default to 3000 if testing locally
 const PORT = process.env.PORT || 3000;
+
 http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
