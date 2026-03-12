@@ -2,28 +2,23 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const path = require('path'); // NEW: Helps find files safely
+const path = require('path'); 
 
 app.use(express.static(__dirname));
 
-// NEW: Explicitly tell the server to load index.html when people visit the link
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 let players = {}; 
 let playerOrder = []; 
-// ... the rest of your server.js code stays exactly the same!
 let currentTurnIndex = 0;
-let isMusicPlaying = false; // NEW: Track global music state
+let isMusicPlaying = false; 
 
 function evaluateRound() {
     let activePlayers = playerOrder.filter(id => players[id].lives > 0);
-    
-    // Separate players who busted from those who got valid scores
     let validPlayers = activePlayers.filter(id => !players[id].busted);
     
-    // Only find a "lowest score" to punish if more than 1 person survived!
     let lowestScore = -1;
     if (validPlayers.length > 1) {
         let scores = validPlayers.map(id => players[id].score);
@@ -35,7 +30,6 @@ function evaluateRound() {
         let lostLife = false;
         let reason = '';
 
-        // You lose a life IF you busted, OR if multiple people survived and you had the lowest score
         if (p.busted) {
             p.lives -= 1;
             lostLife = true;
@@ -46,19 +40,16 @@ function evaluateRound() {
             reason = 'You had the lowest score!';
         }
 
-        // Send the personalized message to the player
         if (lostLife) {
             io.to(id).emit('roundResult', { message: `You lost a life! 💔\n${reason}` });
         } else {
             io.to(id).emit('roundResult', { message: 'Safe for another round! 🛡️\nGreat job.' });
         }
         
-        // Reset scores for next round
         p.score = null;
         p.busted = false;
     });
 
-    // Check for Game Over
     let survivors = playerOrder.filter(id => players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? players[survivors[0]].name : "No one";
@@ -71,22 +62,36 @@ function evaluateRound() {
 }
 
 io.on('connection', (socket) => {
-    let pName = 'Player ' + (playerOrder.length + 1);
+    // Temporarily assign a generic name until they submit the form
+    let pName = 'Joining...';
     players[socket.id] = { id: socket.id, name: pName, lives: 3, score: null, busted: false };
     playerOrder.push(socket.id);
 
-    // If music is already playing for the lobby, tell the new person to play it too
     if (isMusicPlaying) {
         socket.emit('playGlobalMusic');
     }
 
     io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
 
-    // Handle music starting
     socket.on('startGlobalMusic', () => {
         if (!isMusicPlaying) {
             isMusicPlaying = true;
-            io.emit('playGlobalMusic'); // Tell everyone to play it
+            io.emit('playGlobalMusic'); 
+        }
+    });
+
+    // NEW: Listen for the player picking a name!
+    socket.on('setPlayerName', (chosenName) => {
+        if (players[socket.id]) {
+            // Cleanup the name so it isn't empty or infinitely long
+            let finalName = chosenName.trim();
+            if (finalName === "") finalName = "Anonymous Pirate";
+            if (finalName.length > 15) finalName = finalName.substring(0, 15);
+            
+            players[socket.id].name = finalName;
+            
+            // Blast the updated name out to everyone's scoreboard
+            io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
         }
     });
 
@@ -125,7 +130,5 @@ io.on('connection', (socket) => {
     });
 });
 
-// This tells the code to use the Cloud Server's official port, or default to 3000 if testing locally
 const PORT = process.env.PORT || 3000;
-
 http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
