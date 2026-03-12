@@ -62,7 +62,6 @@ function evaluateRound() {
 }
 
 io.on('connection', (socket) => {
-    // Temporarily assign a generic name until they submit the form
     let pName = 'Joining...';
     players[socket.id] = { id: socket.id, name: pName, lives: 3, score: null, busted: false };
     playerOrder.push(socket.id);
@@ -80,19 +79,20 @@ io.on('connection', (socket) => {
         }
     });
 
-    // NEW: Listen for the player picking a name!
     socket.on('setPlayerName', (chosenName) => {
         if (players[socket.id]) {
-            // Cleanup the name so it isn't empty or infinitely long
             let finalName = chosenName.trim();
             if (finalName === "") finalName = "Anonymous Pirate";
             if (finalName.length > 15) finalName = finalName.substring(0, 15);
-            
             players[socket.id].name = finalName;
-            
-            // Blast the updated name out to everyone's scoreboard
             io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
         }
+    });
+
+    // NEW: Listen for Emoji Reactions
+    socket.on('sendReaction', (emoji) => {
+        let playerName = players[socket.id] ? players[socket.id].name : "Pirate";
+        io.emit('receiveReaction', { name: playerName, emoji: emoji });
     });
 
     socket.on('updateBoard', (gameData) => {
