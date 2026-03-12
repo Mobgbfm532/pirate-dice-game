@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2, 4, 24 - Pirate Dice Game - Compact Layout</title>
+    <style>
+        /* --- Base & Root Variables --- */
+        :root {
+            --bg-color: #2c3e50;
+            --board-color: #34495e;
+            --text-color: #ecf0f1;
+            --dice-bg: #fff; 
+            --pip-red: #e74c3c;
+            --pip-green: #2ecc71;
+            --pip-black: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-page {
+            display: grid;
+            grid-template-columns: 2fr 1fr; 
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            align-items: start; 
+        }
+
+        /* --- Game Area (Left Side) --- */
+        #game-area {
+            background-color: var(--board-color);
+            padding: 15px; 
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .area-title {
+            margin-top: 10px; 
+            margin-bottom: 5px; 
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #locked-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            min-height: 90px; 
+            background: rgba(0,0,0,0.2);
+            padding: 15px; 
+            border-radius: 10px;
+            margin-bottom: 15px; 
+            border: 2px dashed #7f8c8d;
+        }
+
+        #required-dice {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-right: 20px;
+            border-right: 2px solid #7f8c8d;
+            min-height: 80px; 
+        }
+
+        #remaining-locked {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 80px;
+        }
+
+        #active-area {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            min-height: 90px; 
+            background: rgba(255,255,255,0.05);
+            padding: 15px; 
+            border-radius: 10px;
+            margin-bottom: 15px; 
+        }
+
+        /* --- Dice & Pips Styling --- */
+        .die {
+            width: 80px;
+            height: 80px;
+            background-color: var(--dice-bg); 
+            border-radius: 15px;
+            box-shadow: inset 0 -5px 0 rgba(0,0,0,0.2), 0 5px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+            
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            padding: 12px;
+            box-sizing: border-box;
+            align-items: center;
+            justify-items: center;
+            font-weight: bold;
+            color: var(--pip-black); 
+        }
+
+        .die:hover { transform: translateY(-5px); }
+        .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); }
+
+        .die[data-value="1"] .pip { background-color: var(--pip-red); }
+        .die[data-value="6"] .pip { background-color: var(--pip-green); }
+        .die[data-value="1"] { color: var(--pip-red); }
+        .die[data-value="6"] { color: var(--pip-green); }
+
+        .pip.top-left { grid-column: 1; grid-row: 1; } .pip.top-right { grid-column: 3; grid-row: 1; }
+        .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; }
+        .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; }
+        .pip.bottom-right { grid-column: 3; grid-row: 3; }
+
+        .number-display {
+            grid-column: 1 / 4; grid-row: 1 / 4;    
+            display: flex; justify-content: center; align-items: center;
+            width: 100%; height: 100%; font-size: 3rem; margin-top: -5px; 
+        }
+
+        /* --- Animations --- */
+        @keyframes tumble {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            20% { transform: translateY(-40px) rotate(72deg) scale(1.1); }
+            40% { transform: translateY(-60px) rotate(144deg) scale(1.15); }
+            60% { transform: translateY(-20px) rotate(216deg) scale(1.1); }
+            80% { transform: translateY(-5px) rotate(288deg) scale(1.05); }
+            90% { transform: translateY(-10px) rotate(320deg) scale(1.02); }
+            100% { transform: translateY(0) rotate(360deg) scale(1); }
+        }
+        .rolling { animation: tumble 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+
+        @keyframes tumble-suspense {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            20% { transform: translateY(-80px) rotate(144deg) scale(1.2); }
+            40% { transform: translateY(-100px) rotate(288deg) scale(1.25); }
+            60% { transform: translateY(-40px) rotate(576deg) scale(1.15); }
+            80% { transform: translateY(-10px) rotate(720deg) scale(1.05); }
+            90% { transform: translateY(-15px) rotate(760deg) scale(1.02); }
+            100% { transform: translateY(0) rotate(1080deg) scale(1); }
+        }
+        .rolling-suspense { animation: tumble-suspense 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+
+        @keyframes screen-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        .shake-screen { animation: screen-shake 0.3s infinite; }
+
+        /* Controls */
+        #controls { margin-top: 10px; }
+        button {
+            padding: 15px 30px; font-size: 1.1rem; font-weight: bold;
+            background-color: #3498db; color: white; border: none;
+            border-radius: 8px; cursor: pointer; transition: background 0.3s;
+            margin: 5px;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; transform: none; }
+
+        /* --- Sidebar & Scoreboard Box --- */
+        #sidebar {
+            background-color: var(--board-color);
+            padding: 20px; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        #scoreboard {
+            background: rgba(0,0,0,0.3);
+            padding: 15px; border-radius: 10px;
+            margin-bottom: 20px; width: 100%;
+            display: grid; 
+            gap: 15px; 
+            align-items: start;
+        }
+
+        .player-stat {
+            font-size: 1.1rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* --- NEW: Custom Modal Styling --- */
+        #custom-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #custom-modal-content {
+            background-color: var(--board-color);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,1);
+            border: 3px solid #f1c40f;
+            max-width: 400px;
+            animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        #custom-modal-text {
+            color: var(--text-color);
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            white-space: pre-line; /* This ensures the \n newlines from the server are formatted correctly */
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="custom-modal">
+        <div id="custom-modal-content">
+            <div id="custom-modal-text">Message goes here!</div>
+            <button id="custom-modal-btn" style="background-color: #f1c40f; color: #2c3e50;">Continue</button>
+        </div>
+    </div>
+
+    <div id="game-page">
+        <div id="game-area"> 
+            
+            <h3 id="turn-indicator" style="color: #3498db; margin-top: 5px; margin-bottom: 15px;">Connecting...</h3>
+
+            <h2 class="area-title">Locked Dice</h2>
+            <div id="locked-area">
+                <div id="required-dice"></div>
+                <div id="remaining-locked"></div>
+            </div>
+
+            <h2 class="area-title">Active Dice</h2>
+            <div id="active-area"></div>
+
+            <h3 id="score-display" style="height: 30px; margin-bottom: 5px;"></h3> 
+
+            <div id="controls">
+                <button id="roll-btn">Roll Dice</button>
+                <button id="toggle-btn" style="background-color: #7f8c8d;">Switch to Numbers</button>
+                <button id="mute-btn" style="background-color: #9b59b6;">🎵 Mute Music</button>
+            </div>
+        </div>
+
+        <div id="sidebar"> 
+            <div style="width: 100%; border-bottom: 2px solid #7f8c8d; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">
+                <h2 class="area-title">Turn Score</h2>
+                <h2 style="margin: 0; color: #f1c40f; font-size: 2.5rem;"><span id="current-score-span">0</span></h2>
+            </div>
+
+            <h2 class="area-title">Leaderboard</h2>
+            <div id="scoreboard"></div> 
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <script>
+        const socket = io();
+
+        // --- Game & Audio State ---
+        let dice = [];
+        let hasRolled = false, locksThisRoll = 0, rollCount = 0;
+        let isAnimating = false, usePips = true;
+        let suspenseType = 'none', inTrouble = false, turnFinalized = false;
+        
+        let myId = null;
+        let isMyTurn = false;
+        const turnIndicator = document.getElementById('turn-indicator');
+        const scoreboard = document.getElementById('scoreboard');
+
+        const sfxRoll = new Audio('roll.mp3'); const sfxClick = new Audio('click.mp3');
+        const sfxWin = new Audio('win.mp3'); const sfxBust = new Audio('bust.mp3');
+        const sfxAww = new Audio('Aww.mp3'); const sfxYay = new Audio('Yay.mp3');
+        const sfxOhWell = new Audio('ohwell.mp3');
+        const bgm = new Audio('Soundtrack.mp3');
+        bgm.loop = true; bgm.volume = 0.2;
+
+        function playSound(audioEl) {
+            audioEl.currentTime = 0;
+            let playPromise = audioEl.play();
+            if (playPromise !== undefined) playPromise.catch(error => { console.log("Audio skipped"); });
+        }
+
+        const muteBtn = document.getElementById('mute-btn');
+        let isMuted = false;
+        muteBtn.onclick = () => {
+            isMuted = !isMuted;
+            bgm.muted = isMuted;
+            muteBtn.innerText = isMuted ? "🔇 Unmute Music" : "🎵 Mute Music";
+            muteBtn.style.backgroundColor = isMuted ? "#e74c3c" : "#9b59b6";
+        };
+
+        function triggerGlobalMusic() {
+            if (bgm.paused) {
+                let playPromise = bgm.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => console.log("Waiting for interaction."));
+                }
+                socket.emit('startGlobalMusic');
+            }
+        }
+
+        socket.on('playGlobalMusic', () => {
+            if (bgm.paused) {
+                let playPromise = bgm.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => console.log("Waiting for interaction."));
+                }
+            }
+        });
+
+        const scoreDisplay = document.getElementById('score-display'); 
+        function broadcastAnnouncement(text, color) {
+            scoreDisplay.innerText = text;
+            scoreDisplay.style.color = color;
+            if (isMyTurn) socket.emit('broadcastMessage', { text, color });
+        }
+
+        socket.on('displayMessage', (msgData) => {
+            scoreDisplay.innerText = msgData.text;
+            scoreDisplay.style.color = msgData.color;
+        });
+
+        // --- NEW: Custom Modal Logic ---
+        const customModal = document.getElementById('custom-modal');
+        const customModalText = document.getElementById('custom-modal-text');
+        const customModalBtn = document.getElementById('custom-modal-btn');
+
+        function showModal(message) {
+            customModalText.innerText = message;
+            customModal.style.display = 'flex'; // Unhides the modal
+        }
+
+        customModalBtn.onclick = () => {
+            playSound(sfxClick);
+            customModal.style.display = 'none'; // Hides the modal
+        };
+
+        // --- Multiplayer Logic ---
+        socket.on('connect', () => { myId = socket.id; });
+
+        socket.on('gameStateUpdate', (state) => {
+            scoreboard.innerHTML = '';
+            
+            if (state.playerOrder.length > 3) {
+                scoreboard.style.gridTemplateColumns = '1fr 1fr';
+            } else {
+                scoreboard.style.gridTemplateColumns = '1fr';
+            }
+
+            state.playerOrder.forEach(id => {
+                let p = state.players[id];
+                let hearts = "❤️".repeat(p.lives) + "🖤".repeat(3 - p.lives);
+                let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
+                if (p.lives <= 0) scoreText = "ELIMINATED";
+                
+                let el = document.createElement('div');
+                el.className = 'player-stat';
+                el.innerHTML = `<strong>${p.name}</strong><br>${hearts}<br>Score: ${scoreText}`;
+                if (id === state.currentTurnId) el.style.color = "#f1c40f"; 
+                scoreboard.appendChild(el);
+            });
+
+            if (state.playerOrder.length < 2) {
+                turnIndicator.innerText = "Waiting for players to join...";
+                turnIndicator.style.color = "#95a5a6";
+                isMyTurn = false;
+            } else {
+                let myPlayerInfo = state.players[myId];
+                if (myPlayerInfo && myPlayerInfo.lives <= 0) {
+                    turnIndicator.innerText = "You have been eliminated!";
+                    turnIndicator.style.color = "#7f8c8d";
+                    isMyTurn = false;
+                } else {
+                    isMyTurn = (myId === state.currentTurnId);
+                    turnIndicator.innerText = isMyTurn ? "Your Turn!" : "Opponent's Turn...";
+                    turnIndicator.style.color = isMyTurn ? "#2ecc71" : "#e74c3c";
+                }
+            }
+            
+            document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
+            document.getElementById('toggle-btn').style.display = isMyTurn ? "inline-block" : "none";
+            
+            if (isMyTurn) initGame(); 
+        });
+
+        // REPLACED standard alerts with our new custom modal
+        socket.on('roundResult', (data) => { showModal(data.message); });
+        socket.on('gameOver', (data) => { showModal(data.message); });
+
+        socket.on('boardUpdated', (gameData) => {
+            dice = gameData.dice; rollCount = gameData.rollCount;
+            inTrouble = gameData.inTrouble; turnFinalized = gameData.turnFinalized;
+            renderDice(false); 
+        });
+
+        // --- DOM & Game Core ---
+        const activeArea = document.getElementById('active-area');
+        const requiredArea = document.getElementById('required-dice');
+        const remainingArea = document.getElementById('remaining-locked');
+        const rollBtn = document.getElementById('roll-btn');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const currentScoreSpan = document.getElementById('current-score-span'); 
+
+        function initGame() {
+            dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
+            hasRolled = false; locksThisRoll = 0; rollCount = 0; 
+            suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
+            scoreDisplay.innerText = ''; 
+            currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#f1c40f"; 
+            
+            rollBtn.innerText = "Roll Dice";
+            rollBtn.onclick = rollDice;
+            renderDice();
+        }
+
+        toggleBtn.onclick = () => {
+            triggerGlobalMusic();
+            playSound(sfxClick);
+            usePips = !usePips;
+            toggleBtn.innerText = usePips ? "Switch to Numbers" : "Switch to Pips";
+            renderDice(); 
+        };
+
+        function getPipsHTML(value) {
+            if (value === 0 || !usePips) return `<div class="number-display">${value === 0 ? '?' : value}</div>`;
+            const layouts = {
+                1: ['center'], 2: ['top-left', 'bottom-right'], 3: ['top-left', 'center', 'bottom-right'],
+                4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], 5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
+                6: ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right']
+            };
+            let html = '';
+            layouts[value].forEach(pos => { html += `<div class="pip ${pos}"></div>`; });
+            return html;
+        }
+
+        function rollDice() {
+            if (isAnimating) return; 
+            triggerGlobalMusic();
+
+            if (rollCount === 1) {
+                let justLocked = dice.filter(d => d.status === 'lockedThisTurn');
+                let stillActive = dice.filter(d => d.status === 'active');
+                
+                let has2 = justLocked.some(d => d.value === 2);
+                let has4 = justLocked.some(d => d.value === 4);
+                let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); 
+                let activeHas6 = stillActive.some(d => d.value === 6);
+                let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
+                
+                if (exactlyOneRequired && has1356) {
+                    broadcastAnnouncement("The Early Ross!", "#e67e22");
+                } else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
+                    broadcastAnnouncement("You didn't bite!", "#3498db");
+                }
+            } else if (rollCount > 1) {
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") {
+                    broadcastAnnouncement("", ""); 
+                }
+            }
+
+            rollCount++; 
+            dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
+
+            isAnimating = true;
+            rollBtn.disabled = true; 
+            playSound(sfxRoll);
+
+            let activeCount = dice.filter(d => d.status === 'active').length;
+            let lockedDice = dice.filter(d => d.status === 'permanentlyLocked');
+            let lockedHas2 = lockedDice.some(d => d.value === 2);
+            let lockedHas4 = lockedDice.some(d => d.value === 4);
+            let locked6sCount = lockedDice.filter(d => d.value === 6).length;
+            
+            suspenseType = (activeCount === 1 && (!lockedHas2 || !lockedHas4)) ? 'survival' : ((activeCount === 1 && lockedHas2 && lockedHas4 && locked6sCount === 3) ? 'perfect' : 'none');
+            
+            const activeDOMDice = activeArea.querySelectorAll('.die');
+            if (suspenseType !== 'none') {
+                document.body.classList.add('shake-screen'); 
+                activeDOMDice.forEach(die => die.classList.add('rolling-suspense'));
+            } else {
+                activeDOMDice.forEach(die => die.classList.add('rolling'));
+            }
+
+            setTimeout(() => {
+                if (suspenseType !== 'none') document.body.classList.remove('shake-screen');
+                dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
+                hasRolled = true; locksThisRoll = 0; isAnimating = false;
+
+                if (rollCount === 1) {
+                    if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
+                        inTrouble = true;
+                        broadcastAnnouncement("Ooh you might be in trouble here", "var(--pip-red)");
+                    }
+                }
+                renderDice();
+            }, (suspenseType !== 'none') ? 2000 : 500); 
+        }
+
+        function toggleDie(id) {
+            if (!hasRolled || isAnimating || turnFinalized || !isMyTurn) return; 
+            triggerGlobalMusic();
+            
+            let die = dice.find(d => d.id === id);
+            if (!die || die.status === 'permanentlyLocked') return; 
+
+            playSound(sfxClick);
+            die.status = (die.status === 'active') ? 'lockedThisTurn' : 'active';
+            if (die.status === 'lockedThisTurn') locksThisRoll++; else locksThisRoll--;
+            
+            renderDice();
+        }
+
+        function createDieElement(die) {
+            const div = document.createElement('div');
+            div.className = 'die'; div.dataset.value = die.value;
+            div.innerHTML = getPipsHTML(die.value);
+            div.onclick = () => toggleDie(die.id);
+            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.6'; div.style.cursor = 'not-allowed'; } 
+            else if (die.status === 'lockedThisTurn') { div.style.boxShadow = '0 0 0 4px #f1c40f, inset 0 -5px 0 rgba(0,0,0,0.2)'; div.style.transform = 'translateY(-5px)'; }
+            return div;
+        }
+
+        function renderDice(shouldBroadcast = true) {
+            activeArea.innerHTML = ''; requiredArea.innerHTML = ''; remainingArea.innerHTML = '';
+            let lockedDice = dice.filter(d => d.status !== 'active');
+            let activeDice = dice.filter(d => d.status === 'active');
+            let req2 = null, req4 = null, remainingLocked = [];
+
+            lockedDice.forEach(d => {
+                if (d.value === 2 && !req2) req2 = d;
+                else if (d.value === 4 && !req4) req4 = d;
+                else remainingLocked.push(d);
+            });
+
+            remainingLocked.sort((a, b) => a.value - b.value);
+
+            if (req2) requiredArea.appendChild(createDieElement(req2));
+            if (req4) requiredArea.appendChild(createDieElement(req4));
+            remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d)));
+            activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
+
+            let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
+
+            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) {
+                currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "var(--pip-red)";
+            } else {
+                currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#f1c40f"; 
+            }
+
+            if (inTrouble && req2 && req4 && !turnFinalized) {
+                broadcastAnnouncement("Phew!", "var(--pip-green)");
+                inTrouble = false; 
+            }
+
+            if (activeDice.length === 0 && hasRolled) {
+                rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
+                
+                rollBtn.onclick = () => {
+                    let busted = (!req2 || !req4);
+                    let finalScore = busted ? 0 : currentScore;
+                    socket.emit('endTurn', { score: finalScore, busted: busted });
+                };
+
+                if (!req2 || !req4) {
+                    if (!turnFinalized) {
+                        broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "var(--pip-red)");
+                        playSound(suspenseType === 'survival' ? sfxAww : sfxBust);
+                        turnFinalized = true; 
+                    }
+                } else {
+                    if (!turnFinalized) {
+                        turnFinalized = true; 
+                        if (currentScore === 24) playSound((suspenseType === 'survival' || suspenseType === 'perfect') ? sfxYay : sfxWin);
+                        else {
+                            if (suspenseType === 'perfect') playSound(sfxOhWell); 
+                            else if (suspenseType === 'survival') playSound(sfxYay);
+                            else playSound(sfxClick);
+                        }
+                        
+                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#f1c40f");
+                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "var(--pip-green)");
+                    }
+                }
+            } else {
+                rollBtn.disabled = hasRolled && locksThisRoll === 0;
+            }
+
+            if (shouldBroadcast && isMyTurn) {
+                socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
+            }
+        }
+    </script>
+</body>
+</html>
