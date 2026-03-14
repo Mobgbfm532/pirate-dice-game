@@ -82,7 +82,8 @@ io.on('connection', (socket) => {
     socket.on('setPlayerName', (chosenName) => {
         if (players[socket.id]) {
             let finalName = chosenName.trim();
-            if (finalName === "") finalName = "Anonymous Pirate";
+                       if (finalName === "") finalName = "Mysterious Traveler";
+
             if (finalName.length > 15) finalName = finalName.substring(0, 15);
             players[socket.id].name = finalName;
             io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
