@@ -3,70 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2, 4, 24 - Pirate Dice Game</title>
+    <title>2, 4, 24 - Tavern Dice</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
-        /* --- Base & Root Variables --- */
+        /* --- Tavern Theme Variables --- */
         :root {
-            --bg-color: #2c3e50;
-            --board-color: #34495e;
-            --text-color: #ecf0f1;
-            --dice-bg: #fff; 
-            --pip-red: #e74c3c;
-            --pip-green: #2ecc71;
-            --pip-black: #2c3e50;
+            --text-light: #fdf6e3;
+            --text-dark: #3e2723;
+            --dice-bone: #fffaee; 
+            --pip-red: #b71c1c;
+            --pip-green: #2e7d32;
+            --pip-black: #212121;
+            
+            /* Parchment Styling */
+            --parchment-bg: linear-gradient(to bottom right, #fdf6e3, #e6d5aa);
+            --parchment-shadow: inset 0 0 40px rgba(139, 69, 19, 0.15), 5px 5px 15px rgba(0,0,0,0.6);
+            --parchment-border: 1px solid #cda434;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            /* NEW: Realistic scratched wood table background */
+            background-image: url('https://images.unsplash.com/photo-1550684376-efcbd6e3f031?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            
+            font-family: 'Almendra', serif;
+            color: var(--text-light);
+            margin: 0; padding: 20px;
+            display: flex; justify-content: center; align-items: flex-start;
             min-height: 100vh;
-            overflow-x: hidden; /* Prevents scrollbars from floating animations */
+            overflow-x: hidden;
         }
 
         #game-page {
-            display: grid; grid-template-columns: 2fr 1fr; gap: 20px;
-            width: 100%; max-width: 1200px; align-items: start; 
+            display: grid; grid-template-columns: 2fr 1fr; gap: 25px;
+            width: 100%; max-width: 1200px; margin-top: 20px;
         }
 
         /* --- Game Area (Left Side) --- */
         #game-area {
-            background-color: var(--board-color); padding: 15px; border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
-            align-items: center; text-align: center;
+            /* Instead of a solid box, the game area is just an open section of the table */
+            padding: 15px; 
+            display: flex; flex-direction: column; align-items: center; text-align: center;
         }
 
-        .area-title { margin-top: 10px; margin-bottom: 5px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
+        .area-title { 
+            margin-top: 10px; margin-bottom: 5px; 
+            font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            color: #ffcc80;
+        }
 
+        /* Locked and Active areas look like darkened/stained sections of the wood */
         #locked-area {
             display: flex; justify-content: center; align-items: center; gap: 20px;
-            min-height: 90px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;
-            margin-bottom: 15px; border: 2px dashed #7f8c8d;
+            min-height: 100px; 
+            background: rgba(0, 0, 0, 0.4); 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            padding: 15px; border-radius: 8px; margin-bottom: 15px; 
+            border: 2px solid rgba(0,0,0,0.6);
         }
-        #required-dice { display: flex; align-items: center; gap: 10px; padding-right: 20px; border-right: 2px solid #7f8c8d; min-height: 80px; }
+        #required-dice { display: flex; align-items: center; gap: 10px; padding-right: 20px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; align-items: center; gap: 10px; min-height: 80px; }
 
         #active-area {
-            display: flex; justify-content: center; gap: 15px; min-height: 90px; 
-            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px; 
+            display: flex; justify-content: center; gap: 15px; min-height: 100px; 
+            background: rgba(0, 0, 0, 0.3); 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+            padding: 15px; border-radius: 8px; margin-bottom: 15px; 
+            border: 1px solid rgba(0,0,0,0.5);
         }
 
         /* --- Dice & Pips Styling --- */
         .die {
-            width: 80px; height: 80px; background-color: var(--dice-bg); border-radius: 15px;
-            box-shadow: inset 0 -5px 0 rgba(0,0,0,0.2), 0 5px 10px rgba(0,0,0,0.3);
+            width: 80px; height: 80px; 
+            background-color: var(--dice-bone); /* Bone colored dice */
+            border-radius: 12px;
+            box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6);
             cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none;
             display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
             padding: 12px; box-sizing: border-box; align-items: center; justify-items: center;
             font-weight: bold; color: var(--pip-black); 
         }
-        .die:hover { transform: translateY(-5px); }
-        .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); }
+        .die:hover { transform: translateY(-5px) rotate(2deg); }
+        .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5); }
 
         .die[data-value="1"] .pip { background-color: var(--pip-red); } .die[data-value="6"] .pip { background-color: var(--pip-green); }
         .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
@@ -75,8 +100,7 @@
         .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; }
         .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; }
         .pip.bottom-right { grid-column: 3; grid-row: 3; }
-
-        .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3rem; margin-top: -5px; }
+        .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3.5rem; margin-top: -5px; }
 
         /* --- Animations --- */
         @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
@@ -86,93 +110,135 @@
         @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
-        /* Controls */
+        /* --- Buttons (Leather/Wood styling) --- */
         #controls { margin-top: 10px; }
-        button { padding: 15px 30px; font-size: 1.1rem; font-weight: bold; background-color: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.3s; margin: 5px; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #95a5a6; cursor: not-allowed; transform: none; }
+        button { 
+            padding: 12px 25px; font-size: 1.3rem; font-family: 'Almendra', serif; 
+            background: linear-gradient(to bottom, #5d4037, #3e2723); 
+            color: #d7ccc8; border: 2px solid #271612; border-radius: 6px; 
+            cursor: pointer; transition: all 0.2s; margin: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        button:hover { background: linear-gradient(to bottom, #6d4c41, #4e342e); transform: translateY(-2px); color: #fff; }
+        button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
 
-        /* --- Sidebar, Scoreboard & Reactions --- */
-        #sidebar { background-color: var(--board-color); padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
-        #scoreboard { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; width: 100%; display: grid; gap: 15px; align-items: start; }
-        .player-stat { font-size: 1.1rem; width: 100%; text-align: center; }
+        /* --- Sidebar & Scoreboard (Parchment Styling) --- */
+        #sidebar { 
+            background: var(--parchment-bg);
+            box-shadow: var(--parchment-shadow);
+            border: var(--parchment-border);
+            padding: 20px; border-radius: 4px; /* Less rounded, more paper-like */
+            display: flex; flex-direction: column; align-items: center; 
+            color: var(--text-dark);
+        }
+        
+        #sidebar .area-title {
+            color: #8d6e63;
+            text-shadow: none;
+            border-bottom: 2px solid #a1887f;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            width: 100%;
+        }
 
-        /* Reaction Buttons CSS */
-        #reaction-bar { display: flex; justify-content: space-around; width: 100%; margin-top: 10px; padding-top: 15px; border-top: 2px dashed #7f8c8d; }
-        .react-btn { padding: 5px; font-size: 1.8rem; background: transparent; border: none; cursor: pointer; transition: transform 0.2s; margin: 0; }
-        .react-btn:hover { transform: scale(1.3); background: transparent; }
+        #scoreboard { 
+            width: 100%; display: grid; gap: 15px; align-items: start; 
+        }
 
-        /* Floating Animation CSS */
+        .player-stat { 
+            font-size: 1.3rem; width: 100%; text-align: center; 
+            padding: 10px 0; border-bottom: 1px dashed #bcaaa4;
+        }
+
+        /* Reaction Buttons */
+        #reaction-bar { display: flex; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; }
+        .react-btn { padding: 5px; font-size: 1.8rem; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; }
+        .react-btn:hover { transform: scale(1.3); background: transparent; box-shadow: none; }
+
         .floating-reaction {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px;
+            background: rgba(62, 39, 35, 0.9); color: #fdf6e3; padding: 10px 20px;
             border-radius: 20px; font-size: 1.2rem; z-index: 9999;
             pointer-events: none; animation: floatUp 3s ease-out forwards;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 2px solid #f1c40f;
-            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #cda434;
+            display: flex; align-items: center; gap: 10px; font-family: 'Almendra', serif;
         }
-        @keyframes floatUp {
-            0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); }
-            10% { opacity: 1; transform: translateX(-50%) scale(1.2); }
-            20% { transform: translateX(-50%) scale(1); }
-            80% { opacity: 1; }
-            100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); }
-        }
+        @keyframes floatUp { 0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); } 10% { opacity: 1; transform: translateX(-50%) scale(1.2); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); } }
 
-        /* --- Modals --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-box { background-color: var(--board-color); padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,1); border: 3px solid #f1c40f; max-width: 400px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        /* --- Modals (Parchment Styling) --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { 
+            background: var(--parchment-bg);
+            box-shadow: var(--parchment-shadow);
+            border: var(--parchment-border);
+            padding: 40px; border-radius: 4px; text-align: center; max-width: 450px; 
+            animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+            color: var(--text-dark);
+        }
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
         #name-modal { display: flex; z-index: 2000; } 
-        #name-input { padding: 15px; font-size: 1.2rem; border-radius: 8px; border: none; margin-bottom: 20px; width: 80%; text-align: center; outline: none; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); }
+        #name-input { 
+            padding: 15px; font-size: 1.4rem; font-family: 'Almendra', serif;
+            background: #fff8e1; color: #3e2723;
+            border: 1px solid #8d6e63; border-radius: 4px; 
+            margin-bottom: 20px; width: 80%; text-align: center; outline: none; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        #name-input::placeholder { color: #bcaaa4; }
     </style>
 </head>
 <body>
 
     <div id="name-modal" class="modal-overlay">
         <div class="modal-box">
-            <h2 style="color: #f1c40f; margin-top: 0; letter-spacing: 1px;">Join the Crew</h2>
-            <input type="text" id="name-input" placeholder="Enter Pirate Name" maxlength="15">
+            <h2 style="color: #5d4037; font-size: 2.5rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
+            <input type="text" id="name-input" placeholder="Enter Adventurer Name" maxlength="15">
             <br>
-            <button id="join-game-btn" style="background-color: #2ecc71; color: #2c3e50; font-size: 1.3rem;">Set Sail!</button>
+            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px;">Join the Tavern</button>
         </div>
     </div>
 
     <div id="custom-modal" class="modal-overlay">
         <div class="modal-box">
-            <div id="custom-modal-text" style="color: var(--text-color); margin-bottom: 30px; font-size: 1.5rem; white-space: pre-line;"></div>
-            <button id="custom-modal-btn" style="background-color: #f1c40f; color: #2c3e50;">Continue</button>
+            <div id="custom-modal-text" style="color: var(--text-dark); margin-bottom: 30px; font-size: 1.8rem; white-space: pre-line;"></div>
+            <button id="custom-modal-btn">Continue</button>
         </div>
     </div>
 
     <div id="game-page">
         <div id="game-area"> 
-            <h3 id="turn-indicator" style="color: #3498db; margin-top: 5px; margin-bottom: 15px;">Connecting...</h3>
+            <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
+            
             <h2 class="area-title">Locked Dice</h2>
             <div id="locked-area"><div id="required-dice"></div><div id="remaining-locked"></div></div>
+            
             <h2 class="area-title">Active Dice</h2>
             <div id="active-area"></div>
-            <h3 id="score-display" style="height: 30px; margin-bottom: 5px;"></h3> 
+            
+            <h3 id="score-display" style="height: 35px; font-size: 1.5rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); margin-bottom: 5px;"></h3> 
+            
             <div id="controls">
                 <button id="roll-btn">Roll Dice</button>
-                <button id="toggle-btn" style="background-color: #7f8c8d;">Switch to Numbers</button>
-                <button id="mute-btn" style="background-color: #9b59b6;">🎵 Mute Music</button>
+                <button id="toggle-btn">Switch to Numbers</button>
+                <button id="mute-btn">🎵 Mute Tavern</button>
             </div>
         </div>
         
         <div id="sidebar"> 
-            <div style="width: 100%; border-bottom: 2px solid #7f8c8d; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">
-                <h2 class="area-title">Turn Score</h2>
-                <h2 style="margin: 0; color: #f1c40f; font-size: 2.5rem;"><span id="current-score-span">0</span></h2>
-            </div>
-            <h2 class="area-title">Leaderboard</h2>
+            <h2 class="area-title">Turn Score</h2>
+            <h2 style="margin: 0; color: #b71c1c; font-size: 4rem; text-shadow: 1px 1px 2px rgba(255,255,255,0.5); border-bottom: 2px solid #a1887f; width: 100%; text-align: center; padding-bottom: 10px; margin-bottom: 20px;"><span id="current-score-span">0</span></h2>
+            
+            <h2 class="area-title">Adventurers</h2>
             <div id="scoreboard"></div> 
 
             <div id="reaction-bar">
+                <button class="react-btn" onclick="sendReaction('🍺')" title="Cheers!">🍺</button>
+                <button class="react-btn" onclick="sendReaction('😲')" title="Awe">😲</button>
                 <button class="react-btn" onclick="sendReaction('😡')" title="Anger">😡</button>
                 <button class="react-btn" onclick="sendReaction('🤢')" title="Disgust">🤢</button>
-                <button class="react-btn" onclick="sendReaction('😲')" title="Awe">😲</button>
-                <button class="react-btn" onclick="sendReaction('😄')" title="Happiness">😄</button>
             </div>
         </div>
     </div>
@@ -209,8 +275,7 @@
         let isMuted = false;
         muteBtn.onclick = () => {
             isMuted = !isMuted; bgm.muted = isMuted;
-            muteBtn.innerText = isMuted ? "🔇 Unmute Music" : "🎵 Mute Music";
-            muteBtn.style.backgroundColor = isMuted ? "#e74c3c" : "#9b59b6";
+            muteBtn.innerText = isMuted ? "🔇 Unmute Tavern" : "🎵 Mute Tavern";
         };
 
         function triggerGlobalMusic() {
@@ -258,24 +323,19 @@
             scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color;
         });
 
-        // --- NEW: Send and Receive Reactions ---
+        // --- Send and Receive Reactions ---
         function sendReaction(emoji) {
             socket.emit('sendReaction', emoji);
-            playSound(sfxClick); // Satisfying pop when you click a reaction
+            playSound(sfxClick); 
         }
 
         socket.on('receiveReaction', (data) => {
-            // Create a temporary floating element
             const reactionDiv = document.createElement('div');
             reactionDiv.className = 'floating-reaction';
             reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.5rem">${data.emoji}</span>`;
             document.body.appendChild(reactionDiv);
-
-            // Give it a slightly random horizontal position so multiple reactions don't perfectly overlap
             const randomOffset = Math.floor(Math.random() * 60) - 30;
             reactionDiv.style.left = `calc(50% + ${randomOffset}px)`;
-
-            // Destroy it after the animation finishes
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
@@ -295,30 +355,29 @@
                 if (p.lives <= 0) scoreText = "ELIMINATED";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
-                el.innerHTML = `<strong>${p.name}</strong><br>${hearts}<br>Score: ${scoreText}`;
-                if (id === state.currentTurnId) el.style.color = "#f1c40f"; 
+                el.innerHTML = `<strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
+                if (id === state.currentTurnId) el.style.color = "#b71c1c"; // Highlight active player in dark red
                 scoreboard.appendChild(el);
             });
 
             if (state.playerOrder.length < 2) {
-                turnIndicator.innerText = "Waiting for players to join...";
-                turnIndicator.style.color = "#95a5a6";
+                turnIndicator.innerText = "Waiting for travelers to join...";
+                turnIndicator.style.color = "#9e9e9e";
                 isMyTurn = false;
             } else {
                 let myPlayerInfo = state.players[myId];
                 if (myPlayerInfo && myPlayerInfo.lives <= 0) {
                     turnIndicator.innerText = "You have been eliminated!";
-                    turnIndicator.style.color = "#7f8c8d";
+                    turnIndicator.style.color = "#9e9e9e";
                     isMyTurn = false;
                 } else {
                     isMyTurn = (myId === state.currentTurnId);
                     
-                    // NEW: Dynamically grab the active player's name!
                     let activePlayerInfo = state.players[state.currentTurnId];
                     let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
                     
                     turnIndicator.innerText = isMyTurn ? "Your Turn!" : `${activeName} is rolling...`;
-                    turnIndicator.style.color = isMyTurn ? "#2ecc71" : "#e74c3c";
+                    turnIndicator.style.color = isMyTurn ? "#aed581" : "#ffcc80";
                 }
             }
             
@@ -350,7 +409,7 @@
             hasRolled = false; locksThisRoll = 0; rollCount = 0; 
             suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
             scoreDisplay.innerText = ''; 
-            currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#f1c40f"; 
+            currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
             
             rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
         }
@@ -374,8 +433,8 @@
                 let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
                 let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
                 
-                if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#e67e22");
-                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#3498db");
+                if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
+                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#4fc3f7");
             } else if (rollCount > 1) {
                 if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") broadcastAnnouncement("", ""); 
             }
@@ -400,12 +459,11 @@
                 hasRolled = true; locksThisRoll = 0; isAnimating = false;
                 
                 if (rollCount === 1) { 
-                    // NEW: "What are the odds?" Easter Egg check!
                     let allSame = dice.every(d => d.value === dice[0].value);
                     if (allSame) {
-                        broadcastAnnouncement("What are the odds? (1/7,776)", "#9b59b6");
+                        broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
                     } else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
-                        inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "var(--pip-red)"); 
+                        inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373"); 
                     } 
                 }
                 
@@ -426,8 +484,8 @@
         function createDieElement(die) {
             const div = document.createElement('div'); div.className = 'die'; div.dataset.value = die.value;
             div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
-            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.6'; div.style.cursor = 'not-allowed'; } 
-            else if (die.status === 'lockedThisTurn') { div.style.boxShadow = '0 0 0 4px #f1c40f, inset 0 -5px 0 rgba(0,0,0,0.2)'; div.style.transform = 'translateY(-5px)'; }
+            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
+            else if (die.status === 'lockedThisTurn') { div.style.boxShadow = '0 0 0 4px #4caf50, inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8)'; div.style.transform = 'translateY(-5px)'; }
             return div;
         }
 
@@ -444,10 +502,10 @@
 
             let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
 
-            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "var(--pip-red)"; } 
-            else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#f1c40f"; }
+            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
+            else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
 
-            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "var(--pip-green)"); inTrouble = false; }
+            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
 
             if (activeDice.length === 0 && hasRolled) {
                 rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
@@ -457,15 +515,15 @@
                 };
 
                 if (!req2 || !req4) {
-                    if (!turnFinalized) { broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "var(--pip-red)"); playSound(suspenseType === 'survival' ? sfxAww : sfxBust); turnFinalized = true; }
+                    if (!turnFinalized) { broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373"); playSound(suspenseType === 'survival' ? sfxAww : sfxBust); turnFinalized = true; }
                 } else {
                     if (!turnFinalized) {
                         turnFinalized = true; 
                         if (currentScore === 24) playSound((suspenseType === 'survival' || suspenseType === 'perfect') ? sfxYay : sfxWin);
                         else { if (suspenseType === 'perfect') playSound(sfxOhWell); else if (suspenseType === 'survival') playSound(sfxYay); else playSound(sfxClick); }
                         
-                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#f1c40f");
-                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "var(--pip-green)");
+                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
+                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784");
                     }
                 }
             } else { rollBtn.disabled = hasRolled && locksThisRoll === 0; }
