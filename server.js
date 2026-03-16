@@ -12,52 +12,76 @@ app.get('/', (req, res) => {
 
 let players = {}; 
 let playerOrder = []; 
+let roundPlayers = []; // NEW: Tracks who is actively rolling in the current round
 let currentTurnIndex = 0;
 let isMusicPlaying = false; 
+let isTieBreaker = false; // NEW: Tracks if we are in Sudden Death
 
 function evaluateRound() {
-    let activePlayers = playerOrder.filter(id => players[id].lives > 0);
-    let validPlayers = activePlayers.filter(id => !players[id].busted);
-    
-    let lowestScore = -1;
-    if (validPlayers.length > 1) {
-        let scores = validPlayers.map(id => players[id].score);
-        lowestScore = Math.min(...scores);
-    }
+    let losersThisRound = [];
+    let tiedPlayers = [];
 
-    activePlayers.forEach(id => {
-        let p = players[id];
-        let lostLife = false;
-        let reason = '';
-
-        if (p.busted) {
-            p.lives -= 1;
-            lostLife = true;
-            reason = 'You busted!';
-        } else if (validPlayers.length > 1 && p.score === lowestScore) {
-            p.lives -= 1;
-            lostLife = true;
-            reason = 'You had the lowest score!';
-        }
-
-        if (lostLife) {
-            io.to(id).emit('roundResult', { message: `You lost a life! 💔\n${reason}` });
-        } else {
-            io.to(id).emit('roundResult', { message: 'Safe for another round! 🛡️\nGreat job.' });
-        }
-        
-        p.score = null;
-        p.busted = false;
+    // 1. Process Busts (Anyone who busts instantly loses a life)
+    let busted = roundPlayers.filter(id => players[id] && players[id].busted);
+    busted.forEach(id => {
+        players[id].lives -= 1;
+        losersThisRound.push({ id, reason: 'You busted!' });
     });
 
-    let survivors = playerOrder.filter(id => players[id].lives > 0);
+    // 2. Process Lowest Valid Score
+    let valid = roundPlayers.filter(id => players[id] && !players[id].busted);
+    if (valid.length > 1) {
+        let minScore = Math.min(...valid.map(id => players[id].score));
+        let lowest = valid.filter(id => players[id].score === minScore);
+
+        if (lowest.length === 1) {
+            players[lowest[0]].lives -= 1;
+            losersThisRound.push({ id: lowest[0], reason: 'You had the lowest score!' });
+        } else if (lowest.length > 1) {
+            tiedPlayers = lowest;
+        }
+    }
+
+    // 3. Notify the players who were actively in this round
+    roundPlayers.forEach(id => {
+        if (!players[id]) return;
+        let loserInfo = losersThisRound.find(l => l.id === id);
+        if (loserInfo) {
+            io.to(id).emit('roundResult', { message: `You lost a life! 💔\n${loserInfo.reason}` });
+        } else if (tiedPlayers.includes(id)) {
+            io.to(id).emit('roundResult', { message: `It's a TIE! ⚔️\nPrepare for a sudden death tie-breaker!` });
+        } else {
+            io.to(id).emit('roundResult', { message: `Safe! 🛡️\nYou survived the round.` });
+        }
+    });
+
+    // 4. Reset scores for those who just played
+    roundPlayers.forEach(id => {
+        if (players[id]) {
+            players[id].score = null;
+            players[id].busted = false;
+        }
+    });
+
+    // 5. Determine Next Steps
+    let survivors = playerOrder.filter(id => players[id] && players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? players[survivors[0]].name : "No one";
         io.emit('gameOver', { message: `Game Over! ${winnerName} wins the game! 🏆` });
-    } else {
+        roundPlayers = []; 
+    } else if (tiedPlayers.length > 1) {
+        // TIE BREAKER: Shrink the active round to ONLY the tied players!
+        isTieBreaker = true;
+        roundPlayers = tiedPlayers;
         currentTurnIndex = 0;
-        while(players[playerOrder[currentTurnIndex]].lives <= 0) currentTurnIndex++;
-        io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
+        io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+        io.emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
+    } else {
+        // NORMAL ROUND: Everyone alive gets to play
+        isTieBreaker = false;
+        roundPlayers = survivors;
+        currentTurnIndex = 0;
+        io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
     }
 }
 
@@ -66,11 +90,19 @@ io.on('connection', (socket) => {
     players[socket.id] = { id: socket.id, name: pName, lives: 3, score: null, busted: false };
     playerOrder.push(socket.id);
 
+    // Add first players to the active round automatically
+    if (playerOrder.length === 1) {
+        roundPlayers = [socket.id];
+    } else if (playerOrder.length === 2 && roundPlayers.length <= 1) {
+        roundPlayers = [...playerOrder];
+        currentTurnIndex = 0;
+    }
+
     if (isMusicPlaying) {
         socket.emit('playGlobalMusic');
     }
 
-    io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
+    io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
 
     socket.on('startGlobalMusic', () => {
         if (!isMusicPlaying) {
@@ -85,7 +117,7 @@ io.on('connection', (socket) => {
             if (finalName === "") finalName = "Mysterious Traveler";
             if (finalName.length > 15) finalName = finalName.substring(0, 15);
             players[socket.id].name = finalName;
-            io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
+            io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
         }
     });
 
@@ -94,13 +126,12 @@ io.on('connection', (socket) => {
         io.emit('receiveReaction', { name: playerName, emoji: emoji });
     });
 
-    // NEW: Listen for a suspenseful roll and tell everyone else to shake their screens!
     socket.on('triggerShake', () => {
         socket.broadcast.emit('triggerShake');
     });
 
     socket.on('updateBoard', (gameData) => {
-        if (socket.id === playerOrder[currentTurnIndex]) {
+        if (socket.id === roundPlayers[currentTurnIndex]) {
             socket.broadcast.emit('boardUpdated', gameData);
         }
     });
@@ -110,18 +141,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('endTurn', (turnData) => {
-        if (socket.id === playerOrder[currentTurnIndex]) {
+        if (socket.id === roundPlayers[currentTurnIndex]) {
             players[socket.id].score = turnData.score;
             players[socket.id].busted = turnData.busted;
             
-            do {
-                currentTurnIndex++;
-            } while (currentTurnIndex < playerOrder.length && players[playerOrder[currentTurnIndex]].lives <= 0);
-
-            if (currentTurnIndex >= playerOrder.length) {
+            currentTurnIndex++;
+            if (currentTurnIndex >= roundPlayers.length) {
                 evaluateRound();
             } else {
-                io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
+                io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
             }
         }
     });
@@ -129,8 +157,25 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete players[socket.id];
         playerOrder = playerOrder.filter(id => id !== socket.id);
-        if (playerOrder.length > 0 && currentTurnIndex >= playerOrder.length) currentTurnIndex = 0;
-        io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] ? playerOrder[currentTurnIndex] : null });
+        
+        let wasTheirTurn = (roundPlayers[currentTurnIndex] === socket.id);
+        roundPlayers = roundPlayers.filter(id => id !== socket.id);
+
+        if (roundPlayers.length > 0) {
+            if (wasTheirTurn) {
+                if (currentTurnIndex >= roundPlayers.length) {
+                    evaluateRound();
+                } else {
+                    io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+                }
+            } else {
+                if (currentTurnIndex >= roundPlayers.length) currentTurnIndex = 0;
+                io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+            }
+        } else {
+            currentTurnIndex = 0;
+            io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: null, isTieBreaker });
+        }
     });
 });
 
