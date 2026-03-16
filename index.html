@@ -61,7 +61,6 @@
         #required-dice { display: flex; align-items: center; gap: 10px; padding-right: 20px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; align-items: center; gap: 10px; min-height: 80px; }
 
-        /* FIX: Added align-items: center to ensure perfect vertical centering */
         #active-area {
             display: flex; justify-content: center; align-items: center; gap: 15px; min-height: 100px; 
             background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
@@ -113,7 +112,7 @@
         }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
         #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; }
-        .player-stat { font-size: 1.3rem; width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; }
+        .player-stat { font-size: 1.3rem; width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
         /* Reactions */
         #reaction-bar { display: flex; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; }
@@ -337,6 +336,11 @@
                 if (p.lives <= 0) scoreText = "ELIMINATED";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
+                
+                // NEW: Dim players on the scoreboard if they aren't rolling in the current round
+                let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
+                if (!isInRound) el.style.opacity = "0.4";
+
                 el.innerHTML = `<strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
@@ -519,8 +523,14 @@
                 } else {
                     if (!turnFinalized) {
                         turnFinalized = true; 
-                        if (currentScore === 24) playSound((suspenseType === 'survival' || suspenseType === 'perfect') ? sfxYay : sfxWin);
-                        else { if (suspenseType === 'perfect') playSound(sfxOhWell); else if (suspenseType === 'survival') playSound(sfxYay); else playSound(sfxClick); }
+                        
+                        // FIX: Yay.mp3 is now definitively triggered for ALL perfect 24 scores!
+                        if (currentScore === 24) playSound(sfxYay);
+                        else { 
+                            if (suspenseType === 'perfect') playSound(sfxOhWell); 
+                            else if (suspenseType === 'survival') playSound(sfxYay); 
+                            else playSound(sfxClick); 
+                        }
                         
                         if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
                         else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784");
