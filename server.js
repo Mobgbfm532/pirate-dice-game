@@ -82,18 +82,21 @@ io.on('connection', (socket) => {
     socket.on('setPlayerName', (chosenName) => {
         if (players[socket.id]) {
             let finalName = chosenName.trim();
-                       if (finalName === "") finalName = "Mysterious Traveler";
-
+            if (finalName === "") finalName = "Mysterious Traveler";
             if (finalName.length > 15) finalName = finalName.substring(0, 15);
             players[socket.id].name = finalName;
             io.emit('gameStateUpdate', { players, playerOrder, currentTurnId: playerOrder[currentTurnIndex] });
         }
     });
 
-    // NEW: Listen for Emoji Reactions
     socket.on('sendReaction', (emoji) => {
         let playerName = players[socket.id] ? players[socket.id].name : "Pirate";
         io.emit('receiveReaction', { name: playerName, emoji: emoji });
+    });
+
+    // NEW: Listen for a suspenseful roll and tell everyone else to shake their screens!
+    socket.on('triggerShake', () => {
+        socket.broadcast.emit('triggerShake');
     });
 
     socket.on('updateBoard', (gameData) => {
