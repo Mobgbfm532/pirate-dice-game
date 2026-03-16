@@ -40,7 +40,6 @@
             border: 5px solid #271612; border-radius: 12px;
             box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8);
             padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center;
-            width: 100%; box-sizing: border-box; /* Ensures the board respects boundaries */
         }
 
         .area-title { 
@@ -50,31 +49,23 @@
         }
 
         #score-display {
-            height: 35px; font-size: 1.5rem; margin-bottom: 5px; display: flex; align-items: center; justify-content: center;
+            height: 35px; font-size: 1.5rem; margin-bottom: 5px;
             text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9);
         }
 
-        /* FIX: 100% width, box-sizing, and flex-wrap ensure true centering relative to the table */
         #locked-area {
             display: flex; justify-content: center; align-items: center; gap: 20px; min-height: 100px; 
             background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
             padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7);
-            width: 100%; box-sizing: border-box; flex-wrap: wrap; 
         }
-        
         #required-dice { display: flex; align-items: center; gap: 10px; padding-right: 20px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
-        
-        /* FIX: If there are no required dice, delete the border/padding so the rest centers! */
-        #required-dice:empty { display: none; padding: 0; border: none; margin: 0; }
-        
-        #remaining-locked { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 80px; flex-wrap: wrap; }
+        #remaining-locked { display: flex; align-items: center; gap: 10px; min-height: 80px; }
 
-        /* FIX: Active area stretches and truly centers contents */
+        /* FIX: Added align-items: center to ensure perfect vertical centering */
         #active-area {
             display: flex; justify-content: center; align-items: center; gap: 15px; min-height: 100px; 
             background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
             padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6);
-            width: 100%; box-sizing: border-box; flex-wrap: wrap;
         }
 
         /* --- Dice & Pips Styling --- */
@@ -94,11 +85,7 @@
         .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; }
         .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; } .pip.bottom-right { grid-column: 3; grid-row: 3; }
         
-        /* FIX: Removed margin-top, added line-height: 1 to snap text exactly into vertical center */
-        .number-display { 
-            grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; 
-            width: 100%; height: 100%; font-size: 3.5rem; margin: 0; padding: 0; line-height: 1; 
-        }
+        .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3.5rem; }
 
         /* --- Animations --- */
         @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
@@ -109,7 +96,7 @@
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
         /* --- Buttons --- */
-        #controls { margin-top: 10px; display: flex; justify-content: center; flex-wrap: wrap; }
+        #controls { margin-top: 10px; }
         button { 
             padding: 12px 25px; font-size: 1.3rem; font-family: 'Almendra', serif; 
             background: linear-gradient(to bottom, #5d4037, #3e2723); color: #d7ccc8; border: 2px solid #271612; border-radius: 6px; 
@@ -438,7 +425,7 @@
                 let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
                 
                 if (exactlyOneRequired && has1356) {
-                    broadcastAnnouncement("The Early Ross!", "#ffb74d", "The Early Ross!");
+                    broadcastAnnouncement("The Early Ross!", "#ffb74d");
                 } else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
                     broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
                 }
@@ -473,7 +460,7 @@
                 if (rollCount === 1) { 
                     let allSame = dice.every(d => d.value === dice[0].value);
                     if (allSame) {
-                        broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8", "What are the odds? (1/36)");
+                        broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
                     } else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
                         inTrouble = true; 
                         broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
@@ -518,7 +505,7 @@
             if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
             else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
 
-            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784", "Phew!"); inTrouble = false; }
+            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
 
             if (activeDice.length === 0 && hasRolled) {
                 rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
@@ -528,15 +515,15 @@
                 };
 
                 if (!req2 || !req4) {
-                    if (!turnFinalized) { broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373", "Result: BUST! (Missing 2 or 4)"); playSound(suspenseType === 'survival' ? sfxAww : sfxBust); turnFinalized = true; }
+                    if (!turnFinalized) { broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373"); playSound(suspenseType === 'survival' ? sfxAww : sfxBust); turnFinalized = true; }
                 } else {
                     if (!turnFinalized) {
                         turnFinalized = true; 
                         if (currentScore === 24) playSound((suspenseType === 'survival' || suspenseType === 'perfect') ? sfxYay : sfxWin);
                         else { if (suspenseType === 'perfect') playSound(sfxOhWell); else if (suspenseType === 'survival') playSound(sfxYay); else playSound(sfxClick); }
                         
-                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f", rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)");
-                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784", `Result: ${currentScore} Points!`);
+                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
+                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784");
                     }
                 }
             } else { rollBtn.disabled = hasRolled && locksThisRoll === 0; }
