@@ -132,8 +132,10 @@
             z-index: 10; position: relative;
         }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
-        #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; }
-        .player-stat { font-size: 1.3rem; width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
+        
+        /* Adjusted Scoreboard Grid for 3 columns */
+        #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
+        .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
         #reaction-bar { display: flex; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; }
         .react-btn { padding: 5px; font-size: 1.8rem; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; }
@@ -166,6 +168,19 @@
         #splash-text {
             color: #ffcc80; font-size: 6rem; text-shadow: 3px 3px 15px #000; font-family: 'Almendra', serif; 
             transform: scale(0); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center;
+        }
+
+        /* NEW: Tie-Breaker Spectator Banner */
+        #tie-breaker-banner {
+            display: none;
+            color: #e57373; font-size: 1.6rem; letter-spacing: 1px;
+            text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9);
+            text-align: center; margin-top: -10px; margin-bottom: 15px;
+            animation: textFlicker 1.5s infinite alternate;
+        }
+        @keyframes textFlicker {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.8; transform: scale(0.98); }
         }
     </style>
 </head>
@@ -206,6 +221,8 @@
         <div id="game-area"> 
             <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
             
+            <h2 id="tie-breaker-banner">⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️<br><span style="font-size: 1.1rem; color: #ffcc80;">You are spectating</span></h2>
+            
             <h2 class="area-title">Locked Dice</h2>
             <div id="locked-area"><div id="required-dice"></div><div id="remaining-locked"></div></div>
             
@@ -243,16 +260,15 @@
 
         let dice = [];
         let hasRolled = false, locksThisRoll = 0, rollCount = 0;
-        
-        // FIX: usePips is now false by default so numbers display first!
         let isAnimating = false, usePips = false;
-        
         let suspenseType = 'none', inTrouble = false, turnFinalized = false;
+        
         let myId = null, isMyTurn = false, lastTurnId = null, isFirstLoad = true; 
         let myAvatar = '🛡️'; 
 
         const turnIndicator = document.getElementById('turn-indicator');
         const scoreboard = document.getElementById('scoreboard');
+        const tieBanner = document.getElementById('tie-breaker-banner');
 
         const sfxRoll = new Audio('roll.mp3'); const sfxClick = new Audio('click.mp3');
         const sfxWin = new Audio('win.mp3'); const sfxBust = new Audio('bust.mp3');
@@ -350,8 +366,27 @@
 
         socket.on('gameStateUpdate', (state) => {
             scoreboard.innerHTML = '';
-            if (state.playerOrder.length > 3) scoreboard.style.gridTemplateColumns = '1fr 1fr';
-            else scoreboard.style.gridTemplateColumns = '1fr';
+            
+            // NEW: 3 Column Scoreboard Logic based on player count
+            if (state.playerOrder.length > 4) {
+                scoreboard.style.gridTemplateColumns = '1fr 1fr 1fr';
+                scoreboard.style.fontSize = '1.1rem'; // Slightly shrink text for 3 columns
+            } else if (state.playerOrder.length > 2) {
+                scoreboard.style.gridTemplateColumns = '1fr 1fr';
+                scoreboard.style.fontSize = '1.3rem';
+            } else {
+                scoreboard.style.gridTemplateColumns = '1fr';
+                scoreboard.style.fontSize = '1.3rem';
+            }
+
+            let amIInRound = state.roundPlayers && state.roundPlayers.includes(myId);
+
+            // NEW: Show/Hide Tie-Breaker Spectator Banner
+            if (state.isTieBreaker && !amIInRound && state.playerOrder.length > 1 && state.players[myId] && state.players[myId].lives > 0) {
+                tieBanner.style.display = 'block';
+            } else {
+                tieBanner.style.display = 'none';
+            }
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
