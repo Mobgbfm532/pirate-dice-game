@@ -79,14 +79,18 @@ function evaluateRound() {
 }
 
 io.on('connection', (socket) => {
-    // NEW: Added default avatar
     players[socket.id] = { id: socket.id, name: 'Joining...', avatar: '👤', lives: 3, score: null, busted: false };
     playerOrder.push(socket.id);
 
-    if (playerOrder.length === 1) {
-        roundPlayers = [socket.id];
-    } else if (playerOrder.length === 2 && roundPlayers.length <= 1) {
-        roundPlayers = [...playerOrder];
+    // FIX: Add any new player to the current round instantly, as long as it isn't sudden death!
+    if (!isTieBreaker) {
+        if (!roundPlayers.includes(socket.id)) {
+            roundPlayers.push(socket.id);
+        }
+    }
+
+    // Ensure the very first person in an empty room gets the turn
+    if (roundPlayers.length === 1) {
         currentTurnIndex = 0;
     }
 
@@ -103,7 +107,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // NEW: Handles the new Avatar object sent from the client
     socket.on('setPlayerName', (data) => {
         if (players[socket.id]) {
             let finalName = data.name.trim();
@@ -111,7 +114,7 @@ io.on('connection', (socket) => {
             if (finalName.length > 15) finalName = finalName.substring(0, 15);
             
             players[socket.id].name = finalName;
-            players[socket.id].avatar = data.avatar; // Save the avatar
+            players[socket.id].avatar = data.avatar; 
             
             io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
         }
