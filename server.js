@@ -12,23 +12,21 @@ app.get('/', (req, res) => {
 
 let players = {}; 
 let playerOrder = []; 
-let roundPlayers = []; // NEW: Tracks who is actively rolling in the current round
+let roundPlayers = []; 
 let currentTurnIndex = 0;
 let isMusicPlaying = false; 
-let isTieBreaker = false; // NEW: Tracks if we are in Sudden Death
+let isTieBreaker = false; 
 
 function evaluateRound() {
     let losersThisRound = [];
     let tiedPlayers = [];
 
-    // 1. Process Busts (Anyone who busts instantly loses a life)
     let busted = roundPlayers.filter(id => players[id] && players[id].busted);
     busted.forEach(id => {
         players[id].lives -= 1;
         losersThisRound.push({ id, reason: 'You busted!' });
     });
 
-    // 2. Process Lowest Valid Score
     let valid = roundPlayers.filter(id => players[id] && !players[id].busted);
     if (valid.length > 1) {
         let minScore = Math.min(...valid.map(id => players[id].score));
@@ -42,7 +40,6 @@ function evaluateRound() {
         }
     }
 
-    // 3. Notify the players who were actively in this round
     roundPlayers.forEach(id => {
         if (!players[id]) return;
         let loserInfo = losersThisRound.find(l => l.id === id);
@@ -55,7 +52,6 @@ function evaluateRound() {
         }
     });
 
-    // 4. Reset scores for those who just played
     roundPlayers.forEach(id => {
         if (players[id]) {
             players[id].score = null;
@@ -63,21 +59,18 @@ function evaluateRound() {
         }
     });
 
-    // 5. Determine Next Steps
     let survivors = playerOrder.filter(id => players[id] && players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? players[survivors[0]].name : "No one";
         io.emit('gameOver', { message: `Game Over! ${winnerName} wins the game! 🏆` });
         roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
-        // TIE BREAKER: Shrink the active round to ONLY the tied players!
         isTieBreaker = true;
         roundPlayers = tiedPlayers;
         currentTurnIndex = 0;
         io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
         io.emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
     } else {
-        // NORMAL ROUND: Everyone alive gets to play
         isTieBreaker = false;
         roundPlayers = survivors;
         currentTurnIndex = 0;
@@ -86,11 +79,10 @@ function evaluateRound() {
 }
 
 io.on('connection', (socket) => {
-    let pName = 'Joining...';
-    players[socket.id] = { id: socket.id, name: pName, lives: 3, score: null, busted: false };
+    // NEW: Added default avatar
+    players[socket.id] = { id: socket.id, name: 'Joining...', avatar: '👤', lives: 3, score: null, busted: false };
     playerOrder.push(socket.id);
 
-    // Add first players to the active round automatically
     if (playerOrder.length === 1) {
         roundPlayers = [socket.id];
     } else if (playerOrder.length === 2 && roundPlayers.length <= 1) {
@@ -111,12 +103,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('setPlayerName', (chosenName) => {
+    // NEW: Handles the new Avatar object sent from the client
+    socket.on('setPlayerName', (data) => {
         if (players[socket.id]) {
-            let finalName = chosenName.trim();
+            let finalName = data.name.trim();
             if (finalName === "") finalName = "Mysterious Traveler";
             if (finalName.length > 15) finalName = finalName.substring(0, 15);
+            
             players[socket.id].name = finalName;
+            players[socket.id].avatar = data.avatar; // Save the avatar
+            
             io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
         }
     });
