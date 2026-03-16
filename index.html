@@ -28,7 +28,6 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
-        /* NEW: Flickering Firelight Overlay */
         .firelight-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at 50% 120%, rgba(255, 140, 0, 0.15), transparent 70%);
@@ -42,7 +41,6 @@
             75% { opacity: 0.85; transform: scale(1.01); }
         }
 
-        /* NEW: Floating Embers Animation */
         .ember {
             position: fixed; bottom: -10px; width: 4px; height: 4px;
             background: #ffb300; border-radius: 50%;
@@ -156,7 +154,6 @@
         #name-input { padding: 15px; font-size: 1.4rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; margin-bottom: 20px; width: 80%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         #name-input::placeholder { color: #bcaaa4; }
 
-        /* NEW: Avatar Selection Styling */
         .avatar-picker { display: flex; justify-content: space-around; font-size: 2.5rem; margin-bottom: 20px; }
         .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(100%) opacity(0.5); user-select: none; }
         .avatar-option:hover { transform: scale(1.2); filter: grayscale(0%) opacity(1); }
@@ -190,7 +187,7 @@
 
             <input type="text" id="name-input" placeholder="Enter Adventurer Name" maxlength="15">
             <br>
-            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px;">Join the Table</button>
+            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px;">Join the Tavern</button>
         </div>
     </div>
 
@@ -219,7 +216,7 @@
             
             <div id="controls">
                 <button id="roll-btn">Roll Dice</button>
-                <button id="toggle-btn">Switch to Numbers</button>
+                <button id="toggle-btn">Switch to Pips</button>
                 <button id="mute-btn">🎵 Mute Tavern</button>
             </div>
         </div>
@@ -246,11 +243,13 @@
 
         let dice = [];
         let hasRolled = false, locksThisRoll = 0, rollCount = 0;
-        let isAnimating = false, usePips = true;
-        let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         
+        // FIX: usePips is now false by default so numbers display first!
+        let isAnimating = false, usePips = false;
+        
+        let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         let myId = null, isMyTurn = false, lastTurnId = null, isFirstLoad = true; 
-        let myAvatar = '🛡️'; // Default avatar
+        let myAvatar = '🛡️'; 
 
         const turnIndicator = document.getElementById('turn-indicator');
         const scoreboard = document.getElementById('scoreboard');
@@ -261,34 +260,21 @@
         const sfxOhWell = new Audio('ohwell.mp3');
         const sfxSwoosh = new Audio('Swoosh.mp3');
         
-        // NEW: Dual Audio Setup
         const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.2;
         const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.3;
 
-        // NEW: Ambient Floating Embers Logic
         function createEmber() {
-            const ember = document.createElement('div');
-            ember.className = 'ember';
-            ember.style.left = Math.random() * 100 + 'vw';
-            ember.style.animationDuration = (Math.random() * 3 + 2) + 's';
-            document.body.appendChild(ember);
-            setTimeout(() => ember.remove(), 5000); // Clean up after floating
+            const ember = document.createElement('div'); ember.className = 'ember';
+            ember.style.left = Math.random() * 100 + 'vw'; ember.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(ember); setTimeout(() => ember.remove(), 5000); 
         }
-        setInterval(createEmber, 400); // Spawns a spark every 400ms
+        setInterval(createEmber, 400); 
 
-        function playSound(audioEl) {
-            audioEl.currentTime = 0;
-            let playPromise = audioEl.play();
-            if (playPromise !== undefined) playPromise.catch(error => { console.log("Audio skipped"); });
-        }
+        function playSound(audioEl) { audioEl.currentTime = 0; let playPromise = audioEl.play(); if (playPromise !== undefined) playPromise.catch(error => { console.log("Audio skipped"); }); }
 
-        // NEW: Dynamic Pitch manipulation for the dice roll
         function playRollSound() {
-            sfxRoll.currentTime = 0;
-            // Alters the speed/pitch between 0.85x and 1.15x for realistic variety
-            sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
-            let playPromise = sfxRoll.play();
-            if (playPromise !== undefined) playPromise.catch(e => { console.log("Audio skipped"); });
+            sfxRoll.currentTime = 0; sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
+            let playPromise = sfxRoll.play(); if (playPromise !== undefined) playPromise.catch(e => { console.log("Audio skipped"); });
         }
 
         const muteBtn = document.getElementById('mute-btn');
@@ -313,12 +299,9 @@
             }
         });
 
-        // --- Avatar & Name Logic ---
         function selectAvatar(element, icon) {
             document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-            myAvatar = icon;
-            playSound(sfxClick);
+            element.classList.add('selected'); myAvatar = icon; playSound(sfxClick);
         }
 
         const nameModal = document.getElementById('name-modal');
@@ -326,12 +309,9 @@
         const joinGameBtn = document.getElementById('join-game-btn');
 
         joinGameBtn.onclick = () => {
-            playSound(sfxClick);
-            const chosenName = nameInput.value;
-            // Send BOTH name and avatar to server
+            playSound(sfxClick); const chosenName = nameInput.value;
             socket.emit('setPlayerName', { name: chosenName, avatar: myAvatar }); 
-            nameModal.style.display = 'none';
-            triggerGlobalMusic();
+            nameModal.style.display = 'none'; triggerGlobalMusic();
         };
 
         const customModal = document.getElementById('custom-modal');
@@ -342,19 +322,10 @@
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
         function showTurnSplash(name, avatar) {
-            const overlay = document.getElementById('splash-overlay');
-            const text = document.getElementById('splash-text');
-            text.innerHTML = `${avatar}<br>${name}'s Turn!`; // Show Avatar on Splash!
-            overlay.style.display = 'flex';
-            
-            playSound(sfxSwoosh); 
-
+            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+            text.innerHTML = `${avatar}<br>${name}'s Turn!`; overlay.style.display = 'flex'; playSound(sfxSwoosh); 
             setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
-            
-            setTimeout(() => {
-                text.style.transform = 'scale(1.5)'; text.style.opacity = '0';
-                setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400);
-            }, 1500);
+            setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
         }
 
         const scoreDisplay = document.getElementById('score-display'); 
@@ -369,14 +340,12 @@
             const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
             reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.5rem">${data.emoji}</span>`;
             document.body.appendChild(reactionDiv);
-            const randomOffset = Math.floor(Math.random() * 60) - 30;
-            reactionDiv.style.left = `calc(50% + ${randomOffset}px)`;
+            const randomOffset = Math.floor(Math.random() * 60) - 30; reactionDiv.style.left = `calc(50% + ${randomOffset}px)`;
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
         socket.on('triggerShake', () => { document.body.classList.add('shake-screen'); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); });
 
-        // --- Multiplayer Logic ---
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
@@ -394,7 +363,6 @@
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound) el.style.opacity = "0.4";
 
-                // NEW: Render the player's custom avatar in the scoreboard!
                 el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
@@ -442,7 +410,6 @@
             renderDice(false); 
         });
 
-        // --- DOM & Game Core ---
         const activeArea = document.getElementById('active-area'); const requiredArea = document.getElementById('required-dice'); const remainingArea = document.getElementById('remaining-locked');
         const rollBtn = document.getElementById('roll-btn'); const toggleBtn = document.getElementById('toggle-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
 
@@ -477,8 +444,7 @@
             } else if (rollCount > 1) { if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") broadcastAnnouncement("", ""); }
 
             rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
-            isAnimating = true; rollBtn.disabled = true; 
-            playRollSound(); // NEW: Uses the dynamic pitching function
+            isAnimating = true; rollBtn.disabled = true; playRollSound(); 
 
             let activeCount = dice.filter(d => d.status === 'active').length;
             let lockedDice = dice.filter(d => d.status === 'permanentlyLocked');
@@ -555,7 +521,6 @@
                         
                         if (currentScore === 24) {
                             playSound(sfxYay);
-                            // NEW: Fire magical golden confetti explosion when someone hits 24!
                             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
                         }
                         else { 
