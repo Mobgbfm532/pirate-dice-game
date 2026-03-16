@@ -8,9 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        /* --- Tavern Theme Variables --- */
         :root {
             --text-light: #fdf6e3; --text-dark: #3e2723;
             --dice-bone: #fffaee; --pip-red: #b71c1c; --pip-green: #2e7d32; --pip-black: #212121;
@@ -27,19 +28,45 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
-        #game-page {
-            display: grid; grid-template-columns: 2fr 1fr; gap: 25px;
-            width: 100%; max-width: 1200px; margin-top: 20px;
+        /* NEW: Flickering Firelight Overlay */
+        .firelight-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 120%, rgba(255, 140, 0, 0.15), transparent 70%);
+            pointer-events: none; z-index: 500;
+            animation: flicker 4s infinite alternate;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            25% { opacity: 0.8; transform: scale(1.02); }
+            50% { opacity: 0.95; transform: scale(0.98); }
+            75% { opacity: 0.85; transform: scale(1.01); }
         }
 
-        /* --- Game Area (The Wooden Table) --- */
+        /* NEW: Floating Embers Animation */
+        .ember {
+            position: fixed; bottom: -10px; width: 4px; height: 4px;
+            background: #ffb300; border-radius: 50%;
+            box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8);
+            pointer-events: none; z-index: 499;
+            animation: floatEmber linear forwards;
+        }
+        @keyframes floatEmber {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100vh) scale(0); opacity: 0; }
+        }
+
+        #game-page {
+            display: grid; grid-template-columns: 2fr 1fr; gap: 25px;
+            width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10;
+        }
+
         #game-area {
-            background-color: #3e2723; 
-            background-image: url('Table.png'); 
+            background-color: #3e2723; background-image: url('Table.png'); 
             background-size: cover; background-position: center;
             border: 5px solid #271612; border-radius: 12px;
             box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8);
             padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center;
+            position: relative; z-index: 10;
         }
 
         .area-title { 
@@ -67,7 +94,6 @@
             padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6);
         }
 
-        /* --- Dice & Pips Styling --- */
         .die {
             width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px;
             box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6);
@@ -83,10 +109,8 @@
         .pip.top-left { grid-column: 1; grid-row: 1; } .pip.top-right { grid-column: 3; grid-row: 1; }
         .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; }
         .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; } .pip.bottom-right { grid-column: 3; grid-row: 3; }
-        
         .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3.5rem; }
 
-        /* --- Animations --- */
         @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
         .rolling { animation: tumble 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
         @keyframes tumble-suspense { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-80px) rotate(144deg) scale(1.2); } 40% { transform: translateY(-100px) rotate(288deg) scale(1.25); } 60% { transform: translateY(-40px) rotate(576deg) scale(1.15); } 80% { transform: translateY(-10px) rotate(720deg) scale(1.05); } 90% { transform: translateY(-15px) rotate(760deg) scale(1.02); } 100% { transform: translateY(0) rotate(1080deg) scale(1); } }
@@ -94,7 +118,6 @@
         @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
-        /* --- Buttons --- */
         #controls { margin-top: 10px; }
         button { 
             padding: 12px 25px; font-size: 1.3rem; font-family: 'Almendra', serif; 
@@ -105,16 +128,15 @@
         button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
 
-        /* --- Sidebar & Scoreboard --- */
         #sidebar { 
             background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border);
             padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark);
+            z-index: 10; position: relative;
         }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
         #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; }
         .player-stat { font-size: 1.3rem; width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
-        /* Reactions */
         #reaction-bar { display: flex; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; }
         .react-btn { padding: 5px; font-size: 1.8rem; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; }
         .react-btn:hover { transform: scale(1.3); background: transparent; box-shadow: none; }
@@ -134,7 +156,12 @@
         #name-input { padding: 15px; font-size: 1.4rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; margin-bottom: 20px; width: 80%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         #name-input::placeholder { color: #bcaaa4; }
 
-        /* Turn Announcement Splash Screen */
+        /* NEW: Avatar Selection Styling */
+        .avatar-picker { display: flex; justify-content: space-around; font-size: 2.5rem; margin-bottom: 20px; }
+        .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(100%) opacity(0.5); user-select: none; }
+        .avatar-option:hover { transform: scale(1.2); filter: grayscale(0%) opacity(1); }
+        .avatar-option.selected { transform: scale(1.3); filter: grayscale(0%) opacity(1); text-shadow: 0 0 10px rgba(212, 175, 55, 0.8); }
+
         #splash-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; pointer-events: none;
@@ -147,9 +174,20 @@
 </head>
 <body>
 
+    <div class="firelight-overlay"></div>
+
     <div id="name-modal" class="modal-overlay">
         <div class="modal-box">
             <h2 style="color: #5d4037; font-size: 2.5rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
+            
+            <div class="avatar-picker" id="avatar-container">
+                <div class="avatar-option selected" onclick="selectAvatar(this, '🛡️')">🛡️</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🧙‍♂️')">🧙‍♂️</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🗡️')">🗡️</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🪕')">🪕</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🍻')">🍻</div>
+            </div>
+
             <input type="text" id="name-input" placeholder="Enter Adventurer Name" maxlength="15">
             <br>
             <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px;">Join the Tavern</button>
@@ -206,16 +244,13 @@
     <script>
         const socket = io();
 
-        // --- Game & Audio State ---
         let dice = [];
         let hasRolled = false, locksThisRoll = 0, rollCount = 0;
         let isAnimating = false, usePips = true;
         let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         
-        let myId = null;
-        let isMyTurn = false;
-        let lastTurnId = null; 
-        let isFirstLoad = true; 
+        let myId = null, isMyTurn = false, lastTurnId = null, isFirstLoad = true; 
+        let myAvatar = '🛡️'; // Default avatar
 
         const turnIndicator = document.getElementById('turn-indicator');
         const scoreboard = document.getElementById('scoreboard');
@@ -224,9 +259,22 @@
         const sfxWin = new Audio('win.mp3'); const sfxBust = new Audio('bust.mp3');
         const sfxAww = new Audio('Aww.mp3'); const sfxYay = new Audio('Yay.mp3');
         const sfxOhWell = new Audio('ohwell.mp3');
-        
-        const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.2;
         const sfxSwoosh = new Audio('Swoosh.mp3');
+        
+        // NEW: Dual Audio Setup
+        const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.2;
+        const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.3;
+
+        // NEW: Ambient Floating Embers Logic
+        function createEmber() {
+            const ember = document.createElement('div');
+            ember.className = 'ember';
+            ember.style.left = Math.random() * 100 + 'vw';
+            ember.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(ember);
+            setTimeout(() => ember.remove(), 5000); // Clean up after floating
+        }
+        setInterval(createEmber, 400); // Spawns a spark every 400ms
 
         function playSound(audioEl) {
             audioEl.currentTime = 0;
@@ -234,27 +282,44 @@
             if (playPromise !== undefined) playPromise.catch(error => { console.log("Audio skipped"); });
         }
 
+        // NEW: Dynamic Pitch manipulation for the dice roll
+        function playRollSound() {
+            sfxRoll.currentTime = 0;
+            // Alters the speed/pitch between 0.85x and 1.15x for realistic variety
+            sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
+            let playPromise = sfxRoll.play();
+            if (playPromise !== undefined) playPromise.catch(e => { console.log("Audio skipped"); });
+        }
+
         const muteBtn = document.getElementById('mute-btn');
         let isMuted = false;
         muteBtn.onclick = () => {
-            isMuted = !isMuted; bgm.muted = isMuted;
+            isMuted = !isMuted; bgm.muted = isMuted; sfxAmbience.muted = isMuted;
             muteBtn.innerText = isMuted ? "🔇 Unmute Tavern" : "🎵 Mute Tavern";
         };
 
         function triggerGlobalMusic() {
             if (bgm.paused) {
-                let playPromise = bgm.play();
-                if (playPromise !== undefined) playPromise.catch(e => console.log("Waiting for interaction."));
+                let p1 = bgm.play(); if (p1 !== undefined) p1.catch(e => {});
+                let p2 = sfxAmbience.play(); if (p2 !== undefined) p2.catch(e => {});
                 socket.emit('startGlobalMusic');
             }
         }
 
         socket.on('playGlobalMusic', () => {
             if (bgm.paused) {
-                let playPromise = bgm.play();
-                if (playPromise !== undefined) playPromise.catch(e => console.log("Waiting for interaction."));
+                let p1 = bgm.play(); if (p1 !== undefined) p1.catch(e => {});
+                let p2 = sfxAmbience.play(); if (p2 !== undefined) p2.catch(e => {});
             }
         });
+
+        // --- Avatar & Name Logic ---
+        function selectAvatar(element, icon) {
+            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            myAvatar = icon;
+            playSound(sfxClick);
+        }
 
         const nameModal = document.getElementById('name-modal');
         const nameInput = document.getElementById('name-input');
@@ -263,7 +328,8 @@
         joinGameBtn.onclick = () => {
             playSound(sfxClick);
             const chosenName = nameInput.value;
-            socket.emit('setPlayerName', chosenName);
+            // Send BOTH name and avatar to server
+            socket.emit('setPlayerName', { name: chosenName, avatar: myAvatar }); 
             nameModal.style.display = 'none';
             triggerGlobalMusic();
         };
@@ -275,10 +341,10 @@
         function showModal(message) { customModalText.innerText = message; customModal.style.display = 'flex'; }
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
-        function showTurnSplash(name) {
+        function showTurnSplash(name, avatar) {
             const overlay = document.getElementById('splash-overlay');
             const text = document.getElementById('splash-text');
-            text.innerText = `${name}'s Turn!`;
+            text.innerHTML = `${avatar}<br>${name}'s Turn!`; // Show Avatar on Splash!
             overlay.style.display = 'flex';
             
             playSound(sfxSwoosh); 
@@ -292,22 +358,15 @@
         }
 
         const scoreDisplay = document.getElementById('score-display'); 
-        
         function broadcastAnnouncement(text, color, altText = null) {
-            scoreDisplay.innerText = text; 
-            scoreDisplay.style.color = color;
+            scoreDisplay.innerText = text; scoreDisplay.style.color = color;
             if (isMyTurn) socket.emit('broadcastMessage', { text: altText !== null ? altText : text, color });
         }
-        
-        socket.on('displayMessage', (msgData) => {
-            scoreDisplay.innerText = msgData.text; 
-            scoreDisplay.style.color = msgData.color;
-        });
+        socket.on('displayMessage', (msgData) => { scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color; });
 
         function sendReaction(emoji) { socket.emit('sendReaction', emoji); playSound(sfxClick); }
         socket.on('receiveReaction', (data) => {
-            const reactionDiv = document.createElement('div');
-            reactionDiv.className = 'floating-reaction';
+            const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
             reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.5rem">${data.emoji}</span>`;
             document.body.appendChild(reactionDiv);
             const randomOffset = Math.floor(Math.random() * 60) - 30;
@@ -315,17 +374,13 @@
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
-        socket.on('triggerShake', () => {
-            document.body.classList.add('shake-screen');
-            setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000);
-        });
+        socket.on('triggerShake', () => { document.body.classList.add('shake-screen'); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); });
 
         // --- Multiplayer Logic ---
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
             scoreboard.innerHTML = '';
-            
             if (state.playerOrder.length > 3) scoreboard.style.gridTemplateColumns = '1fr 1fr';
             else scoreboard.style.gridTemplateColumns = '1fr';
 
@@ -336,12 +391,11 @@
                 if (p.lives <= 0) scoreText = "ELIMINATED";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
-                
-                // NEW: Dim players on the scoreboard if they aren't rolling in the current round
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound) el.style.opacity = "0.4";
 
-                el.innerHTML = `<strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
+                // NEW: Render the player's custom avatar in the scoreboard!
+                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
             });
@@ -349,8 +403,7 @@
             if (state.playerOrder.length < 2) {
                 turnIndicator.innerText = "Waiting for travelers to join...";
                 turnIndicator.style.color = "#9e9e9e";
-                isMyTurn = false;
-                isFirstLoad = true; 
+                isMyTurn = false; isFirstLoad = true; 
             } else {
                 let myPlayerInfo = state.players[myId];
                 if (myPlayerInfo && myPlayerInfo.lives <= 0) {
@@ -362,16 +415,16 @@
                     
                     let activePlayerInfo = state.players[state.currentTurnId];
                     let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
+                    let activeAvatar = activePlayerInfo ? activePlayerInfo.avatar : "👤";
                     
                     if (!isFirstLoad && state.currentTurnId !== lastTurnId) {
-                        showTurnSplash(isMyTurn ? "Your" : activeName);
+                        showTurnSplash(isMyTurn ? "Your" : activeName, activeAvatar);
                     }
                     
-                    turnIndicator.innerText = isMyTurn ? "Your Turn!" : `${activeName} is rolling...`;
+                    turnIndicator.innerText = isMyTurn ? "Your Turn!" : `${activeAvatar} ${activeName} is rolling...`;
                     turnIndicator.style.color = isMyTurn ? "#aed581" : "#ffcc80";
                 }
-                lastTurnId = state.currentTurnId;
-                isFirstLoad = false;
+                lastTurnId = state.currentTurnId; isFirstLoad = false;
             }
             
             document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
@@ -390,22 +443,14 @@
         });
 
         // --- DOM & Game Core ---
-        const activeArea = document.getElementById('active-area');
-        const requiredArea = document.getElementById('required-dice');
-        const remainingArea = document.getElementById('remaining-locked');
-        const rollBtn = document.getElementById('roll-btn');
-        const toggleBtn = document.getElementById('toggle-btn');
-        const currentScoreSpan = document.getElementById('current-score-span'); 
+        const activeArea = document.getElementById('active-area'); const requiredArea = document.getElementById('required-dice'); const remainingArea = document.getElementById('remaining-locked');
+        const rollBtn = document.getElementById('roll-btn'); const toggleBtn = document.getElementById('toggle-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
 
         function initGame() {
             dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
-            hasRolled = false; locksThisRoll = 0; rollCount = 0; 
-            suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
-            scoreDisplay.innerText = ''; 
-            currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
-            
+            hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
+            scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
             if (isMyTurn) broadcastAnnouncement("", "");
-
             rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
         }
 
@@ -422,23 +467,18 @@
             triggerGlobalMusic();
 
             if (rollCount === 1) {
-                let justLocked = dice.filter(d => d.status === 'lockedThisTurn');
-                let stillActive = dice.filter(d => d.status === 'active');
+                let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
                 let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
                 let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
                 let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
                 
-                if (exactlyOneRequired && has1356) {
-                    broadcastAnnouncement("The Early Ross!", "#ffb74d");
-                } else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
-                    broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
-                }
-            } else if (rollCount > 1) {
-                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") broadcastAnnouncement("", ""); 
-            }
+                if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
+                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
+            } else if (rollCount > 1) { if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") broadcastAnnouncement("", ""); }
 
             rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
-            isAnimating = true; rollBtn.disabled = true; playSound(sfxRoll);
+            isAnimating = true; rollBtn.disabled = true; 
+            playRollSound(); // NEW: Uses the dynamic pitching function
 
             let activeCount = dice.filter(d => d.status === 'active').length;
             let lockedDice = dice.filter(d => d.status === 'permanentlyLocked');
@@ -448,12 +488,7 @@
             suspenseType = (activeCount === 1 && (!lockedHas2 || !lockedHas4)) ? 'survival' : ((activeCount === 1 && lockedHas2 && lockedHas4 && locked6sCount === 3) ? 'perfect' : 'none');
             
             const activeDOMDice = activeArea.querySelectorAll('.die');
-            if (suspenseType !== 'none') { 
-                document.body.classList.add('shake-screen'); 
-                activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); 
-                
-                socket.emit('triggerShake'); 
-            } 
+            if (suspenseType !== 'none') { document.body.classList.add('shake-screen'); activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); socket.emit('triggerShake'); } 
             else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
 
             setTimeout(() => {
@@ -463,14 +498,9 @@
                 
                 if (rollCount === 1) { 
                     let allSame = dice.every(d => d.value === dice[0].value);
-                    if (allSame) {
-                        broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
-                    } else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
-                        inTrouble = true; 
-                        broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
-                    } 
+                    if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
+                    else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); } 
                 }
-                
                 renderDice();
             }, (suspenseType !== 'none') ? 2000 : 500); 
         }
@@ -486,8 +516,7 @@
         }
 
         function createDieElement(die) {
-            const div = document.createElement('div'); div.className = 'die'; div.dataset.value = die.value;
-            div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
+            const div = document.createElement('div'); div.className = 'die'; div.dataset.value = die.value; div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
             if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
             else if (die.status === 'lockedThisTurn') { div.style.boxShadow = '0 0 0 4px #4caf50, inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8)'; div.style.transform = 'translateY(-5px)'; }
             return div;
@@ -524,12 +553,13 @@
                     if (!turnFinalized) {
                         turnFinalized = true; 
                         
-                        // FIX: Yay.mp3 is now definitively triggered for ALL perfect 24 scores!
-                        if (currentScore === 24) playSound(sfxYay);
+                        if (currentScore === 24) {
+                            playSound(sfxYay);
+                            // NEW: Fire magical golden confetti explosion when someone hits 24!
+                            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
+                        }
                         else { 
-                            if (suspenseType === 'perfect') playSound(sfxOhWell); 
-                            else if (suspenseType === 'survival') playSound(sfxYay); 
-                            else playSound(sfxClick); 
+                            if (suspenseType === 'perfect') playSound(sfxOhWell); else if (suspenseType === 'survival') playSound(sfxYay); else playSound(sfxClick); 
                         }
                         
                         if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
