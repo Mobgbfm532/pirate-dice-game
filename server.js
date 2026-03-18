@@ -79,7 +79,7 @@ function evaluateRound() {
 }
 
 io.on('connection', (socket) => {
-    players[socket.id] = { id: socket.id, name: 'Joining...', avatar: '👤', lives: 3, score: null, busted: false };
+    players[socket.id] = { id: socket.id, name: 'Joining...', avatar: '👤', lives: 2, score: null, busted: false };
     playerOrder.push(socket.id);
 
     // FIX: Add any new player to the current round instantly, as long as it isn't sudden death!
