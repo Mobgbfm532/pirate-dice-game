@@ -34,24 +34,14 @@
             pointer-events: none; z-index: 500;
             animation: flicker 4s infinite alternate;
         }
-        @keyframes flicker {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            25% { opacity: 0.8; transform: scale(1.02); }
-            50% { opacity: 0.95; transform: scale(0.98); }
-            75% { opacity: 0.85; transform: scale(1.01); }
-        }
+        @keyframes flicker { 0%, 100% { opacity: 1; transform: scale(1); } 25% { opacity: 0.8; transform: scale(1.02); } 50% { opacity: 0.95; transform: scale(0.98); } 75% { opacity: 0.85; transform: scale(1.01); } }
 
         .ember {
             position: fixed; bottom: -10px; width: 4px; height: 4px;
-            background: #ffb300; border-radius: 50%;
-            box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8);
-            pointer-events: none; z-index: 499;
-            animation: floatEmber linear forwards;
+            background: #ffb300; border-radius: 50%; box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8);
+            pointer-events: none; z-index: 499; animation: floatEmber linear forwards;
         }
-        @keyframes floatEmber {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-100vh) scale(0); opacity: 0; }
-        }
+        @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
         #game-page {
             display: grid; grid-template-columns: 2fr 1fr; gap: 25px;
@@ -69,8 +59,7 @@
 
         .area-title { 
             margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; 
-            text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); 
-            color: #ffcc80;
+            text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80;
         }
 
         #score-display {
@@ -97,16 +86,13 @@
             box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6);
             cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none;
             display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-            padding: 12px; box-sizing: border-box; align-items: center; justify-items: center;
-            font-weight: bold; color: var(--pip-black); 
+            padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; font-weight: bold; color: var(--pip-black); 
         }
         .die:hover { transform: translateY(-5px) rotate(2deg); }
         .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5); }
         .die[data-value="1"] .pip { background-color: var(--pip-red); } .die[data-value="6"] .pip { background-color: var(--pip-green); }
         .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
-        .pip.top-left { grid-column: 1; grid-row: 1; } .pip.top-right { grid-column: 3; grid-row: 1; }
-        .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; }
-        .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; } .pip.bottom-right { grid-column: 3; grid-row: 3; }
+        .pip.top-left { grid-column: 1; grid-row: 1; } .pip.top-right { grid-column: 3; grid-row: 1; } .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; } .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; } .pip.bottom-right { grid-column: 3; grid-row: 3; }
         .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3.5rem; }
 
         @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
@@ -128,12 +114,9 @@
 
         #sidebar { 
             background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border);
-            padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark);
-            z-index: 10; position: relative;
+            padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative;
         }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
-        
-        /* Adjusted Scoreboard Grid for 3 columns */
         #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
         .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
@@ -147,7 +130,6 @@
         }
         @keyframes floatUp { 0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); } 10% { opacity: 1; transform: translateX(-50%) scale(1.2); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); } }
 
-        /* --- Modals & Overlays --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-box { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 40px; border-radius: 4px; text-align: center; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); color: var(--text-dark); }
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -170,18 +152,12 @@
             transform: scale(0); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center;
         }
 
-        /* NEW: Tie-Breaker Spectator Banner */
         #tie-breaker-banner {
-            display: none;
-            color: #e57373; font-size: 1.6rem; letter-spacing: 1px;
+            display: none; color: #e57373; font-size: 1.6rem; letter-spacing: 1px;
             text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9);
-            text-align: center; margin-top: -10px; margin-bottom: 15px;
-            animation: textFlicker 1.5s infinite alternate;
+            text-align: center; margin-top: -10px; margin-bottom: 15px; animation: textFlicker 1.5s infinite alternate;
         }
-        @keyframes textFlicker {
-            0% { opacity: 1; transform: scale(1); }
-            100% { opacity: 0.8; transform: scale(0.98); }
-        }
+        @keyframes textFlicker { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0.8; transform: scale(0.98); } }
     </style>
 </head>
 <body>
@@ -213,14 +189,11 @@
         </div>
     </div>
 
-    <div id="splash-overlay">
-        <h1 id="splash-text">Player's Turn!</h1>
-    </div>
+    <div id="splash-overlay"><h1 id="splash-text">Player's Turn!</h1></div>
 
     <div id="game-page">
         <div id="game-area"> 
             <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
-            
             <h2 id="tie-breaker-banner">⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️<br><span style="font-size: 1.1rem; color: #ffcc80;">You are spectating</span></h2>
             
             <h2 class="area-title">Locked Dice</h2>
@@ -275,7 +248,6 @@
         const sfxAww = new Audio('Aww.mp3'); const sfxYay = new Audio('Yay.mp3');
         const sfxOhWell = new Audio('ohwell.mp3');
         const sfxSwoosh = new Audio('Swoosh.mp3');
-        
         const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.2;
         const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.3;
 
@@ -290,7 +262,7 @@
 
         function playRollSound() {
             sfxRoll.currentTime = 0; sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
-            let playPromise = sfxRoll.play(); if (playPromise !== undefined) playPromise.catch(e => { console.log("Audio skipped"); });
+            let playPromise = sfxRoll.play(); if (playPromise !== undefined) playPromise.catch(e => {});
         }
 
         const muteBtn = document.getElementById('mute-btn');
@@ -333,7 +305,6 @@
         const customModal = document.getElementById('custom-modal');
         const customModalText = document.getElementById('custom-modal-text');
         const customModalBtn = document.getElementById('custom-modal-btn');
-
         function showModal(message) { customModalText.innerText = message; customModal.style.display = 'flex'; }
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
@@ -360,33 +331,62 @@
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
-        socket.on('triggerShake', () => { document.body.classList.add('shake-screen'); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); });
+        // NEW: Centralized Audio and Animation relays
+        function triggerGameSound(soundId) {
+            if (soundId === 'yay') playSound(sfxYay);
+            else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust);
+            else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell);
+            else if (soundId === 'click') playSound(sfxClick);
+
+            if (isMyTurn) socket.emit('playGameSound', soundId);
+        }
+        
+        socket.on('playGameSound', (soundId) => {
+            if (soundId === 'yay') playSound(sfxYay);
+            else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust);
+            else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell);
+            else if (soundId === 'click') playSound(sfxClick);
+        });
+
+        function triggerRollAnimation(suspense) {
+            playRollSound();
+            const activeDOMDice = document.getElementById('active-area').querySelectorAll('.die');
+            if (suspense !== 'none') { 
+                document.body.classList.add('shake-screen'); 
+                activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); 
+                setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000);
+            } 
+            else { 
+                activeDOMDice.forEach(die => die.classList.add('rolling')); 
+            }
+        }
+
+        socket.on('playerRolledDice', (suspenseType) => {
+            triggerRollAnimation(suspenseType);
+        });
+
+        socket.on('triggerConfetti', () => {
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
+        });
+
 
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
             scoreboard.innerHTML = '';
             
-            // NEW: 3 Column Scoreboard Logic based on player count
-            if (state.playerOrder.length > 4) {
-                scoreboard.style.gridTemplateColumns = '1fr 1fr 1fr';
-                scoreboard.style.fontSize = '1.1rem'; // Slightly shrink text for 3 columns
-            } else if (state.playerOrder.length > 2) {
-                scoreboard.style.gridTemplateColumns = '1fr 1fr';
-                scoreboard.style.fontSize = '1.3rem';
-            } else {
-                scoreboard.style.gridTemplateColumns = '1fr';
-                scoreboard.style.fontSize = '1.3rem';
-            }
+            if (state.playerOrder.length > 4) { scoreboard.style.gridTemplateColumns = '1fr 1fr 1fr'; scoreboard.style.fontSize = '1.1rem'; } 
+            else if (state.playerOrder.length > 2) { scoreboard.style.gridTemplateColumns = '1fr 1fr'; scoreboard.style.fontSize = '1.3rem'; } 
+            else { scoreboard.style.gridTemplateColumns = '1fr'; scoreboard.style.fontSize = '1.3rem'; }
 
             let amIInRound = state.roundPlayers && state.roundPlayers.includes(myId);
-
-            // NEW: Show/Hide Tie-Breaker Spectator Banner
             if (state.isTieBreaker && !amIInRound && state.playerOrder.length > 1 && state.players[myId] && state.players[myId].lives > 0) {
                 tieBanner.style.display = 'block';
-            } else {
-                tieBanner.style.display = 'none';
-            }
+            } else { tieBanner.style.display = 'none'; }
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
@@ -404,25 +404,17 @@
             });
 
             if (state.playerOrder.length < 2) {
-                turnIndicator.innerText = "Waiting for travelers to join...";
-                turnIndicator.style.color = "#9e9e9e";
-                isMyTurn = false; isFirstLoad = true; 
+                turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isFirstLoad = true; 
             } else {
                 let myPlayerInfo = state.players[myId];
-                if (myPlayerInfo && myPlayerInfo.lives <= 0) {
-                    turnIndicator.innerText = "You have been eliminated!";
-                    turnIndicator.style.color = "#9e9e9e";
-                    isMyTurn = false;
-                } else {
+                if (myPlayerInfo && myPlayerInfo.lives <= 0) { turnIndicator.innerText = "You have been eliminated!"; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; } 
+                else {
                     isMyTurn = (myId === state.currentTurnId);
-                    
                     let activePlayerInfo = state.players[state.currentTurnId];
                     let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
                     let activeAvatar = activePlayerInfo ? activePlayerInfo.avatar : "👤";
                     
-                    if (!isFirstLoad && state.currentTurnId !== lastTurnId) {
-                        showTurnSplash(isMyTurn ? "Your" : activeName, activeAvatar);
-                    }
+                    if (!isFirstLoad && state.currentTurnId !== lastTurnId) { showTurnSplash(isMyTurn ? "Your" : activeName, activeAvatar); }
                     
                     turnIndicator.innerText = isMyTurn ? "Your Turn!" : `${activeAvatar} ${activeName} is rolling...`;
                     turnIndicator.style.color = isMyTurn ? "#aed581" : "#ffcc80";
@@ -456,7 +448,7 @@
             rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
         }
 
-        toggleBtn.onclick = () => { triggerGlobalMusic(); playSound(sfxClick); usePips = !usePips; toggleBtn.innerText = usePips ? "Switch to Numbers" : "Switch to Pips"; renderDice(); };
+        toggleBtn.onclick = () => { triggerGlobalMusic(); triggerGameSound('click'); usePips = !usePips; toggleBtn.innerText = usePips ? "Switch to Numbers" : "Switch to Pips"; renderDice(); };
 
         function getPipsHTML(value) {
             if (value === 0 || !usePips) return `<div class="number-display">${value === 0 ? '?' : value}</div>`;
@@ -479,7 +471,10 @@
             } else if (rollCount > 1) { if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") broadcastAnnouncement("", ""); }
 
             rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
-            isAnimating = true; rollBtn.disabled = true; playRollSound(); 
+            isAnimating = true; rollBtn.disabled = true; 
+            
+            // NEW: Broadcast the board BEFORE the animation, so spectators know what dice to roll
+            if (isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
 
             let activeCount = dice.filter(d => d.status === 'active').length;
             let lockedDice = dice.filter(d => d.status === 'permanentlyLocked');
@@ -488,12 +483,11 @@
             
             suspenseType = (activeCount === 1 && (!lockedHas2 || !lockedHas4)) ? 'survival' : ((activeCount === 1 && lockedHas2 && lockedHas4 && locked6sCount === 3) ? 'perfect' : 'none');
             
-            const activeDOMDice = activeArea.querySelectorAll('.die');
-            if (suspenseType !== 'none') { document.body.classList.add('shake-screen'); activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); socket.emit('triggerShake'); } 
-            else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
+            // NEW: Trigger animation locally, and tell the server to trigger it for everyone else
+            triggerRollAnimation(suspenseType);
+            if (isMyTurn) socket.emit('playerRolledDice', suspenseType);
 
             setTimeout(() => {
-                if (suspenseType !== 'none') document.body.classList.remove('shake-screen');
                 dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
                 hasRolled = true; locksThisRoll = 0; isAnimating = false;
                 
@@ -510,7 +504,7 @@
             if (!hasRolled || isAnimating || turnFinalized || !isMyTurn) return; 
             triggerGlobalMusic();
             let die = dice.find(d => d.id === id); if (!die || die.status === 'permanentlyLocked') return; 
-            playSound(sfxClick);
+            triggerGameSound('click');
             die.status = (die.status === 'active') ? 'lockedThisTurn' : 'active';
             if (die.status === 'lockedThisTurn') locksThisRoll++; else locksThisRoll--;
             renderDice();
@@ -549,17 +543,25 @@
                 };
 
                 if (!req2 || !req4) {
-                    if (!turnFinalized) { broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373"); playSound(suspenseType === 'survival' ? sfxAww : sfxBust); turnFinalized = true; }
+                    if (!turnFinalized) { 
+                        broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373"); 
+                        triggerGameSound(suspenseType === 'survival' ? 'aww' : 'bust'); 
+                        turnFinalized = true; 
+                    }
                 } else {
                     if (!turnFinalized) {
                         turnFinalized = true; 
                         
+                        // NEW: Centralized audio triggers broadcast to all players!
                         if (currentScore === 24) {
-                            playSound(sfxYay);
+                            triggerGameSound('yay');
                             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
+                            if (isMyTurn) socket.emit('triggerConfetti');
                         }
                         else { 
-                            if (suspenseType === 'perfect') playSound(sfxOhWell); else if (suspenseType === 'survival') playSound(sfxYay); else playSound(sfxClick); 
+                            if (suspenseType === 'perfect') triggerGameSound('ohwell'); 
+                            else if (suspenseType === 'survival') triggerGameSound('yay'); 
+                            else triggerGameSound('click'); 
                         }
                         
                         if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
