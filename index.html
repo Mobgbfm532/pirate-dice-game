@@ -390,7 +390,7 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
-                let hearts = "❤️".repeat(p.lives) + "🖤".repeat(3 - p.lives);
+                let hearts = "❤️".repeat(p.lives) + "🖤".repeat(2 - p.lives);
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 if (p.lives <= 0) scoreText = "ELIMINATED";
                 
