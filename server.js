@@ -82,14 +82,12 @@ io.on('connection', (socket) => {
     players[socket.id] = { id: socket.id, name: 'Joining...', avatar: '👤', lives: 2, score: null, busted: false };
     playerOrder.push(socket.id);
 
-    // FIX: Add any new player to the current round instantly, as long as it isn't sudden death!
     if (!isTieBreaker) {
         if (!roundPlayers.includes(socket.id)) {
             roundPlayers.push(socket.id);
         }
     }
 
-    // Ensure the very first person in an empty room gets the turn
     if (roundPlayers.length === 1) {
         currentTurnIndex = 0;
     }
@@ -125,9 +123,10 @@ io.on('connection', (socket) => {
         io.emit('receiveReaction', { name: playerName, emoji: emoji });
     });
 
-    socket.on('triggerShake', () => {
-        socket.broadcast.emit('triggerShake');
-    });
+    // NEW: Sync rolling animations, sounds, and confetti across the network
+    socket.on('playerRolledDice', (suspenseType) => socket.broadcast.emit('playerRolledDice', suspenseType));
+    socket.on('playGameSound', (soundId) => socket.broadcast.emit('playGameSound', soundId));
+    socket.on('triggerConfetti', () => socket.broadcast.emit('triggerConfetti'));
 
     socket.on('updateBoard', (gameData) => {
         if (socket.id === roundPlayers[currentTurnIndex]) {
