@@ -301,6 +301,8 @@
         const sfxAww = new Audio('Aww.mp3'); const sfxYay = new Audio('Yay.mp3');
         const sfxOhWell = new Audio('ohwell.mp3');
         const sfxSwoosh = new Audio('Swoosh.mp3');
+        const sfxDevilsTeets = new Audio('DevilsTeets.wav'); // NEW AUDIO ADDED
+        
         const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.2;
         const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.3;
 
@@ -391,7 +393,7 @@
         function showDevilEffect() {
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
-            // Reduced to 1 second
+            playSound(sfxDevilsTeets); // Triggers the wav file
             setTimeout(() => { container.style.display = 'none'; }, 1000); 
         }
         
@@ -459,7 +461,10 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
-                let hearts = "❤️".repeat(p.lives) + "🖤".repeat(2 - p.lives);
+                
+                // UPDATED: Dynamically draw hearts up to 10 max
+                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(p.lives) + "🖤".repeat(10 - p.lives) + `</span>`;
+                
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
@@ -469,7 +474,7 @@
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound || !p.connected) el.style.opacity = "0.4";
 
-                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
+                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
             });
@@ -539,7 +544,7 @@
                 }
             }
 
-            if (rollCount === 1) {
+            if (rollCount === 0) {
                 let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
                 let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
                 let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
@@ -585,6 +590,11 @@
                 if (newlyRolled6s >= 3) {
                     showDevilEffect();
                     if (isMyTurn) socket.emit('triggerDevilEffect');
+                }
+
+                // FIX: If they rolled no 6's, clear the "knocking" message immediately
+                if (newlyRolled6s === 0 && (scoreDisplay.innerText === "You're knocking at the door" || scoreDisplay.innerText === "They're knocking at the door")) {
+                    if (isMyTurn) broadcastAnnouncement("", "");
                 }
 
                 if (rollCount === 1) { 
