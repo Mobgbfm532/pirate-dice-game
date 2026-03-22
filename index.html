@@ -190,7 +190,7 @@
                 <input type="text" id="name-input" class="styled-input" placeholder="Adventurer Name" maxlength="15">
             </div>
             <div class="input-group">
-                <input type="text" id="room-input" class="styled-input" placeholder="Tavern Code (e.g. ABCD)" maxlength="10" style="text-transform: uppercase;">
+                <input type="text" id="room-input" class="styled-input" placeholder="Table Code" maxlength="10" style="text-transform: uppercase;">
             </div>
             
             <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px; margin-top: 10px;">Enter Tavern</button>
@@ -248,7 +248,6 @@
     <script>
         const socket = io();
 
-        // NEW: Secure Session Token setup
         let sessionToken = localStorage.getItem('tavernToken');
         if (!sessionToken) {
             sessionToken = Math.random().toString(36).substring(2, 15);
@@ -313,7 +312,6 @@
             }
         });
 
-        // NEW: Remember previous choices for a smoother login!
         const nameModal = document.getElementById('name-modal');
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
@@ -345,7 +343,6 @@
             const chosenName = nameInput.value;
             const chosenRoom = roomInput.value;
             
-            // Save inputs for next time
             localStorage.setItem('tavernName', chosenName);
             localStorage.setItem('tavernRoom', chosenRoom);
             localStorage.setItem('tavernAvatar', myAvatar);
@@ -353,7 +350,6 @@
             myRoom = chosenRoom.trim() === "" ? "PUBLIC" : chosenRoom.trim().toUpperCase();
             roomCodeDisplay.innerText = myRoom;
             
-            // Pass the secret session token to the server
             socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom, token: sessionToken }); 
             nameModal.style.display = 'none'; triggerGlobalMusic();
         };
@@ -411,6 +407,10 @@
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
+            
+            // FIX: Capture the previous turn ID to ensure we don't reset dice if someone leaves mid-turn!
+            let previousTurnId = lastTurnId;
+            
             scoreboard.innerHTML = '';
             
             if (state.playerOrder.length > 4) { scoreboard.style.gridTemplateColumns = '1fr 1fr 1fr'; scoreboard.style.fontSize = '1.1rem'; } 
@@ -461,7 +461,10 @@
             document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
             document.getElementById('toggle-btn').style.display = isMyTurn ? "inline-block" : "none";
             
-            if (isMyTurn) initGame(); 
+            // FIX: Only initialize the board if the turn just officially switched to you
+            if (isMyTurn && previousTurnId !== myId) {
+                initGame(); 
+            }
         });
 
         socket.on('roundResult', (data) => { showModal(data.message); });
