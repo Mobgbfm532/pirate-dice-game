@@ -10,7 +10,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Master object holding all private tavern instances
 let rooms = {};
 
 function getRoomState(roomCode) {
@@ -33,14 +32,12 @@ function evaluateRound(roomCode) {
     let losersThisRound = [];
     let tiedPlayers = [];
 
-    // Deduct life for busting
     let busted = room.roundPlayers.filter(id => room.players[id] && room.players[id].busted);
     busted.forEach(id => {
         room.players[id].lives -= 1;
         losersThisRound.push({ id, reason: 'You busted!' });
     });
 
-    // Deduct life for lowest score
     let valid = room.roundPlayers.filter(id => room.players[id] && !room.players[id].busted);
     if (valid.length > 1) {
         let minScore = Math.min(...valid.map(id => room.players[id].score));
@@ -83,7 +80,6 @@ function evaluateRound(roomCode) {
         room.roundPlayers = tiedPlayers;
         room.currentTurnIndex = 0;
         
-        // Auto-skip disconnected players during tie-breakers
         while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
             room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
             room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
@@ -99,7 +95,6 @@ function evaluateRound(roomCode) {
         room.roundPlayers = survivors;
         room.currentTurnIndex = 0;
         
-        // Auto-skip disconnected players during normal rounds
         while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
             room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
             room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
@@ -132,20 +127,17 @@ io.on('connection', (socket) => {
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
 
-        // NEW: Match by their secret browser token instead of just their typed name
         let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
 
         if (existingPlayerId) {
-            // Perfect Reconnection: Reclaim identity, update socket IDs, and keep exact lives!
             let p = room.players[existingPlayerId];
             p.id = socket.id;
             p.avatar = data.avatar;
-            p.name = finalName; // Update in case they fixed a typo
+            p.name = finalName; 
             p.connected = true;
             
             room.players[socket.id] = p;
             
-            // If they had a ghost connection, sever it.
             if (existingPlayerId !== socket.id) {
                 delete room.players[existingPlayerId];
                 let oldSocket = io.sockets.sockets.get(existingPlayerId);
@@ -156,16 +148,8 @@ io.on('connection', (socket) => {
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
             
         } else {
-            // Brand new player to this room
             room.players[socket.id] = { 
-                id: socket.id, 
-                token: data.token, // Store their token
-                name: finalName, 
-                avatar: data.avatar, 
-                lives: 2, 
-                score: null, 
-                busted: false, 
-                connected: true 
+                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true 
             };
             room.playerOrder.push(socket.id);
 
@@ -199,6 +183,9 @@ io.on('connection', (socket) => {
     socket.on('playerRolledDice', (suspenseType) => socket.to(socket.roomCode).emit('playerRolledDice', suspenseType));
     socket.on('playGameSound', (soundId) => socket.to(socket.roomCode).emit('playGameSound', soundId));
     socket.on('triggerConfetti', () => socket.to(socket.roomCode).emit('triggerConfetti'));
+    
+    // NEW: Relay for the video explosion!
+    socket.on('triggerDevilVideo', () => socket.to(socket.roomCode).emit('triggerDevilVideo'));
     
     socket.on('updateBoard', (gameData) => {
         let room = rooms[socket.roomCode];
