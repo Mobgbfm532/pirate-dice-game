@@ -136,7 +136,6 @@
         
         #name-modal { display: flex; z-index: 2000; } 
         
-        /* NEW: Room styling */
         .input-group { margin-bottom: 20px; text-align: center; }
         .styled-input { 
             padding: 15px; font-size: 1.4rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; 
@@ -191,7 +190,7 @@
                 <input type="text" id="name-input" class="styled-input" placeholder="Adventurer Name" maxlength="15">
             </div>
             <div class="input-group">
-                <input type="text" id="room-input" class="styled-input" placeholder="Tavern Code" maxlength="10" style="text-transform: uppercase;">
+                <input type="text" id="room-input" class="styled-input" placeholder="Tavern Code (e.g. ABCD)" maxlength="10" style="text-transform: uppercase;">
             </div>
             
             <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px; margin-top: 10px;">Enter Tavern</button>
@@ -249,6 +248,13 @@
     <script>
         const socket = io();
 
+        // NEW: Secure Session Token setup
+        let sessionToken = localStorage.getItem('tavernToken');
+        if (!sessionToken) {
+            sessionToken = Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('tavernToken', sessionToken);
+        }
+
         let dice = [];
         let hasRolled = false, locksThisRoll = 0, rollCount = 0;
         let isAnimating = false, usePips = false;
@@ -278,7 +284,7 @@
         }
         setInterval(createEmber, 400); 
 
-        function playSound(audioEl) { audioEl.currentTime = 0; let playPromise = audioEl.play(); if (playPromise !== undefined) playPromise.catch(error => { console.log("Audio skipped"); }); }
+        function playSound(audioEl) { audioEl.currentTime = 0; let playPromise = audioEl.play(); if (playPromise !== undefined) playPromise.catch(error => {}); }
 
         function playRollSound() {
             sfxRoll.currentTime = 0; sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
@@ -307,27 +313,48 @@
             }
         });
 
-        function selectAvatar(element, icon) {
-            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected'); myAvatar = icon; playSound(sfxClick);
-        }
-
+        // NEW: Remember previous choices for a smoother login!
         const nameModal = document.getElementById('name-modal');
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
         const joinGameBtn = document.getElementById('join-game-btn');
+
+        const savedName = localStorage.getItem('tavernName');
+        const savedRoom = localStorage.getItem('tavernRoom');
+        const savedAvatar = localStorage.getItem('tavernAvatar');
+        
+        if (savedName) nameInput.value = savedName;
+        if (savedRoom) roomInput.value = savedRoom;
+        if (savedAvatar) {
+            myAvatar = savedAvatar;
+            document.querySelectorAll('.avatar-option').forEach(el => {
+                if(el.innerText === savedAvatar) {
+                    document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
+                    el.classList.add('selected');
+                }
+            });
+        }
+
+        function selectAvatar(element, icon) {
+            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected'); myAvatar = icon; playSound(sfxClick);
+        }
 
         joinGameBtn.onclick = () => {
             playSound(sfxClick); 
             const chosenName = nameInput.value;
             const chosenRoom = roomInput.value;
             
-            // Displays the entered room code on the table
+            // Save inputs for next time
+            localStorage.setItem('tavernName', chosenName);
+            localStorage.setItem('tavernRoom', chosenRoom);
+            localStorage.setItem('tavernAvatar', myAvatar);
+            
             myRoom = chosenRoom.trim() === "" ? "PUBLIC" : chosenRoom.trim().toUpperCase();
             roomCodeDisplay.innerText = myRoom;
             
-            // Broadcasts room code along with player info
-            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom }); 
+            // Pass the secret session token to the server
+            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom, token: sessionToken }); 
             nameModal.style.display = 'none'; triggerGlobalMusic();
         };
 
@@ -366,6 +393,7 @@
             else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
             if (isMyTurn) socket.emit('playGameSound', soundId);
         }
+        
         socket.on('playGameSound', (soundId) => {
             if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
             else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
@@ -396,18 +424,15 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
-                // NEW: Visual hearts explicitly map to max 2 lives!
                 let hearts = "❤️".repeat(p.lives) + "🖤".repeat(2 - p.lives);
-                
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
-                // NEW: Mark disconnected players on the scoreboard visually!
                 if (!p.connected) scoreText = "OFFLINE";
                 else if (p.lives <= 0) scoreText = "ELIMINATED";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
-                if (!isInRound || !p.connected) el.style.opacity = "0.4"; // Fade offline/spectating players
+                if (!isInRound || !p.connected) el.style.opacity = "0.4";
 
                 el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
