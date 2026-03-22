@@ -135,8 +135,14 @@
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         
         #name-modal { display: flex; z-index: 2000; } 
-        #name-input { padding: 15px; font-size: 1.4rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; margin-bottom: 20px; width: 80%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-        #name-input::placeholder { color: #bcaaa4; }
+        
+        /* NEW: Room styling */
+        .input-group { margin-bottom: 20px; text-align: center; }
+        .styled-input { 
+            padding: 15px; font-size: 1.4rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; 
+            border: 1px solid #8d6e63; border-radius: 4px; width: 80%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .styled-input::placeholder { color: #bcaaa4; }
 
         .avatar-picker { display: flex; justify-content: space-around; font-size: 2.5rem; margin-bottom: 20px; }
         .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(100%) opacity(0.5); user-select: none; }
@@ -158,6 +164,11 @@
             text-align: center; margin-top: -10px; margin-bottom: 15px; animation: textFlicker 1.5s infinite alternate;
         }
         @keyframes textFlicker { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0.8; transform: scale(0.98); } }
+        
+        #room-indicator {
+            position: absolute; top: 15px; right: 20px; color: rgba(255,255,255,0.4); 
+            font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; text-shadow: 1px 1px 2px #000;
+        }
     </style>
 </head>
 <body>
@@ -176,9 +187,14 @@
                 <div class="avatar-option" onclick="selectAvatar(this, '🍻')">🍻</div>
             </div>
 
-            <input type="text" id="name-input" placeholder="Enter Adventurer Name" maxlength="15">
-            <br>
-            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px;">Join the Tavern</button>
+            <div class="input-group">
+                <input type="text" id="name-input" class="styled-input" placeholder="Adventurer Name" maxlength="15">
+            </div>
+            <div class="input-group">
+                <input type="text" id="room-input" class="styled-input" placeholder="Tavern Code (e.g. ABCD)" maxlength="10" style="text-transform: uppercase;">
+            </div>
+            
+            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.5rem; padding: 15px 40px; margin-top: 10px;">Enter Tavern</button>
         </div>
     </div>
 
@@ -193,6 +209,8 @@
 
     <div id="game-page">
         <div id="game-area"> 
+            <div id="room-indicator">Tavern: <span id="room-code-display">...</span></div>
+            
             <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
             <h2 id="tie-breaker-banner">⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️<br><span style="font-size: 1.1rem; color: #ffcc80;">You are spectating</span></h2>
             
@@ -238,10 +256,12 @@
         
         let myId = null, isMyTurn = false, lastTurnId = null, isFirstLoad = true; 
         let myAvatar = '🛡️'; 
+        let myRoom = 'PUBLIC';
 
         const turnIndicator = document.getElementById('turn-indicator');
         const scoreboard = document.getElementById('scoreboard');
         const tieBanner = document.getElementById('tie-breaker-banner');
+        const roomCodeDisplay = document.getElementById('room-code-display');
 
         const sfxRoll = new Audio('roll.mp3'); const sfxClick = new Audio('click.mp3');
         const sfxWin = new Audio('win.mp3'); const sfxBust = new Audio('bust.mp3');
@@ -294,11 +314,20 @@
 
         const nameModal = document.getElementById('name-modal');
         const nameInput = document.getElementById('name-input');
+        const roomInput = document.getElementById('room-input');
         const joinGameBtn = document.getElementById('join-game-btn');
 
         joinGameBtn.onclick = () => {
-            playSound(sfxClick); const chosenName = nameInput.value;
-            socket.emit('setPlayerName', { name: chosenName, avatar: myAvatar }); 
+            playSound(sfxClick); 
+            const chosenName = nameInput.value;
+            const chosenRoom = roomInput.value;
+            
+            // Displays the entered room code on the table
+            myRoom = chosenRoom.trim() === "" ? "PUBLIC" : chosenRoom.trim().toUpperCase();
+            roomCodeDisplay.innerText = myRoom;
+            
+            // Broadcasts room code along with player info
+            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom }); 
             nameModal.style.display = 'none'; triggerGlobalMusic();
         };
 
@@ -331,48 +360,25 @@
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
-        // NEW: Centralized Audio and Animation relays
         function triggerGameSound(soundId) {
-            if (soundId === 'yay') playSound(sfxYay);
-            else if (soundId === 'aww') playSound(sfxAww);
-            else if (soundId === 'bust') playSound(sfxBust);
-            else if (soundId === 'win') playSound(sfxWin);
-            else if (soundId === 'ohwell') playSound(sfxOhWell);
-            else if (soundId === 'click') playSound(sfxClick);
-
+            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
             if (isMyTurn) socket.emit('playGameSound', soundId);
         }
-        
         socket.on('playGameSound', (soundId) => {
-            if (soundId === 'yay') playSound(sfxYay);
-            else if (soundId === 'aww') playSound(sfxAww);
-            else if (soundId === 'bust') playSound(sfxBust);
-            else if (soundId === 'win') playSound(sfxWin);
-            else if (soundId === 'ohwell') playSound(sfxOhWell);
-            else if (soundId === 'click') playSound(sfxClick);
+            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
         });
 
         function triggerRollAnimation(suspense) {
-            playRollSound();
-            const activeDOMDice = document.getElementById('active-area').querySelectorAll('.die');
-            if (suspense !== 'none') { 
-                document.body.classList.add('shake-screen'); 
-                activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); 
-                setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000);
-            } 
-            else { 
-                activeDOMDice.forEach(die => die.classList.add('rolling')); 
-            }
+            playRollSound(); const activeDOMDice = document.getElementById('active-area').querySelectorAll('.die');
+            if (suspense !== 'none') { document.body.classList.add('shake-screen'); activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); } 
+            else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
         }
-
-        socket.on('playerRolledDice', (suspenseType) => {
-            triggerRollAnimation(suspenseType);
-        });
-
-        socket.on('triggerConfetti', () => {
-            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
-        });
-
+        socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
+        socket.on('triggerConfetti', () => { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); });
 
         socket.on('connect', () => { myId = socket.id; });
 
@@ -390,13 +396,18 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
+                // NEW: Visual hearts explicitly map to max 2 lives!
                 let hearts = "❤️".repeat(p.lives) + "🖤".repeat(2 - p.lives);
+                
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
-                if (p.lives <= 0) scoreText = "ELIMINATED";
+                
+                // NEW: Mark disconnected players on the scoreboard visually!
+                if (!p.connected) scoreText = "OFFLINE";
+                else if (p.lives <= 0) scoreText = "ELIMINATED";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
-                if (!isInRound) el.style.opacity = "0.4";
+                if (!isInRound || !p.connected) el.style.opacity = "0.4"; // Fade offline/spectating players
 
                 el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
@@ -473,7 +484,6 @@
             rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
             isAnimating = true; rollBtn.disabled = true; 
             
-            // NEW: Broadcast the board BEFORE the animation, so spectators know what dice to roll
             if (isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
 
             let activeCount = dice.filter(d => d.status === 'active').length;
@@ -483,7 +493,6 @@
             
             suspenseType = (activeCount === 1 && (!lockedHas2 || !lockedHas4)) ? 'survival' : ((activeCount === 1 && lockedHas2 && lockedHas4 && locked6sCount === 3) ? 'perfect' : 'none');
             
-            // NEW: Trigger animation locally, and tell the server to trigger it for everyone else
             triggerRollAnimation(suspenseType);
             if (isMyTurn) socket.emit('playerRolledDice', suspenseType);
 
@@ -551,8 +560,6 @@
                 } else {
                     if (!turnFinalized) {
                         turnFinalized = true; 
-                        
-                        // NEW: Centralized audio triggers broadcast to all players!
                         if (currentScore === 24) {
                             triggerGameSound('yay');
                             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
