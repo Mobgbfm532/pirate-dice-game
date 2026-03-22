@@ -17,7 +17,6 @@ function getRoomState(roomCode) {
     let room = rooms[roomCode];
     if (!room) return {};
     
-    // FIX: We must explicitly map the current active player's ID so the client knows whose turn it is!
     return {
         players: room.players,
         playerOrder: room.playerOrder,
@@ -133,28 +132,41 @@ io.on('connection', (socket) => {
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
 
-        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].name === finalName);
+        // NEW: Match by their secret browser token instead of just their typed name
+        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
 
-        if (existingPlayerId && !room.players[existingPlayerId].connected) {
-            // Reclaim identity
+        if (existingPlayerId) {
+            // Perfect Reconnection: Reclaim identity, update socket IDs, and keep exact lives!
             let p = room.players[existingPlayerId];
             p.id = socket.id;
             p.avatar = data.avatar;
+            p.name = finalName; // Update in case they fixed a typo
             p.connected = true;
             
             room.players[socket.id] = p;
-            delete room.players[existingPlayerId];
+            
+            // If they had a ghost connection, sever it.
+            if (existingPlayerId !== socket.id) {
+                delete room.players[existingPlayerId];
+                let oldSocket = io.sockets.sockets.get(existingPlayerId);
+                if (oldSocket) oldSocket.disconnect(true);
+            }
 
             room.playerOrder = room.playerOrder.map(id => id === existingPlayerId ? socket.id : id);
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
             
         } else {
-            // Brand new player
-            if (existingPlayerId && room.players[existingPlayerId].connected) {
-                finalName = finalName + Math.floor(Math.random() * 100);
-            }
-            
-            room.players[socket.id] = { id: socket.id, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true };
+            // Brand new player to this room
+            room.players[socket.id] = { 
+                id: socket.id, 
+                token: data.token, // Store their token
+                name: finalName, 
+                avatar: data.avatar, 
+                lives: 2, 
+                score: null, 
+                busted: false, 
+                connected: true 
+            };
             room.playerOrder.push(socket.id);
 
             if (!room.isTieBreaker) {
