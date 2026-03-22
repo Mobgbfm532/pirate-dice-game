@@ -184,8 +184,8 @@ io.on('connection', (socket) => {
     socket.on('playGameSound', (soundId) => socket.to(socket.roomCode).emit('playGameSound', soundId));
     socket.on('triggerConfetti', () => socket.to(socket.roomCode).emit('triggerConfetti'));
     
-    // NEW: Relay for the video explosion!
-    socket.on('triggerDevilVideo', () => socket.to(socket.roomCode).emit('triggerDevilVideo'));
+    // UPDATED: Video removed, now triggers the 2-second visual effect
+    socket.on('triggerDevilEffect', () => socket.to(socket.roomCode).emit('triggerDevilEffect'));
     
     socket.on('updateBoard', (gameData) => {
         let room = rooms[socket.roomCode];
