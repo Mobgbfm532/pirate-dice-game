@@ -169,8 +169,8 @@
             font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; text-shadow: 1px 1px 2px #000;
         }
 
-        /* NEW: The Devil's Overlay Styling */
-        #devil-video-container {
+        /* UPDATED: The Devil's Overlay Styling (No Video) */
+        #devil-effect-container {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(30, 0, 0, 0.95); z-index: 4000; 
             justify-content: center; align-items: center; flex-direction: column;
@@ -193,17 +193,12 @@
             75% { transform: translate(3px, 2px) rotate(-1deg); }
             100% { transform: translate(1px, -2px) rotate(2deg); }
         }
-        #devil-video {
-            max-width: 80%; max-height: 60%; border: 5px solid #ff0000; 
-            box-shadow: 0 0 50px #ff0000; border-radius: 10px;
-        }
     </style>
 </head>
 <body>
 
-    <div id="devil-video-container">
+    <div id="devil-effect-container">
         <h1 class="devil-text">The Devil's titties!</h1>
-        <video id="devil-video" src="Devils Titties.mp4" playsinline></video>
     </div>
 
     <div class="firelight-overlay"></div>
@@ -394,19 +389,14 @@
         function showModal(message) { customModalText.innerText = message; customModal.style.display = 'flex'; }
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
-        // NEW: Core logic to handle the Devil Video display
-        function showDevilVideo() {
-            const container = document.getElementById('devil-video-container');
-            const vid = document.getElementById('devil-video');
+        // UPDATED: Displays the effect without the video for 2 seconds
+        function showDevilEffect() {
+            const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
-            vid.currentTime = 0;
-            vid.play().catch(e => console.log("Video auto-play blocked by browser."));
-            
-            vid.onended = () => { container.style.display = 'none'; };
-            setTimeout(() => { container.style.display = 'none'; vid.pause(); }, 6000); // 6s fallback 
+            setTimeout(() => { container.style.display = 'none'; }, 2000); 
         }
         
-        socket.on('triggerDevilVideo', showDevilVideo);
+        socket.on('triggerDevilEffect', showDevilEffect);
 
         function showTurnSplash(name, avatar) {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
@@ -431,6 +421,7 @@
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
+        // Ensure these audio triggers correctly map to the network!
         function triggerGameSound(soundId) {
             if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
             else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
@@ -544,13 +535,7 @@
             if (isAnimating) return; 
             triggerGlobalMusic();
 
-            let allLocked = dice.filter(d => d.status !== 'active');
-            let lockedHas2 = allLocked.some(d => d.value === 2);
-            let lockedHas4 = allLocked.some(d => d.value === 4);
-            let locked6sCount = allLocked.filter(d => d.value === 6).length;
-            let activeCount = dice.filter(d => d.status === 'active').length;
-
-            if (rollCount === 0) { // BEFORE increment, so checking rollCount 0 means we are ABOUT to do roll 1
+            if (rollCount === 0) { 
                 let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
                 let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
                 let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
@@ -558,13 +543,25 @@
                 
                 if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
                 else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
-                else if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
-                    broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
+                else {
+                    let allLocked = dice.filter(d => d.status !== 'active');
+                    let lockedHas2 = allLocked.some(d => d.value === 2);
+                    let lockedHas4 = allLocked.some(d => d.value === 4);
+                    let locked6sCount = allLocked.filter(d => d.value === 6).length;
+                    if (lockedHas2 && lockedHas4 && locked6sCount === 2 && stillActive.length >= 2) {
+                        broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
+                    }
                 }
             } else if (rollCount > 0) { 
-                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!") broadcastAnnouncement("", ""); 
+                // FIX: Clears the Phew message (or any old message) immediately upon the next roll!
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!") broadcastAnnouncement("", ""); 
                 
-                // NEW: Trigger "Knocking at the door" on ANY subsequent roll as long as criteria are met!
+                let allLocked = dice.filter(d => d.status !== 'active');
+                let lockedHas2 = allLocked.some(d => d.value === 2);
+                let lockedHas4 = allLocked.some(d => d.value === 4);
+                let locked6sCount = allLocked.filter(d => d.value === 6).length;
+                let activeCount = dice.filter(d => d.status === 'active').length;
+
                 if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
                     broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
                 }
@@ -590,18 +587,16 @@
                 dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
                 hasRolled = true; locksThisRoll = 0; isAnimating = false;
                 
-                // NEW: The Devil's Titties Video Trigger
                 let newlyRolled6s = dice.filter(d => d.status === 'active' && d.value === 6).length;
                 if (newlyRolled6s >= 3) {
-                    showDevilVideo();
-                    if (isMyTurn) socket.emit('triggerDevilVideo');
+                    showDevilEffect();
+                    if (isMyTurn) socket.emit('triggerDevilEffect');
                 }
 
                 if (rollCount === 1) { 
                     let allSame = dice.every(d => d.value === dice[0].value);
                     if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
                     else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
-                        // It is guaranteed to only appear on rollCount === 1 and strictly checks ALL dice for 2s or 4s.
                         inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
                     } 
                 }
