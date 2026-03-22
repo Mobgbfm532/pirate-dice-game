@@ -169,7 +169,6 @@
             font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; text-shadow: 1px 1px 2px #000;
         }
 
-        /* UPDATED: The Devil's Overlay Styling (No Video) */
         #devil-effect-container {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(30, 0, 0, 0.95); z-index: 4000; 
@@ -389,11 +388,11 @@
         function showModal(message) { customModalText.innerText = message; customModal.style.display = 'flex'; }
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
-        // UPDATED: Displays the effect without the video for 2 seconds
         function showDevilEffect() {
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
-            setTimeout(() => { container.style.display = 'none'; }, 2000); 
+            // Reduced to 1 second
+            setTimeout(() => { container.style.display = 'none'; }, 1000); 
         }
         
         socket.on('triggerDevilEffect', showDevilEffect);
@@ -421,7 +420,6 @@
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
-        // Ensure these audio triggers correctly map to the network!
         function triggerGameSound(soundId) {
             if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
             else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
@@ -535,7 +533,13 @@
             if (isAnimating) return; 
             triggerGlobalMusic();
 
-            if (rollCount === 0) { 
+            if (rollCount > 0) { 
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!") {
+                    broadcastAnnouncement("", ""); 
+                }
+            }
+
+            if (rollCount === 1) {
                 let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
                 let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
                 let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
@@ -543,19 +547,9 @@
                 
                 if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
                 else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
-                else {
-                    let allLocked = dice.filter(d => d.status !== 'active');
-                    let lockedHas2 = allLocked.some(d => d.value === 2);
-                    let lockedHas4 = allLocked.some(d => d.value === 4);
-                    let locked6sCount = allLocked.filter(d => d.value === 6).length;
-                    if (lockedHas2 && lockedHas4 && locked6sCount === 2 && stillActive.length >= 2) {
-                        broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
-                    }
-                }
-            } else if (rollCount > 0) { 
-                // FIX: Clears the Phew message (or any old message) immediately upon the next roll!
-                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!") broadcastAnnouncement("", ""); 
-                
+            }
+
+            if (rollCount > 0) { 
                 let allLocked = dice.filter(d => d.status !== 'active');
                 let lockedHas2 = allLocked.some(d => d.value === 2);
                 let lockedHas4 = allLocked.some(d => d.value === 4);
