@@ -10,11 +10,21 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// NEW: Master object holding all private tavern instances
+// Master object holding all private tavern instances
 let rooms = {};
 
 function getRoomState(roomCode) {
-    return rooms[roomCode];
+    let room = rooms[roomCode];
+    if (!room) return {};
+    
+    // FIX: We must explicitly map the current active player's ID so the client knows whose turn it is!
+    return {
+        players: room.players,
+        playerOrder: room.playerOrder,
+        roundPlayers: room.roundPlayers,
+        currentTurnId: room.roundPlayers[room.currentTurnIndex], 
+        isTieBreaker: room.isTieBreaker
+    };
 }
 
 function evaluateRound(roomCode) {
@@ -104,16 +114,14 @@ function evaluateRound(roomCode) {
 
 io.on('connection', (socket) => {
     
-    // NEW: Joins a specific private room and handles persistent identity mapping
     socket.on('joinTavern', (data) => {
         let roomCode = data.roomCode.trim().toUpperCase();
-        if (roomCode === "") roomCode = "PUBLIC"; // Fallback to a global lobby
+        if (roomCode === "") roomCode = "PUBLIC"; 
         if (roomCode.length > 10) roomCode = roomCode.substring(0, 10);
         
         socket.roomCode = roomCode;
         socket.join(roomCode);
 
-        // Create room if it doesn't exist
         if (!rooms[roomCode]) {
             rooms[roomCode] = {
                 players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false
@@ -125,11 +133,10 @@ io.on('connection', (socket) => {
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
 
-        // NEW: Check if this name already exists in the room (Reconnection Logic)
         let existingPlayerId = Object.keys(room.players).find(id => room.players[id].name === finalName);
 
         if (existingPlayerId && !room.players[existingPlayerId].connected) {
-            // They were disconnected! Reclaim their identity and lives.
+            // Reclaim identity
             let p = room.players[existingPlayerId];
             p.id = socket.id;
             p.avatar = data.avatar;
@@ -142,12 +149,11 @@ io.on('connection', (socket) => {
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
             
         } else {
-            // Brand new player to the table
+            // Brand new player
             if (existingPlayerId && room.players[existingPlayerId].connected) {
-                finalName = finalName + Math.floor(Math.random() * 100); // Prevent identical names
+                finalName = finalName + Math.floor(Math.random() * 100);
             }
             
-            // Start with 2 lives
             room.players[socket.id] = { id: socket.id, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true };
             room.playerOrder.push(socket.id);
 
@@ -199,7 +205,6 @@ io.on('connection', (socket) => {
             room.players[socket.id].score = turnData.score;
             room.players[socket.id].busted = turnData.busted;
             
-            // NEW: The "1-Up" Mechanic! 24 restores a life (up to the max of 2)
             if (turnData.score === 24 && room.players[socket.id].lives < 2) {
                 room.players[socket.id].lives += 1;
                 io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
@@ -207,7 +212,6 @@ io.on('connection', (socket) => {
 
             room.currentTurnIndex++;
             
-            // Auto-skip offline players
             while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
                 room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
                 room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
@@ -227,11 +231,8 @@ io.on('connection', (socket) => {
         if (roomCode && rooms[roomCode]) {
             let room = rooms[roomCode];
             if (room.players[socket.id]) {
-                
-                // Do not delete them! Mark them offline so they can reclaim their life later.
                 room.players[socket.id].connected = false;
                 
-                // If it was their turn when they lagged out, end their turn with a bust so the game continues
                 if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
                     room.players[socket.id].busted = true;
                     room.players[socket.id].score = 0;
@@ -250,7 +251,6 @@ io.on('connection', (socket) => {
                 }
             }
             
-            // Destroy the room if everyone leaves
             let anyConnected = Object.values(room.players).some(p => p.connected);
             if (!anyConnected) delete rooms[roomCode];
         }
