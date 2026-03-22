@@ -10,38 +10,43 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let players = {}; 
-let playerOrder = []; 
-let roundPlayers = []; 
-let currentTurnIndex = 0;
-let isMusicPlaying = false; 
-let isTieBreaker = false; 
+// NEW: Master object holding all private tavern instances
+let rooms = {};
 
-function evaluateRound() {
+function getRoomState(roomCode) {
+    return rooms[roomCode];
+}
+
+function evaluateRound(roomCode) {
+    let room = rooms[roomCode];
+    if (!room) return;
+
     let losersThisRound = [];
     let tiedPlayers = [];
 
-    let busted = roundPlayers.filter(id => players[id] && players[id].busted);
+    // Deduct life for busting
+    let busted = room.roundPlayers.filter(id => room.players[id] && room.players[id].busted);
     busted.forEach(id => {
-        players[id].lives -= 1;
+        room.players[id].lives -= 1;
         losersThisRound.push({ id, reason: 'You busted!' });
     });
 
-    let valid = roundPlayers.filter(id => players[id] && !players[id].busted);
+    // Deduct life for lowest score
+    let valid = room.roundPlayers.filter(id => room.players[id] && !room.players[id].busted);
     if (valid.length > 1) {
-        let minScore = Math.min(...valid.map(id => players[id].score));
-        let lowest = valid.filter(id => players[id].score === minScore);
+        let minScore = Math.min(...valid.map(id => room.players[id].score));
+        let lowest = valid.filter(id => room.players[id].score === minScore);
 
         if (lowest.length === 1) {
-            players[lowest[0]].lives -= 1;
+            room.players[lowest[0]].lives -= 1;
             losersThisRound.push({ id: lowest[0], reason: 'You had the lowest score!' });
         } else if (lowest.length > 1) {
             tiedPlayers = lowest;
         }
     }
 
-    roundPlayers.forEach(id => {
-        if (!players[id]) return;
+    room.roundPlayers.forEach(id => {
+        if (!room.players[id]) return;
         let loserInfo = losersThisRound.find(l => l.id === id);
         if (loserInfo) {
             io.to(id).emit('roundResult', { message: `You lost a life! 💔\n${loserInfo.reason}` });
@@ -52,127 +57,202 @@ function evaluateRound() {
         }
     });
 
-    roundPlayers.forEach(id => {
-        if (players[id]) {
-            players[id].score = null;
-            players[id].busted = false;
+    room.roundPlayers.forEach(id => {
+        if (room.players[id]) {
+            room.players[id].score = null;
+            room.players[id].busted = false;
         }
     });
 
-    let survivors = playerOrder.filter(id => players[id] && players[id].lives > 0);
+    let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
-        let winnerName = survivors.length === 1 ? players[survivors[0]].name : "No one";
-        io.emit('gameOver', { message: `Game Over! ${winnerName} wins the game! 🏆` });
-        roundPlayers = []; 
+        let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
+        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the tavern! 🏆` });
+        room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
-        isTieBreaker = true;
-        roundPlayers = tiedPlayers;
-        currentTurnIndex = 0;
-        io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
-        io.emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
+        room.isTieBreaker = true;
+        room.roundPlayers = tiedPlayers;
+        room.currentTurnIndex = 0;
+        
+        // Auto-skip disconnected players during tie-breakers
+        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
+            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
+            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
+            room.currentTurnIndex++;
+        }
+
+        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        io.to(roomCode).emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
+        
+        if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
     } else {
-        isTieBreaker = false;
-        roundPlayers = survivors;
-        currentTurnIndex = 0;
-        io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+        room.isTieBreaker = false;
+        room.roundPlayers = survivors;
+        room.currentTurnIndex = 0;
+        
+        // Auto-skip disconnected players during normal rounds
+        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
+            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
+            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
+            room.currentTurnIndex++;
+        }
+
+        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        if(room.currentTurnIndex >= room.roundPlayers.length && room.roundPlayers.length > 0) evaluateRound(roomCode);
     }
 }
 
 io.on('connection', (socket) => {
-    players[socket.id] = { id: socket.id, name: 'Joining...', avatar: '👤', lives: 2, score: null, busted: false };
-    playerOrder.push(socket.id);
+    
+    // NEW: Joins a specific private room and handles persistent identity mapping
+    socket.on('joinTavern', (data) => {
+        let roomCode = data.roomCode.trim().toUpperCase();
+        if (roomCode === "") roomCode = "PUBLIC"; // Fallback to a global lobby
+        if (roomCode.length > 10) roomCode = roomCode.substring(0, 10);
+        
+        socket.roomCode = roomCode;
+        socket.join(roomCode);
 
-    if (!isTieBreaker) {
-        if (!roundPlayers.includes(socket.id)) {
-            roundPlayers.push(socket.id);
+        // Create room if it doesn't exist
+        if (!rooms[roomCode]) {
+            rooms[roomCode] = {
+                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false
+            };
         }
-    }
+        
+        let room = rooms[roomCode];
+        let finalName = data.name.trim();
+        if (finalName === "") finalName = "Mysterious Traveler";
+        if (finalName.length > 15) finalName = finalName.substring(0, 15);
 
-    if (roundPlayers.length === 1) {
-        currentTurnIndex = 0;
-    }
+        // NEW: Check if this name already exists in the room (Reconnection Logic)
+        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].name === finalName);
 
-    if (isMusicPlaying) {
-        socket.emit('playGlobalMusic');
-    }
+        if (existingPlayerId && !room.players[existingPlayerId].connected) {
+            // They were disconnected! Reclaim their identity and lives.
+            let p = room.players[existingPlayerId];
+            p.id = socket.id;
+            p.avatar = data.avatar;
+            p.connected = true;
+            
+            room.players[socket.id] = p;
+            delete room.players[existingPlayerId];
 
-    io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+            room.playerOrder = room.playerOrder.map(id => id === existingPlayerId ? socket.id : id);
+            room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
+            
+        } else {
+            // Brand new player to the table
+            if (existingPlayerId && room.players[existingPlayerId].connected) {
+                finalName = finalName + Math.floor(Math.random() * 100); // Prevent identical names
+            }
+            
+            // Start with 2 lives
+            room.players[socket.id] = { id: socket.id, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true };
+            room.playerOrder.push(socket.id);
 
-    socket.on('startGlobalMusic', () => {
-        if (!isMusicPlaying) {
-            isMusicPlaying = true;
-            io.emit('playGlobalMusic'); 
+            if (!room.isTieBreaker) {
+                if (!room.roundPlayers.includes(socket.id)) room.roundPlayers.push(socket.id);
+            }
         }
+
+        if (room.roundPlayers.length === 1) room.currentTurnIndex = 0;
+        if (room.isMusicPlaying) socket.emit('playGlobalMusic');
+
+        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
     });
 
-    socket.on('setPlayerName', (data) => {
-        if (players[socket.id]) {
-            let finalName = data.name.trim();
-            if (finalName === "") finalName = "Mysterious Traveler";
-            if (finalName.length > 15) finalName = finalName.substring(0, 15);
-            
-            players[socket.id].name = finalName;
-            players[socket.id].avatar = data.avatar; 
-            
-            io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+    socket.on('startGlobalMusic', () => {
+        let room = rooms[socket.roomCode];
+        if (room && !room.isMusicPlaying) {
+            room.isMusicPlaying = true;
+            io.to(socket.roomCode).emit('playGlobalMusic'); 
         }
     });
 
     socket.on('sendReaction', (emoji) => {
-        let playerName = players[socket.id] ? players[socket.id].name : "Pirate";
-        io.emit('receiveReaction', { name: playerName, emoji: emoji });
+        let room = rooms[socket.roomCode];
+        if (room) {
+            let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
+            io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
+        }
     });
 
-    // NEW: Sync rolling animations, sounds, and confetti across the network
-    socket.on('playerRolledDice', (suspenseType) => socket.broadcast.emit('playerRolledDice', suspenseType));
-    socket.on('playGameSound', (soundId) => socket.broadcast.emit('playGameSound', soundId));
-    socket.on('triggerConfetti', () => socket.broadcast.emit('triggerConfetti'));
-
+    socket.on('playerRolledDice', (suspenseType) => socket.to(socket.roomCode).emit('playerRolledDice', suspenseType));
+    socket.on('playGameSound', (soundId) => socket.to(socket.roomCode).emit('playGameSound', soundId));
+    socket.on('triggerConfetti', () => socket.to(socket.roomCode).emit('triggerConfetti'));
+    
     socket.on('updateBoard', (gameData) => {
-        if (socket.id === roundPlayers[currentTurnIndex]) {
-            socket.broadcast.emit('boardUpdated', gameData);
+        let room = rooms[socket.roomCode];
+        if (room && socket.id === room.roundPlayers[room.currentTurnIndex]) {
+            socket.to(socket.roomCode).emit('boardUpdated', gameData);
         }
     });
 
     socket.on('broadcastMessage', (msgData) => {
-        socket.broadcast.emit('displayMessage', msgData);
+        socket.to(socket.roomCode).emit('displayMessage', msgData);
     });
 
     socket.on('endTurn', (turnData) => {
-        if (socket.id === roundPlayers[currentTurnIndex]) {
-            players[socket.id].score = turnData.score;
-            players[socket.id].busted = turnData.busted;
+        let room = rooms[socket.roomCode];
+        if (room && socket.id === room.roundPlayers[room.currentTurnIndex]) {
+            room.players[socket.id].score = turnData.score;
+            room.players[socket.id].busted = turnData.busted;
             
-            currentTurnIndex++;
-            if (currentTurnIndex >= roundPlayers.length) {
-                evaluateRound();
+            // NEW: The "1-Up" Mechanic! 24 restores a life (up to the max of 2)
+            if (turnData.score === 24 && room.players[socket.id].lives < 2) {
+                room.players[socket.id].lives += 1;
+                io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
+            }
+
+            room.currentTurnIndex++;
+            
+            // Auto-skip offline players
+            while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
+                room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
+                room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
+                room.currentTurnIndex++;
+            }
+
+            if (room.currentTurnIndex >= room.roundPlayers.length) {
+                evaluateRound(socket.roomCode);
             } else {
-                io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
             }
         }
     });
 
     socket.on('disconnect', () => {
-        delete players[socket.id];
-        playerOrder = playerOrder.filter(id => id !== socket.id);
-        
-        let wasTheirTurn = (roundPlayers[currentTurnIndex] === socket.id);
-        roundPlayers = roundPlayers.filter(id => id !== socket.id);
+        let roomCode = socket.roomCode;
+        if (roomCode && rooms[roomCode]) {
+            let room = rooms[roomCode];
+            if (room.players[socket.id]) {
+                
+                // Do not delete them! Mark them offline so they can reclaim their life later.
+                room.players[socket.id].connected = false;
+                
+                // If it was their turn when they lagged out, end their turn with a bust so the game continues
+                if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
+                    room.players[socket.id].busted = true;
+                    room.players[socket.id].score = 0;
+                    room.currentTurnIndex++;
+                    
+                    while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
+                        room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
+                        room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
+                        room.currentTurnIndex++;
+                    }
 
-        if (roundPlayers.length > 0) {
-            if (wasTheirTurn) {
-                if (currentTurnIndex >= roundPlayers.length) {
-                    evaluateRound();
+                    if (room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
+                    else io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
                 } else {
-                    io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
+                    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
                 }
-            } else {
-                if (currentTurnIndex >= roundPlayers.length) currentTurnIndex = 0;
-                io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: roundPlayers[currentTurnIndex], isTieBreaker });
             }
-        } else {
-            currentTurnIndex = 0;
-            io.emit('gameStateUpdate', { players, playerOrder, roundPlayers, currentTurnId: null, isTieBreaker });
+            
+            // Destroy the room if everyone leaves
+            let anyConnected = Object.values(room.players).some(p => p.connected);
+            if (!anyConnected) delete rooms[roomCode];
         }
     });
 });
