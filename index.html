@@ -169,7 +169,6 @@
             font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; text-shadow: 1px 1px 2px #000;
         }
 
-        /* UPDATED: The Devil's Overlay Styling with Static Image */
         #devil-effect-container {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(30, 0, 0, 0.95); z-index: 4000; 
@@ -194,7 +193,6 @@
             100% { transform: translate(1px, -2px) rotate(2deg); }
         }
         
-        /* NEW: Image styling matching the old video */
         #devil-image {
             max-width: 80%; max-height: 60%; border: 5px solid #ff0000; 
             box-shadow: 0 0 50px #ff0000; border-radius: 10px;
@@ -398,7 +396,6 @@
         function showModal(message) { customModalText.innerText = message; customModal.style.display = 'flex'; }
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
-        // UPDATED: Now displays the static image instead of a video
         function showDevilEffect() {
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
@@ -474,7 +471,10 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
-                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(p.lives) + "🖤".repeat(10 - p.lives) + `</span>`;
+                
+                // UPDATED: Now fixed to physically display a maximum of 3 hearts per player 
+                let hearts = "❤️".repeat(Math.max(0, p.lives)) + "🖤".repeat(Math.max(0, 3 - p.lives));
+                
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
@@ -484,7 +484,7 @@
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound || !p.connected) el.style.opacity = "0.4";
 
-                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
+                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
             });
