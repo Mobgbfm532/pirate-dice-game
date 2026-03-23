@@ -474,7 +474,7 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
-                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(p.lives) + "🖤".repeat(10 - p.lives) + `</span>`;
+                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(p.lives) + "🖤".repeat(2 - p.lives) + `</span>`;
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
