@@ -77,7 +77,7 @@ function evaluateRound(roomCode) {
         room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
-        room.roundPlayers = tiedPlayers;
+        room.roundPlayers = tiedPlayers; // Tied players preserve their relative rotated order!
         room.currentTurnIndex = 0;
         
         while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
@@ -92,7 +92,22 @@ function evaluateRound(roomCode) {
         if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
     } else {
         room.isTieBreaker = false;
-        room.roundPlayers = survivors;
+        
+        // NEW: Advance the rotating first player ("Dealer Button")
+        if (room.playerOrder.length > 0) {
+            room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
+        }
+        
+        // Rebuild the round order starting from the new dealer
+        room.roundPlayers = [];
+        for (let i = 0; i < room.playerOrder.length; i++) {
+            let idx = (room.dealerIndex + i) % room.playerOrder.length;
+            let playerId = room.playerOrder[idx];
+            if (room.players[playerId] && room.players[playerId].lives > 0) {
+                room.roundPlayers.push(playerId);
+            }
+        }
+        
         room.currentTurnIndex = 0;
         
         while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
@@ -117,8 +132,9 @@ io.on('connection', (socket) => {
         socket.join(roomCode);
 
         if (!rooms[roomCode]) {
+            // NEW: Added dealerIndex to track who starts
             rooms[roomCode] = {
-                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false
+                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0
             };
         }
         
@@ -127,13 +143,9 @@ io.on('connection', (socket) => {
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
 
-        // FIX 1: Enhanced reconnection logic. Matches by Token OR exact Name fallback (for incognito testing)
-        let existingPlayerId = Object.keys(room.players).find(id => 
-            room.players[id].token === data.token || 
-            room.players[id].name.toLowerCase() === finalName.toLowerCase()
-        );
+        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
 
-        if (existingPlayerId && !room.players[existingPlayerId].connected) {
+        if (existingPlayerId) {
             let p = room.players[existingPlayerId];
             p.id = socket.id;
             p.avatar = data.avatar;
@@ -152,14 +164,9 @@ io.on('connection', (socket) => {
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
             
         } else {
-            // Player is genuinely new
-            if (existingPlayerId && room.players[existingPlayerId].connected) {
-                finalName = finalName + Math.floor(Math.random() * 100);
-            }
-            
-            // LIVES REDUCED BACK TO 3
+            // UPDATED: Lives back to 2
             room.players[socket.id] = { 
-                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 3, score: null, busted: false, connected: true 
+                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true 
             };
             room.playerOrder.push(socket.id);
 
@@ -168,15 +175,16 @@ io.on('connection', (socket) => {
             }
         }
 
-        // FIX 2: Room Revival! If a room hit Game Over because people disconnected, restart it entirely.
+        // Room Revival Logic
         if (room.roundPlayers.length === 0 && room.playerOrder.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
-                    room.players[id].lives = 3;
+                    room.players[id].lives = 2; // UPDATED: Revive with 2
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
             });
+            room.dealerIndex = 0; // Reset dealer on revive
             room.roundPlayers = room.playerOrder.filter(id => room.players[id].connected);
             room.currentTurnIndex = 0;
             room.isTieBreaker = false;
@@ -226,8 +234,8 @@ io.on('connection', (socket) => {
             room.players[socket.id].score = turnData.score;
             room.players[socket.id].busted = turnData.busted;
             
-            // MAXIMUM LIVES CAP AT 3
-            if (turnData.score === 24 && room.players[socket.id].lives < 3) {
+            // UPDATED: Restores up to max 2
+            if (turnData.score === 24 && room.players[socket.id].lives < 2) {
                 room.players[socket.id].lives += 1;
                 io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
             }
