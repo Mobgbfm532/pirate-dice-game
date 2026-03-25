@@ -404,7 +404,7 @@
             
             setTimeout(() => { 
                 container.style.display = 'none'; 
-            }, 2000); 
+            }, 1000); 
         }
         
         socket.on('triggerDevilEffect', showDevilEffect);
@@ -472,8 +472,8 @@
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
                 
-                // UPDATED: Now fixed to physically display a maximum of 3 hearts per player 
-                let hearts = "❤️".repeat(Math.max(0, p.lives)) + "🖤".repeat(Math.max(0, 3 - p.lives));
+                // UPDATED: Reverted to display max 2 hearts
+                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(Math.max(0, p.lives)) + "🖤".repeat(Math.max(0, 2 - p.lives)) + `</span>`;
                 
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
@@ -484,7 +484,7 @@
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound || !p.connected) el.style.opacity = "0.4";
 
-                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br><span style="font-size: 0.9rem">${hearts}</span><br><strong>Score: ${scoreText}</strong>`;
+                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
             });
