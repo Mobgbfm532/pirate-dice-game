@@ -21,7 +21,8 @@ function getRoomState(roomCode) {
         playerOrder: room.playerOrder,
         roundPlayers: room.roundPlayers,
         currentTurnId: room.roundPlayers[room.currentTurnIndex], 
-        isTieBreaker: room.isTieBreaker
+        isTieBreaker: room.isTieBreaker,
+        roundNumber: room.roundNumber // NEW: Track the round number
     };
 }
 
@@ -77,7 +78,8 @@ function evaluateRound(roomCode) {
         room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
-        room.roundPlayers = tiedPlayers; // Tied players preserve their relative rotated order!
+        room.roundNumber++; // Advance round to unstick UI
+        room.roundPlayers = tiedPlayers;
         room.currentTurnIndex = 0;
         
         while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
@@ -92,13 +94,12 @@ function evaluateRound(roomCode) {
         if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
     } else {
         room.isTieBreaker = false;
+        room.roundNumber++; // Advance round to unstick UI
         
-        // NEW: Advance the rotating first player ("Dealer Button")
         if (room.playerOrder.length > 0) {
             room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
         }
         
-        // Rebuild the round order starting from the new dealer
         room.roundPlayers = [];
         for (let i = 0; i < room.playerOrder.length; i++) {
             let idx = (room.dealerIndex + i) % room.playerOrder.length;
@@ -132,9 +133,8 @@ io.on('connection', (socket) => {
         socket.join(roomCode);
 
         if (!rooms[roomCode]) {
-            // NEW: Added dealerIndex to track who starts
             rooms[roomCode] = {
-                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0
+                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1
             };
         }
         
@@ -164,7 +164,7 @@ io.on('connection', (socket) => {
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
             
         } else {
-            // UPDATED: Lives back to 2
+            // Player starts with exactly 2 lives
             room.players[socket.id] = { 
                 id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true 
             };
@@ -175,19 +175,19 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Room Revival Logic
         if (room.roundPlayers.length === 0 && room.playerOrder.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
-                    room.players[id].lives = 2; // UPDATED: Revive with 2
+                    room.players[id].lives = 2; 
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
             });
-            room.dealerIndex = 0; // Reset dealer on revive
+            room.dealerIndex = 0; 
             room.roundPlayers = room.playerOrder.filter(id => room.players[id].connected);
             room.currentTurnIndex = 0;
             room.isTieBreaker = false;
+            room.roundNumber = 1;
         }
 
         if (room.roundPlayers.length === 1) room.currentTurnIndex = 0;
@@ -234,7 +234,7 @@ io.on('connection', (socket) => {
             room.players[socket.id].score = turnData.score;
             room.players[socket.id].busted = turnData.busted;
             
-            // UPDATED: Restores up to max 2
+            // Restores up to a max of 2 lives
             if (turnData.score === 24 && room.players[socket.id].lives < 2) {
                 room.players[socket.id].lives += 1;
                 io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
