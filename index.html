@@ -9,11 +9,11 @@
     <meta name="theme-color" content="#3e2723">
     <link rel="apple-touch-icon" href="icon-192.png">
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="[fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&display=swap)" rel="stylesheet">
     
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js)"></script>
 
     <style>
         :root {
@@ -37,8 +37,35 @@
         .ember { position: fixed; bottom: -10px; width: 4px; height: 4px; background: #ffb300; border-radius: 50%; box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8); pointer-events: none; z-index: 499; animation: floatEmber linear forwards; }
         @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
-        #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
-        #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        #game-page {
+            display: flex;
+            flex-direction: row;
+            gap: 25px;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            z-index: 10;
+        }
+
+        #game-area {
+            flex: 2;
+            background-color: #3e2723;
+            background-image: url('Table.png');
+            background-size: cover;
+            background-position: center;
+            border: 5px solid #271612;
+            border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            box-sizing: border-box;
+        }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
@@ -69,11 +96,25 @@
         button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
 
-        /* Install App Button Specific Style */
         #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
         #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
 
-        #sidebar { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative; width: 100%; box-sizing: border-box; }
+        #sidebar {
+            flex: 1;
+            background: var(--parchment-bg);
+            box-shadow: var(--parchment-shadow);
+            border: var(--parchment-border);
+            padding: 20px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-dark);
+            z-index: 10;
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+        }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
         #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
         .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
@@ -111,210 +152,107 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
+        /* ── MOBILE STYLES ── */
         @media screen and (max-width: 900px) {
-    body {
-        padding: 5px;
-        align-items: flex-start;
-        /* Prevent any horizontal scroll */
-        overflow-x: hidden;
-        width: 100vw;
-        box-sizing: border-box;
-    }
+            body {
+                padding: 5px;
+                overflow-x: hidden;
+                box-sizing: border-box;
+            }
 
-    #game-page {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 10px;
-        margin-top: 0;
-        width: 100%;
-        box-sizing: border-box;
-    }
+            #game-page {
+                flex-direction: column !important;
+                gap: 10px;
+                margin-top: 5px;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
 
-    /* ── Game area fills the viewport width ── */
-    #game-area {
-        padding: 10px 8px;
-        border-width: 3px;
-        border-radius: 8px;
-        width: 100%;
-        box-sizing: border-box;
-    }
+            #game-area {
+                flex: none !important;
+                width: 100% !important;
+                min-height: unset !important;
+                padding: 10px 8px;
+                border-width: 3px;
+                box-sizing: border-box;
+            }
 
-    /* ── Dice: fill available width, never overflow ── */
-    #locked-area,
-    #active-area {
-        gap: 6px;
-        min-height: 60px;
-        padding: 8px 6px;
-        width: 100%;
-        box-sizing: border-box;
-        /* Let dice wrap freely */
-        flex-wrap: wrap;
-        justify-content: center;
-    }
+            #sidebar {
+                flex: none !important;
+                width: 100% !important;
+                padding: 12px 10px;
+                box-sizing: border-box;
+            }
 
-    #required-dice {
-        gap: 6px;
-        padding-right: 10px;
-        min-height: 60px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
+            .die {
+                width: clamp(42px, 13vw, 70px);
+                height: clamp(42px, 13vw, 70px);
+                padding: clamp(4px, 1.2vw, 10px);
+                border-radius: 8px;
+            }
 
-    #remaining-locked {
-        gap: 6px;
-        min-height: 60px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
+            .pip {
+                width: clamp(8px, 2.2vw, 13px);
+                height: clamp(8px, 2.2vw, 13px);
+            }
 
-    /* ── Die size: fluid, uses viewport units so 6 dice always fit in one row ── */
-    .die {
-        /* (100vw - body padding - game-area padding - gaps) / 6  ≈ 13vw, capped */
-        width: clamp(42px, 13vw, 72px);
-        height: clamp(42px, 13vw, 72px);
-        padding: clamp(4px, 1.2vw, 10px);
-        border-radius: 8px;
-        flex-shrink: 0;
-    }
+            .number-display { font-size: clamp(1.4rem, 4.5vw, 2.2rem); }
 
-    .pip {
-        width: clamp(8px, 2.2vw, 14px);
-        height: clamp(8px, 2.2vw, 14px);
-    }
+            .area-title { font-size: 1.2rem; }
 
-    .number-display {
-        font-size: clamp(1.4rem, 4.5vw, 2.2rem);
-    }
+            #turn-indicator { font-size: 1.4rem !important; margin-bottom: 8px; }
 
-    /* ── Typography ── */
-    .area-title {
-        font-size: 1.2rem;
-        margin-top: 6px;
-        margin-bottom: 4px;
-    }
+            #score-display { font-size: 1.1rem; height: 24px; }
 
-    #turn-indicator {
-        font-size: 1.4rem !important;
-        margin-top: 4px;
-        margin-bottom: 8px;
-    }
+            #locked-area, #active-area {
+                gap: 6px;
+                min-height: 60px;
+                padding: 8px 6px;
+                box-sizing: border-box;
+            }
 
-    #score-display {
-        font-size: 1.1rem;
-        height: 24px;
-        margin-bottom: 4px;
-    }
+            #required-dice, #remaining-locked { gap: 6px; }
 
-    /* ── Controls: single row, buttons stretch evenly ── */
-    #controls {
-        margin-top: 6px;
-        gap: 6px;
-        flex-wrap: nowrap;
-        width: 100%;
-        justify-content: stretch;
-    }
+            #controls {
+                gap: 6px;
+                flex-wrap: nowrap;
+                width: 100%;
+            }
 
-    #controls button {
-        font-size: clamp(0.85rem, 2.8vw, 1.1rem);
-        padding: 9px 6px;
-        flex: 1 1 0;
-        min-width: 0;      /* allow shrinking below content size */
-        white-space: nowrap;
-    }
+            #controls button {
+                font-size: clamp(0.8rem, 2.5vw, 1rem);
+                padding: 9px 4px;
+                flex: 1 1 0;
+                min-width: 0;
+                white-space: nowrap;
+            }
 
-    /* ── Room indicator: smaller so it doesn't crowd the header ── */
-    #room-indicator {
-        font-size: 0.8rem;
-        top: 6px;
-        right: 8px;
-    }
+            #scoreboard { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
 
-    /* ── Sidebar / scoreboard below the game board ── */
-    #sidebar {
-        padding: 12px 10px;
-        width: 100%;
-        box-sizing: border-box;
-        border-radius: 4px;
-    }
+            .player-stat { padding: 6px 4px; font-size: 0.85rem; }
 
-    #sidebar .area-title {
-        font-size: 1.1rem;
-        margin-bottom: 8px;
-    }
+            #splash-text { font-size: 3rem; }
 
-    /* Turn score number */
-    #sidebar > h2:nth-of-type(1) { display: none; } /* hide "Turn Score" label on mobile to save space */
-    #current-score-span {
-        font-size: 2.8rem;
-    }
+            .devil-text { font-size: 2.2rem; }
 
-    /* 2-column player grid on medium-width phones, 1-col on small */
-    #scoreboard {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px;
-    }
+            .modal-box { max-width: 96vw; padding: 20px 15px; }
 
-    .player-stat {
-        padding: 6px 4px;
-        font-size: 0.85rem;
-    }
+            #room-indicator { font-size: 0.75rem; top: 6px; right: 8px; }
+        }
 
-    .player-stat span[style*="font-size: 1.8rem"] {
-        font-size: 1.4rem !important;
-    }
+        @media screen and (max-width: 400px) {
+            .die {
+                width: clamp(36px, 14vw, 46px);
+                height: clamp(36px, 14vw, 46px);
+                padding: 3px;
+            }
 
-    /* ── Reaction bar ── */
-    #reaction-bar {
-        margin-top: 12px;
-        padding-top: 10px;
-    }
+            .number-display { font-size: clamp(1.1rem, 4vw, 1.6rem); }
 
-    .react-btn {
-        font-size: 1.5rem;
-    }
+            #controls button { font-size: 0.75rem; padding: 8px 3px; }
 
-    /* ── Splash / modal text ── */
-    #splash-text {
-        font-size: 3rem;
-    }
-
-    .devil-text {
-        font-size: 2.2rem;
-    }
-
-    /* ── Modals fill the screen width ── */
-    .modal-box {
-        max-width: 96vw;
-        padding: 20px 15px;
-    }
-}
-
-/* ── Very small phones (≤ 400px) ── */
-@media screen and (max-width: 400px) {
-    .die {
-        width: clamp(38px, 14vw, 48px);
-        height: clamp(38px, 14vw, 48px);
-        padding: 3px;
-    }
-
-    .number-display {
-        font-size: clamp(1.2rem, 4vw, 1.8rem);
-    }
-
-    #controls button {
-        font-size: 0.8rem;
-        padding: 8px 4px;
-    }
-
-    #scoreboard {
-        grid-template-columns: 1fr !important;
-    }
-
-    #current-score-span {
-        font-size: 2.2rem;
-    }
-}
-
+            #scoreboard { grid-template-columns: 1fr !important; }
+        }
     </style>
 </head>
 <body>
@@ -806,35 +744,26 @@
             if (shouldBroadcast && isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
         }
 
-        // NEW: Handles the physical Install App button logic
         let deferredPrompt;
         const installBtn = document.getElementById('install-app-btn');
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome from automatically showing the prompt
             e.preventDefault();
-            // Stash the event so it can be triggered later.
             deferredPrompt = e;
-            // Reveal our custom install button in the menu
             installBtn.style.display = 'inline-block';
         });
 
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
-                // Show the official browser install prompt
                 deferredPrompt.prompt();
-                // Wait for the user to respond to the prompt
                 const { outcome } = await deferredPrompt.userChoice;
                 console.log(`User response to the install prompt: ${outcome}`);
-                // We've used the prompt, and can't use it again, throw it away
                 deferredPrompt = null;
-                // Hide the button
                 installBtn.style.display = 'none';
             }
         });
 
         window.addEventListener('appinstalled', () => {
-            // Hide the app-provided install promotion once installed
             installBtn.style.display = 'none';
             console.log('PWA was installed successfully');
         });
