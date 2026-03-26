@@ -43,7 +43,6 @@
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        /* FIX: Added flex-wrap so the dice can drop to a new line if the screen is too narrow */
         #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
         #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
@@ -87,7 +86,7 @@
         
         #name-modal { display: flex; z-index: 2000; } 
         .input-group { margin-bottom: 15px; text-align: center; }
-        .styled-input { padding: 12px; font-size: 1.2rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; width: 100%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
+        .styled-input { padding: 12px; font-size: 1.2rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; width: 90%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
         .styled-input::placeholder { color: #bcaaa4; }
         .avatar-picker { display: flex; justify-content: space-around; font-size: 2.2rem; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;}
         .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(100%) opacity(0.5); user-select: none; }
@@ -102,59 +101,58 @@
         
         #room-indicator { position: absolute; top: 10px; right: 15px; color: rgba(255,255,255,0.4); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 2px #000; }
 
+        /* Devil's Overlay Styling */
         #devil-effect-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 0, 0, 0.95); z-index: 4000; justify-content: center; align-items: center; flex-direction: column; animation: explodeIn 0.5s ease-out forwards; }
         @keyframes explodeIn { 0% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.05); box-shadow: inset 0 0 150px 50px #ff0000; } 100% { opacity: 1; transform: scale(1); box-shadow: inset 0 0 80px 20px #ff0000; } }
         .devil-text { color: #ff0000; font-size: 4rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 20px #ff5500, 0 0 40px #ff0000, 4px 4px 0 #000; margin-bottom: 20px; animation: shake-violent 0.4s infinite; text-align: center; padding: 0 10px; }
-        @keyframes shake-violent { 0% { transform: translate(2px, 2px) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(-4px, 1px) rotate(1deg); } 75% { transform: translate(3px, 2px) rotate(-1deg); } 100% { transform: translate(1px, -2px) rotate(2deg); } }
+        @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
         /* =========================================================================
-           MOBILE OPTIMIZATION - Forcing the layout to stack properly
+           MOBILE OPTIMIZATION - This forces the layout to stack on phones!
            ========================================================================= */
         @media screen and (max-width: 900px) {
-            body { padding: 5px; }
+            body { padding: 10px; }
             
-            /* FORCES THE TWO COLUMNS TO STACK VERTICALLY */
+            /* Forces the gameboard and scoreboard into a single vertical column */
             #game-page { 
-                display: grid;
-                grid-template-columns: 1fr; 
+                display: flex;
+                flex-direction: column; 
                 gap: 15px; 
                 margin-top: 5px; 
             }
             
             #game-area { padding: 15px 10px; border-width: 3px; }
             
-            /* SHRINK DICE SO ALL 6 FIT IN A ROW ON PHONES */
-            .die { width: 45px; height: 45px; padding: 5px; border-radius: 8px; }
-            .pip { width: 8px; height: 8px; }
-            .number-display { font-size: 1.8rem; }
+            /* Shrink dice so all 6 fit in a row */
+            .die { width: 48px; height: 48px; padding: 5px; border-radius: 8px; }
+            .pip { width: 10px; height: 10px; }
+            .number-display { font-size: 2rem; }
             
             /* Adjust fonts */
-            .area-title { font-size: 1.3rem; }
-            #turn-indicator { font-size: 1.4rem !important; margin-bottom: 10px; }
-            #score-display { font-size: 1.1rem; height: 28px; }
+            .area-title { font-size: 1.4rem; }
+            #turn-indicator { font-size: 1.5rem !important; margin-bottom: 10px; }
+            #score-display { font-size: 1.2rem; height: 28px; }
             
             /* Shrink borders and gaps */
-            #locked-area, #active-area { gap: 8px; min-height: 60px; padding: 10px; }
-            #required-dice { padding-right: 10px; gap: 8px; }
+            #locked-area, #active-area { gap: 8px; min-height: 70px; padding: 10px; }
+            #required-dice { padding-right: 12px; gap: 8px; }
             #remaining-locked { gap: 8px; }
             
             /* Shrink buttons */
-            #controls button { font-size: 1rem; padding: 8px 12px; }
+            #controls button { font-size: 1.1rem; padding: 10px 15px; margin: 3px; }
             
-            /* Split scoreboard dynamically */
-            #scoreboard { grid-template-columns: 1fr 1fr !important; }
+            #sidebar { padding: 15px; width: 100%; box-sizing: border-box; }
+            #sidebar .area-title { margin-bottom: 10px; }
             
             #splash-text { font-size: 3.5rem; }
-            .devil-text { font-size: 2.2rem; }
+            .devil-text { font-size: 2.5rem; }
         }
 
         /* For very small phones (e.g., iPhone SE) */
         @media screen and (max-width: 400px) {
-            .die { width: 40px; height: 40px; padding: 4px; }
-            .number-display { font-size: 1.6rem; }
-            .area-title { font-size: 1.1rem; }
-            #scoreboard { grid-template-columns: 1fr !important; } /* Force 1 column list */
+            .die { width: 42px; height: 42px; padding: 4px; }
+            .number-display { font-size: 1.8rem; }
         }
     </style>
 </head>
@@ -358,8 +356,12 @@
         function showDevilEffect() {
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
+            
             playSound(sfxDevilsTeets);
-            setTimeout(() => { container.style.display = 'none'; }, 1000); 
+            
+            setTimeout(() => { 
+                container.style.display = 'none'; 
+            }, 1000); 
         }
         
         socket.on('triggerDevilEffect', showDevilEffect);
@@ -411,6 +413,7 @@
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
+            
             if (typeof window.currentRoundNumber === 'undefined') window.currentRoundNumber = state.roundNumber;
             if (window.currentRoundNumber !== state.roundNumber) {
                 window.currentRoundNumber = state.roundNumber;
@@ -420,7 +423,6 @@
             let previousTurnId = lastTurnId;
             scoreboard.innerHTML = '';
             
-            // This applies to wider desktop screens (phones are handled by the media query)
             if (state.playerOrder.length > 4) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))'; } 
             else if (state.playerOrder.length > 2) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))'; } 
             else { scoreboard.style.gridTemplateColumns = '1fr'; }
@@ -645,7 +647,8 @@
 
             if (shouldBroadcast && isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
         }
-
+        
+        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
