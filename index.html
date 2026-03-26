@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2, 4, 24 - Tavern Dice</title>
+    <title>2, 4, 24</title> 
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3e2723">
@@ -109,31 +109,47 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
+        /* =========================================================================
+           BULLETPROOF MOBILE STACKING
+           ========================================================================= */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
-            #game-page { display: grid !important; grid-template-columns: 1fr !important; gap: 8px; margin-top: 0px; }
-            #game-area { padding: 10px; border-width: 2px; }
             
+            /* The absolute strongest override to force vertical stacking */
+            #game-page { 
+                display: flex !important; 
+                flex-direction: column !important; 
+                gap: 8px !important; 
+                margin-top: 5px; 
+            }
+            
+            #game-area { padding: 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
+            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
+            
+            /* Shrink dice */
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
             .pip { width: 9px; height: 9px; }
             .number-display { font-size: 1.8rem; }
             
+            /* Adjust fonts */
             .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
             
-            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; }
+            /* Shrink borders and gaps */
+            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
+            /* Shrink buttons */
+            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
-            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             #sidebar .area-title { margin-bottom: 5px; }
-            #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+            #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; width: 100%; }
             .player-stat { padding: 5px 0; }
             
-            #reaction-bar { margin-top: 10px; padding-top: 10px; }
+            #reaction-bar { margin-top: 10px; padding-top: 10px; width: 100%; }
             .react-btn { font-size: 1.5rem; padding: 2px; }
             
             #splash-text { font-size: 3.5rem; }
@@ -246,7 +262,11 @@
         let myAvatar = '🛡️'; 
         let myRoom = 'PUBLIC';
 
-        // Adjust audio mix to prevent device limiting/ducking
+        const turnIndicator = document.getElementById('turn-indicator');
+        const scoreboard = document.getElementById('scoreboard');
+        const tieBanner = document.getElementById('tie-breaker-banner');
+        const roomCodeDisplay = document.getElementById('room-code-display');
+
         const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
         const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
         const sfxWin = new Audio('win.mp3'); sfxWin.volume = 0.6;
@@ -257,7 +277,7 @@
         const sfxSwoosh = new Audio('Swoosh.mp3'); sfxSwoosh.volume = 0.6;
         
         const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
-        sfxDevilsTeets.preload = 'auto'; // Load to RAM for instant sync
+        sfxDevilsTeets.preload = 'auto';
         sfxDevilsTeets.volume = 0.6;
         
         const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.4;
@@ -348,7 +368,7 @@
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
         function showDevilEffect() {
-            playSound(sfxDevilsTeets); // Fire the audio instantly
+            playSound(sfxDevilsTeets);
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
             setTimeout(() => { container.style.display = 'none'; }, 1000); 
@@ -664,7 +684,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Tavern Dice App registered!'))
+                    .then(reg => console.log('2, 4, 24 App registered!'))
                     .catch(err => console.log('Registration failed: ', err));
             });
         }
