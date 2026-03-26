@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2, 4, 24</title>
+    <title>2, 4, 24</title> 
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3e2723">
@@ -109,24 +109,39 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
+        /* =========================================================================
+           BULLETPROOF MOBILE STACKING
+           ========================================================================= */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
-            #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
+            
+            /* The absolute strongest override to force vertical stacking */
+            #game-page { 
+                display: flex !important; 
+                flex-direction: column !important; 
+                gap: 8px !important; 
+                margin-top: 5px; 
+            }
+            
             #game-area { padding: 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
+            /* Shrink dice */
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
             .pip { width: 9px; height: 9px; }
             .number-display { font-size: 1.8rem; }
             
+            /* Adjust fonts */
             .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
             
+            /* Shrink borders and gaps */
             #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
+            /* Shrink buttons */
             #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
@@ -174,9 +189,6 @@
             </div>
             <div class="input-group">
                 <input type="text" id="room-input" class="styled-input" placeholder="Table Code" maxlength="10" style="text-transform: uppercase;">
-            </div>
-            <div class="input-group">
-                <input type="number" id="lives-input" class="styled-input" placeholder="Starting Lives (Max 5)" min="1" max="5" value="3">
             </div>
             
             <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
@@ -265,7 +277,7 @@
         const sfxSwoosh = new Audio('Swoosh.mp3'); sfxSwoosh.volume = 0.6;
         
         const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
-        sfxDevilsTeets.preload = 'auto'; // Load straight to memory
+        sfxDevilsTeets.preload = 'auto';
         sfxDevilsTeets.volume = 0.6;
         
         const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.4;
@@ -310,18 +322,14 @@
         const nameModal = document.getElementById('name-modal');
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
-        const livesInput = document.getElementById('lives-input');
         const joinGameBtn = document.getElementById('join-game-btn');
 
         const savedName = localStorage.getItem('tavernName');
         const savedRoom = localStorage.getItem('tavernRoom');
         const savedAvatar = localStorage.getItem('tavernAvatar');
-        const savedLives = localStorage.getItem('tavernLives');
         
         if (savedName) nameInput.value = savedName;
         if (savedRoom) roomInput.value = savedRoom;
-        if (savedLives) livesInput.value = savedLives;
-        
         if (savedAvatar) {
             myAvatar = savedAvatar;
             document.querySelectorAll('.avatar-option').forEach(el => {
@@ -342,46 +350,22 @@
             const chosenName = nameInput.value;
             const chosenRoom = roomInput.value;
             
-            // Limit and save lives setting
-            let chosenLives = parseInt(livesInput.value) || 3;
-            chosenLives = Math.max(1, Math.min(5, chosenLives));
-            
             localStorage.setItem('tavernName', chosenName);
             localStorage.setItem('tavernRoom', chosenRoom);
             localStorage.setItem('tavernAvatar', myAvatar);
-            localStorage.setItem('tavernLives', chosenLives);
             
             myRoom = chosenRoom.trim() === "" ? "PUBLIC" : chosenRoom.trim().toUpperCase();
             roomCodeDisplay.innerText = myRoom;
             
-            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom, token: sessionToken, startingLives: chosenLives }); 
+            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom, token: sessionToken }); 
             nameModal.style.display = 'none'; triggerGlobalMusic();
         };
 
         const customModal = document.getElementById('custom-modal');
         const customModalText = document.getElementById('custom-modal-text');
         const customModalBtn = document.getElementById('custom-modal-btn');
-        
-        // NEW: Handles "Play Again" state vs "Continue" state
-        function showModal(message, isGameOver = false) { 
-            customModalText.innerText = message; 
-            customModal.style.display = 'flex'; 
-            
-            if (isGameOver) {
-                customModalBtn.innerText = "Play Again";
-                customModalBtn.onclick = () => {
-                    playSound(sfxClick); 
-                    customModal.style.display = 'none';
-                    socket.emit('playAgain'); // Tell server to restart!
-                };
-            } else {
-                customModalBtn.innerText = "Continue";
-                customModalBtn.onclick = () => { 
-                    playSound(sfxClick); 
-                    customModal.style.display = 'none'; 
-                };
-            }
-        }
+        function showModal(message) { customModalText.innerText = message; customModal.style.display = 'flex'; }
+        customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
         function showDevilEffect() {
             playSound(sfxDevilsTeets);
@@ -459,17 +443,11 @@
 
             state.playerOrder.forEach(id => {
                 let p = state.players[id];
-                
-                // NEW: Dynamic Hearts based on the room's setting!
-                let sLives = state.startingLives || 3;
-                let pLives = Math.max(0, p.lives);
-                let emptyHearts = Math.max(0, sLives - pLives);
-                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(pLives) + "🖤".repeat(emptyHearts) + `</span>`;
-                
+                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(Math.max(0, p.lives)) + "🖤".repeat(Math.max(0, 2 - p.lives)) + `</span>`;
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
-                else if (p.lives <= 0) scoreText = "Dust!"; // Dust term added!
+                else if (p.lives <= 0) scoreText = "Dust!";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
@@ -507,9 +485,8 @@
             }
         });
 
-        // Pass 'false' for normal rounds, 'true' for game over!
-        socket.on('roundResult', (data) => { showModal(data.message, false); });
-        socket.on('gameOver', (data) => { showModal(data.message, true); });
+        socket.on('roundResult', (data) => { showModal(data.message); });
+        socket.on('gameOver', (data) => { showModal(data.message); });
 
         socket.on('boardUpdated', (gameData) => {
             dice = gameData.dice; rollCount = gameData.rollCount;
@@ -563,7 +540,6 @@
                 let locked6sCount = allLocked.filter(d => d.value === 6).length;
                 let activeCount = dice.filter(d => d.status === 'active').length;
 
-                // NEW: Triggers "The door is open!" if they have 24 points and exactly 1 roll left
                 if (lockedHas2 && lockedHas4 && locked6sCount === 3 && activeCount === 1) {
                     broadcastAnnouncement("The door is open!", "#b2ff59", "The door is open!");
                 } else if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
