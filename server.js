@@ -166,7 +166,7 @@ io.on('connection', (socket) => {
         } else {
             // Player starts with exactly 2 lives
             room.players[socket.id] = { 
-                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 2, score: null, busted: false, connected: true 
+                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 3, score: null, busted: false, connected: true 
             };
             room.playerOrder.push(socket.id);
 
@@ -178,7 +178,7 @@ io.on('connection', (socket) => {
         if (room.roundPlayers.length === 0 && room.playerOrder.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
-                    room.players[id].lives = 2; 
+                    room.players[id].lives = 3; 
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
