@@ -101,7 +101,6 @@
         
         #room-indicator { position: absolute; top: 10px; right: 15px; color: rgba(255,255,255,0.4); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 2px #000; }
 
-        /* Devil's Overlay Styling */
         #devil-effect-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 0, 0, 0.95); z-index: 4000; justify-content: center; align-items: center; flex-direction: column; animation: explodeIn 0.5s ease-out forwards; }
         @keyframes explodeIn { 0% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.05); box-shadow: inset 0 0 150px 50px #ff0000; } 100% { opacity: 1; transform: scale(1); box-shadow: inset 0 0 80px 20px #ff0000; } }
         .devil-text { color: #ff0000; font-size: 4rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 20px #ff5500, 0 0 40px #ff0000, 4px 4px 0 #000; margin-bottom: 20px; animation: shake-violent 0.4s infinite; text-align: center; padding: 0 10px; }
@@ -109,50 +108,48 @@
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
         /* =========================================================================
-           MOBILE OPTIMIZATION - This forces the layout to stack on phones!
+           MOBILE OPTIMIZATION - Bulletproof Stacking
            ========================================================================= */
         @media screen and (max-width: 900px) {
-            body { padding: 10px; }
+            body { padding: 5px; }
             
-            /* Forces the gameboard and scoreboard into a single vertical column */
+            /* FORCE STACKING: explicitly use grid with 1 column */
             #game-page { 
-                display: flex;
-                flex-direction: column; 
+                display: grid !important;
+                grid-template-columns: 1fr !important; 
                 gap: 15px; 
                 margin-top: 5px; 
             }
             
             #game-area { padding: 15px 10px; border-width: 3px; }
             
-            /* Shrink dice so all 6 fit in a row */
+            /* Shrink dice */
             .die { width: 48px; height: 48px; padding: 5px; border-radius: 8px; }
             .pip { width: 10px; height: 10px; }
             .number-display { font-size: 2rem; }
             
-            /* Adjust fonts */
             .area-title { font-size: 1.4rem; }
             #turn-indicator { font-size: 1.5rem !important; margin-bottom: 10px; }
             #score-display { font-size: 1.2rem; height: 28px; }
             
-            /* Shrink borders and gaps */
             #locked-area, #active-area { gap: 8px; min-height: 70px; padding: 10px; }
             #required-dice { padding-right: 12px; gap: 8px; }
             #remaining-locked { gap: 8px; }
             
-            /* Shrink buttons */
             #controls button { font-size: 1.1rem; padding: 10px 15px; margin: 3px; }
             
             #sidebar { padding: 15px; width: 100%; box-sizing: border-box; }
             #sidebar .area-title { margin-bottom: 10px; }
+            #scoreboard { grid-template-columns: 1fr 1fr !important; }
             
             #splash-text { font-size: 3.5rem; }
             .devil-text { font-size: 2.5rem; }
         }
 
-        /* For very small phones (e.g., iPhone SE) */
         @media screen and (max-width: 400px) {
             .die { width: 42px; height: 42px; padding: 4px; }
             .number-display { font-size: 1.8rem; }
+            #scoreboard { grid-template-columns: 1fr !important; }
         }
     </style>
 </head>
@@ -356,12 +353,8 @@
         function showDevilEffect() {
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
-            
             playSound(sfxDevilsTeets);
-            
-            setTimeout(() => { 
-                container.style.display = 'none'; 
-            }, 1000); 
+            setTimeout(() => { container.style.display = 'none'; }, 1000); 
         }
         
         socket.on('triggerDevilEffect', showDevilEffect);
@@ -413,7 +406,6 @@
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
-            
             if (typeof window.currentRoundNumber === 'undefined') window.currentRoundNumber = state.roundNumber;
             if (window.currentRoundNumber !== state.roundNumber) {
                 window.currentRoundNumber = state.roundNumber;
@@ -647,8 +639,7 @@
 
             if (shouldBroadcast && isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
         }
-        
-        // PWA Service Worker Registration
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
