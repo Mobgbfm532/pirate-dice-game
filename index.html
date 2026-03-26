@@ -68,8 +68,6 @@
         button:hover { background: linear-gradient(to bottom, #6d4c41, #4e342e); transform: translateY(-2px); color: #fff; }
         button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
-
-        /* Install App Button Specific Style */
         #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
         #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
 
@@ -111,30 +109,43 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
+        /* =========================================================================
+           MOBILE OPTIMIZATION - Squished for Vertical Space
+           ========================================================================= */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
-            #game-page { display: grid !important; grid-template-columns: 1fr !important; gap: 15px; margin-top: 5px; }
-            #game-area { padding: 15px 10px; border-width: 3px; }
-            .die { width: 48px; height: 48px; padding: 5px; border-radius: 8px; }
-            .pip { width: 10px; height: 10px; }
-            .number-display { font-size: 2rem; }
-            .area-title { font-size: 1.4rem; }
-            #turn-indicator { font-size: 1.5rem !important; margin-bottom: 10px; }
-            #score-display { font-size: 1.2rem; height: 28px; }
-            #locked-area, #active-area { gap: 8px; min-height: 70px; padding: 10px; }
-            #required-dice { padding-right: 12px; gap: 8px; }
-            #remaining-locked { gap: 8px; }
-            #controls button { font-size: 1.1rem; padding: 10px 15px; margin: 3px; }
-            #sidebar { padding: 15px; width: 100%; box-sizing: border-box; }
-            #sidebar .area-title { margin-bottom: 10px; }
-            #scoreboard { grid-template-columns: 1fr 1fr !important; }
+            #game-page { display: grid !important; grid-template-columns: 1fr !important; gap: 8px; margin-top: 0px; }
+            #game-area { padding: 10px; border-width: 2px; }
+            
+            .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
+            .pip { width: 9px; height: 9px; }
+            .number-display { font-size: 1.8rem; }
+            
+            .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
+            #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
+            #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
+            
+            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; }
+            #required-dice { padding-right: 8px; gap: 6px; }
+            #remaining-locked { gap: 6px; }
+            
+            #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
+            
+            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
+            #sidebar .area-title { margin-bottom: 5px; }
+            #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+            .player-stat { padding: 5px 0; }
+            
+            #reaction-bar { margin-top: 10px; padding-top: 10px; }
+            .react-btn { font-size: 1.5rem; padding: 2px; }
+            
             #splash-text { font-size: 3.5rem; }
             .devil-text { font-size: 2.5rem; }
         }
 
         @media screen and (max-width: 400px) {
-            .die { width: 42px; height: 42px; padding: 4px; }
-            .number-display { font-size: 1.8rem; }
+            .die { width: 40px; height: 40px; padding: 3px; }
+            .number-display { font-size: 1.6rem; }
             #scoreboard { grid-template-columns: 1fr !important; }
         }
     </style>
@@ -168,7 +179,6 @@
             </div>
             
             <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
-            
             <button id="install-app-btn">📲 Install App</button>
         </div>
     </div>
@@ -249,7 +259,10 @@
         const sfxAww = new Audio('Aww.mp3'); const sfxYay = new Audio('Yay.mp3');
         const sfxOhWell = new Audio('ohwell.mp3');
         const sfxSwoosh = new Audio('Swoosh.mp3');
+        
+        // NEW: Preload audio into RAM to eliminate playback delay
         const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
+        sfxDevilsTeets.preload = 'auto';
         
         const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.2;
         const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.3;
@@ -339,10 +352,14 @@
         customModalBtn.onclick = () => { playSound(sfxClick); customModal.style.display = 'none'; };
 
         function showDevilEffect() {
+            // UPDATED: Play sound BEFORE dom manipulation to guarantee immediate execution
+            playSound(sfxDevilsTeets);
             const container = document.getElementById('devil-effect-container');
             container.style.display = 'flex';
-            playSound(sfxDevilsTeets);
-            setTimeout(() => { container.style.display = 'none'; }, 1000); 
+            
+            setTimeout(() => { 
+                container.style.display = 'none'; 
+            }, 1000); 
         }
         
         socket.on('triggerDevilEffect', showDevilEffect);
@@ -418,7 +435,8 @@
                 let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
-                else if (p.lives <= 0) scoreText = "ELIMINATED";
+                // UPDATED: Terminology is now "Dust!"
+                else if (p.lives <= 0) scoreText = "Dust!";
                 
                 let el = document.createElement('div'); el.className = 'player-stat';
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
@@ -433,7 +451,12 @@
                 turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isFirstLoad = true; 
             } else {
                 let myPlayerInfo = state.players[myId];
-                if (myPlayerInfo && myPlayerInfo.lives <= 0) { turnIndicator.innerText = "You have been eliminated!"; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; } 
+                if (myPlayerInfo && myPlayerInfo.lives <= 0) { 
+                    // UPDATED: Replaced "You have been eliminated!"
+                    turnIndicator.innerText = "You're dust!"; 
+                    turnIndicator.style.color = "#9e9e9e"; 
+                    isMyTurn = false; 
+                } 
                 else {
                     isMyTurn = (myId === state.currentTurnId);
                     let activePlayerInfo = state.players[state.currentTurnId];
@@ -489,7 +512,7 @@
             triggerGlobalMusic();
 
             if (rollCount > 0) { 
-                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!") {
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
                     broadcastAnnouncement("", ""); 
                 }
             }
@@ -511,7 +534,10 @@
                 let locked6sCount = allLocked.filter(d => d.value === 6).length;
                 let activeCount = dice.filter(d => d.status === 'active').length;
 
-                if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
+                // NEW: Triggers "The door is open!" if they have 24 points and exactly 1 roll left
+                if (lockedHas2 && lockedHas4 && locked6sCount === 3 && activeCount === 1) {
+                    broadcastAnnouncement("The door is open!", "#b2ff59", "The door is open!");
+                } else if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
                     broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
                 }
             }
@@ -628,37 +654,26 @@
             if (shouldBroadcast && isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
         }
 
-        // NEW: Handles the physical Install App button logic
         let deferredPrompt;
         const installBtn = document.getElementById('install-app-btn');
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome from automatically showing the prompt
             e.preventDefault();
-            // Stash the event so it can be triggered later.
             deferredPrompt = e;
-            // Reveal our custom install button in the menu
             installBtn.style.display = 'inline-block';
         });
 
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
-                // Show the official browser install prompt
                 deferredPrompt.prompt();
-                // Wait for the user to respond to the prompt
                 const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response to the install prompt: ${outcome}`);
-                // We've used the prompt, and can't use it again, throw it away
                 deferredPrompt = null;
-                // Hide the button
                 installBtn.style.display = 'none';
             }
         });
 
         window.addEventListener('appinstalled', () => {
-            // Hide the app-provided install promotion once installed
             installBtn.style.display = 'none';
-            console.log('PWA was installed successfully');
         });
 
         if ('serviceWorker' in navigator) {
