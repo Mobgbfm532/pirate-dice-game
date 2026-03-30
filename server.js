@@ -37,7 +37,7 @@ function evaluateRound(roomCode) {
     let busted = room.roundPlayers.filter(id => room.players[id] && room.players[id].busted);
     busted.forEach(id => {
         room.players[id].lives -= 1;
-        losersThisRound.push({ id, reason: 'You busted!' });
+        losersThisRound.push({ id, reason: 'Dust!' });
     });
 
     let valid = room.roundPlayers.filter(id => room.players[id] && !room.players[id].busted);
@@ -259,7 +259,6 @@ io.on('connection', (socket) => {
             room.roundNumber++;
             
             io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-            // UPDATED: Broadcast the new splash screen event!
             io.to(socket.roomCode).emit('triggerNewGameSplash');
         }
     });
