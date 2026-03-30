@@ -42,8 +42,8 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        /* UPDATED: Increased top padding to 50px to push all content down! */
-        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 50px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        /* UPDATED: Increased top padding to 70px to push content down even more */
+        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 70px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
@@ -74,13 +74,12 @@
 
         #controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
-        /* UPDATED: High-contrast brightened buttons for readability against #473222 */
         button { 
             padding: 12px 25px; 
             font-size: 1.3rem; 
             font-family: 'Almendra', serif; 
-            background: linear-gradient(to bottom, #8d6e63, #5d4037); /* Lighter, warmer wood tones */
-            color: #ffffff; /* Pure white text for pop */
+            background: linear-gradient(to bottom, #8d6e63, #5d4037); 
+            color: #ffffff; 
             border: 2px solid #2a1610; 
             border-radius: 6px; 
             cursor: pointer; 
@@ -146,8 +145,8 @@
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
-            /* UPDATED: Mobile top padding increased to push content down */
-            #game-area { padding: 40px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
+            /* UPDATED: Mobile top padding increased slightly to 60px */
+            #game-area { padding: 60px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
