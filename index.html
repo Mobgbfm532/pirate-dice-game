@@ -41,12 +41,13 @@
         @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
-        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        
+        /* UPDATED: Increased top padding to 50px to push all content down! */
+        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 50px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        /* FIXED: Strict min-height applied to prevent layout shifting when moving dice! */
         #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 115px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
         #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
@@ -72,10 +73,24 @@
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
         #controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-        button { padding: 12px 25px; font-size: 1.3rem; font-family: 'Almendra', serif; background: linear-gradient(to bottom, #5d4037, #3e2723); color: #d7ccc8; border: 2px solid #271612; border-radius: 6px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
-        button:hover { background: linear-gradient(to bottom, #6d4c41, #4e342e); transform: translateY(-2px); color: #fff; }
+        
+        /* UPDATED: High-contrast brightened buttons for readability against #473222 */
+        button { 
+            padding: 12px 25px; 
+            font-size: 1.3rem; 
+            font-family: 'Almendra', serif; 
+            background: linear-gradient(to bottom, #8d6e63, #5d4037); /* Lighter, warmer wood tones */
+            color: #ffffff; /* Pure white text for pop */
+            border: 2px solid #2a1610; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2); 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
+        }
+        button:hover { background: linear-gradient(to bottom, #a1887f, #6d4c41); transform: translateY(-2px); }
         button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
+        button:disabled { background: #4e342e; color: #9e9e9e; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723; text-shadow: none;}
         
         #play-again-btn { background: linear-gradient(to bottom, #2e7d32, #1b5e20); display: none; color: #fff; border-color: #1b5e20; }
         #play-again-btn:hover { background: linear-gradient(to bottom, #388e3c, #2e7d32); }
@@ -131,7 +146,8 @@
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
-            #game-area { padding: 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
+            /* UPDATED: Mobile top padding increased to push content down */
+            #game-area { padding: 40px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
@@ -142,7 +158,6 @@
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
             
-            /* FIXED: Strict min-height for mobile to prevent collapsing empty boxes */
             #locked-area, #active-area { gap: 6px; min-height: 65px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
@@ -480,7 +495,6 @@
         socket.on('receiveReaction', (data) => {
             const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
             
-            // Handles removing the name tag for our special Early Ross emoji!
             if (data.emoji === '🧔🏼‍♂️ Early Ross') {
                 reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
             } else {
