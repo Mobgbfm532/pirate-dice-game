@@ -75,7 +75,8 @@ function evaluateRound(roomCode) {
     let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
-        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the tavern! 🏆` });
+        // UPDATED: "wins the table!"
+        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
         room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
@@ -142,12 +143,14 @@ io.on('connection', (socket) => {
                 startingLives: requestedLives 
             };
             
-            // NEW: Inject "The Molar" if the room code is exactly "COMP"
+            // Inject "The Molar"
             if (roomCode === "COMP") {
                 rooms[roomCode].players['BOT_MOLAR'] = { 
                     id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
                 };
                 rooms[roomCode].playerOrder.push('BOT_MOLAR');
+                // FIX: Instantly push the bot to the round so he doesn't miss the first turn!
+                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
             }
         }
         
@@ -187,7 +190,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Fix bot logic if evaluating an empty room
         let humanPlayers = room.playerOrder.filter(id => id !== 'BOT_MOLAR' && room.players[id] && room.players[id].connected);
         
         if (room.roundPlayers.length === 0 && humanPlayers.length > 0) {
@@ -205,7 +207,6 @@ io.on('connection', (socket) => {
             room.roundNumber = 1;
         }
 
-        // If the room has only The Molar, don't start the game until the human is technically fully connected
         if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== 'BOT_MOLAR') {
             room.currentTurnIndex = 0;
         }
@@ -264,7 +265,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Helper function: verifies if the user sending the command is allowed to (Humans can command the bot)
     function isAuthorized(socket, roomCode) {
         let room = rooms[roomCode];
         if (!room) return false;
