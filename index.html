@@ -40,4 +40,711 @@
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
-        .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px
+        .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
+        #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
+
+        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
+        #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
+        #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
+        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
+
+        .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; font-weight: bold; color: var(--pip-black); }
+        .die:hover { transform: translateY(-5px) rotate(2deg); }
+        .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5); }
+        .die[data-value="1"] .pip { background-color: var(--pip-red); } .die[data-value="6"] .pip { background-color: var(--pip-green); }
+        .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
+        .pip.top-left { grid-column: 1; grid-row: 1; } .pip.top-right { grid-column: 3; grid-row: 1; } .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; } .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; } .pip.bottom-right { grid-column: 3; grid-row: 3; }
+        .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3.5rem; }
+
+        @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
+        .rolling { animation: tumble 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes tumble-suspense { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-80px) rotate(144deg) scale(1.2); } 40% { transform: translateY(-100px) rotate(288deg) scale(1.25); } 60% { transform: translateY(-40px) rotate(576deg) scale(1.15); } 80% { transform: translateY(-10px) rotate(720deg) scale(1.05); } 90% { transform: translateY(-15px) rotate(760deg) scale(1.02); } 100% { transform: translateY(0) rotate(1080deg) scale(1); } }
+        .rolling-suspense { animation: tumble-suspense 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
+        .shake-screen { animation: screen-shake 0.3s infinite; }
+
+        #controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        button { padding: 12px 25px; font-size: 1.3rem; font-family: 'Almendra', serif; background: linear-gradient(to bottom, #5d4037, #3e2723); color: #d7ccc8; border: 2px solid #271612; border-radius: 6px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        button:hover { background: linear-gradient(to bottom, #6d4c41, #4e342e); transform: translateY(-2px); color: #fff; }
+        button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
+        #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
+        #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
+
+        #sidebar { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative; width: 100%; box-sizing: border-box; }
+        #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
+        #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
+        .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
+
+        #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; gap: 5px;}
+        .react-btn { padding: 5px; font-size: 1.8rem; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; }
+        .react-btn:hover { transform: scale(1.3); background: transparent; box-shadow: none; }
+        .floating-reaction { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(62, 39, 35, 0.9); color: #fdf6e3; padding: 10px 20px; border-radius: 20px; font-size: 1.2rem; z-index: 9999; pointer-events: none; animation: floatUp 3s ease-out forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #cda434; display: flex; align-items: center; gap: 10px; font-family: 'Almendra', serif; white-space: nowrap;}
+        @keyframes floatUp { 0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); } 10% { opacity: 1; transform: translateX(-50%) scale(1.2); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); } }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
+        .modal-box { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 30px; border-radius: 4px; text-align: center; width: 100%; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); color: var(--text-dark); box-sizing: border-box;}
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        #name-modal { display: flex; z-index: 2000; } 
+        .input-group { margin-bottom: 15px; text-align: center; width: 100%;}
+        .styled-input { padding: 12px; font-size: 1.2rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; width: 90%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
+        .styled-input::placeholder { color: #bcaaa4; }
+        
+        /* New styling for the lives picker */
+        .lives-picker { display: flex; justify-content: space-around; background: #fff8e1; border: 1px solid #8d6e63; border-radius: 4px; padding: 5px; width: 90%; margin: 0 auto; box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .lives-option { cursor: pointer; transition: transform 0.2s, opacity 0.2s; opacity: 0.4; user-select: none; padding: 5px 10px; font-size: 1.2rem; letter-spacing: -2px; border-radius: 4px; border: 2px solid transparent;}
+        .lives-option:hover { transform: scale(1.1); opacity: 0.8; }
+        .lives-option.selected { transform: scale(1.1); opacity: 1; text-shadow: 0 0 10px rgba(212, 175, 55, 0.8); border-color: #cda434; background: #5d4037; color: transparent; /* Text shadow doesn't color emojis, but background creates a nice highlighted button effect */ }
+        .lives-label { color: #8d6e63; margin-bottom: 5px; font-size: 1.1rem; font-weight: bold;}
+
+        .avatar-picker { display: flex; justify-content: space-around; font-size: 2.2rem; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;}
+        .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(100%) opacity(0.5); user-select: none; }
+        .avatar-option:hover { transform: scale(1.2); filter: grayscale(0%) opacity(1); }
+        .avatar-option.selected { transform: scale(1.3); filter: grayscale(0%) opacity(1); text-shadow: 0 0 10px rgba(212, 175, 55, 0.8); }
+
+        #splash-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; pointer-events: none; }
+        #splash-text { color: #ffcc80; font-size: 6rem; text-shadow: 3px 3px 15px #000; font-family: 'Almendra', serif; transform: scale(0); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
+
+        #tie-breaker-banner { display: none; color: #e57373; font-size: 1.4rem; letter-spacing: 1px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); text-align: center; margin-top: -10px; margin-bottom: 15px; animation: textFlicker 1.5s infinite alternate; }
+        @keyframes textFlicker { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0.8; transform: scale(0.98); } }
+        
+        #room-indicator { position: absolute; top: 10px; right: 15px; color: rgba(255,255,255,0.4); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 2px #000; }
+
+        #devil-effect-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 0, 0, 0.95); z-index: 4000; justify-content: center; align-items: center; flex-direction: column; animation: explodeIn 0.5s ease-out forwards; }
+        @keyframes explodeIn { 0% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.05); box-shadow: inset 0 0 150px 50px #ff0000; } 100% { opacity: 1; transform: scale(1); box-shadow: inset 0 0 80px 20px #ff0000; } }
+        .devil-text { color: #ff0000; font-size: 4rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 20px #ff5500, 0 0 40px #ff0000, 4px 4px 0 #000; margin-bottom: 20px; animation: shake-violent 0.4s infinite; text-align: center; padding: 0 10px; }
+        @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
+        #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
+
+        @media screen and (max-width: 900px) {
+            body { padding: 5px; }
+            
+            #game-page { 
+                display: flex !important; 
+                flex-direction: column !important; 
+                gap: 8px !important; 
+                margin-top: 5px; 
+            }
+            
+            #game-area { padding: 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
+            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
+            
+            .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
+            .pip { width: 9px; height: 9px; }
+            .number-display { font-size: 1.8rem; }
+            
+            .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
+            #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
+            #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
+            
+            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
+            #required-dice { padding-right: 8px; gap: 6px; }
+            #remaining-locked { gap: 6px; }
+            
+            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+            #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
+            
+            #sidebar .area-title { margin-bottom: 5px; }
+            #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; width: 100%; }
+            .player-stat { padding: 5px 0; }
+            
+            #reaction-bar { margin-top: 10px; padding-top: 10px; width: 100%; }
+            .react-btn { font-size: 1.5rem; padding: 2px; }
+            
+            #splash-text { font-size: 3.5rem; }
+            .devil-text { font-size: 2.5rem; }
+        }
+
+        @media screen and (max-width: 400px) {
+            .die { width: 40px; height: 40px; padding: 3px; }
+            .number-display { font-size: 1.6rem; }
+            #scoreboard { grid-template-columns: 1fr !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="devil-effect-container">
+        <h1 class="devil-text">The Devil's titties!</h1>
+        <img id="devil-image" src="666.jpg" alt="666">
+    </div>
+
+    <div class="firelight-overlay"></div>
+
+    <div id="name-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2 style="color: #5d4037; font-size: 2.2rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
+            
+            <div class="avatar-picker" id="avatar-container">
+                <div class="avatar-option selected" onclick="selectAvatar(this, '🛡️')">🛡️</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🧙‍♂️')">🧙‍♂️</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🗡️')">🗡️</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🪕')">🪕</div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🍻')">🍻</div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="name-input" class="styled-input" placeholder="Adventurer Name" maxlength="15">
+            </div>
+            <div class="input-group">
+                <input type="text" id="room-input" class="styled-input" placeholder="Table Code" maxlength="10" style="text-transform: uppercase;">
+            </div>
+            
+            <div class="input-group">
+                <div class="lives-label">How many lives? (Host)</div>
+                <div class="lives-picker" id="lives-container">
+                    <div class="lives-option" onclick="selectLives(this, 2)">❤️❤️</div>
+                    <div class="lives-option selected" onclick="selectLives(this, 3)">❤️❤️❤️</div>
+                    <div class="lives-option" onclick="selectLives(this, 4)">❤️❤️❤️❤️</div>
+                </div>
+            </div>
+            
+            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
+            <button id="install-app-btn">📲 Install App</button>
+        </div>
+    </div>
+
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="custom-modal-text" style="color: var(--text-dark); margin-bottom: 30px; font-size: 1.5rem; white-space: pre-line;"></div>
+            <button id="custom-modal-btn">Continue</button>
+        </div>
+    </div>
+
+    <div id="splash-overlay"><h1 id="splash-text">Player's Turn!</h1></div>
+
+    <div id="game-page">
+        <div id="game-area"> 
+            <div id="room-indicator">Tavern: <span id="room-code-display">...</span></div>
+            
+            <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
+            <h2 id="tie-breaker-banner">⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️<br><span style="font-size: 1.1rem; color: #ffcc80;">You are spectating</span></h2>
+            
+            <h2 class="area-title">Locked Dice</h2>
+            <div id="locked-area"><div id="required-dice"></div><div id="remaining-locked"></div></div>
+            
+            <h2 class="area-title">Active Dice</h2>
+            <div id="active-area"></div>
+            
+            <h3 id="score-display"></h3> 
+            
+            <div id="controls">
+                <button id="roll-btn">Roll Dice</button>
+                <button id="toggle-btn">Switch to Pips</button>
+                <button id="mute-btn">🎵 Mute Tavern</button>
+            </div>
+        </div>
+        
+        <div id="sidebar"> 
+            <h2 class="area-title">Turn Score</h2>
+            <h2 style="margin: 0; color: #b71c1c; font-size: 4rem; text-shadow: 1px 1px 2px rgba(255,255,255,0.5); border-bottom: 2px solid #a1887f; width: 100%; text-align: center; padding-bottom: 10px; margin-bottom: 20px;"><span id="current-score-span">0</span></h2>
+            
+            <h2 class="area-title">Adventurers</h2>
+            <div id="scoreboard"></div> 
+
+            <div id="reaction-bar">
+                <button class="react-btn" onclick="sendReaction('👍')" title="Thumbs up">👍</button>
+                <button class="react-btn" onclick="sendReaction('👎')" title="Thumbs down">👎</button>
+                <button class="react-btn" onclick="sendReaction('😡')" title="Anger">😡</button>
+                <button class="react-btn" onclick="sendReaction('😉')" title="Wink">😉</button>
+                <button class="react-btn" onclick="sendReaction('😲')" title="Shock">😲</button>
+                <button class="react-btn" onclick="sendReaction('🧔‍♂️ Early Ross')" title="Early Ross">🧔‍♂️</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        let sessionToken = sessionStorage.getItem('tavernToken');
+        if (!sessionToken) {
+            sessionToken = Math.random().toString(36).substring(2, 15);
+            sessionStorage.setItem('tavernToken', sessionToken);
+        }
+
+        let dice = [];
+        let hasRolled = false, locksThisRoll = 0, rollCount = 0;
+        let isAnimating = false, usePips = false;
+        let suspenseType = 'none', inTrouble = false, turnFinalized = false;
+        
+        let myId = null, isMyTurn = false, lastTurnId = null, isFirstLoad = true; 
+        let myAvatar = '🛡️'; 
+        let myRoom = 'PUBLIC';
+        let myStartingLives = 3;
+
+        const turnIndicator = document.getElementById('turn-indicator');
+        const scoreboard = document.getElementById('scoreboard');
+        const tieBanner = document.getElementById('tie-breaker-banner');
+        const roomCodeDisplay = document.getElementById('room-code-display');
+
+        const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
+        const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
+        const sfxWin = new Audio('win.mp3'); sfxWin.volume = 0.6;
+        const sfxBust = new Audio('bust.mp3'); sfxBust.volume = 0.6;
+        const sfxAww = new Audio('Aww.mp3'); sfxAww.volume = 0.6;
+        const sfxYay = new Audio('Yay.mp3'); sfxYay.volume = 0.6;
+        const sfxOhWell = new Audio('ohwell.mp3'); sfxOhWell.volume = 0.6;
+        const sfxSwoosh = new Audio('Swoosh.mp3'); sfxSwoosh.volume = 0.6;
+        
+        const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
+        sfxDevilsTeets.preload = 'auto';
+        sfxDevilsTeets.volume = 0.6;
+        
+        const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.4;
+        const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.5;
+
+        function createEmber() {
+            const ember = document.createElement('div'); ember.className = 'ember';
+            ember.style.left = Math.random() * 100 + 'vw'; ember.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(ember); setTimeout(() => ember.remove(), 5000); 
+        }
+        setInterval(createEmber, 400); 
+
+        function playSound(audioEl) { audioEl.currentTime = 0; let playPromise = audioEl.play(); if (playPromise !== undefined) playPromise.catch(error => {}); }
+
+        function playRollSound() {
+            sfxRoll.currentTime = 0; sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
+            let playPromise = sfxRoll.play(); if (playPromise !== undefined) playPromise.catch(e => {});
+        }
+
+        const muteBtn = document.getElementById('mute-btn');
+        let isMuted = false;
+        muteBtn.onclick = () => {
+            isMuted = !isMuted; bgm.muted = isMuted; sfxAmbience.muted = isMuted;
+            muteBtn.innerText = isMuted ? "🔇 Unmute Tavern" : "🎵 Mute Tavern";
+        };
+
+        function triggerGlobalMusic() {
+            if (bgm.paused) {
+                let p1 = bgm.play(); if (p1 !== undefined) p1.catch(e => {});
+                let p2 = sfxAmbience.play(); if (p2 !== undefined) p2.catch(e => {});
+                socket.emit('startGlobalMusic');
+            }
+        }
+
+        socket.on('playGlobalMusic', () => {
+            if (bgm.paused) {
+                let p1 = bgm.play(); if (p1 !== undefined) p1.catch(e => {});
+                let p2 = sfxAmbience.play(); if (p2 !== undefined) p2.catch(e => {});
+            }
+        });
+
+        const nameModal = document.getElementById('name-modal');
+        const nameInput = document.getElementById('name-input');
+        const roomInput = document.getElementById('room-input');
+        const joinGameBtn = document.getElementById('join-game-btn');
+
+        const savedName = localStorage.getItem('tavernName');
+        const savedRoom = localStorage.getItem('tavernRoom');
+        const savedAvatar = localStorage.getItem('tavernAvatar');
+        const savedLives = localStorage.getItem('tavernLives');
+        
+        if (savedName) nameInput.value = savedName;
+        if (savedRoom) roomInput.value = savedRoom;
+        
+        if (savedAvatar) {
+            myAvatar = savedAvatar;
+            document.querySelectorAll('.avatar-option').forEach(el => {
+                if(el.innerText === savedAvatar) {
+                    document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
+                    el.classList.add('selected');
+                }
+            });
+        }
+        
+        // Restore lives option
+        if (savedLives && [2,3,4].includes(parseInt(savedLives))) {
+            myStartingLives = parseInt(savedLives);
+            document.querySelectorAll('.lives-option').forEach((el, index) => {
+                el.classList.remove('selected');
+                if (index + 2 === myStartingLives) {
+                    el.classList.add('selected');
+                }
+            });
+        }
+
+        function selectAvatar(element, icon) {
+            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected'); myAvatar = icon; playSound(sfxClick);
+        }
+        
+        function selectLives(element, count) {
+            document.querySelectorAll('.lives-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected'); myStartingLives = count; playSound(sfxClick);
+        }
+
+        joinGameBtn.onclick = () => {
+            playSound(sfxClick); 
+            const chosenName = nameInput.value;
+            const chosenRoom = roomInput.value;
+            
+            localStorage.setItem('tavernName', chosenName);
+            localStorage.setItem('tavernRoom', chosenRoom);
+            localStorage.setItem('tavernAvatar', myAvatar);
+            localStorage.setItem('tavernLives', myStartingLives);
+            
+            myRoom = chosenRoom.trim() === "" ? "PUBLIC" : chosenRoom.trim().toUpperCase();
+            roomCodeDisplay.innerText = myRoom;
+            
+            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: chosenRoom, token: sessionToken, startingLives: myStartingLives }); 
+            nameModal.style.display = 'none'; triggerGlobalMusic();
+        };
+
+        const customModal = document.getElementById('custom-modal');
+        const customModalText = document.getElementById('custom-modal-text');
+        const customModalBtn = document.getElementById('custom-modal-btn');
+        
+        function showModal(message, isGameOver = false) { 
+            customModalText.innerText = message; 
+            customModal.style.display = 'flex'; 
+            
+            if (isGameOver) {
+                customModalBtn.innerText = "Play Again";
+                customModalBtn.onclick = () => {
+                    playSound(sfxClick); 
+                    customModal.style.display = 'none';
+                    socket.emit('playAgain'); 
+                };
+            } else {
+                customModalBtn.innerText = "Continue";
+                customModalBtn.onclick = () => { 
+                    playSound(sfxClick); 
+                    customModal.style.display = 'none'; 
+                };
+            }
+        }
+
+        function showDevilEffect() {
+            playSound(sfxDevilsTeets); 
+            const container = document.getElementById('devil-effect-container');
+            container.style.display = 'flex';
+            setTimeout(() => { container.style.display = 'none'; }, 1000); 
+        }
+        
+        socket.on('triggerDevilEffect', showDevilEffect);
+
+        function showTurnSplash(name, avatar) {
+            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+            // FIX: Removed the typo "Your's Turn!"
+            let turnText = name === "Your" ? "Your Turn!" : `${name}'s Turn!`;
+            
+            text.innerHTML = `${avatar}<br>${turnText}`; overlay.style.display = 'flex'; playSound(sfxSwoosh); 
+            setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+            setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
+        }
+
+        const scoreDisplay = document.getElementById('score-display'); 
+        function broadcastAnnouncement(text, color, altText = null) {
+            scoreDisplay.innerText = text; scoreDisplay.style.color = color;
+            if (isMyTurn) socket.emit('broadcastMessage', { text: altText !== null ? altText : text, color });
+        }
+        socket.on('displayMessage', (msgData) => { scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color; });
+
+        function sendReaction(emoji) { socket.emit('sendReaction', emoji); playSound(sfxClick); }
+        socket.on('receiveReaction', (data) => {
+            const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
+            reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.5rem">${data.emoji}</span>`;
+            document.body.appendChild(reactionDiv);
+            const randomOffset = Math.floor(Math.random() * 60) - 30; reactionDiv.style.left = `calc(50% + ${randomOffset}px)`;
+            setTimeout(() => { reactionDiv.remove(); }, 3000);
+        });
+
+        function triggerGameSound(soundId) {
+            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
+            if (isMyTurn) socket.emit('playGameSound', soundId);
+        }
+        
+        socket.on('playGameSound', (soundId) => {
+            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
+        });
+
+        function triggerRollAnimation(suspense) {
+            playRollSound(); const activeDOMDice = document.getElementById('active-area').querySelectorAll('.die');
+            if (suspense !== 'none') { document.body.classList.add('shake-screen'); activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); } 
+            else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
+        }
+        socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
+        socket.on('triggerConfetti', () => { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); });
+
+        socket.on('connect', () => { myId = socket.id; });
+
+        socket.on('gameStateUpdate', (state) => {
+            if (typeof window.currentRoundNumber === 'undefined') window.currentRoundNumber = state.roundNumber;
+            if (window.currentRoundNumber !== state.roundNumber) {
+                window.currentRoundNumber = state.roundNumber;
+                lastTurnId = null; 
+            }
+
+            let previousTurnId = lastTurnId;
+            scoreboard.innerHTML = '';
+            
+            if (state.playerOrder.length > 4) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))'; } 
+            else if (state.playerOrder.length > 2) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))'; } 
+            else { scoreboard.style.gridTemplateColumns = '1fr'; }
+
+            let amIInRound = state.roundPlayers && state.roundPlayers.includes(myId);
+            if (state.isTieBreaker && !amIInRound && state.playerOrder.length > 1 && state.players[myId] && state.players[myId].lives > 0) {
+                tieBanner.style.display = 'block';
+            } else { tieBanner.style.display = 'none'; }
+
+            state.playerOrder.forEach(id => {
+                let p = state.players[id];
+                
+                let sLives = state.startingLives || 3;
+                let pLives = Math.max(0, p.lives);
+                let emptyHearts = Math.max(0, sLives - pLives);
+                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(pLives) + "🖤".repeat(emptyHearts) + `</span>`;
+                
+                let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
+                
+                if (!p.connected) scoreText = "OFFLINE";
+                else if (p.lives <= 0) scoreText = "Dust!";
+                
+                let el = document.createElement('div'); el.className = 'player-stat';
+                let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
+                if (!isInRound || !p.connected) el.style.opacity = "0.4";
+
+                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
+                if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
+                scoreboard.appendChild(el);
+            });
+
+            if (state.playerOrder.length < 2) {
+                turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isFirstLoad = true; 
+            } else {
+                let myPlayerInfo = state.players[myId];
+                if (myPlayerInfo && myPlayerInfo.lives <= 0) { turnIndicator.innerText = "You're dust!"; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; } 
+                else {
+                    isMyTurn = (myId === state.currentTurnId);
+                    let activePlayerInfo = state.players[state.currentTurnId];
+                    let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
+                    let activeAvatar = activePlayerInfo ? activePlayerInfo.avatar : "👤";
+                    
+                    if (!isFirstLoad && state.currentTurnId !== lastTurnId) { showTurnSplash(isMyTurn ? "Your" : activeName, activeAvatar); }
+                    
+                    turnIndicator.innerText = isMyTurn ? "Your Turn!" : `${activeAvatar} ${activeName} is rolling...`;
+                    turnIndicator.style.color = isMyTurn ? "#aed581" : "#ffcc80";
+                }
+                lastTurnId = state.currentTurnId; isFirstLoad = false;
+            }
+            
+            document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
+            document.getElementById('toggle-btn').style.display = isMyTurn ? "inline-block" : "none";
+            
+            if (isMyTurn && previousTurnId !== myId) {
+                initGame(); 
+            }
+        });
+
+        socket.on('roundResult', (data) => { showModal(data.message, false); });
+        socket.on('gameOver', (data) => { showModal(data.message, true); });
+
+        socket.on('boardUpdated', (gameData) => {
+            dice = gameData.dice; rollCount = gameData.rollCount;
+            inTrouble = gameData.inTrouble; turnFinalized = gameData.turnFinalized;
+            renderDice(false); 
+        });
+
+        const activeArea = document.getElementById('active-area'); const requiredArea = document.getElementById('required-dice'); const remainingArea = document.getElementById('remaining-locked');
+        const rollBtn = document.getElementById('roll-btn'); const toggleBtn = document.getElementById('toggle-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
+
+        function initGame() {
+            dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
+            hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
+            scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
+            if (isMyTurn) broadcastAnnouncement("", "");
+            rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
+        }
+
+        toggleBtn.onclick = () => { triggerGlobalMusic(); triggerGameSound('click'); usePips = !usePips; toggleBtn.innerText = usePips ? "Switch to Numbers" : "Switch to Pips"; renderDice(); };
+
+        function getPipsHTML(value) {
+            if (value === 0 || !usePips) return `<div class="number-display">${value === 0 ? '?' : value}</div>`;
+            const layouts = { 1: ['center'], 2: ['top-left', 'bottom-right'], 3: ['top-left', 'center', 'bottom-right'], 4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], 5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'], 6: ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right'] };
+            let html = ''; layouts[value].forEach(pos => { html += `<div class="pip ${pos}"></div>`; }); return html;
+        }
+
+        function rollDice() {
+            if (isAnimating) return; 
+            triggerGlobalMusic();
+
+            if (rollCount > 0) { 
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
+                    broadcastAnnouncement("", ""); 
+                }
+            }
+
+            if (rollCount === 1) {
+                let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
+                let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
+                let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
+                let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
+                
+                if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
+                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
+            }
+
+            if (rollCount > 0) { 
+                let allLocked = dice.filter(d => d.status !== 'active');
+                let lockedHas2 = allLocked.some(d => d.value === 2);
+                let lockedHas4 = allLocked.some(d => d.value === 4);
+                let locked6sCount = allLocked.filter(d => d.value === 6).length;
+                let activeCount = dice.filter(d => d.status === 'active').length;
+
+                if (lockedHas2 && lockedHas4 && locked6sCount === 3 && activeCount === 1) {
+                    broadcastAnnouncement("The door is open!", "#b2ff59", "The door is open!");
+                } else if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
+                    broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
+                }
+            }
+
+            rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
+            isAnimating = true; rollBtn.disabled = true; 
+            
+            if (isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
+
+            let postLockActiveCount = dice.filter(d => d.status === 'active').length;
+            let postLockLockedDice = dice.filter(d => d.status === 'permanentlyLocked');
+            let postLockHas2 = postLockLockedDice.some(d => d.value === 2); 
+            let postLockHas4 = postLockLockedDice.some(d => d.value === 4);
+            let postLock6sCount = postLockLockedDice.filter(d => d.value === 6).length;
+            
+            suspenseType = (postLockActiveCount === 1 && (!postLockHas2 || !postLockHas4)) ? 'survival' : ((postLockActiveCount === 1 && postLockHas2 && postLockHas4 && postLock6sCount === 3) ? 'perfect' : 'none');
+            
+            triggerRollAnimation(suspenseType);
+            if (isMyTurn) socket.emit('playerRolledDice', suspenseType);
+
+            setTimeout(() => {
+                dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
+                hasRolled = true; locksThisRoll = 0; isAnimating = false;
+                
+                let newlyRolled6s = dice.filter(d => d.status === 'active' && d.value === 6).length;
+                if (newlyRolled6s >= 3) {
+                    showDevilEffect();
+                    if (isMyTurn) socket.emit('triggerDevilEffect');
+                }
+
+                if (newlyRolled6s === 0 && (scoreDisplay.innerText === "You're knocking at the door" || scoreDisplay.innerText === "They're knocking at the door" || scoreDisplay.innerText === "The door is open!")) {
+                    if (isMyTurn) broadcastAnnouncement("", "");
+                }
+
+                if (rollCount === 1) { 
+                    let allSame = dice.every(d => d.value === dice[0].value);
+                    if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
+                    else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
+                        inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
+                    } 
+                }
+                renderDice();
+            }, (suspenseType !== 'none') ? 2000 : 500); 
+        }
+
+        function toggleDie(id) {
+            if (!hasRolled || isAnimating || turnFinalized || !isMyTurn) return; 
+            triggerGlobalMusic();
+            let die = dice.find(d => d.id === id); if (!die || die.status === 'permanentlyLocked') return; 
+            triggerGameSound('click');
+            die.status = (die.status === 'active') ? 'lockedThisTurn' : 'active';
+            if (die.status === 'lockedThisTurn') locksThisRoll++; else locksThisRoll--;
+            renderDice();
+        }
+
+        function createDieElement(die) {
+            const div = document.createElement('div'); div.className = 'die'; div.dataset.value = die.value; div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
+            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
+            else if (die.status === 'lockedThisTurn') { div.style.boxShadow = '0 0 0 4px #4caf50, inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8)'; div.style.transform = 'translateY(-5px)'; }
+            return div;
+        }
+
+        function renderDice(shouldBroadcast = true) {
+            activeArea.innerHTML = ''; requiredArea.innerHTML = ''; remainingArea.innerHTML = '';
+            let lockedDice = dice.filter(d => d.status !== 'active'); let activeDice = dice.filter(d => d.status === 'active');
+            let req2 = null, req4 = null, remainingLocked = [];
+
+            lockedDice.forEach(d => { if (d.value === 2 && !req2) req2 = d; else if (d.value === 4 && !req4) req4 = d; else remainingLocked.push(d); });
+            remainingLocked.sort((a, b) => a.value - b.value);
+
+            if (req2) requiredArea.appendChild(createDieElement(req2)); if (req4) requiredArea.appendChild(createDieElement(req4));
+            remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d))); activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
+
+            let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
+
+            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
+            else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
+
+            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
+
+            if (activeDice.length === 0 && hasRolled) {
+                rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
+                rollBtn.onclick = () => {
+                    let busted = (!req2 || !req4); let finalScore = busted ? 0 : currentScore;
+                    socket.emit('endTurn', { score: finalScore, busted: busted });
+                };
+
+                if (!req2 || !req4) {
+                    if (!turnFinalized) { 
+                        broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373"); 
+                        triggerGameSound(suspenseType === 'survival' ? 'aww' : 'bust'); 
+                        turnFinalized = true; 
+                    }
+                } else {
+                    if (!turnFinalized) {
+                        turnFinalized = true; 
+                        if (currentScore === 24) {
+                            triggerGameSound('yay');
+                            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
+                            if (isMyTurn) socket.emit('triggerConfetti');
+                        }
+                        else { 
+                            if (suspenseType === 'perfect') triggerGameSound('ohwell'); 
+                            else if (suspenseType === 'survival') triggerGameSound('yay'); 
+                            else triggerGameSound('click'); 
+                        }
+                        
+                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
+                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784");
+                    }
+                }
+            } else { rollBtn.disabled = hasRolled && locksThisRoll === 0; }
+
+            if (shouldBroadcast && isMyTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
+        }
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-app-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'inline-block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('2, 4, 24 App registered!'))
+                    .catch(err => console.log('Registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
