@@ -1,4 +1,4 @@
-const CACHE_NAME = '2424-cache-v3'; // V3 triggers the nuclear cache wipe!
+const CACHE_NAME = '2424-cache-v4'; // Bumped to v4 to clear cache!
 const urlsToCache = [
   '/',
   '/index.html',
