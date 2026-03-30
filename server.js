@@ -75,7 +75,6 @@ function evaluateRound(roomCode) {
     let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
-        // UPDATED: "wins the table!"
         io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
         room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
@@ -143,13 +142,11 @@ io.on('connection', (socket) => {
                 startingLives: requestedLives 
             };
             
-            // Inject "The Molar"
             if (roomCode === "COMP") {
                 rooms[roomCode].players['BOT_MOLAR'] = { 
                     id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
                 };
                 rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                // FIX: Instantly push the bot to the round so he doesn't miss the first turn!
                 rooms[roomCode].roundPlayers.push('BOT_MOLAR');
             }
         }
@@ -262,6 +259,14 @@ io.on('connection', (socket) => {
         if (room) {
             let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
             io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
+        }
+    });
+
+    // NEW: Special channel just for The Molar's emotes
+    socket.on('sendBotReaction', (emoji) => {
+        let room = rooms[socket.roomCode];
+        if (room && isAuthorized(socket, socket.roomCode)) {
+            io.to(socket.roomCode).emit('receiveReaction', { name: "The Molar", emoji: emoji });
         }
     });
 
