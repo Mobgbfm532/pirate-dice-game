@@ -275,7 +275,7 @@
         const scoreboard = document.getElementById('scoreboard');
         const tieBanner = document.getElementById('tie-breaker-banner');
         const roomCodeDisplay = document.getElementById('room-code-display');
-        const playAgainBtn = document.getElementById('play-again-btn'); // Link to new button
+        const playAgainBtn = document.getElementById('play-again-btn'); 
 
         const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
         const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
@@ -363,20 +363,18 @@
             });
         }
 
-        // NEW: Real-time room checking!
         roomInput.addEventListener('input', (e) => {
             let code = e.target.value.trim().toUpperCase() || 'PUBLIC';
             socket.emit('checkRoom', code);
         });
         
-        // Initial check on load just in case the browser autofilled
         socket.emit('checkRoom', roomInput.value.trim().toUpperCase() || 'PUBLIC');
 
         socket.on('roomStatus', (data) => {
             if (data.exists) {
-                livesGroup.style.display = 'none'; // Room exists! Hide the host settings.
+                livesGroup.style.display = 'none'; 
             } else {
-                livesGroup.style.display = 'block'; // New room! Show the host settings.
+                livesGroup.style.display = 'block'; 
             }
         });
 
@@ -390,23 +388,23 @@
             element.classList.add('selected'); myStartingLives = count; playSound(sfxClick);
         }
 
-      joinGameBtn.onclick = () => {
+        joinGameBtn.onclick = () => {
             playSound(sfxClick); 
             const chosenName = nameInput.value;
             let chosenRoom = roomInput.value.trim().toUpperCase();
             
-            // NEW: Invisible Suffix for COMP rooms!
+            // Generate invisible suffix for solo play!
             if (chosenRoom === "COMP") {
                 chosenRoom = "COMP-" + Math.floor(1000 + Math.random() * 9000);
             }
             
             localStorage.setItem('tavernName', chosenName);
-            localStorage.setItem('tavernRoom', roomInput.value.trim().toUpperCase()); // Save what they typed
+            localStorage.setItem('tavernRoom', roomInput.value.trim().toUpperCase()); 
             localStorage.setItem('tavernAvatar', myAvatar);
             localStorage.setItem('tavernLives', myStartingLives);
             
             myRoom = chosenRoom === "" ? "PUBLIC" : chosenRoom;
-            roomCodeDisplay.innerText = myRoom.startsWith("COMP-") ? "SOLO" : myRoom; // Keep the UI looking clean
+            roomCodeDisplay.innerText = myRoom.startsWith("COMP-") ? "SOLO" : myRoom; 
             
             socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: myRoom, token: sessionToken, startingLives: myStartingLives }); 
             nameModal.style.display = 'none'; triggerGlobalMusic();
@@ -416,7 +414,6 @@
         const customModalText = document.getElementById('custom-modal-text');
         const customModalBtn = document.getElementById('custom-modal-btn');
         
-        // UPDATED: The popup only ever says "Continue". Play again is a table button now.
         function showModal(message, isGameOver = false) { 
             customModalText.innerText = message; 
             customModal.style.display = 'flex'; 
@@ -510,7 +507,6 @@
             let previousTurnId = lastTurnId;
             scoreboard.innerHTML = '';
             
-            // Hide the play again button automatically if a new game starts
             if (state.roundPlayers.length > 0 || state.playerOrder.length === 1) {
                 playAgainBtn.style.display = 'none';
             }
@@ -546,7 +542,7 @@
                 scoreboard.appendChild(el);
             });
 
-            if (state.playerOrder.length < 2 && myRoom !== 'COMP') {
+            if (state.playerOrder.length < 2 && !myRoom.startsWith('COMP')) {
                 turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; isFirstLoad = true; 
             } else {
                 let myPlayerInfo = state.players[myId];
@@ -573,7 +569,7 @@
             if ((isMyTurn || isBotTurn) && previousTurnId !== state.currentTurnId) {
                 initGame(); 
                 if (isBotTurn) {
-                    setTimeout(rollDice, 1500); 
+                    setTimeout(rollDice, 1000); 
                 }
             }
         });
@@ -665,6 +661,9 @@
                 if (newlyRolled6s >= 3) {
                     showDevilEffect();
                     if (isMyTurn || isBotTurn) socket.emit('triggerDevilEffect');
+                    if (myRoom.startsWith('COMP')) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😉'), i * 300); }
+                    }
                 }
 
                 if (newlyRolled6s === 0 && (scoreDisplay.innerText === "You're knocking at the door" || scoreDisplay.innerText === "They're knocking at the door" || scoreDisplay.innerText === "The door is open!")) {
@@ -682,7 +681,7 @@
                 renderDice();
                 
                 if (isBotTurn) {
-                    setTimeout(makeBotDecision, 1500);
+                    setTimeout(makeBotDecision, 1000); // Molar reacts faster
                 }
                 
             }, (suspenseType !== 'none') ? 2000 : 500); 
@@ -711,18 +710,15 @@
             });
             active = active.filter(x => !toLock.includes(x.id));
 
+            // ALWAYS lock the highest available if forced
             if (toLock.length === 0 && active.length > 0) {
-                if (has2 && has4) {
-                    toLock.push(active[0].id); 
-                } else {
-                    toLock.push(active[active.length - 1].id); 
-                }
+                toLock.push(active[0].id); 
             }
 
             toLock.forEach((id, index) => {
                 setTimeout(() => {
                     toggleDie(id, true);
-                }, index * 600); 
+                }, index * 400); // Faster clicking
             });
 
             setTimeout(() => {
@@ -737,7 +733,6 @@
                     let busted = (!has2 || !has4) && remainingCount === 0;
                     let finalScore = busted ? 0 : botScore;
                     
-                    // UPDATED: The Molar's Emote Brain
                     if (busted) {
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😡'), i * 300); }
                     } else if (finalScore === 24) {
@@ -752,7 +747,7 @@
                 } else {
                     rollDice();
                 }
-            }, (toLock.length * 600) + 1200); 
+            }, (toLock.length * 400) + 800); // Faster turn ending
         }
 
         function toggleDie(id, isBotForced = false) {
