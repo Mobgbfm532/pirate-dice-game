@@ -26,7 +26,7 @@
 
         body {
             background-color: #1a1210;
-            background-image: url('Background.png'); /* NEW: Background image implementation */
+            background-image: url('Background.png'); 
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -41,15 +41,18 @@
         @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
-        #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 150px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 30px 80px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        
+        /* REVERTED: Back to the classic rectangular shape with 12px rounded corners */
+        #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 50px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
+        /* REVERTED: Back to 8px rounded corners */
+        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
         #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
-        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 50px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
+        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
 
         .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; font-weight: bold; color: var(--pip-black); }
         .die:hover { transform: translateY(-5px) rotate(2deg); }
@@ -127,10 +130,11 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
+        /* REVERTED: Back to classic layout for mobile screens */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
-            #game-area { padding: 40px 20px; border-width: 2px; width: 100%; box-sizing: border-box; border-radius: 80px; }
+            #game-area { padding: 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
@@ -141,7 +145,7 @@
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
             
-            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; border-radius: 40px; }
+            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
@@ -545,7 +549,6 @@
                 let emptyHearts = Math.max(0, sLives - pLives);
                 let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(pLives) + "🖤".repeat(emptyHearts) + `</span>`;
                 
-                // UPDATED: "BUST" -> "DUST"
                 let scoreText = p.score !== null ? (p.busted ? "DUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
@@ -714,7 +717,6 @@
             let toLock = [];
             let lockedAnything = false;
 
-            // 1. Secure 2 and 4
             if (!has2) { 
                 let d = active.find(x => x.value === 2); 
                 if (d) { toLock.push(d.id); has2 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
@@ -724,7 +726,6 @@
                 if (d) { toLock.push(d.id); has4 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
             }
 
-            // 2. Only hoard high dice if we are SAFE (have both 2 and 4)
             if (has2 && has4) {
                 active.forEach(d => {
                     if (d.value === 6) { toLock.push(d.id); lockedAnything = true; }
@@ -733,7 +734,6 @@
                 active = active.filter(x => !toLock.includes(x.id));
             }
 
-            // 3. ALWAYS lock the highest available if forced (we haven't locked anything yet)
             if (!lockedAnything && active.length > 0) {
                 toLock.push(active[0].id); 
             }
@@ -814,7 +814,6 @@
 
             let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
 
-            // UPDATED: "BUST" -> "DUST"
             if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
             else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
 
