@@ -433,9 +433,17 @@
         socket.on('displayMessage', (msgData) => { scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color; });
 
         function sendReaction(emoji) { socket.emit('sendReaction', emoji); playSound(sfxClick); }
+        
         socket.on('receiveReaction', (data) => {
             const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
-            reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.5rem">${data.emoji}</span>`;
+            
+            // UPDATED: Logic to hide the player name for the Early Ross emote!
+            if (data.emoji === '🧔‍♂️ Early Ross') {
+                reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
+            } else {
+                reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.5rem">${data.emoji}</span>`;
+            }
+            
             document.body.appendChild(reactionDiv);
             const randomOffset = Math.floor(Math.random() * 60) - 30; reactionDiv.style.left = `calc(50% + ${randomOffset}px)`;
             setTimeout(() => { reactionDiv.remove(); }, 3000);
@@ -648,7 +656,6 @@
         }
         
         function makeBotDecision() {
-            // Sort active dice highest to lowest
             let active = dice.filter(d => d.status === 'active').sort((a, b) => b.value - a.value);
             let locked = dice.filter(d => d.status !== 'active');
             let has2 = locked.some(d => d.value === 2);
@@ -656,7 +663,6 @@
             
             let toLock = [];
 
-            // 1. Secure 2 and 4 sequentially
             if (!has2) { 
                 let d = active.find(x => x.value === 2); 
                 if (d) { toLock.push(d.id); has2 = true; active = active.filter(x => x.id !== d.id); } 
@@ -666,14 +672,12 @@
                 if (d) { toLock.push(d.id); has4 = true; active = active.filter(x => x.id !== d.id); } 
             }
 
-            // 2. Secure Points
             active.forEach(d => {
                 if (d.value === 6) { toLock.push(d.id); }
                 else if (d.value === 5 && has2 && has4) { toLock.push(d.id); }
             });
             active = active.filter(x => !toLock.includes(x.id));
 
-            // 3. Forced Lock (Lock highest die if Safe, otherwise lock lowest to save points)
             if (toLock.length === 0 && active.length > 0) {
                 if (has2 && has4) {
                     toLock.push(active[0].id); 
@@ -682,14 +686,12 @@
                 }
             }
 
-            // Visually execute the locks one by one for suspense!
             toLock.forEach((id, index) => {
                 setTimeout(() => {
                     toggleDie(id, true);
                 }, index * 600); 
             });
 
-            // Decide whether to end turn or roll again
             setTimeout(() => {
                 let remainingCount = dice.filter(d => d.status === 'active').length;
                 let botScore = dice.filter(d => d.status !== 'active' && d.value !== 2 && d.value !== 4).reduce((sum, d) => sum + d.value, 0);
@@ -701,11 +703,19 @@
                 if (stopRolling) {
                     let busted = (!has2 || !has4) && remainingCount === 0;
                     let finalScore = busted ? 0 : botScore;
+                    
+                    // NEW: The Molar judges his own final score!
+                    if (!busted && finalScore >= 22) {
+                        socket.emit('sendReaction', '😉');
+                    } else if (busted || finalScore <= 17) {
+                        socket.emit('sendReaction', '👎');
+                    }
+                    
                     socket.emit('endTurn', { score: finalScore, busted: busted });
                 } else {
                     rollDice();
                 }
-            }, (toLock.length * 600) + 1200); // Wait for locks to finish before deciding
+            }, (toLock.length * 600) + 1200); 
         }
 
         function toggleDie(id, isBotForced = false) {
