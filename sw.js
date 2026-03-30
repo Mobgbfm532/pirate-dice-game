@@ -1,4 +1,4 @@
-const CACHE_NAME = '2424-cache-v4'; // Bumped to v4 to clear cache!
+const CACHE_NAME = '2424-cache-v5'; // Bumped to v5!
 const urlsToCache = [
   '/',
   '/index.html',
