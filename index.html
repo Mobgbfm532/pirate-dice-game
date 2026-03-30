@@ -41,8 +41,6 @@
         @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
-        
-        /* UPDATED: Table2.png applied, sized to exactly 100% to fit the box without cropping */
         #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
@@ -510,7 +508,12 @@
             else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
         }
         socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
-        socket.on('triggerConfetti', () => { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); });
+        
+        // NEW: The Confetti trigger guarantees everyone hears yay.mp3!
+        socket.on('triggerConfetti', () => { 
+            playSound(sfxYay);
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); 
+        });
 
         socket.on('connect', () => { myId = socket.id; });
 
@@ -708,23 +711,29 @@
         
         function makeBotDecision() {
             let active = dice.filter(d => d.status === 'active').sort((a, b) => b.value - a.value);
-            let locked = dice.filter(d => d.status !== 'active');
-            let has2 = locked.some(d => d.value === 2);
-            let has4 = locked.some(d => d.value === 4);
-            
             let toLock = [];
             let lockedAnything = false;
 
-            if (!has2) { 
+            // UPDATED: Completely accurate bot score calculator so Sudden Death works!
+            let lockedForBot = dice.filter(d => d.status !== 'active').sort((a, b) => a.value - b.value);
+            let bReq2 = false, bReq4 = false, botScore = 0;
+            
+            lockedForBot.forEach(d => {
+                if (d.value === 2 && !bReq2) bReq2 = true;
+                else if (d.value === 4 && !bReq4) bReq4 = true;
+                else botScore += d.value;
+            });
+
+            if (!bReq2) { 
                 let d = active.find(x => x.value === 2); 
-                if (d) { toLock.push(d.id); has2 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
+                if (d) { toLock.push(d.id); bReq2 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
             }
-            if (!has4) { 
+            if (!bReq4) { 
                 let d = active.find(x => x.value === 4); 
-                if (d) { toLock.push(d.id); has4 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
+                if (d) { toLock.push(d.id); bReq4 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
             }
 
-            if (has2 && has4) {
+            if (bReq2 && bReq4) {
                 active.forEach(d => {
                     if (d.value === 6) { toLock.push(d.id); lockedAnything = true; }
                     else if (d.value === 5) { toLock.push(d.id); lockedAnything = true; }
@@ -744,15 +753,22 @@
 
             setTimeout(() => {
                 let remainingCount = dice.filter(d => d.status === 'active').length;
-                let botScore = dice.filter(d => d.status !== 'active' && d.value !== 2 && d.value !== 4).reduce((sum, d) => sum + d.value, 0);
+                
+                // Recalculate botScore to include newly locked dice
+                let finalLocked = dice.filter(d => d.status !== 'active').sort((a, b) => a.value - b.value);
+                bReq2 = false; bReq4 = false; botScore = 0;
+                finalLocked.forEach(d => {
+                    if (d.value === 2 && !bReq2) bReq2 = true;
+                    else if (d.value === 4 && !bReq4) bReq4 = true;
+                    else botScore += d.value;
+                });
 
+                // The Molar MUST finish his turn (No early "staying"!)
                 let stopRolling = false;
                 if (remainingCount === 0) stopRolling = true;
-                
-                // CRITICAL FIX: The bot must now strictly roll all dice to the end.
 
                 if (stopRolling) {
-                    let busted = (!has2 || !has4) && remainingCount === 0;
+                    let busted = (!bReq2 || !bReq4);
                     let finalScore = busted ? 0 : botScore;
                     
                     if (busted) {
@@ -766,10 +782,10 @@
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '👎'), i * 300); }
                     }
                     
-                    // Added a 3-second delay so the player can actually watch the end of the Bot's turn
+                    // Reduced delay so The Molar clicks "End Turn" snappier!
                     setTimeout(() => {
                         socket.emit('endTurn', { score: finalScore, busted: busted });
-                    }, 3000);
+                    }, 1500);
                     
                 } else {
                     rollDice();
@@ -826,17 +842,8 @@
             if (activeDice.length === 0 && hasRolled) {
                 rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
                 
-                // Human explicitly ends their turn with this button
                 rollBtn.onclick = () => {
                     let busted = (!req2 || !req4); let finalScore = busted ? 0 : currentScore;
-                    
-                    // NEW: Ensure human triggers yay.mp3 if they manually hit end turn on 24
-                    if (!busted && finalScore === 24) {
-                        triggerGameSound('yay');
-                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
-                        socket.emit('triggerConfetti');
-                    }
-                    
                     socket.emit('endTurn', { score: finalScore, busted: busted });
                 };
 
@@ -850,9 +857,9 @@
                     if (!turnFinalized) {
                         turnFinalized = true; 
                         
-                        // NEW: This triggers automatically if the last die is locked!
                         if (currentScore === 24) {
-                            triggerGameSound('yay');
+                            // Automatically triggers for the person throwing the 24!
+                            playSound(sfxYay);
                             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
                             if (isMyTurn || isBotTurn) socket.emit('triggerConfetti');
                         }
