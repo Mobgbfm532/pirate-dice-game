@@ -65,7 +65,6 @@ function evaluateRound(roomCode) {
         }
     });
 
-    // NEW: If "The Molar" is in the room and a human lost a life, gloat!
     let humanLost = losersThisRound.some(l => l.id !== 'BOT_MOLAR');
     if (room.players['BOT_MOLAR'] && humanLost) {
         setTimeout(() => {
@@ -74,7 +73,7 @@ function evaluateRound(roomCode) {
                     io.to(roomCode).emit('receiveReaction', { name: "The Molar", emoji: "😉" });
                 }, i * 300);
             }
-        }, 1000); // Waits 1 second so it appears just as the modal opens
+        }, 1000); 
     }
 
     room.roundPlayers.forEach(id => {
@@ -260,7 +259,8 @@ io.on('connection', (socket) => {
             room.roundNumber++;
             
             io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-            io.to(socket.roomCode).emit('displayMessage', { text: `A new game begins!`, color: "#aed581" });
+            // UPDATED: Broadcast the new splash screen event!
+            io.to(socket.roomCode).emit('triggerNewGameSplash');
         }
     });
 
