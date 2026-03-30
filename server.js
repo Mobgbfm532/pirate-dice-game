@@ -22,7 +22,8 @@ function getRoomState(roomCode) {
         roundPlayers: room.roundPlayers,
         currentTurnId: room.roundPlayers[room.currentTurnIndex], 
         isTieBreaker: room.isTieBreaker,
-        roundNumber: room.roundNumber // NEW: Track the round number
+        roundNumber: room.roundNumber,
+        startingLives: room.startingLives // Pass the room's setting to clients
     };
 }
 
@@ -74,11 +75,11 @@ function evaluateRound(roomCode) {
     let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
-        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
+        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the tavern! 🏆` });
         room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
-        room.roundNumber++; // Advance round to unstick UI
+        room.roundNumber++; 
         room.roundPlayers = tiedPlayers;
         room.currentTurnIndex = 0;
         
@@ -94,7 +95,7 @@ function evaluateRound(roomCode) {
         if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
     } else {
         room.isTieBreaker = false;
-        room.roundNumber++; // Advance round to unstick UI
+        room.roundNumber++; 
         
         if (room.playerOrder.length > 0) {
             room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
@@ -132,9 +133,14 @@ io.on('connection', (socket) => {
         socket.roomCode = roomCode;
         socket.join(roomCode);
 
+        // Limit lives to 1-5
+        let requestedLives = parseInt(data.startingLives) || 3;
+        requestedLives = Math.max(1, Math.min(5, requestedLives));
+
         if (!rooms[roomCode]) {
             rooms[roomCode] = {
-                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1
+                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1,
+                startingLives: requestedLives // First player sets the rules!
             };
         }
         
@@ -164,9 +170,8 @@ io.on('connection', (socket) => {
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
             
         } else {
-            // Player starts with exactly 2 lives
             room.players[socket.id] = { 
-                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: 3, score: null, busted: false, connected: true 
+                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: room.startingLives, score: null, busted: false, connected: true 
             };
             room.playerOrder.push(socket.id);
 
@@ -178,7 +183,7 @@ io.on('connection', (socket) => {
         if (room.roundPlayers.length === 0 && room.playerOrder.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
-                    room.players[id].lives = 3; 
+                    room.players[id].lives = room.startingLives; 
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
@@ -194,6 +199,43 @@ io.on('connection', (socket) => {
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
 
         io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    });
+
+    // NEW: Play Again logic to reset the board
+    socket.on('playAgain', () => {
+        let room = rooms[socket.roomCode];
+        // Only allow a reset if the game is actually over
+        if (room && room.roundPlayers.length === 0) {
+            room.playerOrder.forEach(id => {
+                if (room.players[id]) {
+                    room.players[id].lives = room.startingLives;
+                    room.players[id].score = null;
+                    room.players[id].busted = false;
+                }
+            });
+            
+            // Advance the dealer button for the new game!
+            if (room.playerOrder.length > 0) {
+                room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
+            }
+            
+            // Rebuild round order
+            room.roundPlayers = [];
+            for (let i = 0; i < room.playerOrder.length; i++) {
+                let idx = (room.dealerIndex + i) % room.playerOrder.length;
+                let playerId = room.playerOrder[idx];
+                if (room.players[playerId] && room.players[playerId].connected) {
+                    room.roundPlayers.push(playerId);
+                }
+            }
+            
+            room.currentTurnIndex = 0;
+            room.isTieBreaker = false;
+            room.roundNumber++;
+            
+            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+            io.to(socket.roomCode).emit('displayMessage', { text: `A new game begins!`, color: "#aed581" });
+        }
     });
 
     socket.on('startGlobalMusic', () => {
@@ -234,8 +276,8 @@ io.on('connection', (socket) => {
             room.players[socket.id].score = turnData.score;
             room.players[socket.id].busted = turnData.busted;
             
-            // Restores up to a max of 2 lives
-            if (turnData.score === 24 && room.players[socket.id].lives < 2) {
+            // Limit +1 life restores to whatever the host chose as max
+            if (turnData.score === 24 && room.players[socket.id].lives < room.startingLives) {
                 room.players[socket.id].lives += 1;
                 io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
             }
