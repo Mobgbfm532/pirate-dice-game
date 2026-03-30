@@ -125,6 +125,13 @@ function evaluateRound(roomCode) {
 
 io.on('connection', (socket) => {
     
+    // NEW: Real-time room checking for the login screen
+    socket.on('checkRoom', (roomCode) => {
+        let code = roomCode.trim().toUpperCase() || "PUBLIC";
+        let exists = rooms[code] ? true : false;
+        socket.emit('roomStatus', { exists: exists });
+    });
+
     socket.on('joinTavern', (data) => {
         let roomCode = data.roomCode.trim().toUpperCase();
         if (roomCode === "") roomCode = "PUBLIC"; 
@@ -262,7 +269,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // NEW: Special channel just for The Molar's emotes
     socket.on('sendBotReaction', (emoji) => {
         let room = rooms[socket.roomCode];
         if (room && isAuthorized(socket, socket.roomCode)) {
