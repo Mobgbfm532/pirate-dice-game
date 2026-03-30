@@ -23,7 +23,7 @@ function getRoomState(roomCode) {
         currentTurnId: room.roundPlayers[room.currentTurnIndex], 
         isTieBreaker: room.isTieBreaker,
         roundNumber: room.roundNumber,
-        startingLives: room.startingLives // Pass the room's setting to clients
+        startingLives: room.startingLives 
     };
 }
 
@@ -133,15 +133,22 @@ io.on('connection', (socket) => {
         socket.roomCode = roomCode;
         socket.join(roomCode);
 
-        // Limit lives to 1-5
         let requestedLives = parseInt(data.startingLives) || 3;
         requestedLives = Math.max(1, Math.min(5, requestedLives));
 
         if (!rooms[roomCode]) {
             rooms[roomCode] = {
                 players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1,
-                startingLives: requestedLives // First player sets the rules!
+                startingLives: requestedLives 
             };
+            
+            // NEW: Inject "The Molar" if the room code is exactly "COMP"
+            if (roomCode === "COMP") {
+                rooms[roomCode].players['BOT_MOLAR'] = { 
+                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
+                };
+                rooms[roomCode].playerOrder.push('BOT_MOLAR');
+            }
         }
         
         let room = rooms[roomCode];
@@ -151,7 +158,7 @@ io.on('connection', (socket) => {
 
         let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
 
-        if (existingPlayerId) {
+        if (existingPlayerId && existingPlayerId !== 'BOT_MOLAR') {
             let p = room.players[existingPlayerId];
             p.id = socket.id;
             p.avatar = data.avatar;
@@ -180,7 +187,10 @@ io.on('connection', (socket) => {
             }
         }
 
-        if (room.roundPlayers.length === 0 && room.playerOrder.length > 0) {
+        // Fix bot logic if evaluating an empty room
+        let humanPlayers = room.playerOrder.filter(id => id !== 'BOT_MOLAR' && room.players[id] && room.players[id].connected);
+        
+        if (room.roundPlayers.length === 0 && humanPlayers.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
                     room.players[id].lives = room.startingLives; 
@@ -195,16 +205,18 @@ io.on('connection', (socket) => {
             room.roundNumber = 1;
         }
 
-        if (room.roundPlayers.length === 1) room.currentTurnIndex = 0;
+        // If the room has only The Molar, don't start the game until the human is technically fully connected
+        if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== 'BOT_MOLAR') {
+            room.currentTurnIndex = 0;
+        }
+
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
 
         io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
     });
 
-    // NEW: Play Again logic to reset the board
     socket.on('playAgain', () => {
         let room = rooms[socket.roomCode];
-        // Only allow a reset if the game is actually over
         if (room && room.roundPlayers.length === 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
@@ -214,12 +226,10 @@ io.on('connection', (socket) => {
                 }
             });
             
-            // Advance the dealer button for the new game!
             if (room.playerOrder.length > 0) {
                 room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
             }
             
-            // Rebuild round order
             room.roundPlayers = [];
             for (let i = 0; i < room.playerOrder.length; i++) {
                 let idx = (room.dealerIndex + i) % room.playerOrder.length;
@@ -254,31 +264,41 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('playerRolledDice', (suspenseType) => socket.to(socket.roomCode).emit('playerRolledDice', suspenseType));
-    socket.on('playGameSound', (soundId) => socket.to(socket.roomCode).emit('playGameSound', soundId));
-    socket.on('triggerConfetti', () => socket.to(socket.roomCode).emit('triggerConfetti'));
-    socket.on('triggerDevilEffect', () => socket.to(socket.roomCode).emit('triggerDevilEffect'));
+    // Helper function: verifies if the user sending the command is allowed to (Humans can command the bot)
+    function isAuthorized(socket, roomCode) {
+        let room = rooms[roomCode];
+        if (!room) return false;
+        let currentId = room.roundPlayers[room.currentTurnIndex];
+        return (socket.id === currentId) || (roomCode === 'COMP' && currentId === 'BOT_MOLAR');
+    }
+
+    socket.on('playerRolledDice', (suspenseType) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playerRolledDice', suspenseType) });
+    socket.on('playGameSound', (soundId) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playGameSound', soundId) });
+    socket.on('triggerConfetti', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerConfetti') });
+    socket.on('triggerDevilEffect', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerDevilEffect') });
     
     socket.on('updateBoard', (gameData) => {
-        let room = rooms[socket.roomCode];
-        if (room && socket.id === room.roundPlayers[room.currentTurnIndex]) {
+        if (isAuthorized(socket, socket.roomCode)) {
             socket.to(socket.roomCode).emit('boardUpdated', gameData);
         }
     });
 
     socket.on('broadcastMessage', (msgData) => {
-        socket.to(socket.roomCode).emit('displayMessage', msgData);
+        if (isAuthorized(socket, socket.roomCode)) {
+            socket.to(socket.roomCode).emit('displayMessage', msgData);
+        }
     });
 
     socket.on('endTurn', (turnData) => {
         let room = rooms[socket.roomCode];
-        if (room && socket.id === room.roundPlayers[room.currentTurnIndex]) {
-            room.players[socket.id].score = turnData.score;
-            room.players[socket.id].busted = turnData.busted;
+        if (room && isAuthorized(socket, socket.roomCode)) {
+            let currentId = room.roundPlayers[room.currentTurnIndex];
             
-            // Limit +1 life restores to whatever the host chose as max
-            if (turnData.score === 24 && room.players[socket.id].lives < room.startingLives) {
-                room.players[socket.id].lives += 1;
+            room.players[currentId].score = turnData.score;
+            room.players[currentId].busted = turnData.busted;
+            
+            if (turnData.score === 24 && room.players[currentId].lives < room.startingLives) {
+                room.players[currentId].lives += 1;
                 io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
             }
 
@@ -323,7 +343,7 @@ io.on('connection', (socket) => {
                 }
             }
             
-            let anyConnected = Object.values(room.players).some(p => p.connected);
+            let anyConnected = Object.values(room.players).some(p => p.connected && p.id !== 'BOT_MOLAR');
             if (!anyConnected) delete rooms[roomCode];
         }
     });
