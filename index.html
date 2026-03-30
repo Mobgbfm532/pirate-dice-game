@@ -42,7 +42,6 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        /* UPDATED: Increased top padding to 70px to push content down even more */
         #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 70px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
@@ -72,7 +71,8 @@
         @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
-        #controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        /* UPDATED: margin-top increased to 20px to move just the buttons down! */
+        #controls { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
         button { 
             padding: 12px 25px; 
@@ -145,7 +145,6 @@
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
-            /* UPDATED: Mobile top padding increased slightly to 60px */
             #game-area { padding: 60px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
@@ -161,7 +160,8 @@
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
-            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+            /* Inherit the margin change for mobile too */
+            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 20px;}
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
             #sidebar .area-title { margin-bottom: 5px; }
