@@ -38,30 +38,31 @@
         @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
-        #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        
+        /* UPDATED: The Pill Table CSS! */
+        #game-area { 
+            background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; 
+            border: 5px solid #271612; 
+            border-radius: 150px; /* Extreme rounding for the pill effect */
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); 
+            padding: 30px 80px; /* Heavy side padding keeps dice away from the curved edges */
+            display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; 
+        }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
+        /* Inner areas rounded to match the felt table aesthetic */
+        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 50px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
         #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
-        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
+        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 50px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
 
-        /* Normal Dice Styling */
         .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; font-weight: bold; color: var(--pip-black); }
         .die:hover { transform: translateY(-5px) rotate(2deg); }
         
-        /* NEW: The Molar's Tooth Dice Styling */
-        .molar-tooth { 
-            border-radius: 15px 15px 40px 40px !important; /* Wide curved top, tapered root bottom */
-            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f4f4f4 60%, #e0e0e0 100%) !important; /* Bright enamel finish */
-            box-shadow: inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9), 2px 6px 10px rgba(0,0,0,0.5) !important;
-            border-bottom: 3px solid #d7ccc8 !important; /* Root separation effect */
-        }
-        .molar-tooth.lockedThisTurn {
-            box-shadow: 0 0 0 4px #4caf50, inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9) !important;
-        }
+        .molar-tooth { border-radius: 15px 15px 40px 40px !important; background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f4f4f4 60%, #e0e0e0 100%) !important; box-shadow: inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9), 2px 6px 10px rgba(0,0,0,0.5) !important; border-bottom: 3px solid #d7ccc8 !important; }
+        .molar-tooth.lockedThisTurn { box-shadow: 0 0 0 4px #4caf50, inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9) !important; }
 
         .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5); }
         .die[data-value="1"] .pip { background-color: var(--pip-red); } .die[data-value="6"] .pip { background-color: var(--pip-green); }
@@ -133,10 +134,13 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
+        /* The mobile pill layout */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
-            #game-area { padding: 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
+            
+            /* Vertical oval for mobile screens */
+            #game-area { padding: 40px 20px; border-width: 2px; width: 100%; box-sizing: border-box; border-radius: 80px; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
@@ -147,7 +151,7 @@
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
             
-            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
+            #locked-area, #active-area { gap: 6px; min-height: 55px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; border-radius: 40px; }
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
@@ -283,8 +287,6 @@
         let myAvatar = '🛡️'; 
         let myRoom = 'PUBLIC';
         let myStartingLives = 3;
-        
-        // NEW: Global tracker for the renderer to know if the tooth style is needed
         let currentActiveId = null;
 
         const turnIndicator = document.getElementById('turn-indicator');
@@ -457,6 +459,15 @@
         
         socket.on('triggerDevilEffect', showDevilEffect);
 
+        // NEW: Listener for the New Game Splash
+        socket.on('triggerNewGameSplash', () => {
+            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+            text.innerHTML = `🎲<br>A New Game Begins!`; 
+            overlay.style.display = 'flex'; playSound(sfxSwoosh); 
+            setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+            setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
+        });
+
         function showTurnSplash(name, avatar) {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
             let turnText = name === "Your" ? "Your turn!" : `${name}'s turn!`;
@@ -535,7 +546,6 @@
                 tieBanner.style.display = 'block';
             } else { tieBanner.style.display = 'none'; }
 
-            // NEW: Save the active ID so createDieElement knows if it needs teeth!
             currentActiveId = state.currentTurnId;
 
             state.playerOrder.forEach(id => {
@@ -782,17 +792,14 @@
         function createDieElement(die) {
             const div = document.createElement('div'); div.className = 'die'; 
             
-            // NEW: Slap the tooth style on if it's the Molar's turn!
             if (currentActiveId === 'BOT_MOLAR') {
                 div.classList.add('molar-tooth');
             }
             
             div.dataset.value = die.value; div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
             if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
-            
-            // If it's a tooth, the green border goes over the custom shape
             else if (die.status === 'lockedThisTurn') { 
-                div.classList.add('lockedThisTurn'); // Triggers custom CSS
+                div.classList.add('lockedThisTurn'); 
                 div.style.transform = 'translateY(-5px)'; 
             }
             return div;
