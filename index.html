@@ -68,6 +68,10 @@
         button:hover { background: linear-gradient(to bottom, #6d4c41, #4e342e); transform: translateY(-2px); color: #fff; }
         button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         button:disabled { background: #4e342e; color: #795548; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723;}
+        
+        #play-again-btn { background: linear-gradient(to bottom, #2e7d32, #1b5e20); display: none; color: #fff; border-color: #1b5e20; }
+        #play-again-btn:hover { background: linear-gradient(to bottom, #388e3c, #2e7d32); }
+
         #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
         #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
 
@@ -183,7 +187,7 @@
                 <input type="text" id="room-input" class="styled-input" placeholder="Table Code" maxlength="10" style="text-transform: uppercase;">
             </div>
             
-            <div class="input-group">
+            <div class="input-group" id="lives-group">
                 <div class="lives-label">How many lives? (Host)</div>
                 <div class="lives-picker" id="lives-container">
                     <div class="lives-option" onclick="selectLives(this, 2)">❤️❤️</div>
@@ -224,6 +228,7 @@
             <div id="controls">
                 <button id="roll-btn">Roll Dice</button>
                 <button id="toggle-btn">Switch to Pips</button>
+                <button id="play-again-btn">Play Again</button>
                 <button id="mute-btn">🎵 Mute Tavern</button>
             </div>
         </div>
@@ -270,6 +275,7 @@
         const scoreboard = document.getElementById('scoreboard');
         const tieBanner = document.getElementById('tie-breaker-banner');
         const roomCodeDisplay = document.getElementById('room-code-display');
+        const playAgainBtn = document.getElementById('play-again-btn'); // Link to new button
 
         const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
         const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
@@ -327,6 +333,7 @@
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
         const joinGameBtn = document.getElementById('join-game-btn');
+        const livesGroup = document.getElementById('lives-group');
 
         const savedName = localStorage.getItem('tavernName');
         const savedRoom = localStorage.getItem('tavernRoom');
@@ -355,6 +362,23 @@
                 }
             });
         }
+
+        // NEW: Real-time room checking!
+        roomInput.addEventListener('input', (e) => {
+            let code = e.target.value.trim().toUpperCase() || 'PUBLIC';
+            socket.emit('checkRoom', code);
+        });
+        
+        // Initial check on load just in case the browser autofilled
+        socket.emit('checkRoom', roomInput.value.trim().toUpperCase() || 'PUBLIC');
+
+        socket.on('roomStatus', (data) => {
+            if (data.exists) {
+                livesGroup.style.display = 'none'; // Room exists! Hide the host settings.
+            } else {
+                livesGroup.style.display = 'block'; // New room! Show the host settings.
+            }
+        });
 
         function selectAvatar(element, icon) {
             document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
@@ -387,25 +411,25 @@
         const customModalText = document.getElementById('custom-modal-text');
         const customModalBtn = document.getElementById('custom-modal-btn');
         
+        // UPDATED: The popup only ever says "Continue". Play again is a table button now.
         function showModal(message, isGameOver = false) { 
             customModalText.innerText = message; 
             customModal.style.display = 'flex'; 
+            customModalBtn.innerText = "Continue";
+            customModalBtn.onclick = () => { 
+                playSound(sfxClick); 
+                customModal.style.display = 'none'; 
+            };
             
             if (isGameOver) {
-                customModalBtn.innerText = "Play Again";
-                customModalBtn.onclick = () => {
-                    playSound(sfxClick); 
-                    customModal.style.display = 'none';
-                    socket.emit('playAgain'); 
-                };
-            } else {
-                customModalBtn.innerText = "Continue";
-                customModalBtn.onclick = () => { 
-                    playSound(sfxClick); 
-                    customModal.style.display = 'none'; 
-                };
+                playAgainBtn.style.display = 'inline-block';
             }
         }
+        
+        playAgainBtn.onclick = () => {
+            playSound(sfxClick);
+            socket.emit('playAgain');
+        };
 
         function showDevilEffect() {
             playSound(sfxDevilsTeets); 
@@ -480,6 +504,11 @@
 
             let previousTurnId = lastTurnId;
             scoreboard.innerHTML = '';
+            
+            // Hide the play again button automatically if a new game starts
+            if (state.roundPlayers.length > 0 || state.playerOrder.length === 1) {
+                playAgainBtn.style.display = 'none';
+            }
             
             if (state.playerOrder.length > 4) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))'; } 
             else if (state.playerOrder.length > 2) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))'; } 
@@ -703,10 +732,14 @@
                     let busted = (!has2 || !has4) && remainingCount === 0;
                     let finalScore = busted ? 0 : botScore;
                     
-                    // NEW: The Molar rapid-fires emotes to the special Bot channel!
-                    if (!busted && finalScore >= 22) {
+                    // UPDATED: The Molar's Emote Brain
+                    if (busted) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😡'), i * 300); }
+                    } else if (finalScore === 24) {
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😉'), i * 300); }
-                    } else if (busted || finalScore <= 17) {
+                    } else if (finalScore >= 22) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '👍'), i * 300); }
+                    } else if (finalScore <= 17) {
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '👎'), i * 300); }
                     }
                     
