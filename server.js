@@ -65,6 +65,18 @@ function evaluateRound(roomCode) {
         }
     });
 
+    // NEW: If "The Molar" is in the room and a human lost a life, gloat!
+    let humanLost = losersThisRound.some(l => l.id !== 'BOT_MOLAR');
+    if (room.players['BOT_MOLAR'] && humanLost) {
+        setTimeout(() => {
+            for(let i=0; i<3; i++) {
+                setTimeout(() => {
+                    io.to(roomCode).emit('receiveReaction', { name: "The Molar", emoji: "😉" });
+                }, i * 300);
+            }
+        }, 1000); // Waits 1 second so it appears just as the modal opens
+    }
+
     room.roundPlayers.forEach(id => {
         if (room.players[id]) {
             room.players[id].score = null;
@@ -148,7 +160,6 @@ io.on('connection', (socket) => {
                 startingLives: requestedLives 
             };
             
-            // UPDATED: Now checks if the room code starts with COMP
             if (roomCode.startsWith("COMP")) {
                 rooms[roomCode].players['BOT_MOLAR'] = { 
                     id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
@@ -276,7 +287,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // UPDATED: Now authorizes actions if the room starts with COMP
     function isAuthorized(socket, roomCode) {
         let room = rooms[roomCode];
         if (!room) return false;
