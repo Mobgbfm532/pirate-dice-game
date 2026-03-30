@@ -42,13 +42,12 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        /* REVERTED: Back to the classic rectangular shape with 12px rounded corners */
-        #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        /* UPDATED: Table2.png applied, sized to exactly 100% to fit the box without cropping */
+        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        /* REVERTED: Back to 8px rounded corners */
         #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
         #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
@@ -130,7 +129,6 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
-        /* REVERTED: Back to classic layout for mobile screens */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
@@ -750,7 +748,8 @@
 
                 let stopRolling = false;
                 if (remainingCount === 0) stopRolling = true;
-                else if (has2 && has4 && botScore >= 22) stopRolling = true; 
+                
+                // CRITICAL FIX: The bot must now strictly roll all dice to the end.
 
                 if (stopRolling) {
                     let busted = (!has2 || !has4) && remainingCount === 0;
@@ -759,6 +758,7 @@
                     if (busted) {
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😡'), i * 300); }
                     } else if (finalScore === 24) {
+                        // Confetti triggers naturally inside renderDice(), but we still want the Molar to react!
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😉'), i * 300); }
                     } else if (finalScore >= 22) {
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '👍'), i * 300); }
@@ -766,7 +766,11 @@
                         for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '👎'), i * 300); }
                     }
                     
-                    socket.emit('endTurn', { score: finalScore, busted: busted });
+                    // Added a 3-second delay so the player can actually watch the end of the Bot's turn
+                    setTimeout(() => {
+                        socket.emit('endTurn', { score: finalScore, busted: busted });
+                    }, 3000);
+                    
                 } else {
                     rollDice();
                 }
@@ -821,8 +825,18 @@
 
             if (activeDice.length === 0 && hasRolled) {
                 rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
+                
+                // Human explicitly ends their turn with this button
                 rollBtn.onclick = () => {
                     let busted = (!req2 || !req4); let finalScore = busted ? 0 : currentScore;
+                    
+                    // NEW: Ensure human triggers yay.mp3 if they manually hit end turn on 24
+                    if (!busted && finalScore === 24) {
+                        triggerGameSound('yay');
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
+                        socket.emit('triggerConfetti');
+                    }
+                    
                     socket.emit('endTurn', { score: finalScore, busted: busted });
                 };
 
@@ -835,6 +849,8 @@
                 } else {
                     if (!turnFinalized) {
                         turnFinalized = true; 
+                        
+                        // NEW: This triggers automatically if the last die is locked!
                         if (currentScore === 24) {
                             triggerGameSound('yay');
                             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
