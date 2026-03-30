@@ -26,7 +26,10 @@
 
         body {
             background-color: #1a1210;
-            background-image: radial-gradient(circle at center, #2a1e1b 0%, #0a0706 100%);
+            background-image: url('Background.png'); /* NEW: Background image implementation */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             font-family: 'Almendra', serif; color: var(--text-light);
             margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start;
             min-height: 100vh; overflow-x: hidden;
@@ -38,21 +41,11 @@
         @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
-        
-        /* UPDATED: The Pill Table CSS! */
-        #game-area { 
-            background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; 
-            border: 5px solid #271612; 
-            border-radius: 150px; /* Extreme rounding for the pill effect */
-            box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); 
-            padding: 30px 80px; /* Heavy side padding keeps dice away from the curved edges */
-            display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; 
-        }
+        #game-area { background-color: #3e2723; background-image: url('Table.png'); background-size: cover; background-position: center; border: 5px solid #271612; border-radius: 150px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 30px 80px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        /* Inner areas rounded to match the felt table aesthetic */
         #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 100px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 50px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
         #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
@@ -134,12 +127,9 @@
         @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
         #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
 
-        /* The mobile pill layout */
         @media screen and (max-width: 900px) {
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
-            
-            /* Vertical oval for mobile screens */
             #game-area { padding: 40px 20px; border-width: 2px; width: 100%; box-sizing: border-box; border-radius: 80px; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
@@ -459,7 +449,6 @@
         
         socket.on('triggerDevilEffect', showDevilEffect);
 
-        // NEW: Listener for the New Game Splash
         socket.on('triggerNewGameSplash', () => {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
             text.innerHTML = `🎲<br>A New Game Begins!`; 
@@ -556,7 +545,8 @@
                 let emptyHearts = Math.max(0, sLives - pLives);
                 let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(pLives) + "🖤".repeat(emptyHearts) + `</span>`;
                 
-                let scoreText = p.score !== null ? (p.busted ? "BUST" : p.score) : "Waiting...";
+                // UPDATED: "BUST" -> "DUST"
+                let scoreText = p.score !== null ? (p.busted ? "DUST" : p.score) : "Waiting...";
                 
                 if (!p.connected) scoreText = "OFFLINE";
                 else if (p.lives <= 0) scoreText = "Dust!"; 
@@ -722,23 +712,29 @@
             let has4 = locked.some(d => d.value === 4);
             
             let toLock = [];
+            let lockedAnything = false;
 
+            // 1. Secure 2 and 4
             if (!has2) { 
                 let d = active.find(x => x.value === 2); 
-                if (d) { toLock.push(d.id); has2 = true; active = active.filter(x => x.id !== d.id); } 
+                if (d) { toLock.push(d.id); has2 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
             }
             if (!has4) { 
                 let d = active.find(x => x.value === 4); 
-                if (d) { toLock.push(d.id); has4 = true; active = active.filter(x => x.id !== d.id); } 
+                if (d) { toLock.push(d.id); has4 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
             }
 
-            active.forEach(d => {
-                if (d.value === 6) { toLock.push(d.id); }
-                else if (d.value === 5 && has2 && has4) { toLock.push(d.id); }
-            });
-            active = active.filter(x => !toLock.includes(x.id));
+            // 2. Only hoard high dice if we are SAFE (have both 2 and 4)
+            if (has2 && has4) {
+                active.forEach(d => {
+                    if (d.value === 6) { toLock.push(d.id); lockedAnything = true; }
+                    else if (d.value === 5) { toLock.push(d.id); lockedAnything = true; }
+                });
+                active = active.filter(x => !toLock.includes(x.id));
+            }
 
-            if (toLock.length === 0 && active.length > 0) {
+            // 3. ALWAYS lock the highest available if forced (we haven't locked anything yet)
+            if (!lockedAnything && active.length > 0) {
                 toLock.push(active[0].id); 
             }
 
@@ -818,6 +814,7 @@
 
             let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
 
+            // UPDATED: "BUST" -> "DUST"
             if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
             else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
 
@@ -832,7 +829,7 @@
 
                 if (!req2 || !req4) {
                     if (!turnFinalized) { 
-                        broadcastAnnouncement("Result: BUST! (Missing 2 or 4)", "#e57373"); 
+                        broadcastAnnouncement("Result: DUST! (Missing 2 or 4)", "#e57373"); 
                         triggerGameSound(suspenseType === 'survival' ? 'aww' : 'bust'); 
                         turnFinalized = true; 
                     }
