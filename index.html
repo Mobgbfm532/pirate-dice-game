@@ -437,7 +437,6 @@
         socket.on('receiveReaction', (data) => {
             const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
             
-            // UPDATED: Logic to hide the player name for the Early Ross emote!
             if (data.emoji === '🧔‍♂️ Early Ross') {
                 reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
             } else {
@@ -704,11 +703,11 @@
                     let busted = (!has2 || !has4) && remainingCount === 0;
                     let finalScore = busted ? 0 : botScore;
                     
-                    // NEW: The Molar judges his own final score!
+                    // NEW: The Molar rapid-fires emotes to the special Bot channel!
                     if (!busted && finalScore >= 22) {
-                        socket.emit('sendReaction', '😉');
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '😉'), i * 300); }
                     } else if (busted || finalScore <= 17) {
-                        socket.emit('sendReaction', '👎');
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', '👎'), i * 300); }
                     }
                     
                     socket.emit('endTurn', { score: finalScore, busted: busted });
