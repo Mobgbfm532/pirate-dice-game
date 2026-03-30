@@ -125,7 +125,6 @@ function evaluateRound(roomCode) {
 
 io.on('connection', (socket) => {
     
-    // NEW: Real-time room checking for the login screen
     socket.on('checkRoom', (roomCode) => {
         let code = roomCode.trim().toUpperCase() || "PUBLIC";
         let exists = rooms[code] ? true : false;
@@ -149,7 +148,8 @@ io.on('connection', (socket) => {
                 startingLives: requestedLives 
             };
             
-            if (roomCode === "COMP") {
+            // UPDATED: Now checks if the room code starts with COMP
+            if (roomCode.startsWith("COMP")) {
                 rooms[roomCode].players['BOT_MOLAR'] = { 
                     id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
                 };
@@ -276,11 +276,12 @@ io.on('connection', (socket) => {
         }
     });
 
+    // UPDATED: Now authorizes actions if the room starts with COMP
     function isAuthorized(socket, roomCode) {
         let room = rooms[roomCode];
         if (!room) return false;
         let currentId = room.roundPlayers[room.currentTurnIndex];
-        return (socket.id === currentId) || (roomCode === 'COMP' && currentId === 'BOT_MOLAR');
+        return (socket.id === currentId) || (roomCode.startsWith('COMP') && currentId === 'BOT_MOLAR');
     }
 
     socket.on('playerRolledDice', (suspenseType) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playerRolledDice', suspenseType) });
