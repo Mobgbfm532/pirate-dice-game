@@ -10,6 +10,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+
 let rooms = {};
 
 function getRoomState(roomCode) {
