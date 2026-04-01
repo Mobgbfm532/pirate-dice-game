@@ -294,17 +294,17 @@
         const roomCodeDisplay = document.getElementById('room-code-display');
         const playAgainBtn = document.getElementById('play-again-btn'); 
 
-        // Enforced strict lowercase file names here to prevent 404 errors!
+        // Files restored to original capitalization except for yay.mp3
         const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
         const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
         const sfxWin = new Audio('win.mp3'); sfxWin.volume = 0.6;
         const sfxBust = new Audio('bust.mp3'); sfxBust.volume = 0.6;
-        const sfxAww = new Audio('aww.mp3'); sfxAww.volume = 0.6;
+        const sfxAww = new Audio('Aww.mp3'); sfxAww.volume = 0.6;
         const sfxYay = new Audio('yay.mp3'); sfxYay.volume = 0.6;
         const sfxOhWell = new Audio('ohwell.mp3'); sfxOhWell.volume = 0.6;
-        const sfxSwoosh = new Audio('swoosh.mp3'); sfxSwoosh.volume = 0.6;
+        const sfxSwoosh = new Audio('Swoosh.mp3'); sfxSwoosh.volume = 0.6;
         
-        const sfxDevilsTeets = new Audio('devilsteets.wav'); 
+        const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
         sfxDevilsTeets.preload = 'auto'; 
         sfxDevilsTeets.volume = 0.6;
         
@@ -318,7 +318,6 @@
         }
         setInterval(createEmber, 400); 
 
-        // Added error logging to ensure we catch any audio failures!
         function playSound(audioEl) { 
             audioEl.currentTime = 0; 
             let playPromise = audioEl.play(); 
@@ -459,8 +458,6 @@
 
         function showDevilEffect() {
             playSound(sfxDevilsTeets); 
-            // Give the browser 100ms to spin up the audio context before showing the DOM image
-            // This ensures they sync perfectly.
             setTimeout(() => {
                 const container = document.getElementById('devil-effect-container');
                 container.style.display = 'flex';
@@ -530,7 +527,6 @@
         }
         socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
         
-        // This is the unified function to play the celebration locally
         function triggerCelebration() {
             playSound(sfxYay);
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); 
