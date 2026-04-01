@@ -160,8 +160,9 @@ io.on('connection', (socket) => {
             };
             
             if (roomCode.startsWith("COMP")) {
+                // UPDATED: The Molar's avatar is now his image file
                 rooms[roomCode].players['BOT_MOLAR'] = { 
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
+                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '<img src="molar.png" width="40" height="40">', lives: requestedLives, score: null, busted: false, connected: true 
                 };
                 rooms[roomCode].playerOrder.push('BOT_MOLAR');
                 rooms[roomCode].roundPlayers.push('BOT_MOLAR');
