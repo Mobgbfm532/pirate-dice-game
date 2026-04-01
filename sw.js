@@ -1,4 +1,4 @@
-const CACHE_NAME = '2424-cache-v31'; // Bumped to v31!
+const CACHE_NAME = '2424-cache-v32'; // Bumped to v32!
 const urlsToCache = [
   '/',
   '/index.html',
