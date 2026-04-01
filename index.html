@@ -18,7 +18,7 @@
     <style>
         :root {
             --text-light: #fdf6e3; --text-dark: #3e2723;
-            --pip-red: #7f0000; --pip-green: #1b5e20; --pip-black: #111111;
+            --dice-bone: #fffaee; --pip-red: #b71c1c; --pip-green: #2e7d32; --pip-black: #212121;
             --parchment-bg: linear-gradient(to bottom right, #fdf6e3, #e6d5aa);
             --parchment-shadow: inset 0 0 40px rgba(139, 69, 19, 0.15), 5px 5px 15px rgba(0,0,0,0.6);
             --parchment-border: 1px solid #cda434;
@@ -52,74 +52,18 @@
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
         #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 115px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
 
-        /* ---------------------------------------------------------------------
-           UPDATED: The Aged Bone Dice & Carved Pips
-           --------------------------------------------------------------------- */
-        .die { 
-            width: 80px; height: 80px; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            transition: transform 0.2s ease, box-shadow 0.2s ease; 
-            user-select: none; 
-            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); 
-            padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; 
-            font-weight: bold; color: var(--pip-black); 
-            
-            /* Aged Bone Texture & Lighting */
-            background: radial-gradient(circle at 30% 30%, #fffcfo 0%, #e8d8b7 60%, #c4b59d 100%);
-            border: 1px solid #a3957f;
-            box-shadow: 
-                inset -4px -4px 10px rgba(100,80,60,0.5), /* Deep inner shadow */
-                inset 2px 2px 6px rgba(255,255,255,0.9),  /* Top edge highlight */
-                3px 6px 12px rgba(0,0,0,0.7);             /* Heavy outer drop shadow */
-                
-            /* NEW: Accepts random rotation from JS */
-            transform: rotate(var(--random-rot, 0deg));
-        }
+        /* REVERTED: Clean white dice styling restored */
+        .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; font-weight: bold; color: var(--pip-black); }
+        .die:hover { transform: translateY(-5px) rotate(2deg); }
         
-        .die:hover { 
-            /* Keeps the rotation while lifting */
-            transform: translateY(-5px) rotate(calc(var(--random-rot, 0deg) + 2deg)); 
-            box-shadow: 
-                inset -4px -4px 10px rgba(100,80,60,0.5), 
-                inset 2px 2px 6px rgba(255,255,255,0.9), 
-                6px 12px 18px rgba(0,0,0,0.8); 
-        }
-        
-        /* The Molar's Tooth overrides the shape but keeps the bone texture */
-        .molar-tooth { 
-            border-radius: 15px 15px 40px 40px !important; 
-            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f4f4f4 60%, #d4c4b4 100%) !important; 
-            border-bottom: 3px solid #bbaaa0 !important; 
-        }
-        
-        .molar-tooth.lockedThisTurn { 
-            box-shadow: 0 0 0 4px #4caf50, inset -4px -4px 10px rgba(100,80,60,0.5), inset 2px 2px 6px rgba(255,255,255,0.9) !important; 
-        }
+        .molar-tooth { border-radius: 15px 15px 40px 40px !important; background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f4f4f4 60%, #e0e0e0 100%) !important; box-shadow: inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9), 2px 6px 10px rgba(0,0,0,0.5) !important; border-bottom: 3px solid #d7ccc8 !important; }
+        .molar-tooth.lockedThisTurn { box-shadow: 0 0 0 4px #4caf50, inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9) !important; }
 
-        /* Deep Carved Pips */
-        .pip { 
-            width: 16px; height: 16px; border-radius: 50%; 
-            background-color: var(--pip-black); 
-            /* Inner darkness + outer bottom highlight = holes drilled in wood/bone */
-            box-shadow: 
-                inset 3px 3px 6px rgba(0,0,0,0.9), 
-                inset -1px -1px 2px rgba(255,255,255,0.1), 
-                0px 1px 1px rgba(255,255,255,0.6); 
-        }
+        .pip { width: 16px; height: 16px; border-radius: 50%; background-color: var(--pip-black); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5); }
         .die[data-value="1"] .pip { background-color: var(--pip-red); } .die[data-value="6"] .pip { background-color: var(--pip-green); }
-        .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); text-shadow: 0px 1px 1px rgba(255,255,255,0.5); }
-        
-        /* Pips layout */
+        .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
         .pip.top-left { grid-column: 1; grid-row: 1; } .pip.top-right { grid-column: 3; grid-row: 1; } .pip.middle-left { grid-column: 1; grid-row: 2; } .pip.center { grid-column: 2; grid-row: 2; } .pip.middle-right { grid-column: 3; grid-row: 2; } .pip.bottom-left { grid-column: 1; grid-row: 3; } .pip.bottom-right { grid-column: 3; grid-row: 3; }
-        
-        /* Carved look for the Numbers too! */
-        .number-display { 
-            grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; 
-            font-size: 3.5rem; 
-            text-shadow: -1px -1px 2px rgba(0,0,0,0.8), 1px 1px 1px rgba(255,255,255,0.7); 
-        }
-        /* --------------------------------------------------------------------- */
+        .number-display { grid-column: 1 / 4; grid-row: 1 / 4; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; font-size: 3.5rem; }
 
         @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
         .rolling { animation: tumble 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
@@ -213,7 +157,7 @@
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
-            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 20px;}
+            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 40px;}
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
             #sidebar .area-title { margin-bottom: 5px; }
@@ -271,7 +215,7 @@
                 </div>
             </div>
             
-            <button id="join-game-btn">Enter Tavern</button>
+            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
             <button id="install-app-btn">📲 Install App</button>
         </div>
     </div>
@@ -336,7 +280,7 @@
             sessionStorage.setItem('tavernToken', sessionToken);
         }
 
-        // NEW: added 'rot' field to store the random rotation!
+        // REVERTED: Removed rot tracker
         let dice = [];
         let hasRolled = false, locksThisRoll = 0, rollCount = 0;
         let isAnimating = false, usePips = false;
@@ -677,8 +621,8 @@
         const rollBtn = document.getElementById('roll-btn'); const toggleBtn = document.getElementById('toggle-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
 
         function initGame() {
-            // NEW: Added rot field for random angle tracking
-            dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active', rot: 0 }));
+            // REVERTED: Clean initialization
+            dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
             hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
             scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
             if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
@@ -745,11 +689,10 @@
             if (isMyTurn || isBotTurn) socket.emit('playerRolledDice', suspenseType);
 
             setTimeout(() => {
+                // REVERTED: No random rotation math here
                 dice.forEach(d => { 
                     if (d.status === 'active') { 
                         d.value = Math.floor(Math.random() * 6) + 1; 
-                        // NEW: Generate a random organic tilt between -8 and +8 degrees
-                        d.rot = Math.floor(Math.random() * 16) - 8; 
                     } 
                 });
                 hasRolled = true; locksThisRoll = 0; isAnimating = false;
@@ -882,8 +825,7 @@
                 div.classList.add('molar-tooth');
             }
             
-            // NEW: Feed the organic rotation value directly into the CSS
-            div.style.setProperty('--random-rot', (die.rot || 0) + 'deg');
+            // REVERTED: Removed inline rotation injection
             
             div.dataset.value = die.value; div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
             
@@ -892,8 +834,8 @@
             } 
             else if (die.status === 'lockedThisTurn') { 
                 div.classList.add('lockedThisTurn'); 
-                // Maintain the random rotation even while popped up!
-                div.style.transform = 'translateY(-5px) rotate(' + (die.rot || 0) + 'deg)'; 
+                // REVERTED: Clean transform string
+                div.style.transform = 'translateY(-5px)'; 
             }
             return div;
         }
