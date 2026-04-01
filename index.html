@@ -222,13 +222,13 @@
             <h2>Pull Up a Chair</h2>
             
             <div class="avatar-picker" id="avatar-container">
-                <div class="avatar-option selected" onclick="selectAvatar(this, this.innerHTML)"><img src="paladin.png" width="40" height="40"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)"><img src="dicewizard.png" width="40" height="40"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)"><img src="rapier.png" width="40" height="40"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)"><img src="bard.png" width="40" height="40"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)"><img src="hangman.png" width="40" height="40"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)"><img src="themolar.png" width="40" height="40"></div>
-            </div>
+    <div class="avatar-option selected" onclick="selectAvatar(this, this.innerHTML)">🛡️</div>
+    <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)">🧙‍♂️</div>
+    <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)">🗡️</div>
+    <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)">🪕</div>
+    <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)">💀</div>
+    <div class="avatar-option" onclick="selectAvatar(this, this.innerHTML)">🦷</div>
+</div>
 
             <div class="input-group">
                 <input type="text" id="name-input" class="styled-input" placeholder="Adventurer Name" maxlength="15">
@@ -317,7 +317,7 @@
         
         let myId = null, isMyTurn = false, isBotTurn = false, lastTurnId = null, isFirstLoad = true; 
         // Using paladin.png as the new default starting image!
-        let myAvatar = '<img src="paladin.png" width="40" height="40">'; 
+        let myAvatar = '🛡️';
         let myRoom = 'PUBLIC';
         let myStartingLives = 3;
         let currentActiveId = null;
