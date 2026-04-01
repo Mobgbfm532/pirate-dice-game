@@ -71,31 +71,121 @@
         @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
-        /* UPDATED: margin-top increased to 20px to move just the buttons down! */
         #controls { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
+        /* ---------------------------------------------------------------------
+           UPDATED: 3D "Tactile Wooden Plank" Buttons
+           --------------------------------------------------------------------- */
         button { 
+            position: relative;
             padding: 12px 25px; 
             font-size: 1.3rem; 
             font-family: 'Almendra', serif; 
-            background: linear-gradient(to bottom, #8d6e63, #5d4037); 
-            color: #ffffff; 
-            border: 2px solid #2a1610; 
-            border-radius: 6px; 
+            color: #ffcc80; /* Gold tavern text */
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            
+            /* Fake wood grain gradient */
+            background-color: #5d4037;
+            background-image: 
+                linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(0,0,0,0.4)),
+                repeating-linear-gradient(to right, transparent, transparent 20px, rgba(0,0,0,0.05) 20px, rgba(0,0,0,0.05) 40px);
+            
+            border: 2px solid #1a0f0c; /* Iron band border */
+            border-radius: 4px; /* More square, like a plank */
             cursor: pointer; 
-            transition: all 0.2s; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2); 
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
+            transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1); /* Faster snap for tactile feel */
+            
+            /* 3D Shadows: Inner highlight, hard dark bottom edge (thickness), soft drop shadow */
+            box-shadow: 
+                inset 0 2px 2px rgba(255,255,255,0.2), 
+                inset 0 -2px 5px rgba(0,0,0,0.5),
+                0 6px 0 #2a1610, 
+                0 8px 10px rgba(0,0,0,0.6);
+            text-shadow: 2px 2px 3px #000; 
         }
-        button:hover { background: linear-gradient(to bottom, #a1887f, #6d4c41); transform: translateY(-2px); }
-        button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        button:disabled { background: #4e342e; color: #9e9e9e; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723; text-shadow: none;}
         
-        #play-again-btn { background: linear-gradient(to bottom, #2e7d32, #1b5e20); display: none; color: #fff; border-color: #1b5e20; }
-        #play-again-btn:hover { background: linear-gradient(to bottom, #388e3c, #2e7d32); }
+        button:hover { 
+            background-color: #6d4c41; 
+            transform: translateY(2px); /* Pushes down slightly */
+            box-shadow: 
+                inset 0 2px 2px rgba(255,255,255,0.2), 
+                inset 0 -2px 5px rgba(0,0,0,0.5),
+                0 4px 0 #2a1610, 
+                0 6px 8px rgba(0,0,0,0.6);
+        }
+        
+        button:active { 
+            transform: translateY(6px); /* Full physical depression into the board */
+            box-shadow: 
+                inset 0 2px 2px rgba(255,255,255,0.1), 
+                inset 0 -1px 2px rgba(0,0,0,0.8),
+                0 0 0 #2a1610, 
+                0 2px 3px rgba(0,0,0,0.6);
+        }
+        
+        button:disabled { 
+            background: #3e2723; 
+            color: #795548; 
+            cursor: not-allowed; 
+            transform: translateY(6px); /* Disabled buttons stay pressed down permanently */
+            box-shadow: 
+                inset 0 2px 2px rgba(0,0,0,0.5), 
+                0 0 0 #2a1610, 
+                0 1px 1px rgba(0,0,0,0.3);
+            text-shadow: none; 
+            border-color: #2a1610;
+        }
+        
+        /* 3D Green Tinted Wood Variant */
+        #play-again-btn { 
+            background-color: #2e7d32; 
+            border-color: #003300; 
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -2px 5px rgba(0,0,0,0.5), 0 6px 0 #1b5e20, 0 8px 10px rgba(0,0,0,0.6);
+            display: none;
+        }
+        #play-again-btn:hover { 
+            background-color: #388e3c; 
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -2px 5px rgba(0,0,0,0.5), 0 4px 0 #1b5e20, 0 6px 8px rgba(0,0,0,0.6);
+        }
+        #play-again-btn:active {
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.1), inset 0 -1px 2px rgba(0,0,0,0.8), 0 0 0 #1b5e20, 0 2px 3px rgba(0,0,0,0.6);
+        }
 
-        #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
-        #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
+        /* 3D Blue Tinted Wood Variant */
+        #install-app-btn { 
+            background-color: #1565c0; 
+            border-color: #002147;
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -2px 5px rgba(0,0,0,0.5), 0 6px 0 #0d47a1, 0 8px 10px rgba(0,0,0,0.6);
+            display: none; 
+            margin-top: 15px; 
+            width: 100%;
+        }
+        #install-app-btn:hover { 
+            background-color: #1976d2; 
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -2px 5px rgba(0,0,0,0.5), 0 4px 0 #0d47a1, 0 6px 8px rgba(0,0,0,0.6);
+        }
+        #install-app-btn:active {
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.1), inset 0 -1px 2px rgba(0,0,0,0.8), 0 0 0 #0d47a1, 0 2px 3px rgba(0,0,0,0.6);
+        }
+        
+        /* OVERRIDE: Prevent the heavy wood style from ruining the emojis */
+        .react-btn { 
+            padding: 5px; 
+            font-size: 1.8rem; 
+            background: transparent; 
+            background-image: none;
+            border: none; 
+            box-shadow: none; 
+            cursor: pointer; 
+            transition: transform 0.2s; 
+            margin: 0; 
+            text-transform: none;
+            text-shadow: none;
+        }
+        .react-btn:hover { background: transparent; box-shadow: none; transform: scale(1.3); }
+        .react-btn:active { transform: scale(1.1); box-shadow: none; }
+        /* --------------------------------------------------------------------- */
 
         #sidebar { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative; width: 100%; box-sizing: border-box; }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
@@ -103,8 +193,6 @@
         .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
         #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; gap: 5px;}
-        .react-btn { padding: 5px; font-size: 1.8rem; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; }
-        .react-btn:hover { transform: scale(1.3); background: transparent; box-shadow: none; }
         .floating-reaction { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(62, 39, 35, 0.9); color: #fdf6e3; padding: 10px 20px; border-radius: 20px; font-size: 1.2rem; z-index: 9999; pointer-events: none; animation: floatUp 3s ease-out forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #cda434; display: flex; align-items: center; gap: 10px; font-family: 'Almendra', serif; white-space: nowrap;}
         @keyframes floatUp { 0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); } 10% { opacity: 1; transform: translateX(-50%) scale(1.2); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); } }
 
@@ -160,8 +248,7 @@
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
-            /* Inherit the margin change for mobile too */
-            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 20px;}
+            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 30px;}
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
             #sidebar .area-title { margin-bottom: 5px; }
@@ -219,7 +306,7 @@
                 </div>
             </div>
             
-            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
+            <button id="join-game-btn">Enter Tavern</button>
             <button id="install-app-btn">📲 Install App</button>
         </div>
     </div>
