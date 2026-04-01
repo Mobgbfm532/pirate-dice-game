@@ -19,14 +19,10 @@
         :root {
             --text-light: #fdf6e3; --text-dark: #3e2723;
             --dice-bone: #fffaee; --pip-red: #b71c1c; --pip-green: #2e7d32; --pip-black: #212121;
-            --parchment-bg: linear-gradient(to bottom right, #fdf6e3, #e6d5aa);
-            --parchment-shadow: inset 0 0 40px rgba(139, 69, 19, 0.15), 5px 5px 15px rgba(0,0,0,0.6);
-            --parchment-border: 1px solid #cda434;
         }
 
         body {
             background-color: #1a1210;
-            /* UPDATED: Added a heavy radial vignette gradient over the Background.png to create a spotlight effect! */
             background-image: radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.85) 100%), url('Background.png'); 
             background-size: cover;
             background-position: center;
@@ -43,19 +39,17 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        /* UPDATED: Deepened the inner shadow of the entire table to make it feel thicker and heavier */
         #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.9), inset 0 0 100px 40px rgba(0,0,0,0.95); padding: 70px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        /* UPDATED: Added deep inset shadows and a green felt tint to make the zones look carved into the wood */
         #locked-area, #active-area { 
             display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; 
             min-height: 115px; 
-            background: rgba(15, 30, 20, 0.7); /* Tavern felt */
+            background: rgba(15, 30, 20, 0.7); 
             box-shadow: inset 0 10px 25px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.1); 
-            border: 2px solid #0a110c; /* Deep shadowed rim */
+            border: 2px solid #0a110c; 
             padding: 15px; border-radius: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box; 
         }
         
@@ -81,7 +75,6 @@
         @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
-        /* UPDATED: Increased margin-top to strictly push buttons down */
         #controls { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
         button { 
@@ -106,34 +99,103 @@
         .react-btn:hover { background: transparent; box-shadow: none; transform: scale(1.3); }
         .react-btn:active { transform: scale(1.1); box-shadow: none; }
 
-        #sidebar { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative; width: 100%; box-sizing: border-box; }
-        #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
-        #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
-        .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
+        /* ---------------------------------------------------------------------
+           UPDATED: The Menus - Parchment & Iron
+           --------------------------------------------------------------------- */
+        
+        /* The main parchment panels with thick wood/iron borders */
+        #sidebar, .modal-box { 
+            background-color: #e6d5aa; 
+            /* Complex linear gradients mimic old paper grain and burnt, shadowed edges */
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.2) 0%, transparent 10%, transparent 90%, rgba(0,0,0,0.15) 100%),
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(139, 69, 19, 0.03) 10px, rgba(139, 69, 19, 0.03) 20px);
+            
+            border: 6px solid #2a1610; /* The heavy outer frame */
+            outline: 2px solid #5d4037; /* Inner trim */
+            outline-offset: -6px;
+            
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9), inset 0 0 40px rgba(100, 50, 20, 0.5); /* Deep inset burn */
+            border-radius: 4px; 
+            padding: 20px; 
+            color: #2a1610; 
+            z-index: 10; position: relative; width: 100%; box-sizing: border-box; 
+        }
 
-        #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; gap: 5px;}
+        .modal-box { padding: 30px; text-align: center; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+
+        /* The Embossed Ink Text Effect */
+        .ink-text {
+            color: #2a1610; /* Very dark brown ink */
+            /* The shadow trick: a pure white highlight slightly offset down and right simulates a physical indent into the paper */
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5); 
+            font-weight: 700;
+        }
+
+        #sidebar .area-title { 
+            color: #2a1610; 
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5); 
+            border-bottom: 2px dashed rgba(42, 22, 16, 0.4); /* Dashed bottom looks like stitched thread or dotted ink */
+            padding-bottom: 5px; margin-bottom: 15px; width: 100%; text-align: center; 
+        }
+        
+        #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
+        .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed rgba(42, 22, 16, 0.4); transition: opacity 0.3s; }
+
+        /* The Avatar Coins */
+        .avatar-token {
+            display: inline-flex; 
+            justify-content: center; 
+            align-items: center;
+            width: 55px; 
+            height: 55px;
+            background: radial-gradient(circle at 30% 30%, #a1887f, #4e342e); /* Wood/clay token color */
+            border: 3px solid #2a1610;
+            border-radius: 50%;
+            /* Gives the token 3D depth and thickness */
+            box-shadow: inset 1px 1px 3px rgba(255,255,255,0.3), 2px 4px 6px rgba(0,0,0,0.5);
+            font-size: 2.2rem; 
+            text-shadow: none; 
+            margin-bottom: 5px;
+        }
+        
+        /* Update the modal header to match ink style */
+        .modal-box h2 { color: #2a1610; text-shadow: 1px 1px 0px rgba(255,255,255,0.5); font-size: 2.2rem; margin-top: 0; border-bottom: 2px dashed rgba(42, 22, 16, 0.4); padding-bottom: 10px; }
+        
+        .styled-input { 
+            padding: 12px; font-size: 1.2rem; font-family: 'Almendra', serif; 
+            background: rgba(0,0,0,0.05); /* Carved slot look */
+            color: #2a1610; 
+            border: 2px solid #5d4037; border-radius: 4px; 
+            width: 90%; text-align: center; outline: none; 
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.2), 0 1px 1px rgba(255,255,255,0.4); 
+            box-sizing: border-box; 
+            font-weight: bold;
+        }
+        .styled-input::placeholder { color: rgba(42, 22, 16, 0.5); font-weight: normal; }
+
+        #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px dashed rgba(42, 22, 16, 0.4); gap: 5px;}
+        /* --------------------------------------------------------------------- */
+
         .floating-reaction { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(62, 39, 35, 0.9); color: #fdf6e3; padding: 10px 20px; border-radius: 20px; font-size: 1.2rem; z-index: 9999; pointer-events: none; animation: floatUp 3s ease-out forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #cda434; display: flex; align-items: center; gap: 10px; font-family: 'Almendra', serif; white-space: nowrap;}
         @keyframes floatUp { 0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); } 10% { opacity: 1; transform: translateX(-50%) scale(1.2); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); } }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
-        .modal-box { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 30px; border-radius: 4px; text-align: center; width: 100%; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); color: var(--text-dark); box-sizing: border-box;}
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         
         #name-modal { display: flex; z-index: 2000; } 
         .input-group { margin-bottom: 15px; text-align: center; width: 100%;}
-        .styled-input { padding: 12px; font-size: 1.2rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; width: 90%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
-        .styled-input::placeholder { color: #bcaaa4; }
         
         .lives-picker { display: flex; justify-content: space-around; background: transparent; border: none; padding: 5px; width: 90%; margin: 0 auto; box-sizing: border-box; }
         .lives-option { cursor: pointer; transition: all 0.2s; opacity: 0.5; user-select: none; padding: 5px 10px; font-size: 1.2rem; letter-spacing: -2px; border-radius: 8px; border: 2px solid transparent; }
         .lives-option:hover { transform: scale(1.1); opacity: 0.8; }
-        .lives-option.selected { transform: scale(1.1); opacity: 1; border: 2px solid #cda434; background: rgba(205, 164, 52, 0.1); box-shadow: 0 0 8px rgba(205, 164, 52, 0.5); }
-        .lives-label { color: #8d6e63; margin-bottom: 5px; font-size: 1.1rem; font-weight: bold;}
+        .lives-option.selected { transform: scale(1.1); opacity: 1; border: 2px solid #5d4037; background: rgba(139, 69, 19, 0.1); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .lives-label { color: #2a1610; margin-bottom: 5px; font-size: 1.1rem; font-weight: bold; text-shadow: 1px 1px 0px rgba(255,255,255,0.4); }
 
         .avatar-picker { display: flex; justify-content: space-around; font-size: 2.2rem; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;}
         .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(100%) opacity(0.5); user-select: none; }
         .avatar-option:hover { transform: scale(1.2); filter: grayscale(0%) opacity(1); }
-        .avatar-option.selected { transform: scale(1.3); filter: grayscale(0%) opacity(1); text-shadow: 0 0 10px rgba(212, 175, 55, 0.8); }
+        .avatar-option.selected { transform: scale(1.3); filter: grayscale(0%) opacity(1); text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
         #splash-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; pointer-events: none; }
         #splash-text { color: #ffcc80; font-size: 6rem; text-shadow: 3px 3px 15px #000; font-family: 'Almendra', serif; transform: scale(0); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
@@ -153,7 +215,7 @@
             body { padding: 5px; }
             #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
             #game-area { padding: 60px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
-            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
+            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; border-width: 4px;}
             
             .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
             .pip { width: 9px; height: 9px; }
@@ -167,7 +229,6 @@
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
-            /* UPDATED: Increased mobile margin for buttons */
             #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 40px;}
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
@@ -200,7 +261,7 @@
 
     <div id="name-modal" class="modal-overlay">
         <div class="modal-box">
-            <h2 style="color: #5d4037; font-size: 2.2rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
+            <h2>Pull Up a Chair</h2>
             
             <div class="avatar-picker" id="avatar-container">
                 <div class="avatar-option selected" onclick="selectAvatar(this, '🛡️')">🛡️</div>
@@ -233,7 +294,7 @@
 
     <div id="custom-modal" class="modal-overlay">
         <div class="modal-box">
-            <div id="custom-modal-text" style="color: var(--text-dark); margin-bottom: 30px; font-size: 1.5rem; white-space: pre-line;"></div>
+            <div id="custom-modal-text" class="ink-text" style="margin-bottom: 30px; font-size: 1.5rem; white-space: pre-line;"></div>
             <button id="custom-modal-btn">Continue</button>
         </div>
     </div>
@@ -265,7 +326,7 @@
         
         <div id="sidebar"> 
             <h2 class="area-title">Turn Score</h2>
-            <h2 style="margin: 0; color: #b71c1c; font-size: 4rem; text-shadow: 1px 1px 2px rgba(255,255,255,0.5); border-bottom: 2px solid #a1887f; width: 100%; text-align: center; padding-bottom: 10px; margin-bottom: 20px;"><span id="current-score-span">0</span></h2>
+            <h2 style="margin: 0; color: #7f0000; font-size: 4rem; text-shadow: 1px 1px 0 rgba(255,255,255,0.6), -1px -1px 2px rgba(0,0,0,0.4); border-bottom: 2px dashed rgba(42, 22, 16, 0.4); width: 100%; text-align: center; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold;"><span id="current-score-span">0</span></h2>
             
             <h2 class="area-title">Adventurers</h2>
             <div id="scoreboard"></div> 
@@ -581,8 +642,14 @@
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound || !p.connected) el.style.opacity = "0.4";
 
-                el.innerHTML = `<span style="font-size: 1.8rem">${p.avatar}</span><br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
-                if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
+                // UPDATED: Injected the new avatar-token and ink-text CSS classes!
+                el.innerHTML = `<div class="avatar-token">${p.avatar}</div><br><strong class="ink-text" style="font-size:1.2rem;">${p.name}</strong><br>${hearts}<br><strong class="ink-text">Score: ${scoreText}</strong>`;
+                
+                if (id === state.currentTurnId) {
+                    el.style.backgroundColor = "rgba(139, 69, 19, 0.15)";
+                    el.style.borderRadius = "8px";
+                    el.style.boxShadow = "inset 0 0 10px rgba(0,0,0,0.1)";
+                } 
                 scoreboard.appendChild(el);
             });
 
@@ -633,7 +700,7 @@
         function initGame() {
             dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
             hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
-            scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
+            scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#7f0000"; 
             if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
             rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
         }
@@ -665,7 +732,6 @@
                 
                 if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
                 else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
-                    // UPDATED: Custom text for when The Molar doesn't bite!
                     if (isBotTurn) {
                         broadcastAnnouncement("The Molar NEVER bites!", "#4fc3f7", "The Molar NEVER bites!");
                     } else {
@@ -705,11 +771,7 @@
             if (isMyTurn || isBotTurn) socket.emit('playerRolledDice', suspenseType);
 
             setTimeout(() => {
-                dice.forEach(d => { 
-                    if (d.status === 'active') { 
-                        d.value = Math.floor(Math.random() * 6) + 1; 
-                    } 
-                });
+                dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
                 hasRolled = true; locksThisRoll = 0; isAnimating = false;
                 
                 let newlyRolled6s = dice.filter(d => d.status === 'active' && d.value === 6).length;
@@ -862,8 +924,8 @@
 
             let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
 
-            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
-            else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
+            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#7f0000"; } 
+            else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#7f0000"; }
 
             if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
 
