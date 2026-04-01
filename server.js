@@ -86,6 +86,8 @@ function evaluateRound(roomCode) {
     let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
+        // Fixed: Ensure the final UI state is synced before ending the game
+        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
         io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
         room.roundPlayers = []; 
     } else if (tiedPlayers.length > 1) {
