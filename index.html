@@ -612,7 +612,7 @@
             });
 
             if (state.playerOrder.length < 2 && !myRoom.startsWith('COMP')) {
-                turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; isFirstLoad = true; 
+                turnIndicator.innerHTML = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; isFirstLoad = true; 
             } else {
                 let myPlayerInfo = state.players[myId];
                 if (myPlayerInfo && myPlayerInfo.lives <= 0) { turnIndicator.innerText = "You're dust!"; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; } 
