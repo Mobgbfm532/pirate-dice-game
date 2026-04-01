@@ -451,9 +451,13 @@
 
         function showDevilEffect() {
             playSound(sfxDevilsTeets); 
-            const container = document.getElementById('devil-effect-container');
-            container.style.display = 'flex';
-            setTimeout(() => { container.style.display = 'none'; }, 1000); 
+            // Give the browser 100ms to spin up the audio context before showing the DOM image
+            // This ensures they sync perfectly.
+            setTimeout(() => {
+                const container = document.getElementById('devil-effect-container');
+                container.style.display = 'flex';
+                setTimeout(() => { container.style.display = 'none'; }, 1000); 
+            }, 100);
         }
         
         socket.on('triggerDevilEffect', showDevilEffect);
@@ -518,10 +522,12 @@
         }
         socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
         
-        socket.on('triggerConfetti', () => { 
+        // This is the unified function to play the celebration locally
+        function triggerCelebration() {
             playSound(sfxYay);
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); 
-        });
+        }
+        socket.on('triggerConfetti', triggerCelebration);
 
         socket.on('connect', () => { myId = socket.id; });
 
@@ -851,10 +857,6 @@
                     
                     let busted = (!req2 || !req4); let finalScore = busted ? 0 : currentScore;
                     
-                    if (!busted && finalScore === 24) {
-                        socket.emit('triggerConfetti');
-                    }
-                    
                     socket.emit('endTurn', { score: finalScore, busted: busted });
                 };
 
@@ -869,7 +871,8 @@
                         turnFinalized = true; 
                         
                         if (currentScore === 24) {
-                            if (isMyTurn || isBotTurn) socket.emit('triggerConfetti');
+                            triggerCelebration(); // Play locally immediately
+                            if (isMyTurn || isBotTurn) socket.emit('triggerConfetti'); // Tell everyone else
                         }
                         else { 
                             if (suspenseType === 'perfect') triggerGameSound('ohwell'); 
