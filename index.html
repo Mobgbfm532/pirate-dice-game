@@ -26,7 +26,8 @@
 
         body {
             background-color: #1a1210;
-            background-image: url('Background.png'); 
+            /* UPDATED: Added a heavy radial vignette gradient over the Background.png to create a spotlight effect! */
+            background-image: radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.85) 100%), url('Background.png'); 
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -42,17 +43,25 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 70px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        /* UPDATED: Deepened the inner shadow of the entire table to make it feel thicker and heavier */
+        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.9), inset 0 0 100px 40px rgba(0,0,0,0.95); padding: 70px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
         
         .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 115px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
-        #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
+        /* UPDATED: Added deep inset shadows and a green felt tint to make the zones look carved into the wood */
+        #locked-area, #active-area { 
+            display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; 
+            min-height: 115px; 
+            background: rgba(15, 30, 20, 0.7); /* Tavern felt */
+            box-shadow: inset 0 10px 25px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.1); 
+            border: 2px solid #0a110c; /* Deep shadowed rim */
+            padding: 15px; border-radius: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box; 
+        }
+        
+        #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.1); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
-        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 115px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
 
-        /* REVERTED: Clean white dice styling restored */
         .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 12px; box-sizing: border-box; align-items: center; justify-items: center; font-weight: bold; color: var(--pip-black); }
         .die:hover { transform: translateY(-5px) rotate(2deg); }
         
@@ -72,7 +81,8 @@
         @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-screen { animation: screen-shake 0.3s infinite; }
 
-        #controls { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        /* UPDATED: Increased margin-top to strictly push buttons down */
+        #controls { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
         button { 
             position: relative; padding: 12px 25px; font-size: 1.3rem; font-family: 'Almendra', serif; color: #ffcc80; text-transform: uppercase; letter-spacing: 1px;
@@ -157,6 +167,7 @@
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
+            /* UPDATED: Increased mobile margin for buttons */
             #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 40px;}
             #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
             
@@ -215,7 +226,7 @@
                 </div>
             </div>
             
-            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
+            <button id="join-game-btn">Enter Tavern</button>
             <button id="install-app-btn">📲 Install App</button>
         </div>
     </div>
@@ -280,7 +291,6 @@
             sessionStorage.setItem('tavernToken', sessionToken);
         }
 
-        // REVERTED: Removed rot tracker
         let dice = [];
         let hasRolled = false, locksThisRoll = 0, rollCount = 0;
         let isAnimating = false, usePips = false;
@@ -621,7 +631,6 @@
         const rollBtn = document.getElementById('roll-btn'); const toggleBtn = document.getElementById('toggle-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
 
         function initGame() {
-            // REVERTED: Clean initialization
             dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
             hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
             scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
@@ -643,7 +652,7 @@
             triggerGlobalMusic();
 
             if (rollCount > 0) { 
-                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "The Molar NEVER bites!" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
                     broadcastAnnouncement("", ""); 
                 }
             }
@@ -655,7 +664,14 @@
                 let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
                 
                 if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
-                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
+                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
+                    // UPDATED: Custom text for when The Molar doesn't bite!
+                    if (isBotTurn) {
+                        broadcastAnnouncement("The Molar NEVER bites!", "#4fc3f7", "The Molar NEVER bites!");
+                    } else {
+                        broadcastAnnouncement("You didn't bite!", "#4fc3f7", "They didn't bite!");
+                    }
+                }
             }
 
             if (rollCount > 0) { 
@@ -689,7 +705,6 @@
             if (isMyTurn || isBotTurn) socket.emit('playerRolledDice', suspenseType);
 
             setTimeout(() => {
-                // REVERTED: No random rotation math here
                 dice.forEach(d => { 
                     if (d.status === 'active') { 
                         d.value = Math.floor(Math.random() * 6) + 1; 
@@ -825,16 +840,10 @@
                 div.classList.add('molar-tooth');
             }
             
-            // REVERTED: Removed inline rotation injection
-            
             div.dataset.value = die.value; div.innerHTML = getPipsHTML(die.value); div.onclick = () => toggleDie(die.id);
-            
-            if (die.status === 'permanentlyLocked') { 
-                div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; 
-            } 
+            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
             else if (die.status === 'lockedThisTurn') { 
                 div.classList.add('lockedThisTurn'); 
-                // REVERTED: Clean transform string
                 div.style.transform = 'translateY(-5px)'; 
             }
             return div;
