@@ -2,7 +2,6 @@ const CACHE_NAME = '2424-cache-v27';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
 ];
