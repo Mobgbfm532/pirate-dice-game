@@ -229,6 +229,7 @@
 
     <div id="game-page">
         <div id="game-area"> 
+            <div id="phaser-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; border-radius: 8px; overflow: hidden;"></div>
             <div id="room-indicator">Tavern: <span id="room-code-display">...</span></div>
             
             <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
@@ -267,6 +268,7 @@
         </div>
     </div>
 
+ <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -922,6 +924,62 @@
                     .catch(err => console.log('Registration failed: ', err));
             });
         }
+// ==========================================
+        // PHASER 3 ENGINE SETUP (STAGE 1)
+        // ==========================================
+        
+        class TavernScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'TavernScene' });
+            }
+
+            preload() {
+                // Later, we will load dice images and normal maps here
+                // this.load.image('dice', 'path/to/dice.png');
+            }
+
+            create() {
+                // Get the dimensions of our container
+                const width = this.cameras.main.width;
+                const height = this.cameras.main.height;
+
+                // For Stage 1, let's just draw a nice dark tavern-colored rectangle 
+                // to prove Phaser is rendering behind your UI.
+                this.add.rectangle(width/2, height/2, width, height, 0x271612);
+
+                // Add some placeholder text inside the Phaser canvas
+                this.add.text(width/2, height - 30, 'Phaser 3 Engine Active', { 
+                    fontFamily: 'Almendra', 
+                    fontSize: '20px', 
+                    color: '#ffcc80' 
+                }).setOrigin(0.5);
+            }
+
+            update() {
+                // The game loop (runs 60 times per second)
+            }
+        }
+
+        const phaserConfig = {
+            type: Phaser.AUTO,
+            parent: 'phaser-container', // Matches the div ID we created
+            width: '100%',
+            height: '100%',
+            transparent: true, // Lets your body background show through if needed
+            physics: {
+                default: 'matter', // We are turning on the advanced physics engine now!
+                matter: {
+                    gravity: { y: 0 }, // It's a top-down table, so gravity pulls "into" the screen, not down
+                    debug: true // We'll leave debug on for Stage 2 so we can see the physics boxes
+                }
+            },
+            scene: TavernScene
+        };
+
+        // Boot up the engine!
+        const game = new Phaser.Game(phaserConfig);
+
+        
     </script>
 </body>
 </html>
