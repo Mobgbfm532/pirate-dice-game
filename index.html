@@ -229,7 +229,6 @@
 
     <div id="game-page">
         <div id="game-area"> 
-            <div id="phaser-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; border-radius: 8px; overflow: hidden;"></div>
             <div id="room-indicator">Tavern: <span id="room-code-display">...</span></div>
             
             <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
@@ -268,7 +267,6 @@
         </div>
     </div>
 
- <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -924,105 +922,6 @@
                     .catch(err => console.log('Registration failed: ', err));
             });
         }
-// ==========================================
-        // PHASER 3 ENGINE SETUP (STAGE 2)
-        // ==========================================
-        
-        class TavernScene extends Phaser.Scene {
-            constructor() {
-                super({ key: 'TavernScene' });
-                this.physicalDice = [];
-            }
-
-            create() {
-                const width = this.cameras.main.width;
-                const height = this.cameras.main.height;
-
-                // 1. Draw the Tavern Table background
-                this.add.rectangle(width/2, height/2, width, height, 0x271612);
-                
-                // Add temporary instructions
-                this.add.text(width/2, 30, 'Click anywhere on the table to throw!', { 
-                    fontFamily: 'Almendra', fontSize: '24px', color: '#ffcc80' 
-                }).setOrigin(0.5);
-
-                // 2. Set up Physics Boundaries (Invisible walls so dice don't fly away)
-                // Parameters: x, y, width, height, thickness, top, bottom, left, right
-                this.matter.world.setBounds(0, 0, width, height, 50, true, true, true, true);
-
-                // 3. Create 6 physical "Dice" (Just blank bone-colored squares for now)
-                for(let i = 0; i < 6; i++) {
-                    // Start them clumped near the bottom center
-                    let startX = width/2 + (Math.random() * 40 - 20);
-                    let startY = height - 80;
-
-                    // Draw the visual square
-                    let visualDie = this.add.rectangle(startX, startY, 70, 70, 0xfffaee);
-                    visualDie.setStrokeStyle(3, 0x212121);
-                    
-                    // Attach Matter.js physics to the visual square
-                    this.matter.add.gameObject(visualDie, {
-                        restitution: 0.7,   // Bounciness (0 to 1)
-                        friction: 0.1,      // How much they slide against each other
-                        frictionAir: 0.015, // Air resistance (slows down their spin)
-                        density: 0.05,      // How "heavy" they feel
-                        chamfer: { radius: 10 } // Rounds the physics hitbox corners!
-                    });
-
-                    this.physicalDice.push(visualDie);
-                }
-
-                // 4. Temporary test trigger: Throw dice when you click the canvas
-                this.input.on('pointerdown', () => {
-                    this.throwDice();
-                });
-                
-                // Expose this scene to the global window so your HTML buttons can talk to it later
-                window.tavernScene = this;
-            }
-
-            throwDice() {
-                const width = this.cameras.main.width;
-                const height = this.cameras.main.height;
-
-                this.physicalDice.forEach(die => {
-                    // Reset position to the bottom of the screen
-                    die.setPosition(width/2 + (Math.random() * 60 - 30), height - 50);
-                    
-                    // Give them a random starting rotation
-                    die.setRotation(Math.random() * Math.PI);
-                    
-                    // Apply a random upward and outward physical force
-                    let forceX = (Math.random() - 0.5) * 0.15; // Random left/right
-                    let forceY = -(Math.random() * 0.1 + 0.15); // Negative force pushes UP
-
-                    die.applyForce({ x: forceX, y: forceY });
-                    
-                    // Apply a random torque to make them tumble
-                    die.setAngularVelocity((Math.random() - 0.5) * 0.6);
-                });
-            }
-        }
-
-        const phaserConfig = {
-            type: Phaser.AUTO,
-            parent: 'phaser-container', 
-            width: '100%',
-            height: '100%',
-            transparent: true, 
-            physics: {
-                default: 'matter',
-                matter: {
-                    gravity: { y: 0 }, // Top-down view means no downward gravity on the Y axis
-                    debug: false // Turn to true if you want to see the wireframe hitboxes!
-                }
-            },
-            scene: TavernScene
-        };
-
-        const game = new Phaser.Game(phaserConfig);
-
-        
     </script>
 </body>
 </html>
