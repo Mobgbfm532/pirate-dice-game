@@ -35,6 +35,19 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
+        /* --- PHASE 1: COZY TAVERN LIGHTING VIGNETTE --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, transparent 15%, rgba(15, 10, 8, 0.5) 55%, rgba(0, 0, 0, 0.95) 100%);
+            pointer-events: none;
+            z-index: 498; 
+        }
+
         .firelight-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 120%, rgba(255, 140, 0, 0.15), transparent 70%); pointer-events: none; z-index: 500; animation: flicker 4s infinite alternate; }
         @keyframes flicker { 0%, 100% { opacity: 1; transform: scale(1); } 25% { opacity: 0.8; transform: scale(1.02); } 50% { opacity: 0.95; transform: scale(0.98); } 75% { opacity: 0.85; transform: scale(1.01); } }
         .ember { position: fixed; bottom: -10px; width: 4px; height: 4px; background: #ffb300; border-radius: 50%; box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8); pointer-events: none; z-index: 499; animation: floatEmber linear forwards; }
@@ -42,15 +55,99 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        #game-area { background-color: #3e2723; background-image: url('Table2.png'); background-size: 100% 100%; background-position: center; border: 5px solid #271612; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.8); padding: 70px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10; width: 100%; box-sizing: border-box; }
+        /* --- PHASE 2: PHYSICAL DICE BOX OVERHAUL --- */
+        #game-area { 
+            background-color: #3e2723; 
+            background-image: url('Table2.png'); 
+            background-size: 100% 100%; 
+            background-position: center; 
+            border: 6px double #1a0f0d; 
+            border-radius: 14px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 0 80px rgba(0,0,0,0.85); 
+            padding: 70px 25px 25px 25px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center; 
+            position: relative; 
+            z-index: 10; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
         
-        .area-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.8rem; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); color: #ffcc80; }
+        /* --- PHASE 1: PREMIUM COCKTAIL TYPOGRAPHY --- */
+        .area-title { 
+            margin-top: 15px; 
+            margin-bottom: 8px; 
+            font-size: 1.9rem; 
+            font-weight: 700;
+            letter-spacing: 3px; 
+            text-transform: uppercase; 
+            color: #ffb74d; 
+            text-shadow: 
+                -1px -1px 0 #1a0f0d,  
+                 1px -1px 0 #1a0f0d,
+                -1px  1px 0 #1a0f0d,
+                 1px  1px 0 #1a0f0d,
+                 2px  3px 5px rgba(0, 0, 0, 0.9),
+                 0px  0px 12px rgba(255, 140, 0, 0.4); 
+            transition: text-shadow 0.3s ease;
+        }
+        
+        #turn-indicator { 
+            color: #fff3e0; 
+            font-size: 2.2rem; 
+            text-shadow: 
+                -1px -1px 0 #000,  
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 3px  5px 8px rgba(0, 0, 0, 0.95),
+                 0px  0px 20px rgba(174, 213, 129, 0.3); 
+            margin-top: 5px; 
+            margin-bottom: 20px; 
+            letter-spacing: 1px;
+        }
+
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        #locked-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 115px; background: rgba(0, 0, 0, 0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0,0,0,0.7); width: 100%; box-sizing: border-box; }
-        #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.2); min-height: 80px; }
+        /* --- PHASE 2: RECESSED DICE TRAY CUTOUTS --- */
+        #locked-area { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 15px; 
+            min-height: 120px; 
+            background: radial-gradient(circle at 50% 50%, rgba(12, 20, 12, 0.65), rgba(5, 10, 5, 0.9)); 
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.95), inset 0 -4px 12px rgba(0,0,0,0.7), 0 2px 3px rgba(255,255,255,0.05); 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 20px; 
+            border: 3px solid #1a0f0d; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        
+        #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.15); min-height: 80px; }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
-        #active-area { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; min-height: 115px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.6); width: 100%; box-sizing: border-box; }
+        
+        #active-area { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 15px; 
+            min-height: 120px; 
+            background: radial-gradient(circle at 50% 50%, rgba(22, 38, 22, 0.6), rgba(8, 18, 8, 0.85)); 
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.95), inset 0 -4px 12px rgba(0,0,0,0.7), 0 2px 3px rgba(255,255,255,0.05); 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 20px; 
+            border: 3px solid #1a0f0d; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
 
         .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--pip-black); box-sizing: border-box; }
         .die:hover { transform: translateY(-5px) rotate(2deg); }
@@ -96,6 +193,16 @@
         #sidebar { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative; width: 100%; box-sizing: border-box; }
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
         #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
+        
+        /* --- PHASE 1: SCORE TYPOGRAPHY OVERRIDE --- */
+        #sidebar h2:has(#current-score-span) {
+            font-size: 4.5rem !important;
+            font-weight: 700;
+            color: #8e1c1c !important;
+            letter-spacing: -1px;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.6), 2px 3px 4px rgba(0,0,0,0.3) !important;
+        }
+
         .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
         #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; gap: 5px;}
@@ -151,7 +258,7 @@
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
             
-            #locked-area, #active-area { gap: 6px; min-height: 65px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
+            #locked-area, #active-area { gap: 6px; min-height: 65px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; border-width: 2px; }
             #required-dice { padding-right: 8px; gap: 6px; }
             #remaining-locked { gap: 6px; }
             
@@ -231,7 +338,7 @@
         <div id="game-area"> 
             <div id="room-indicator">Tavern: <span id="room-code-display">...</span></div>
             
-            <h3 id="turn-indicator" style="color: #ffcc80; font-size: 2rem; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); margin-top: 5px; margin-bottom: 15px;">Connecting to Tavern...</h3>
+            <h3 id="turn-indicator">Connecting to Tavern...</h3>
             <h2 id="tie-breaker-banner">⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️<br><span style="font-size: 1.1rem; color: #ffcc80;">You are spectating</span></h2>
             
             <h2 class="area-title">Locked Dice</h2>
@@ -294,7 +401,6 @@
         const roomCodeDisplay = document.getElementById('room-code-display');
         const playAgainBtn = document.getElementById('play-again-btn'); 
 
-        // Files restored to original capitalization except for yay.mp3
         const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
         const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
         const sfxWin = new Audio('win.mp3'); sfxWin.volume = 0.6;
@@ -613,15 +719,6 @@
             }
         });
 
-        socket.on('roundResult', (data) => { showModal(data.message, false); });
-        socket.on('gameOver', (data) => { showModal(data.message, true); });
-
-        socket.on('boardUpdated', (gameData) => {
-            dice = gameData.dice; rollCount = gameData.rollCount;
-            inTrouble = gameData.inTrouble; turnFinalized = gameData.turnFinalized;
-            renderDice(false); 
-        });
-
         const activeArea = document.getElementById('active-area'); const requiredArea = document.getElementById('required-dice'); const remainingArea = document.getElementById('remaining-locked');
         const rollBtn = document.getElementById('roll-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
 
@@ -855,7 +952,6 @@
                 rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
                 
                 rollBtn.onclick = () => {
-                    // Prevent double clicks and indicate action
                     rollBtn.disabled = true; 
                     rollBtn.innerText = "Ending..."; 
                     
@@ -875,8 +971,8 @@
                         turnFinalized = true; 
                         
                         if (currentScore === 24) {
-                            triggerCelebration(); // Play locally immediately
-                            if (isMyTurn || isBotTurn) socket.emit('triggerConfetti'); // Tell everyone else
+                            triggerCelebration(); 
+                            if (isMyTurn || isBotTurn) socket.emit('triggerConfetti'); 
                         }
                         else { 
                             if (suspenseType === 'perfect') triggerGameSound('ohwell'); 
