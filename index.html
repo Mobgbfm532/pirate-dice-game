@@ -35,19 +35,6 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
-        /* --- PHASE 1: COZY TAVERN LIGHTING VIGNETTE --- */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 50% 50%, transparent 15%, rgba(15, 10, 8, 0.5) 55%, rgba(0, 0, 0, 0.95) 100%);
-            pointer-events: none;
-            z-index: 498; 
-        }
-
         .firelight-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 120%, rgba(255, 140, 0, 0.15), transparent 70%); pointer-events: none; z-index: 500; animation: flicker 4s infinite alternate; }
         @keyframes flicker { 0%, 100% { opacity: 1; transform: scale(1); } 25% { opacity: 0.8; transform: scale(1.02); } 50% { opacity: 0.95; transform: scale(0.98); } 75% { opacity: 0.85; transform: scale(1.01); } }
         .ember { position: fixed; bottom: -10px; width: 4px; height: 4px; background: #ffb300; border-radius: 50%; box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8); pointer-events: none; z-index: 499; animation: floatEmber linear forwards; }
@@ -55,7 +42,6 @@
 
         #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
         
-        /* --- PHASE 2: PHYSICAL DICE BOX OVERHAUL --- */
         #game-area { 
             background-color: #3e2723; 
             background-image: url('Table2.png'); 
@@ -75,7 +61,6 @@
             box-sizing: border-box; 
         }
         
-        /* --- PHASE 1: PREMIUM COCKTAIL TYPOGRAPHY --- */
         .area-title { 
             margin-top: 15px; 
             margin-bottom: 8px; 
@@ -111,7 +96,6 @@
 
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
-        /* --- PHASE 2: RECESSED DICE TRAY CUTOUTS --- */
         #locked-area { 
             display: flex; 
             flex-wrap: wrap; 
@@ -149,13 +133,35 @@
             box-sizing: border-box; 
         }
 
-        .die { width: 80px; height: 80px; background-color: var(--dice-bone); border-radius: 12px; box-shadow: inset -3px -3px 8px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(255,255,255,0.8), 3px 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; user-select: none; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--pip-black); box-sizing: border-box; }
-        .die:hover { transform: translateY(-5px) rotate(2deg); }
+        /* --- PHASE 3: REMODELING DICE MATERIALITY --- */
+        .die { 
+            width: 80px; 
+            height: 80px; 
+            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #fcf9f2 55%, #eae2ce 100%);
+            border: 1px solid #dcd1b4;
+            border-radius: 14px; 
+            box-shadow: inset -3px -3px 8px rgba(0,0,0,0.15), inset 2px 2px 5px rgba(255,255,255,0.9), 3px 6px 12px rgba(0,0,0,0.55); 
+            cursor: pointer; 
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease; 
+            user-select: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            color: var(--pip-black); 
+            box-sizing: border-box; 
+        }
+        .die:hover { transform: translateY(-6px) rotate(3deg); border-color: #ffcc80; }
         
+        .die.lockedThisTurn {
+            box-shadow: 0 0 0 4px #ffb74d, inset -3px -3px 8px rgba(0,0,0,0.15), inset 2px 2px 5px rgba(255,255,255,0.9), 2px 4px 8px rgba(0,0,0,0.4) !important;
+            border-color: #ffb74d !important;
+        }
+
         .molar-tooth { border-radius: 15px 15px 40px 40px !important; background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f4f4f4 60%, #e0e0e0 100%) !important; box-shadow: inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9), 2px 6px 10px rgba(0,0,0,0.5) !important; border-bottom: 3px solid #d7ccc8 !important; }
         .molar-tooth.lockedThisTurn { box-shadow: 0 0 0 4px #4caf50, inset -2px -6px 12px rgba(0,0,0,0.15), inset 2px 2px 8px rgba(255,255,255,0.9) !important; }
 
-        .number-display { width: 100%; text-align: center; font-size: 3.5rem; }
+        .number-display { width: 100%; text-align: center; font-size: 3.5rem; text-shadow: 0px 1px 1px rgba(255,255,255,0.8); }
         .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
 
         @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
@@ -167,25 +173,74 @@
 
         #controls { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
+        /* --- PHASE 3: INTERACTIVE SKEUOMORPHIC WOOD & IRON BUTTONS --- */
         button { 
             padding: 12px 25px; 
             font-size: 1.3rem; 
             font-family: 'Almendra', serif; 
-            background: linear-gradient(to bottom, #8d6e63, #5d4037); 
-            color: #ffffff; 
-            border: 2px solid #2a1610; 
-            border-radius: 6px; 
+            font-weight: 700;
+            background: linear-gradient(to bottom, #5d4037 0%, #4e342e 40%, #3e2723 100%); 
+            color: #ffcc80; 
+            border: 2px solid #271612; 
+            border-radius: 8px; 
             cursor: pointer; 
-            transition: all 0.2s; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2); 
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
+            transition: all 0.1s ease; 
+            box-shadow: 0 6px 0 #271612, 0 8px 16px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.15); 
+            text-shadow: -1px -1px 0 rgba(0,0,0,0.7), 1px 1px 0 rgba(255,255,255,0.1); 
         }
-        button:hover { background: linear-gradient(to bottom, #a1887f, #6d4c41); transform: translateY(-2px); }
-        button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        button:disabled { background: #4e342e; color: #9e9e9e; cursor: not-allowed; transform: none; box-shadow: none; border-color: #3e2723; text-shadow: none;}
+        button:hover { 
+            background: linear-gradient(to bottom, #6d4c41 0%, #5d4037 40%, #4e342e 100%); 
+            color: #ffe0b2;
+            transform: translateY(1px);
+            box-shadow: 0 5px 0 #271612, 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.2);
+        }
+        button:active { 
+            transform: translateY(6px); 
+            box-shadow: 0 0px 0 #271612, 0 2px 4px rgba(0,0,0,0.8); 
+        }
+        button:disabled { 
+            background: #2d1f1c; 
+            color: #7d665f; 
+            cursor: not-allowed; 
+            transform: none !important; 
+            box-shadow: 0 4px 0 #1a0f0d, 0 4px 8px rgba(0,0,0,0.5) !important; 
+            border-color: #1a0f0d; 
+            text-shadow: none;
+        }
         
-        #play-again-btn { background: linear-gradient(to bottom, #2e7d32, #1b5e20); display: none; color: #fff; border-color: #1b5e20; }
-        #play-again-btn:hover { background: linear-gradient(to bottom, #388e3c, #2e7d32); }
+        #roll-btn {
+            background: linear-gradient(to bottom, #b71c1c 0%, #880e4f 100%);
+            color: #ffffff;
+            border-color: #4a0007;
+            box-shadow: 0 6px 0 #4a0007, 0 8px 16px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3);
+        }
+        #roll-btn:hover {
+            background: linear-gradient(to bottom, #d32f2f 0%, #ad1457 100%);
+            box-shadow: 0 5px 0 #4a0007, 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4);
+        }
+        #roll-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 #4a0007, 0 2px 4px rgba(0,0,0,0.8);
+        }
+        #roll-btn:disabled {
+            background: #4e342e; color: #9e9e9e; border-color: #3e2723;
+            box-shadow: 0 4px 0 #271612, 0 4px 8px rgba(0,0,0,0.5) !important;
+        }
+
+        #play-again-btn, #join-game-btn { 
+            background: linear-gradient(to bottom, #2e7d32 0%, #1b5e20 100%) !important; 
+            color: #fff !important; 
+            border-color: #0d230d !important; 
+            box-shadow: 0 6px 0 #0d230d, 0 8px 16px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3) !important;
+        }
+        #play-again-btn:hover, #join-game-btn:hover { 
+            background: linear-gradient(to bottom, #388e3c 0%, #2e7d32 100%) !important; 
+            box-shadow: 0 5px 0 #0d230d, 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4) !important;
+        }
+        #play-again-btn:active, #join-game-btn:active {
+            transform: translateY(6px) !important;
+            box-shadow: 0 0px 0 #0d230d, 0 2px 4px rgba(0,0,0,0.8) !important;
+        }
 
         #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
         #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
@@ -194,7 +249,6 @@
         #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
         #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
         
-        /* --- PHASE 1: SCORE TYPOGRAPHY OVERRIDE --- */
         #sidebar h2:has(#current-score-span) {
             font-size: 4.5rem !important;
             font-weight: 700;
@@ -251,7 +305,8 @@
             #game-area { padding: 60px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
-            .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; }
+            .die { width: 45px; height: 45px; padding: 4px; border-radius: 6px; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.15), inset 1px 1px 3px rgba(255,255,255,0.9), 1px 3px 6px rgba(0,0,0,0.55); }
+            .die:hover { transform: translateY(-3px) rotate(2deg); }
             .number-display { font-size: 1.8rem; }
             
             .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
@@ -263,7 +318,46 @@
             #remaining-locked { gap: 6px; }
             
             #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 20px;}
-            #controls button { font-size: 1rem; padding: 8px 12px; margin: 2px; }
+            
+            button {
+                font-size: 1rem; padding: 8px 12px; margin: 2px;
+                box-shadow: 0 3px 0 #271612, 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.15);
+            }
+            button:hover {
+                box-shadow: 0 2px 0 #271612, 0 3px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+                transform: translateY(1px);
+            }
+            button:active {
+                transform: translateY(3px);
+                box-shadow: 0 0px 0 #271612, 0 1px 2px rgba(0,0,0,0.8);
+            }
+            button:disabled {
+                transform: none !important;
+                box-shadow: 0 2px 0 #1a0f0d, 0 2px 4px rgba(0,0,0,0.5) !important;
+            }
+            #roll-btn {
+                box-shadow: 0 3px 0 #4a0007, 0 4px 8px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3);
+            }
+            #roll-btn:hover {
+                box-shadow: 0 2px 0 #4a0007, 0 3px 6px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4);
+            }
+            #roll-btn:active {
+                transform: translateY(3px);
+                box-shadow: 0 0px 0 #4a0007, 0 1px 2px rgba(0,0,0,0.8);
+            }
+            #roll-btn:disabled {
+                box-shadow: 0 2px 0 #271612, 0 2px 4px rgba(0,0,0,0.5) !important;
+            }
+            #play-again-btn, #join-game-btn {
+                box-shadow: 0 3px 0 #0d230d, 0 4px 8px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3) !important;
+            }
+            #play-again-btn:hover, #join-game-btn:hover {
+                box-shadow: 0 2px 0 #0d230d, 0 3px 6px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4) !important;
+            }
+            #play-again-btn:active, #join-game-btn:active {
+                transform: translateY(3px) !important;
+                box-shadow: 0 0px 0 #0d230d, 0 1px 2px rgba(0,0,0,0.8) !important;
+            }
             
             #sidebar .area-title { margin-bottom: 5px; }
             #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; width: 100%; }
@@ -320,7 +414,7 @@
                 </div>
             </div>
             
-            <button id="join-game-btn" style="background: linear-gradient(to bottom, #2e7d32, #1b5e20); font-size: 1.3rem; padding: 12px 30px; margin-top: 10px;">Enter Tavern</button>
+            <button id="join-game-btn">Enter Tavern</button>
             <button id="install-app-btn">📲 Install App</button>
         </div>
     </div>
@@ -759,6 +853,14 @@
                 }
             }
 
+            if (rollCount === 1) { 
+                let allSame = dice.every(d => d.value === dice[0].value);
+                if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
+                else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
+                    inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
+                } 
+            }
+
             if (rollCount > 0) { 
                 let allLocked = dice.filter(d => d.status !== 'active');
                 let lockedHas2 = allLocked.some(d => d.value === 2);
@@ -804,14 +906,6 @@
 
                 if (newlyRolled6s === 0 && (scoreDisplay.innerText === "You're knocking at the door" || scoreDisplay.innerText === "They're knocking at the door" || scoreDisplay.innerText === "The door is open!")) {
                     if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
-                }
-
-                if (rollCount === 1) { 
-                    let allSame = dice.every(d => d.value === dice[0].value);
-                    if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
-                    else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
-                        inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
-                    } 
                 }
                 
                 renderDice();
