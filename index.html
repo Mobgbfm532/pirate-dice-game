@@ -133,7 +133,6 @@
             box-sizing: border-box; 
         }
 
-        /* --- PHASE 3: REMODELING DICE MATERIALITY --- */
         .die { 
             width: 80px; 
             height: 80px; 
@@ -173,7 +172,6 @@
 
         #controls { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
-        /* --- PHASE 3: INTERACTIVE SKEUOMORPHIC WOOD & IRON BUTTONS --- */
         button { 
             padding: 12px 25px; 
             font-size: 1.3rem; 
@@ -356,7 +354,7 @@
             }
             #play-again-btn:active, #join-game-btn:active {
                 transform: translateY(3px) !important;
-                box-shadow: 0 0px 0 #0d230d, 0 1px 2px rgba(0,0,0,0.8) !important;
+                box-shadow: 0 0px 0 #0d230d, 1px 2px rgba(0,0,0,0.8) !important;
             }
             
             #sidebar .area-title { margin-bottom: 5px; }
@@ -667,6 +665,10 @@
         
         socket.on('triggerDevilEffect', showDevilEffect);
 
+        socket.on('gameOver', (data) => {
+            showModal(data.message, true);
+        });
+
         socket.on('triggerNewGameSplash', () => {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
             text.innerHTML = `🎲<br>A New Game Begins!`; 
@@ -785,16 +787,24 @@
             if (state.playerOrder.length < 2 && !myRoom.startsWith('COMP')) {
                 turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; isFirstLoad = true; 
             } else {
+                isMyTurn = (myId === state.currentTurnId);
+                isBotTurn = (state.currentTurnId === 'BOT_MOLAR' && myRoom.startsWith('COMP'));
+                
+                let activePlayerInfo = state.players[state.currentTurnId];
+                let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
+                let activeAvatar = activePlayerInfo ? activePlayerInfo.avatar : "👤";
+                
                 let myPlayerInfo = state.players[myId];
-                if (myPlayerInfo && myPlayerInfo.lives <= 0) { turnIndicator.innerText = "You're dust!"; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; } 
+                if (myPlayerInfo && myPlayerInfo.lives <= 0) { 
+                    isMyTurn = false; 
+                    if (state.currentTurnId) {
+                        turnIndicator.innerText = `You're dust! (${activeAvatar} ${activeName} is rolling...)`;
+                    } else {
+                        turnIndicator.innerText = "You're dust!";
+                    }
+                    turnIndicator.style.color = "#e57373";
+                } 
                 else {
-                    isMyTurn = (myId === state.currentTurnId);
-                    isBotTurn = (state.currentTurnId === 'BOT_MOLAR' && myRoom.startsWith('COMP'));
-                    
-                    let activePlayerInfo = state.players[state.currentTurnId];
-                    let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
-                    let activeAvatar = activePlayerInfo ? activePlayerInfo.avatar : "👤";
-                    
                     if (!isFirstLoad && state.currentTurnId !== lastTurnId) { showTurnSplash(isMyTurn ? "Your" : activeName, activeAvatar); }
                     
                     turnIndicator.innerText = isMyTurn ? "Your turn!" : `${activeAvatar} ${activeName} is rolling...`;
