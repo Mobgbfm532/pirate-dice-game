@@ -96,6 +96,7 @@
 
         #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
 
+        /* Immersive Tabletop Layout (No Containers) */
         #locked-area { 
             display: flex; 
             flex-wrap: wrap; 
@@ -103,17 +104,28 @@
             align-items: center; 
             gap: 15px; 
             min-height: 120px; 
-            background: radial-gradient(circle at 50% 50%, rgba(12, 20, 12, 0.65), rgba(5, 10, 5, 0.9)); 
-            box-shadow: inset 0 10px 20px rgba(0,0,0,0.95), inset 0 -4px 12px rgba(0,0,0,0.7), 0 2px 3px rgba(255,255,255,0.05); 
-            padding: 15px; 
-            border-radius: 10px; 
-            margin-bottom: 20px; 
-            border: 3px solid #1a0f0d; 
+            background: transparent; 
+            box-shadow: none;
+            padding: 15px 15px 30px 15px; 
+            margin-bottom: 10px; 
+            border: none;
+            /* Chalk line divider drawn directly on the table felt */
+            border-bottom: 2px dashed rgba(240, 235, 220, 0.35); 
             width: 100%; 
             box-sizing: border-box; 
         }
         
-        #required-dice { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding-right: 15px; border-right: 2px solid rgba(255,255,255,0.15); min-height: 80px; }
+        /* Organic chalk split line for requirement sorting */
+        #required-dice { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 10px; 
+            padding-right: 15px; 
+            border-right: 2px dashed rgba(240, 235, 220, 0.3); 
+            min-height: 80px; 
+        }
         #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
         
         #active-area { 
@@ -123,12 +135,11 @@
             align-items: center; 
             gap: 15px; 
             min-height: 120px; 
-            background: radial-gradient(circle at 50% 50%, rgba(22, 38, 22, 0.6), rgba(8, 18, 8, 0.85)); 
-            box-shadow: inset 0 10px 20px rgba(0,0,0,0.95), inset 0 -4px 12px rgba(0,0,0,0.7), 0 2px 3px rgba(255,255,255,0.05); 
-            padding: 15px; 
-            border-radius: 10px; 
+            background: transparent; 
+            box-shadow: none;
+            padding: 20px 15px 15px 15px; 
             margin-bottom: 20px; 
-            border: 3px solid #1a0f0d; 
+            border: none;
             width: 100%; 
             box-sizing: border-box; 
         }
@@ -141,9 +152,9 @@
             border: 1px solid #dfd7c2;
             border-radius: 12px; 
             box-shadow: 
-                inset 2px 2px 4px rgba(255, 255, 255, 0.9),  /* Shifting light source highlight */
-                inset -4px -4px 8px rgba(0, 0, 0, 0.2),       /* Grounding inner shadow */
-                4px 8px 16px rgba(0, 0, 0, 0.65);            /* Heavy drop shadow onto table felt */
+                inset 2px 2px 4px rgba(255, 255, 255, 0.9),  
+                inset -4px -4px 8px rgba(0, 0, 0, 0.2),       
+                4px 8px 16px rgba(0, 0, 0, 0.65);            
             cursor: pointer; 
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease; 
             user-select: none; 
@@ -155,19 +166,17 @@
             box-sizing: border-box; 
         }
         
-        /* Tactical Lift Effect on Hover */
         .die:hover { 
             transform: translateY(-8px) rotate(4deg); 
             box-shadow: 
                 inset 2px 2px 4px rgba(255, 255, 255, 0.9),
                 inset -4px -4px 8px rgba(0, 0, 0, 0.2),
-                8px 16px 24px rgba(0, 0, 0, 0.75); /* Shadow scales out as the die lifts */
+                8px 16px 24px rgba(0, 0, 0, 0.75); 
             border-color: #ffcc80; 
         }
         
-        /* Grounded / Pressed-into-the-felt Look for Locked State */
         .die.lockedThisTurn {
-            transform: translateY(2px) !important; /* Pushed flat into the table tray */
+            transform: translateY(2px) !important; 
             box-shadow: 
                 0 0 0 4px #ffb74d, 
                 inset 1px 1px 3px rgba(0, 0, 0, 0.4), 
@@ -175,7 +184,6 @@
             border-color: #ffb74d !important;
         }
 
-        /* Carved Skeuomorphic Look for Bot Molar Tooth Dice */
         .molar-tooth { 
             border-radius: 16px 16px 45px 45px !important; 
             background: radial-gradient(circle at 35% 35%, #ffffff 0%, #eaeaea 55%, #c5c5c5 100%) !important; 
@@ -194,15 +202,14 @@
                 2px 3px 6px rgba(0, 0, 0, 0.8) !important; 
         }
 
-        /* Weathered Inscribed Font/Ink Effect */
         .number-display { 
             width: 100%; 
             text-align: center; 
             font-size: 3.5rem; 
             font-weight: 900;
             text-shadow: 
-                -1px -1px 1px rgba(0, 0, 0, 0.8),    /* Deep carving crevice */
-                 1px  1px 1px rgba(255, 255, 255, 0.7); /* Surface catch light edge */
+                -1px -1px 1px rgba(0, 0, 0, 0.8),    
+                 1px  1px 1px rgba(255, 255, 255, 0.7); 
         }
         
         .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
@@ -347,7 +354,26 @@
             #game-area { padding: 60px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
             #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
             
-            /* Responsive Skeuomorphic Adaptation */
+            /* Clean Responsive Layout Reset */
+            #locked-area, #active-area { 
+                gap: 6px; 
+                min-height: 65px; 
+                padding: 8px; 
+                margin-bottom: 8px; 
+                width: 100%; 
+                box-sizing: border-box; 
+                background: transparent;
+                box-shadow: none;
+                border-top: none;
+                border-left: none;
+                border-right: none;
+            }
+            #locked-area {
+                border-bottom: 2px dashed rgba(240, 235, 220, 0.35);
+            }
+            #required-dice { padding-right: 8px; gap: 6px; border-right: 2px dashed rgba(240, 235, 220, 0.3); }
+            #remaining-locked { gap: 6px; }
+
             .die { 
                 width: 45px; 
                 height: 45px; 
@@ -383,10 +409,6 @@
             .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
             #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
             #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
-            
-            #locked-area, #active-area { gap: 6px; min-height: 65px; padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; border-width: 2px; }
-            #required-dice { padding-right: 8px; gap: 6px; }
-            #remaining-locked { gap: 6px; }
             
             #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 20px;}
             
