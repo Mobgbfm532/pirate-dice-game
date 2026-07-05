@@ -329,8 +329,6 @@
         /* Premium Fantasy Character Token Assets */
         .avatar-token { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); margin-bottom: 4px; }
         .splash-token { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(4px 8px 15px rgba(0,0,0,0.7)); margin-bottom: 10px; }
-        .emoji-token { display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; font-size: 2.1rem; line-height: 1; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.35)); margin-bottom: 4px; }
-        .emoji-token.splash-token { width: 120px; height: 120px; font-size: 5rem; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
         .modal-box { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 30px; border-radius: 4px; text-align: center; width: 100%; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); color: var(--text-dark); box-sizing: border-box;}
@@ -499,10 +497,10 @@
             <h2 style="color: #5d4037; font-size: 2.2rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
             
             <div class="avatar-picker" id="avatar-container">
-                <div class="avatar-option selected" onclick="selectAvatar(this, '😀')"><span class="emoji-token">😀</span></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '😄')"><span class="emoji-token">😄</span></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '😎')"><span class="emoji-token">😎</span></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🙂')"><span class="emoji-token">🙂</span></div>
+                <div class="avatar-option selected" onclick="selectAvatar(this, '🛡️')"><img src="paladin.png" alt="Paladin"></div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🧙‍♂️')"><img src="dicewizard.png" alt="Wizard"></div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🗡️')"><img src="rapier.png" alt="Rogue"></div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🪕')"><img src="bard.png" alt="Bard"></div>
             </div>
 
             <div class="input-group">
@@ -576,21 +574,11 @@
             </div>
 
             <div id="reaction-bar">
-                <button class="react-btn" onclick="sendReaction('shield')" title="Defend/Approve">
-                    <svg viewBox="0 0 512 512"><path d="M256 22.25L52.88 77.84v166.46c0 128.47 88.08 214.28 203.12 245.45 115.04-31.17 203.12-116.98 203.12-245.45V77.84zm0 37.15l166 45.46v139.44c0 109-72.33 182-166 209.68-93.67-27.68-166-100.68-166-209.68V104.86z"/></svg>
-                </button>
-                <button class="react-btn" onclick="sendReaction('swords')" title="Challenge/Rivalry">
-                    <svg viewBox="0 0 512 512"><path d="M441.9 22.12c-12 0-23.7 4.7-32.3 13.3l-90.8 90.8-43.2-12.3-51.5 51.5 54.3 22.3-157 157-36.9-11 11.2 35.2-15.3 15.3-33-9.5-22.3 22.3 46.2 19 19 46.2 22.3-22.3-9.5-33 15.3-15.3 35.2 11.2-11-36.9 157-157 22.3 54.3 51.5-51.5-12.3-43.2 90.8-90.8c17.3-17.3 17.3-45.5 0-62.8-8.7-8.6-20.4-13.3-32.4-13.3z"/></svg>
-                </button>
-                <button class="react-btn" onclick="sendReaction('mug')" title="Cheers!">
-                    <svg viewBox="0 0 512 512"><path d="M128 32v32h224V32zm32 64v320h192V96zm224 32v192h48c26.5 0 48-21.5 48-48v-96c0-26.5-21.5-48-48-48zm-256 32h128v32H128zm0 96h128v32H128zm0 96h128v32H128z"/></svg>
-                </button>
-                <button class="react-btn" onclick="sendReaction('hood')" title="Devious Wink">
-                    <svg viewBox="0 0 512 512"><path d="M256 26.63c-94.8 0-176.1 63.34-203.4 150.37L32 245.3l37.2 11.7 5.5-17.3C100.8 159.2 172.5 102.6 256 102.6s155.2 56.6 181.3 137.1l5.5 17.3 37.2-11.7-20.6-68.3C432.1 89.97 350.8 26.63 256 26.63zm0 112c-61.8 0-112 50.2-112 112v128c0 35.3 28.7 64 64 64h96c35.3 0 64-28.7 64-64v-128c0-61.8-50.2-112-112-112z"/></svg>
-                </button>
-                <button class="react-btn" onclick="sendReaction('skull')" title="Shocked Death">
-                    <svg viewBox="0 0 512 512"><path d="M256 42c-83.4 0-150 66.6-150 150 0 55.4 33.3 111.4 78 136.1v49.9h144v-49.9c44.7-24.7 78-80.7 78-136.1 0-83.4-66.6-150-150-150zm-60 120c-16.6 0-30-13.4-30-30s13.4-30 30-30 30 13.4 30 30-13.4 30-30 30zm120 0c-16.6 0-30-13.4-30-30s13.4-30 30-30 30 13.4 30 30-13.4 30-30 30zm-90 150c-27.6 0-50-22.4-50-50h100c0 27.6-22.4 50-50 50z"/></svg>
-                </button>
+                <button class="react-btn" onclick="sendReaction('😀')" title="Smile">😀</button>
+                <button class="react-btn" onclick="sendReaction('😂')" title="Laugh">😂</button>
+                <button class="react-btn" onclick="sendReaction('😮')" title="Gasp">😮</button>
+                <button class="react-btn" onclick="sendReaction('😎')" title="Cool">😎</button>
+                <button class="react-btn" onclick="sendReaction('😭')" title="Cry">😭</button>
             </div>
         </div>
     </div>
@@ -611,7 +599,7 @@
         let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         
         let myId = null, isMyTurn = false, isBotTurn = false, lastTurnId = null, isFirstLoad = true; 
-        let myAvatar = '😀'; 
+        let myAvatar = '🛡️'; 
         let myRoom = 'PUBLIC';
         let myStartingLives = 3;
         let currentActiveId = null;
@@ -625,6 +613,7 @@
         const tieBanner = document.getElementById('tie-breaker-banner');
         const roomCodeDisplay = document.getElementById('room-code-display');
         const playAgainBtn = document.getElementById('play-again-btn'); 
+        const reactionBar = document.getElementById('reaction-bar');
         const tavernCrawlPanel = document.getElementById('tavern-crawl-panel');
         const crawlProgress = document.getElementById('crawl-progress');
         const crawlEnemy = document.getElementById('crawl-enemy');
@@ -656,8 +645,12 @@
 
         // Dynamic helper to turn emoji codes into premium asset image markup
         function renderAvatarAsset(avatarString, className = "avatar-token") {
+            if (avatarString === '🛡️') return `<img src="paladin.png" class="${className}" alt="Paladin">`;
+            if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
+            if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
+            if (avatarString === '🪕') return `<img src="bard.png" class="${className}" alt="Bard">`;
             if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return `<img src="themolar.png" class="${className}" alt="The Molar">`;
-            return `<span class="emoji-token ${className}">${avatarString || '😀'}</span>`;
+            return `<span style="font-size: 1.8rem">${avatarString || '👤'}</span>`;
         }
 
         // Helper map to turn reaction triggers into high-fidelity inline SVGs
@@ -727,10 +720,10 @@
         if (savedRoom) roomInput.value = savedRoom;
         
         if (savedAvatar) {
-            myAvatar = ['😀', '😄', '😎', '🙂'].includes(savedAvatar) ? savedAvatar : '😀';
+            myAvatar = ['🛡️', '🧙‍♂️', '🗡️', '🪕'].includes(savedAvatar) ? savedAvatar : '🛡️';
             document.querySelectorAll('.avatar-option').forEach(el => {
-                const token = el.innerText.trim();
-                if (token === myAvatar) {
+                const img = el.querySelector('img');
+                if (img && img.getAttribute('src').replace('.png', '') === (myAvatar === '🛡️' ? 'paladin' : myAvatar === '🧙‍♂️' ? 'dicewizard' : myAvatar === '🗡️' ? 'rapier' : 'bard')) {
                     document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
                     el.classList.add('selected');
                 }
@@ -939,13 +932,25 @@
             showSignatureSplash("Keepsake", data.name, data.text);
         });
 
-        function sendReaction(emoji) { socket.emit('sendReaction', emoji); playSound(sfxClick); }
+        socket.on('roundResult', (data) => {
+            let lines = String(data.message || '').split('\n');
+            let title = lines[0] || 'Round Result';
+            let detail = lines.slice(1).join(' ') || '';
+            showSignatureSplash('Round Result', title, detail);
+        });
+
+        function sendReaction(emoji) {
+            if (currentMode === 'tavern-crawl') return;
+            socket.emit('sendReaction', emoji); playSound(sfxClick);
+        }
         
         socket.on('receiveReaction', (data) => {
             const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
             
             if (data.emoji === '🧔🏼‍♂️ Early Ross') {
                 reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
+            } else if (['😀', '😂', '😮', '😎', '😭'].includes(data.emoji)) {
+                reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.8rem">${data.emoji}</span>`;
             } else {
                 // Renders custom inline high fidelity graphics to float up over the felt tray
                 reactionDiv.innerHTML = `<strong>${data.name}</strong> ${getReactionSVG(data.emoji)}`;
@@ -975,6 +980,17 @@
             else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
         }
         socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
+
+        socket.on('boardUpdated', (gameData) => {
+            if (isMyTurn || isBotTurn || !gameData || !Array.isArray(gameData.dice)) return;
+            dice = gameData.dice.map(d => ({ ...d }));
+            rollCount = gameData.rollCount || 0;
+            inTrouble = !!gameData.inTrouble;
+            turnFinalized = !!gameData.turnFinalized;
+            hasRolled = dice.some(d => d.value !== 0);
+            locksThisRoll = dice.filter(d => d.status === 'lockedThisTurn').length;
+            renderDice(false);
+        });
         
         function triggerCelebration() {
             playSound(sfxYay);
@@ -988,6 +1004,7 @@
             currentMode = state.mode || 'classic';
             tavernRun = state.tavernRun || null;
             updateTavernCrawlPanel();
+            reactionBar.style.display = currentMode === 'tavern-crawl' ? 'none' : 'flex';
 
             if (typeof window.currentRoundNumber === 'undefined') window.currentRoundNumber = state.roundNumber;
             if (window.currentRoundNumber !== state.roundNumber) {
@@ -1058,7 +1075,7 @@
                     turnIndicator.style.color = "#e57373";
                 } 
                 else {
-                    if (!isFirstLoad && state.currentTurnId !== lastTurnId && currentMode !== 'tavern-crawl') {
+                    if (!isFirstLoad && state.currentTurnId !== lastTurnId) {
                         let splashAvatar = (state.currentTurnId === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') ? 'BOT_MOLAR' : activeAvatar;
                         showTurnSplash(isMyTurn ? "Your" : activeName, splashAvatar);
                     }
