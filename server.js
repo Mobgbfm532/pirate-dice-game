@@ -606,6 +606,7 @@ io.on('connection', (socket) => {
     socket.on('sendReaction', (emoji) => {
         let room = rooms[socket.roomCode];
         if (room) {
+            if (room.mode === 'tavern-crawl') return;
             let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
             io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
         }
