@@ -569,6 +569,7 @@
                 <div class="crawl-line" id="crawl-progress"></div>
                 <div class="crawl-line" id="crawl-enemy"></div>
                 <div class="crawl-line" id="crawl-ability"></div>
+                <h3 class="crawl-title">Keepsakes</h3>
                 <div class="keepsake-list" id="crawl-keepsakes"></div>
             </div>
 
@@ -907,12 +908,30 @@
             setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
         }
 
+        function showSignatureSplash(name, ability, message) {
+            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+            text.innerHTML = `<span style="font-size: 2.2rem; color: #ffcc80;">${name}</span><span style="font-size: 4rem;">${ability}</span><span style="font-size: 1.6rem; color: #fff3e0;">${message}</span>`;
+            overlay.style.display = 'flex'; playSound(sfxSwoosh);
+            setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+            setTimeout(() => { text.style.transform = 'scale(1.35)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1800);
+        }
+
         const scoreDisplay = document.getElementById('score-display'); 
         function broadcastAnnouncement(text, color, altText = null) {
+            if (currentMode === 'tavern-crawl') {
+                let allowed = text === "" || text === "The Early Ross!";
+                if (!allowed) return;
+            }
             scoreDisplay.innerText = text; scoreDisplay.style.color = color;
             if (isMyTurn || isBotTurn) socket.emit('broadcastMessage', { text: altText !== null ? altText : text, color });
         }
-        socket.on('displayMessage', (msgData) => { scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color; });
+        socket.on('displayMessage', (msgData) => {
+            if (currentMode === 'tavern-crawl') return;
+            scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color;
+        });
+        socket.on('signatureMove', (data) => {
+            showSignatureSplash(data.name, data.ability, data.text);
+        });
 
         function sendReaction(emoji) { socket.emit('sendReaction', emoji); playSound(sfxClick); }
         
@@ -1079,7 +1098,7 @@
             tavernRun.abilityUsed = tavernRun.abilityUsed || {};
             tavernRun.abilityUsed[abilityId] = true;
             socket.emit('useEnemyAbility', abilityId);
-            broadcastAnnouncement(message, color);
+            showSignatureSplash(tavernRun.enemy.name, abilityNames[abilityId], message);
             updateTavernCrawlPanel();
             return true;
         }
@@ -1104,6 +1123,7 @@
             if (isAnimating) return; 
             if (!isMyTurn && !isBotTurn) return; 
             triggerGlobalMusic();
+            if (rokrBlurActive && locksThisRoll > 0) rokrBlurActive = false;
 
             if (rollCount > 0) { 
                 if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "The Molar NEVER bites" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
@@ -1301,7 +1321,6 @@
             }
             else if (die.status === 'lockedThisTurn') { 
                 div.classList.add('lockedThisTurn'); 
-                if (rokrBlurActive && isMyTurn) rokrBlurActive = false;
             }
             if (shouldBlur) div.classList.add('blurred');
             return div;
