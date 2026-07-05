@@ -137,6 +137,24 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
     });
 }
 
+function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
+    let message;
+    if (lifeLosers.length > 0) {
+        let names = lifeLosers
+            .map(id => room.players[id] ? room.players[id].name : 'A player')
+            .join(', ');
+        message = `${names} lost ${lifeLosers.length === 1 ? 'a life' : 'lives'}.\nThe round is over.`;
+    } else if (tiedPlayers.length > 1) {
+        let names = tiedPlayers
+            .map(id => room.players[id] ? room.players[id].name : 'A player')
+            .join(' and ');
+        message = `${names} tied.\nNo lives lost.`;
+    } else {
+        message = `Safe for another round.\nNo lives lost.`;
+    }
+    io.to(roomCode).emit('roundResult', { message });
+}
+
 function getHumanPlayerId(room) {
     return room.playerOrder.find(id => id !== 'BOT_MOLAR' && room.players[id]);
 }
@@ -232,17 +250,7 @@ function evaluateRound(roomCode) {
         }
     }
 
-    room.roundPlayers.forEach(id => {
-        if (!room.players[id]) return;
-        let loserInfo = losersThisRound.find(l => l.id === id);
-        if (loserInfo) {
-            io.to(id).emit('roundResult', { message: `You lost a life! 💔\n${loserInfo.reason}` });
-        } else if (tiedPlayers.includes(id)) {
-            io.to(id).emit('roundResult', { message: `It's a TIE! ⚔️\nPrepare for a sudden death tie-breaker!` });
-        } else {
-            io.to(id).emit('roundResult', { message: `Safe! 🛡️\nYou survived the round.` });
-        }
-    });
+    emitRoundLifeResult(roomCode, room, losersThisRound.map(l => l.id), tiedPlayers);
 
     let humanLost = losersThisRound.some(l => l.id !== 'BOT_MOLAR');
     if (room.players['BOT_MOLAR'] && humanLost) {
@@ -326,6 +334,7 @@ function evaluateTavernRound(roomCode) {
     let human = room.players[humanId];
     let enemy = room.players[enemyId];
     let losersThisRound = [];
+    let lifeLosersThisRound = [];
     let tiedPlayers = [];
 
     if (human.busted && hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand) {
@@ -374,23 +383,14 @@ function evaluateTavernRound(roomCode) {
         if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
             room.tavernRun.encounterKeepsakeUses.bentCopper = true;
             emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Bent Copper Coin catches the loss.');
-            io.to(humanId).emit('roundResult', { message: `Bent Copper Coin catches the loss.\n${loser.reason}` });
             return;
         }
 
         player.lives -= 1;
-        io.to(loser.id).emit('roundResult', { message: `You lost a life!\n${loser.reason}` });
+        lifeLosersThisRound.push(loser.id);
     });
 
-    roundPlayers.forEach(id => {
-        if (!room.players[id]) return;
-        if (losersThisRound.some(l => l.id === id)) return;
-        if (tiedPlayers.includes(id)) {
-            io.to(id).emit('roundResult', { message: `It's a TIE!\nThe table demands another roll.` });
-        } else {
-            io.to(id).emit('roundResult', { message: `Safe!\nYou survived the round.` });
-        }
-    });
+    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers);
 
     roundPlayers.forEach(id => {
         if (!room.players[id]) return;
