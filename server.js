@@ -72,9 +72,9 @@ const TAVERN_KEEPSAKES = [
         text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
     },
     {
-        id: 'warmBread',
-        name: 'Warm Bread from the Bar',
-        text: 'At the start of each new encounter, recover 1 life up to your starting lives.'
+        id: 'velvetCushion',
+        name: 'Velvet Cushion',
+        text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.'
     },
     {
         id: 'steadyHand',
@@ -82,9 +82,9 @@ const TAVERN_KEEPSAKES = [
         text: 'Once per encounter, if you dust, it becomes a score of 0 instead of a dust result.'
     },
     {
-        id: 'houseToken',
-        name: 'House Token',
-        text: 'After each won encounter, recover 1 life before choosing your next keepsake.'
+        id: 'markedCoaster',
+        name: 'Marked Coaster',
+        text: 'Once per encounter, your first score of 21 or higher cannot be reduced below 20.'
     }
 ];
 
@@ -167,10 +167,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     };
 
     if (humanId && room.players[humanId]) {
-        if (!keepHumanLives) room.players[humanId].lives = room.startingLives;
-        if (keepHumanLives && hasKeepsake(room, 'warmBread')) {
-            room.players[humanId].lives = Math.min(room.startingLives, room.players[humanId].lives + 1);
-        }
+        room.players[humanId].lives = room.startingLives;
         room.players[humanId].score = null;
         room.players[humanId].busted = false;
         room.playerOrder = [humanId, 'BOT_MOLAR'];
@@ -338,6 +335,13 @@ function evaluateTavernRound(roomCode) {
         }
     }
 
+    if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && human.score + 1 === enemy.score) {
+        room.tavernRun.encounterKeepsakeUses.velvetCushion = true;
+        losersThisRound = [];
+        tiedPlayers = [humanId, enemyId];
+        io.to(roomCode).emit('displayMessage', { text: 'Velvet Cushion softens the loss into a tie.', color: '#ffd54f' });
+    }
+
     if (tiedPlayers.length > 1 && hasKeepsake(room, 'luckySeat') && !room.tavernRun.encounterKeepsakeUses.luckySeat) {
         room.tavernRun.encounterKeepsakeUses.luckySeat = true;
         tiedPlayers = [];
@@ -384,10 +388,6 @@ function evaluateTavernRound(roomCode) {
     }
 
     if (enemy.lives <= 0) {
-        if (hasKeepsake(room, 'houseToken')) {
-            human.lives = Math.min(room.startingLives, human.lives + 1);
-        }
-
         room.tavernRun.encounterIndex++;
         if (room.tavernRun.encounterIndex >= TAVERN_ENCOUNTERS.length) {
             room.roundPlayers = [];
@@ -433,6 +433,7 @@ io.on('connection', (socket) => {
 
         let requestedLives = parseInt(data.startingLives) || 3;
         requestedLives = Math.max(1, Math.min(5, requestedLives));
+        if (roomCode.startsWith("TVRN")) requestedLives = 3;
 
         if (!rooms[roomCode]) {
             let isTavernCrawl = roomCode.startsWith("TVRN");
@@ -653,7 +654,12 @@ io.on('connection', (socket) => {
                 }
 
                 if (encounter && encounter.ability === 'smoothTalk' && currentId !== 'BOT_MOLAR' && !room.tavernRun.abilityUsed.smoothTalk && !turnData.busted && turnData.score > 0) {
-                    room.players[currentId].score = Math.max(0, turnData.score - 3);
+                    let reducedScore = Math.max(0, turnData.score - 3);
+                    if (hasKeepsake(room, 'markedCoaster') && !room.tavernRun.encounterKeepsakeUses.markedCoaster && turnData.score >= 21) {
+                        reducedScore = Math.max(20, reducedScore);
+                        room.tavernRun.encounterKeepsakeUses.markedCoaster = true;
+                    }
+                    room.players[currentId].score = reducedScore;
                     room.tavernRun.abilityUsed.smoothTalk = true;
                     io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
                 }
