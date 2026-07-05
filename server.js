@@ -12,6 +12,82 @@ app.get('/', (req, res) => {
 
 let rooms = {};
 
+const TAVERN_ENCOUNTERS = [
+    {
+        id: 'molar',
+        name: 'The Molar',
+        avatar: '🦷',
+        lives: 2,
+        ability: null,
+        intro: 'The Molar slides into the seat and teaches you the house game: find a 2, find a 4, then chase 24.'
+    },
+    {
+        id: 'klarg',
+        name: 'Klarg',
+        avatar: '🛡️',
+        lives: 3,
+        ability: 'reachAround',
+        intro: 'Klarg, bugbear paladin of questionable table manners, may steal one active die with Reach Around.'
+    },
+    {
+        id: 'rokr',
+        name: 'Rokr',
+        avatar: '✨',
+        lives: 3,
+        ability: 'constellationBlur',
+        intro: 'Rokr reads the dice in the stars. Once per match, constellations can blur your active dice.'
+    },
+    {
+        id: 'hangman',
+        name: 'The Hangman',
+        avatar: '🤠',
+        lives: 3,
+        ability: 'deadeye24',
+        intro: 'The Hangman keeps one round in the chamber. Once per match, a strong hand can become a perfect 24.'
+    },
+    {
+        id: 'jaguar',
+        name: 'Jaguar Cantona',
+        avatar: '🎩',
+        lives: 4,
+        ability: 'smoothTalk',
+        intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Once per match, Smooth Talk worsens your finished score.'
+    }
+];
+
+const TAVERN_KEEPSAKES = [
+    {
+        id: 'bentCopper',
+        name: 'Bent Copper Coin',
+        text: 'Once per encounter, the first life you would lose is ignored.'
+    },
+    {
+        id: 'blessedTankard',
+        name: 'Blessed Tankard',
+        text: 'A perfect 24 restores one extra life.'
+    },
+    {
+        id: 'luckySeat',
+        name: 'Lucky Seat',
+        text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
+    },
+    {
+        id: 'warmBread',
+        name: 'Warm Bread from the Bar',
+        text: 'At the start of each new encounter, recover 1 life up to your starting lives.'
+    },
+    {
+        id: 'steadyHand',
+        name: 'Steady Hand Wrap',
+        text: 'Once per encounter, if you dust, it becomes a score of 0 instead of a dust result.'
+    },
+    {
+        id: 'houseToken',
+        name: 'House Token',
+        text: 'After each won encounter, recover 1 life before choosing your next keepsake.'
+    }
+];
+
 function getRoomState(roomCode) {
     let room = rooms[roomCode];
     if (!room) return {};
@@ -23,13 +99,104 @@ function getRoomState(roomCode) {
         currentTurnId: room.roundPlayers[room.currentTurnIndex], 
         isTieBreaker: room.isTieBreaker,
         roundNumber: room.roundNumber,
-        startingLives: room.startingLives 
+        startingLives: room.startingLives,
+        mode: room.mode || 'classic',
+        tavernRun: getTavernRunState(room)
     };
+}
+
+function getTavernRunState(room) {
+    if (!room || room.mode !== 'tavern-crawl') return null;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    return {
+        encounterNumber: room.tavernRun.encounterIndex + 1,
+        totalEncounters: TAVERN_ENCOUNTERS.length,
+        enemy: encounter,
+        keepsakes: room.tavernRun.keepsakes,
+        pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
+        abilityUsed: room.tavernRun.abilityUsed,
+        runComplete: room.tavernRun.runComplete
+    };
+}
+
+function hasKeepsake(room, keepsakeId) {
+    return room.mode === 'tavern-crawl' && room.tavernRun.keepsakes.some(k => k.id === keepsakeId);
+}
+
+function getHumanPlayerId(room) {
+    return room.playerOrder.find(id => id !== 'BOT_MOLAR' && room.players[id]);
+}
+
+function createTavernRun() {
+    return {
+        encounterIndex: 0,
+        keepsakes: [],
+        pendingKeepsakeChoices: null,
+        abilityUsed: {},
+        encounterKeepsakeUses: {},
+        started: false,
+        runComplete: false
+    };
+}
+
+function pickKeepsakeChoices(room) {
+    let owned = new Set(room.tavernRun.keepsakes.map(k => k.id));
+    let pool = TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
+    for (let i = pool.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, 3);
+}
+
+function resetTavernEncounter(roomCode, keepHumanLives = true) {
+    let room = rooms[roomCode];
+    if (!room || room.mode !== 'tavern-crawl') return;
+
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    let humanId = getHumanPlayerId(room);
+    room.players['BOT_MOLAR'] = {
+        id: 'BOT_MOLAR',
+        token: 'BOT_TOKEN',
+        name: encounter.name,
+        avatar: encounter.avatar,
+        lives: encounter.lives,
+        score: null,
+        busted: false,
+        connected: true
+    };
+
+    if (humanId && room.players[humanId]) {
+        if (!keepHumanLives) room.players[humanId].lives = room.startingLives;
+        if (keepHumanLives && hasKeepsake(room, 'warmBread')) {
+            room.players[humanId].lives = Math.min(room.startingLives, room.players[humanId].lives + 1);
+        }
+        room.players[humanId].score = null;
+        room.players[humanId].busted = false;
+        room.playerOrder = [humanId, 'BOT_MOLAR'];
+        room.roundPlayers = [humanId, 'BOT_MOLAR'];
+    } else {
+        room.playerOrder = ['BOT_MOLAR'];
+        room.roundPlayers = ['BOT_MOLAR'];
+    }
+
+    room.currentTurnIndex = 0;
+    room.isTieBreaker = false;
+    room.dealerIndex = 0;
+    room.tavernRun.pendingKeepsakeChoices = null;
+    room.tavernRun.abilityUsed = {};
+    room.tavernRun.encounterKeepsakeUses = {};
+    room.tavernRun.started = true;
 }
 
 function evaluateRound(roomCode) {
     let room = rooms[roomCode];
     if (!room) return;
+
+    if (room.mode === 'tavern-crawl') {
+        evaluateTavernRound(roomCode);
+        return;
+    }
 
     let losersThisRound = [];
     let tiedPlayers = [];
@@ -136,6 +303,118 @@ function evaluateRound(roomCode) {
     }
 }
 
+function evaluateTavernRound(roomCode) {
+    let room = rooms[roomCode];
+    if (!room) return;
+
+    let humanId = getHumanPlayerId(room);
+    let enemyId = 'BOT_MOLAR';
+    if (!humanId || !room.players[humanId] || !room.players[enemyId]) return;
+
+    let human = room.players[humanId];
+    let enemy = room.players[enemyId];
+    let losersThisRound = [];
+    let tiedPlayers = [];
+
+    if (human.busted && hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand) {
+        human.busted = false;
+        human.score = 0;
+        room.tavernRun.encounterKeepsakeUses.steadyHand = true;
+        io.to(roomCode).emit('displayMessage', { text: 'Steady Hand catches the dice. Dust becomes 0.', color: '#aed581' });
+    }
+
+    let roundPlayers = [humanId, enemyId].filter(id => room.players[id]);
+    let busted = roundPlayers.filter(id => room.players[id].busted);
+    busted.forEach(id => losersThisRound.push({ id, reason: 'Dust!' }));
+
+    let valid = roundPlayers.filter(id => !room.players[id].busted);
+    if (valid.length > 1) {
+        let minScore = Math.min(...valid.map(id => room.players[id].score));
+        let lowest = valid.filter(id => room.players[id].score === minScore);
+        if (lowest.length === 1) {
+            losersThisRound.push({ id: lowest[0], reason: 'Lowest score at the table.' });
+        } else {
+            tiedPlayers = lowest;
+        }
+    }
+
+    if (tiedPlayers.length > 1 && hasKeepsake(room, 'luckySeat') && !room.tavernRun.encounterKeepsakeUses.luckySeat) {
+        room.tavernRun.encounterKeepsakeUses.luckySeat = true;
+        tiedPlayers = [];
+        losersThisRound.push({ id: enemyId, reason: 'Lucky Seat breaks the tie your way.' });
+        io.to(roomCode).emit('displayMessage', { text: 'Lucky Seat breaks the tie your way.', color: '#ffd54f' });
+    }
+
+    losersThisRound.forEach(loser => {
+        let player = room.players[loser.id];
+        if (!player) return;
+
+        if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
+            room.tavernRun.encounterKeepsakeUses.bentCopper = true;
+            io.to(humanId).emit('roundResult', { message: `Bent Copper Coin catches the loss.\n${loser.reason}` });
+            return;
+        }
+
+        player.lives -= 1;
+        io.to(loser.id).emit('roundResult', { message: `You lost a life!\n${loser.reason}` });
+    });
+
+    roundPlayers.forEach(id => {
+        if (!room.players[id]) return;
+        if (losersThisRound.some(l => l.id === id)) return;
+        if (tiedPlayers.includes(id)) {
+            io.to(id).emit('roundResult', { message: `It's a TIE!\nThe table demands another roll.` });
+        } else {
+            io.to(id).emit('roundResult', { message: `Safe!\nYou survived the round.` });
+        }
+    });
+
+    roundPlayers.forEach(id => {
+        if (!room.players[id]) return;
+        room.players[id].score = null;
+        room.players[id].busted = false;
+    });
+
+    if (human.lives <= 0) {
+        room.roundPlayers = [];
+        room.tavernRun.runComplete = true;
+        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        io.to(roomCode).emit('gameOver', { message: `Your tavern crawl ends at ${enemy.name}'s table.` });
+        return;
+    }
+
+    if (enemy.lives <= 0) {
+        if (hasKeepsake(room, 'houseToken')) {
+            human.lives = Math.min(room.startingLives, human.lives + 1);
+        }
+
+        room.tavernRun.encounterIndex++;
+        if (room.tavernRun.encounterIndex >= TAVERN_ENCOUNTERS.length) {
+            room.roundPlayers = [];
+            room.tavernRun.runComplete = true;
+            io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.` });
+            return;
+        }
+
+        room.tavernRun.pendingKeepsakeChoices = pickKeepsakeChoices(room);
+        room.roundPlayers = [];
+        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        io.to(roomCode).emit('offerKeepsakes', {
+            defeated: enemy.name,
+            nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
+            choices: room.tavernRun.pendingKeepsakeChoices
+        });
+        return;
+    }
+
+    room.roundNumber++;
+    room.isTieBreaker = tiedPlayers.length > 1;
+    room.roundPlayers = [humanId, enemyId];
+    room.currentTurnIndex = 0;
+    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+}
+
 io.on('connection', (socket) => {
     
     socket.on('checkRoom', (roomCode) => {
@@ -156,14 +435,23 @@ io.on('connection', (socket) => {
         requestedLives = Math.max(1, Math.min(5, requestedLives));
 
         if (!rooms[roomCode]) {
+            let isTavernCrawl = roomCode.startsWith("TVRN");
             rooms[roomCode] = {
                 players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1,
-                startingLives: requestedLives 
+                startingLives: requestedLives,
+                mode: isTavernCrawl ? 'tavern-crawl' : 'classic',
+                tavernRun: isTavernCrawl ? createTavernRun() : null
             };
             
             if (roomCode.startsWith("COMP")) {
                 rooms[roomCode].players['BOT_MOLAR'] = { 
                     id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
+                };
+                rooms[roomCode].playerOrder.push('BOT_MOLAR');
+                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
+            } else if (isTavernCrawl) {
+                rooms[roomCode].players['BOT_MOLAR'] = {
+                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
                 };
                 rooms[roomCode].playerOrder.push('BOT_MOLAR');
                 rooms[roomCode].roundPlayers.push('BOT_MOLAR');
@@ -227,6 +515,10 @@ io.on('connection', (socket) => {
             room.currentTurnIndex = 0;
         }
 
+        if (room.mode === 'tavern-crawl' && !room.tavernRun.started) {
+            resetTavernEncounter(roomCode, false);
+        }
+
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
 
         io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
@@ -235,6 +527,15 @@ io.on('connection', (socket) => {
     socket.on('playAgain', () => {
         let room = rooms[socket.roomCode];
         if (room && room.roundPlayers.length === 0) {
+            if (room.mode === 'tavern-crawl') {
+                room.tavernRun = createTavernRun();
+                room.roundNumber = 1;
+                resetTavernEncounter(socket.roomCode, false);
+                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+                io.to(socket.roomCode).emit('triggerNewGameSplash');
+                return;
+            }
+
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
                     room.players[id].lives = room.startingLives;
@@ -292,7 +593,7 @@ io.on('connection', (socket) => {
         let room = rooms[roomCode];
         if (!room) return false;
         let currentId = room.roundPlayers[room.currentTurnIndex];
-        return (socket.id === currentId) || (roomCode.startsWith('COMP') && currentId === 'BOT_MOLAR');
+        return (socket.id === currentId) || ((roomCode.startsWith('COMP') || roomCode.startsWith('TVRN')) && currentId === 'BOT_MOLAR');
     }
 
     socket.on('playerRolledDice', (suspenseType) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playerRolledDice', suspenseType) });
@@ -312,6 +613,29 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('useEnemyAbility', (abilityId) => {
+        let room = rooms[socket.roomCode];
+        if (!room || room.mode !== 'tavern-crawl') return;
+        let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+        if (encounter && encounter.ability === abilityId && !room.tavernRun.abilityUsed[abilityId]) {
+            room.tavernRun.abilityUsed[abilityId] = true;
+            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+        }
+    });
+
+    socket.on('chooseKeepsake', (keepsakeId) => {
+        let room = rooms[socket.roomCode];
+        if (!room || room.mode !== 'tavern-crawl' || !room.tavernRun.pendingKeepsakeChoices) return;
+        let selected = room.tavernRun.pendingKeepsakeChoices.find(k => k.id === keepsakeId);
+        if (!selected) return;
+
+        room.tavernRun.keepsakes.push(selected);
+        resetTavernEncounter(socket.roomCode, true);
+        io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+        io.to(socket.roomCode).emit('triggerNewGameSplash');
+        io.to(socket.roomCode).emit('displayMessage', { text: selected.name, color: "#ffd54f" });
+    });
+
     socket.on('endTurn', (turnData) => {
         let room = rooms[socket.roomCode];
         if (room && isAuthorized(socket, socket.roomCode)) {
@@ -319,10 +643,26 @@ io.on('connection', (socket) => {
             
             room.players[currentId].score = turnData.score;
             room.players[currentId].busted = turnData.busted;
+
+            if (room.mode === 'tavern-crawl') {
+                let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+                if (encounter && encounter.ability === 'deadeye24' && currentId === 'BOT_MOLAR' && !room.tavernRun.abilityUsed.deadeye24 && !turnData.busted && turnData.score >= 18 && turnData.score < 24) {
+                    room.players[currentId].score = 24;
+                    room.tavernRun.abilityUsed.deadeye24 = true;
+                    io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman fires once. Deadeye 24.', color: "#ffd54f" });
+                }
+
+                if (encounter && encounter.ability === 'smoothTalk' && currentId !== 'BOT_MOLAR' && !room.tavernRun.abilityUsed.smoothTalk && !turnData.busted && turnData.score > 0) {
+                    room.players[currentId].score = Math.max(0, turnData.score - 3);
+                    room.tavernRun.abilityUsed.smoothTalk = true;
+                    io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
+                }
+            }
             
-            if (turnData.score === 24 && room.players[currentId].lives < room.startingLives) {
-                room.players[currentId].lives += 1;
-                io.to(socket.roomCode).emit('displayMessage', { text: `✨ +1 Life Restored! ✨`, color: "#aed581" });
+            if (room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
+                let restoredLives = (room.mode === 'tavern-crawl' && currentId !== 'BOT_MOLAR' && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
+                room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
+                io.to(socket.roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
             }
 
             room.currentTurnIndex++;
