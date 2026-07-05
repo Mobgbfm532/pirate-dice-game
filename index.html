@@ -329,6 +329,8 @@
         /* Premium Fantasy Character Token Assets */
         .avatar-token { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); margin-bottom: 4px; }
         .splash-token { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(4px 8px 15px rgba(0,0,0,0.7)); margin-bottom: 10px; }
+        .emoji-token { display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; font-size: 2.1rem; line-height: 1; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.35)); margin-bottom: 4px; }
+        .emoji-token.splash-token { width: 120px; height: 120px; font-size: 5rem; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
         .modal-box { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 30px; border-radius: 4px; text-align: center; width: 100%; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); color: var(--text-dark); box-sizing: border-box;}
@@ -497,10 +499,10 @@
             <h2 style="color: #5d4037; font-size: 2.2rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
             
             <div class="avatar-picker" id="avatar-container">
-                <div class="avatar-option selected" onclick="selectAvatar(this, '🛡️')"><img src="paladin.png" alt="Paladin"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🧙‍♂️')"><img src="dicewizard.png" alt="Wizard"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🗡️')"><img src="rapier.png" alt="Rogue"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🪕')"><img src="bard.png" alt="Bard"></div>
+                <div class="avatar-option selected" onclick="selectAvatar(this, '😀')"><span class="emoji-token">😀</span></div>
+                <div class="avatar-option" onclick="selectAvatar(this, '😄')"><span class="emoji-token">😄</span></div>
+                <div class="avatar-option" onclick="selectAvatar(this, '😎')"><span class="emoji-token">😎</span></div>
+                <div class="avatar-option" onclick="selectAvatar(this, '🙂')"><span class="emoji-token">🙂</span></div>
             </div>
 
             <div class="input-group">
@@ -609,7 +611,7 @@
         let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         
         let myId = null, isMyTurn = false, isBotTurn = false, lastTurnId = null, isFirstLoad = true; 
-        let myAvatar = '🛡️'; 
+        let myAvatar = '😀'; 
         let myRoom = 'PUBLIC';
         let myStartingLives = 3;
         let currentActiveId = null;
@@ -654,12 +656,8 @@
 
         // Dynamic helper to turn emoji codes into premium asset image markup
         function renderAvatarAsset(avatarString, className = "avatar-token") {
-            if (avatarString === '🛡️') return `<img src="paladin.png" class="${className}" alt="Paladin">`;
-            if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
-            if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
-            if (avatarString === '🪕') return `<img src="bard.png" class="${className}" alt="Bard">`;
             if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return `<img src="themolar.png" class="${className}" alt="The Molar">`;
-            return `<span style="font-size: 1.8rem">${avatarString || '👤'}</span>`;
+            return `<span class="emoji-token ${className}">${avatarString || '😀'}</span>`;
         }
 
         // Helper map to turn reaction triggers into high-fidelity inline SVGs
@@ -729,10 +727,10 @@
         if (savedRoom) roomInput.value = savedRoom;
         
         if (savedAvatar) {
-            myAvatar = savedAvatar;
+            myAvatar = ['😀', '😄', '😎', '🙂'].includes(savedAvatar) ? savedAvatar : '😀';
             document.querySelectorAll('.avatar-option').forEach(el => {
-                const img = el.querySelector('img');
-                if (img && img.getAttribute('src').replace('.png', '') === (savedAvatar === '🛡️' ? 'paladin' : savedAvatar === '🧙‍♂️' ? 'dicewizard' : savedAvatar === '🗡️' ? 'rapier' : 'bard')) {
+                const token = el.innerText.trim();
+                if (token === myAvatar) {
                     document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
                     el.classList.add('selected');
                 }
@@ -806,6 +804,11 @@
             
             socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: myRoom, token: sessionToken, startingLives: myStartingLives }); 
             nameModal.style.display = 'none'; triggerGlobalMusic();
+            if (myRoom.startsWith("TVRN-")) {
+                setTimeout(() => {
+                    showModal("You enter a tavern. A man with a big toothy grin ushers you to a table for a friendly game of 2, 4, 24...");
+                }, 250);
+            }
         };
 
         const customModal = document.getElementById('custom-modal');
@@ -932,6 +935,9 @@
         socket.on('signatureMove', (data) => {
             showSignatureSplash(data.name, data.ability, data.text);
         });
+        socket.on('keepsakeActivated', (data) => {
+            showSignatureSplash("Keepsake", data.name, data.text);
+        });
 
         function sendReaction(emoji) { socket.emit('sendReaction', emoji); playSound(sfxClick); }
         
@@ -1052,7 +1058,7 @@
                     turnIndicator.style.color = "#e57373";
                 } 
                 else {
-                    if (!isFirstLoad && state.currentTurnId !== lastTurnId) {
+                    if (!isFirstLoad && state.currentTurnId !== lastTurnId && currentMode !== 'tavern-crawl') {
                         let splashAvatar = (state.currentTurnId === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') ? 'BOT_MOLAR' : activeAvatar;
                         showTurnSplash(isMyTurn ? "Your" : activeName, splashAvatar);
                     }
@@ -1312,7 +1318,7 @@
                 div.classList.add('molar-tooth');
             }
             
-            let shouldBlur = rokrBlurActive && die.status === 'active' && isMyTurn;
+            let shouldBlur = rokrBlurActive && isMyTurn && (die.status === 'active' || die.status === 'lockedThisTurn');
             div.dataset.value = shouldBlur ? '?' : die.value; div.innerHTML = getPipsHTML(shouldBlur ? 0 : die.value); div.onclick = () => toggleDie(die.id);
             if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
             else if (die.status === 'stolen') {
@@ -1331,7 +1337,12 @@
             let lockedDice = dice.filter(d => d.status !== 'active' && d.status !== 'stolen'); let activeDice = dice.filter(d => d.status === 'active');
             let req2 = null, req4 = null, remainingLocked = [];
 
-            lockedDice.forEach(d => { if (d.value === 2 && !req2) req2 = d; else if (d.value === 4 && !req4) req4 = d; else remainingLocked.push(d); });
+            lockedDice.forEach(d => {
+                if (rokrBlurActive && isMyTurn && d.status === 'lockedThisTurn') remainingLocked.push(d);
+                else if (d.value === 2 && !req2) req2 = d;
+                else if (d.value === 4 && !req4) req4 = d;
+                else remainingLocked.push(d);
+            });
             remainingLocked.sort((a, b) => a.value - b.value);
 
             if (req2) requiredArea.appendChild(createDieElement(req2)); if (req4) requiredArea.appendChild(createDieElement(req4));
