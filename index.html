@@ -301,7 +301,6 @@
         .choice-btn { display: block; width: 100%; margin: 10px 0; text-align: left; font-size: 1.05rem; }
         .choice-btn small { display: block; margin-top: 4px; color: #ffe0b2; font-size: 0.85rem; line-height: 1.25; }
         .mode-note { color: #8d6e63; font-size: 0.95rem; margin-top: -5px; margin-bottom: 12px; }
-        .die.stolen { opacity: 0.35; border-color: #b71c1c !important; filter: grayscale(80%); cursor: not-allowed; }
         .die.blurred .number-display { color: transparent; text-shadow: 0 0 12px #4fc3f7, 0 0 18px #fff3e0; }
         
         #sidebar h2:has(#current-score-span) {
@@ -749,19 +748,29 @@
             });
         }
 
+        function updateLivesPickerForRoom(code, roomExists = false) {
+            if (code === 'TAVERN') {
+                livesGroup.style.display = 'none';
+                myStartingLives = 3;
+                document.querySelectorAll('.lives-option').forEach((el, index) => {
+                    el.classList.toggle('selected', index === 1);
+                });
+                return;
+            }
+            livesGroup.style.display = roomExists ? 'none' : 'block';
+        }
+
         roomInput.addEventListener('input', (e) => {
             let code = e.target.value.trim().toUpperCase() || 'PUBLIC';
+            updateLivesPickerForRoom(code);
             socket.emit('checkRoom', code);
         });
         
         socket.emit('checkRoom', roomInput.value.trim().toUpperCase() || 'PUBLIC');
 
         socket.on('roomStatus', (data) => {
-            if (data.exists) {
-                livesGroup.style.display = 'none'; 
-            } else {
-                livesGroup.style.display = 'block'; 
-            }
+            let code = roomInput.value.trim().toUpperCase() || 'PUBLIC';
+            updateLivesPickerForRoom(code, data.exists);
         });
 
         function selectAvatar(element, icon) {
@@ -783,6 +792,7 @@
                 chosenRoom = "COMP-" + Math.floor(1000 + Math.random() * 9000);
             } else if (chosenRoom === "TAVERN") {
                 chosenRoom = "TVRN-" + Math.floor(1000 + Math.random() * 9000);
+                myStartingLives = 3;
             }
             
             localStorage.setItem('tavernName', chosenName);
@@ -1300,14 +1310,13 @@
         function renderDice(shouldBroadcast = true) {
             activeArea.innerHTML = ''; requiredArea.innerHTML = ''; remainingArea.innerHTML = '';
             let lockedDice = dice.filter(d => d.status !== 'active' && d.status !== 'stolen'); let activeDice = dice.filter(d => d.status === 'active');
-            let stolenDice = dice.filter(d => d.status === 'stolen');
             let req2 = null, req4 = null, remainingLocked = [];
 
             lockedDice.forEach(d => { if (d.value === 2 && !req2) req2 = d; else if (d.value === 4 && !req4) req4 = d; else remainingLocked.push(d); });
             remainingLocked.sort((a, b) => a.value - b.value);
 
             if (req2) requiredArea.appendChild(createDieElement(req2)); if (req4) requiredArea.appendChild(createDieElement(req4));
-            remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d))); stolenDice.forEach(d => remainingArea.appendChild(createDieElement(d))); activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
+            remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d))); activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
 
             let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
 
