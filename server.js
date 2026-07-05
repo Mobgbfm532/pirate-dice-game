@@ -16,7 +16,7 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'molar',
         name: 'The Molar',
-        avatar: '🦷',
+        avatar: '😬',
         lives: 2,
         ability: null,
         intro: 'The Molar slides into the seat and teaches you the house game: find a 2, find a 4, then chase 24.'
@@ -24,7 +24,7 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'klarg',
         name: 'Klarg',
-        avatar: '🛡️',
+        avatar: '😠',
         lives: 3,
         ability: 'reachAround',
         intro: 'Klarg, bugbear paladin of questionable table manners, may steal one active die with Reach Around.'
@@ -32,7 +32,7 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'rokr',
         name: 'Rokr',
-        avatar: '✨',
+        avatar: '😵‍💫',
         lives: 3,
         ability: 'constellationBlur',
         intro: 'Rokr reads the dice in the stars. Once per match, constellations can blur your active dice.'
@@ -40,7 +40,7 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'hangman',
         name: 'The Hangman',
-        avatar: '🤠',
+        avatar: '😐',
         lives: 3,
         ability: 'deadeye24',
         intro: 'The Hangman keeps one round in the chamber. Once per match, a strong hand can become a perfect 24.'
@@ -48,7 +48,7 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'jaguar',
         name: 'Jaguar Cantona',
-        avatar: '🎩',
+        avatar: '😏',
         lives: 4,
         ability: 'smoothTalk',
         intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Once per match, Smooth Talk worsens your finished score.'
@@ -452,7 +452,7 @@ io.on('connection', (socket) => {
                 rooms[roomCode].roundPlayers.push('BOT_MOLAR');
             } else if (isTavernCrawl) {
                 rooms[roomCode].players['BOT_MOLAR'] = {
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
+                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '😬', lives: 2, score: null, busted: false, connected: true
                 };
                 rooms[roomCode].playerOrder.push('BOT_MOLAR');
                 rooms[roomCode].roundPlayers.push('BOT_MOLAR');
@@ -586,6 +586,7 @@ io.on('connection', (socket) => {
     socket.on('sendBotReaction', (emoji) => {
         let room = rooms[socket.roomCode];
         if (room && isAuthorized(socket, socket.roomCode)) {
+            if (room.mode === 'tavern-crawl') return;
             io.to(socket.roomCode).emit('receiveReaction', { name: "The Molar", emoji: emoji });
         }
     });
@@ -650,6 +651,7 @@ io.on('connection', (socket) => {
                 if (encounter && encounter.ability === 'deadeye24' && currentId === 'BOT_MOLAR' && !room.tavernRun.abilityUsed.deadeye24 && !turnData.busted && turnData.score >= 18 && turnData.score < 24) {
                     room.players[currentId].score = 24;
                     room.tavernRun.abilityUsed.deadeye24 = true;
+                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Deadeye 24', text: 'The Hangman fires once. Perfect 24.' });
                     io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman fires once. Deadeye 24.', color: "#ffd54f" });
                 }
 
@@ -661,6 +663,7 @@ io.on('connection', (socket) => {
                     }
                     room.players[currentId].score = reducedScore;
                     room.tavernRun.abilityUsed.smoothTalk = true;
+                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
                     io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
                 }
             }
