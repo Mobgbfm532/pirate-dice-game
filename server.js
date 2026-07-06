@@ -764,7 +764,7 @@ io.on('connection', (socket) => {
 
             if (room.mode === 'tavern-crawl') {
                 let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && !turnData.busted && turnData.score >= 18 && turnData.score < 24) {
+                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && !turnData.busted && turnData.score > 0 && turnData.score < 24) {
                     room.players[currentId].score = 24;
                     markAbilityUsed(room, 'deadeye24');
                     io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Deadeye 24', text: 'The Hangman fires once. Perfect 24.' });
@@ -784,7 +784,8 @@ io.on('connection', (socket) => {
                 }
             }
             
-            if (room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
+            let tavernEnemyPerfect = room.mode === 'tavern-crawl' && currentId === 'BOT_MOLAR';
+            if (!tavernEnemyPerfect && room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
                 let restoredLives = (room.mode === 'tavern-crawl' && currentId !== 'BOT_MOLAR' && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
                 room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
                 if (restoredLives > 1) emitKeepsakeActivated(socket.roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
