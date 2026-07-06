@@ -298,6 +298,8 @@
         .crawl-line { margin: 6px 0; font-size: 1rem; color: #4e342e; }
         .keepsake-list { margin-top: 8px; display: grid; gap: 6px; }
         .keepsake-pill { padding: 7px 9px; background: rgba(93, 64, 55, 0.1); border: 1px solid rgba(93, 64, 55, 0.28); border-radius: 4px; font-size: 0.95rem; }
+        .keepsake-pill.used { opacity: 0.58; border-style: dashed; background: rgba(93, 64, 55, 0.05); }
+        .keepsake-used-label { float: right; color: #7b1d1d; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
         .choice-btn { display: block; width: 100%; margin: 10px 0; text-align: left; font-size: 1.05rem; }
         .choice-btn small { display: block; margin-top: 4px; color: #ffe0b2; font-size: 0.85rem; line-height: 1.25; }
         .mode-note { color: #8d6e63; font-size: 0.95rem; margin-top: -5px; margin-bottom: 12px; }
@@ -849,7 +851,7 @@
 
         socket.on('offerKeepsakes', (data) => {
             document.getElementById('game-page').style.visibility = 'hidden';
-            customModalText.innerHTML = `<strong>${data.defeated} leaves the table.</strong><br><br>Choose a keepsake before facing ${data.nextEnemy}.`;
+            customModalText.innerHTML = `<strong>${data.defeated} leaves the table.</strong><br><br>Choose a keepsake before battling your next opponent`;
             customModalActions.innerHTML = '';
             data.choices.forEach(choice => {
                 const btn = document.createElement('button');
@@ -886,7 +888,11 @@
             if (tavernRun.keepsakes.length === 0) {
                 crawlKeepsakes.innerHTML = '<div class="keepsake-pill">No keepsakes yet.</div>';
             } else {
-                crawlKeepsakes.innerHTML = tavernRun.keepsakes.map(k => `<div class="keepsake-pill"><strong>${k.name}</strong><br>${k.text}</div>`).join('');
+                const usedKeepsakes = tavernRun.encounterKeepsakeUses || {};
+                crawlKeepsakes.innerHTML = tavernRun.keepsakes.map(k => {
+                    const used = !!usedKeepsakes[k.id];
+                    return `<div class="keepsake-pill ${used ? 'used' : ''}"><strong>${k.name}</strong>${used ? '<span class="keepsake-used-label">Used</span>' : ''}<br>${k.text}</div>`;
+                }).join('');
             }
         }
 
@@ -1117,7 +1123,9 @@
         }
 
         function isTavernAbilityReady(abilityId) {
-            return currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy && tavernRun.enemy.ability === abilityId && !(tavernRun.abilityUsed && tavernRun.abilityUsed[abilityId]);
+            const dueRound = tavernRun ? (tavernRun.abilityRound || 1) : 1;
+            const currentRound = tavernRun ? (tavernRun.encounterRound || 1) : 1;
+            return currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy && tavernRun.enemy.ability === abilityId && currentRound >= dueRound && !(tavernRun.abilityUsed && tavernRun.abilityUsed[abilityId]);
         }
 
         function useTavernAbility(abilityId, message, color = "#ffb74d") {
@@ -1241,10 +1249,47 @@
             }, (suspenseType !== 'none') ? 2000 : 500); 
         }
         
+        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore) {
+            const active = activeDice.slice().sort((a, b) => b.value - a.value);
+            let toLock = [];
+            const enemyId = (currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy) ? tavernRun.enemy.id : 'molar';
+            const lockDie = (die) => {
+                if (!die || toLock.includes(die.id)) return false;
+                toLock.push(die.id);
+                return true;
+            };
+            const lockRequired = () => {
+                if (!hasTwo) {
+                    const two = active.find(d => d.value === 2);
+                    if (lockDie(two)) hasTwo = true;
+                }
+                if (!hasFour) {
+                    const four = active.find(d => d.value === 4 && !toLock.includes(d.id));
+                    if (lockDie(four)) hasFour = true;
+                }
+            };
+
+            lockRequired();
+
+            if (hasTwo && hasFour) {
+                active.forEach(d => {
+                    if (toLock.includes(d.id)) return;
+                    if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
+                    else if (enemyId === 'rokr' && (d.value === 6 || (d.value === 5 && currentScore <= 17 && active.length <= 2))) lockDie(d);
+                    else if (enemyId === 'hangman' && ((currentScore < 18 && d.value >= 4) || (currentScore >= 18 && d.value >= 5))) lockDie(d);
+                    else if (enemyId === 'jaguar' && (d.value >= 5 || (currentScore <= 18 && d.value === 4))) lockDie(d);
+                    else if (enemyId === 'molar' && (d.value === 6 || d.value === 5)) lockDie(d);
+                });
+            } else if (enemyId === 'jaguar') {
+                lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
+            }
+
+            if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
+            return toLock;
+        }
+
         function makeBotDecision() {
             let active = dice.filter(d => d.status === 'active').sort((a, b) => b.value - a.value);
-            let toLock = [];
-            let lockedAnything = false;
 
             let lockedForBot = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').sort((a, b) => a.value - b.value);
             let bReq2 = false, bReq4 = false, botScore = 0;
@@ -1255,26 +1300,7 @@
                 else botScore += d.value;
             });
 
-            if (!bReq2) { 
-                let d = active.find(x => x.value === 2); 
-                if (d) { toLock.push(d.id); bReq2 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
-            }
-            if (!bReq4) { 
-                let d = active.find(x => x.value === 4); 
-                if (d) { toLock.push(d.id); bReq4 = true; active = active.filter(x => x.id !== d.id); lockedAnything = true; } 
-            }
-
-            if (bReq2 && bReq4) {
-                active.forEach(d => {
-                    if (d.value === 6) { toLock.push(d.id); lockedAnything = true; }
-                    else if (d.value === 5) { toLock.push(d.id); lockedAnything = true; }
-                });
-                active = active.filter(x => !toLock.includes(x.id));
-            }
-
-            if (!lockedAnything && active.length > 0) {
-                toLock.push(active[0].id); 
-            }
+            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore);
 
             toLock.forEach((id, index) => {
                 setTimeout(() => {
