@@ -579,6 +579,7 @@
                 <button class="react-btn" onclick="sendReaction('😮')" title="Gasp">😮</button>
                 <button class="react-btn" onclick="sendReaction('😎')" title="Cool">😎</button>
                 <button class="react-btn" onclick="sendReaction('😭')" title="Cry">😭</button>
+                <button class="react-btn" onclick="sendReaction('🧔 Early Ross')" title="Early Ross">🧔</button>
             </div>
         </div>
     </div>
@@ -818,6 +819,7 @@
             customModalBtn.onclick = () => { 
                 playSound(sfxClick); 
                 customModal.style.display = 'none'; 
+                document.getElementById('game-page').style.visibility = 'visible';
             };
             
             if (isGameOver) {
@@ -846,6 +848,7 @@
         });
 
         socket.on('offerKeepsakes', (data) => {
+            document.getElementById('game-page').style.visibility = 'hidden';
             customModalText.innerHTML = `<strong>${data.defeated} leaves the table.</strong><br><br>Choose a keepsake before facing ${data.nextEnemy}.`;
             customModalActions.innerHTML = '';
             data.choices.forEach(choice => {
@@ -856,6 +859,7 @@
                     playSound(sfxClick);
                     socket.emit('chooseKeepsake', choice.id);
                     customModal.style.display = 'none';
+                    document.getElementById('game-page').style.visibility = 'visible';
                 };
                 customModalActions.appendChild(btn);
             });
@@ -947,7 +951,7 @@
         socket.on('receiveReaction', (data) => {
             const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
             
-            if (data.emoji === '🧔🏼‍♂️ Early Ross') {
+            if (data.emoji === '🧔 Early Ross' || data.emoji === '🧔🏼‍♂️ Early Ross') {
                 reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
             } else if (['😀', '😂', '😮', '😎', '😭'].includes(data.emoji)) {
                 reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.8rem">${data.emoji}</span>`;
@@ -1365,10 +1369,14 @@
             if (req2) requiredArea.appendChild(createDieElement(req2)); if (req4) requiredArea.appendChild(createDieElement(req4));
             remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d))); activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
 
-            let currentScore = remainingLocked.reduce((sum, die) => sum + die.value, 0);
+            let hiddenLockedCount = remainingLocked.filter(d => rokrBlurActive && isMyTurn && d.status === 'lockedThisTurn').length;
+            let currentScore = remainingLocked.reduce((sum, die) => {
+                if (rokrBlurActive && isMyTurn && die.status === 'lockedThisTurn') return sum;
+                return sum + die.value;
+            }, 0);
 
             if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
-            else { currentScoreSpan.innerText = currentScore; currentScoreSpan.style.color = "#b71c1c"; }
+            else { currentScoreSpan.innerText = hiddenLockedCount > 0 ? '?' : currentScore; currentScoreSpan.style.color = "#b71c1c"; }
 
             if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
 
