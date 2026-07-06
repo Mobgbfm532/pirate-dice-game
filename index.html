@@ -1311,6 +1311,7 @@
 
             if (toLock.length === 0 && active.length === 1) lockDie(active[0]);
             else if (toLock.length === 0 && active.length > 0 && (!hasTwo || !hasFour)) lockDie(active[0]);
+            else if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
             return toLock;
         }
 
