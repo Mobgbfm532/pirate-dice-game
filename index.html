@@ -961,6 +961,10 @@
         const sfxYay = new Audio('yay.mp3'); sfxYay.volume = 0.6;
         const sfxOhWell = new Audio('ohwell.mp3'); sfxOhWell.volume = 0.6;
         const sfxSwoosh = new Audio('Swoosh.mp3'); sfxSwoosh.volume = 0.6;
+        const sfxReachAround = new Audio('Reach Around.mp3'); sfxReachAround.volume = 0.75;
+        const sfxConstellation = new Audio('Constellation.mp3'); sfxConstellation.volume = 0.75;
+        const sfxGunshot = new Audio('Gunshot.mp3'); sfxGunshot.volume = 0.85;
+        const sfxWinner = new Audio('Winner.mp3'); sfxWinner.volume = 0.75;
         
         const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
         sfxDevilsTeets.preload = 'auto'; 
@@ -971,6 +975,13 @@
 
         // Dynamic helper to turn emoji codes into premium asset image markup
         function renderAvatarAsset(avatarString, className = "avatar-token") {
+            const fallbackAvatar = (avatarString || '👤').replace(/'/g, '');
+            const imageTag = (src, alt) => `<img src="${src}" class="${className}" alt="${alt}" onerror="this.outerHTML='<span style=&quot;font-size: 1.8rem&quot;>${fallbackAvatar}</span>'">`;
+            if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('themolar.png', 'The Molar');
+            if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('klarg.png', 'Klarg');
+            if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('rokr.png', 'Rokr');
+            if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('hangman.png', 'The Hangman');
+            if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('jaguar.png', 'Jaguar Cantona');
             if (avatarString === '🛡️') return `<img src="paladin.png" class="${className}" alt="Paladin">`;
             if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
             if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
@@ -1013,6 +1024,32 @@
             if (playPromise !== undefined) {
                 playPromise.catch(error => { console.warn("Audio play failed:", error); }); 
             }
+        }
+
+        const signatureSounds = {
+            'Reach Around': sfxReachAround,
+            'Constellation Blur': sfxConstellation,
+            'Deadeye 24': sfxGunshot
+        };
+
+        let splashQueue = [];
+        let splashShowing = false;
+
+        function queueSplash(renderSplash) {
+            splashQueue.push(renderSplash);
+            if (!splashShowing) playNextSplash();
+        }
+
+        function playNextSplash() {
+            if (splashQueue.length === 0) {
+                splashShowing = false;
+                return;
+            }
+            splashShowing = true;
+            splashQueue.shift()(() => {
+                splashShowing = false;
+                playNextSplash();
+            });
         }
 
         function playRollSound() {
@@ -1184,6 +1221,7 @@
         });
 
         socket.on('offerKeepsakes', (data) => {
+            playSound(sfxWinner);
             document.getElementById('game-page').style.visibility = 'hidden';
             const transitionMessage = data.transitionMessage || `${data.defeated} leaves the table.`;
             customModalText.innerHTML = `<strong>${transitionMessage}</strong><br><br>Choose a keepsake before battling your next opponent`;
@@ -1234,32 +1272,39 @@
         }
 
         socket.on('triggerNewGameSplash', () => {
-            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
-            text.className = 'signature-splash';
-            text.innerHTML = `🎲<br>A New Game Begins!`; 
-            overlay.style.display = 'flex'; playSound(sfxSwoosh); 
-            setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
-            setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
+            queueSplash((done) => {
+                const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+                text.className = 'signature-splash';
+                text.innerHTML = `🎲<br>A New Game Begins!`; 
+                overlay.style.display = 'flex'; playSound(sfxSwoosh); 
+                setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+                setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; done(); }, 400); }, 1500);
+            });
         });
 
         function showTurnSplash(name, avatar) {
-            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
-            let turnText = name === "Your" ? "Your turn!" : `${name}'s turn!`;
-            text.className = 'turn-splash';
-            
-            // Integrated premium tokens into splash overlay frame animations
-            text.innerHTML = `${renderAvatarAsset(avatar, "splash-token")}${turnText}`; overlay.style.display = 'flex'; playSound(sfxSwoosh); 
-            setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
-            setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
+            queueSplash((done) => {
+                const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+                let turnText = name === "Your" ? "Your turn!" : `${name}'s turn!`;
+                text.className = 'turn-splash';
+                
+                // Integrated premium tokens into splash overlay frame animations
+                text.innerHTML = `${renderAvatarAsset(avatar, "splash-token")}${turnText}`; overlay.style.display = 'flex'; playSound(sfxSwoosh); 
+                setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+                setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; done(); }, 400); }, 1500);
+            });
         }
 
-        function showSignatureSplash(name, ability, message, variant = 'signature-splash') {
-            const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
-            text.className = variant;
-            text.innerHTML = `<span style="font-size: 2.2rem; color: #ffcc80;">${name}</span><span style="font-size: 4rem;">${ability}</span><span style="font-size: 1.6rem; color: #fff3e0;">${message}</span>`;
-            overlay.style.display = 'flex'; playSound(sfxSwoosh);
-            setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
-            setTimeout(() => { text.style.transform = 'scale(1.35)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1800);
+        function showSignatureSplash(name, ability, message, variant = 'signature-splash', sound = null) {
+            queueSplash((done) => {
+                const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+                text.className = variant;
+                text.innerHTML = `<span style="font-size: 2.2rem; color: #ffcc80;">${name}</span><span style="font-size: 4rem;">${ability}</span><span style="font-size: 1.6rem; color: #fff3e0;">${message}</span>`;
+                overlay.style.display = 'flex';
+                playSound(sound || sfxSwoosh);
+                setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+                setTimeout(() => { text.style.transform = 'scale(1.16)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; done(); }, 450); }, 3200);
+            });
         }
 
         const scoreDisplay = document.getElementById('score-display'); 
@@ -1276,7 +1321,7 @@
             scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color;
         });
         socket.on('signatureMove', (data) => {
-            showSignatureSplash(data.name, data.ability, data.text);
+            showSignatureSplash(data.name, data.ability, data.text, 'signature-splash', signatureSounds[data.ability] || null);
         });
         socket.on('keepsakeActivated', (data) => {
             if (tavernRun && data.id) {
@@ -1408,7 +1453,7 @@
                 if (id === myId) el.classList.add('hero-card');
 
                 // Injects the custom player graphical tokens into the sidebar adventurer listings
-                let avatarToRender = (id === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') ? 'BOT_MOLAR' : p.avatar;
+                let avatarToRender = id === 'BOT_MOLAR' ? (currentMode === 'tavern-crawl' ? p.name : 'BOT_MOLAR') : p.avatar;
                 if (currentMode === 'tavern-crawl') {
                     el.innerHTML = `${renderAvatarAsset(avatarToRender)}<div class="player-card-copy"><strong>${p.name}</strong><div>${hearts}</div><span class="score-chip">Score: ${scoreText}</span></div>`;
                 } else {
@@ -1441,7 +1486,7 @@
                 } 
                 else {
                     if (!hasPendingKeepsakeChoice && state.currentTurnId && !isFirstLoad && state.currentTurnId !== lastTurnId) {
-                        let splashAvatar = (state.currentTurnId === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') ? 'BOT_MOLAR' : activeAvatar;
+                        let splashAvatar = state.currentTurnId === 'BOT_MOLAR' ? (currentMode === 'tavern-crawl' ? activeName : 'BOT_MOLAR') : activeAvatar;
                         showTurnSplash(isMyTurn ? "Your" : activeName, splashAvatar);
                     }
                     
@@ -1499,7 +1544,7 @@
             tavernRun.abilityUsed = tavernRun.abilityUsed || {};
             tavernRun.abilityUsed[abilityId] = getTavernAbilityUseCount(abilityId) + 1;
             socket.emit('useEnemyAbility', abilityId);
-            showSignatureSplash(tavernRun.enemy.name, abilityNames[abilityId], message);
+            showSignatureSplash(tavernRun.enemy.name, abilityNames[abilityId], message, 'signature-splash', signatureSounds[abilityNames[abilityId]] || null);
             updateTavernCrawlPanel();
             return true;
         }
@@ -1615,12 +1660,10 @@
             }, (suspenseType !== 'none') ? 2000 : 500); 
         }
         
-        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore, targetScore = null) {
+        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore) {
             const active = activeDice.slice().sort((a, b) => b.value - a.value);
             let toLock = [];
             const enemyId = (currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy) ? tavernRun.enemy.id : 'molar';
-            const hasTarget = Number.isFinite(targetScore) && targetScore > 0;
-            const isHelpfulScoringDie = (die) => !hasTarget || currentScore >= targetScore || currentScore + die.value >= targetScore || active.length === 1;
             const lockDie = (die) => {
                 if (!die || toLock.includes(die.id)) return false;
                 toLock.push(die.id);
@@ -1640,14 +1683,16 @@
             lockRequired();
 
             if (hasTwo && hasFour) {
+                const remainingToPerfect = Math.max(0, 24 - currentScore);
                 active.forEach(d => {
                     if (toLock.includes(d.id)) return;
-                    if (!isHelpfulScoringDie(d)) return;
-                    if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
-                    else if (enemyId === 'rokr' && (d.value === 6 || (d.value === 5 && currentScore <= 17 && active.length <= 2))) lockDie(d);
-                    else if (enemyId === 'hangman' && ((currentScore < 18 && d.value >= 4) || (currentScore >= 18 && d.value >= 5))) lockDie(d);
-                    else if (enemyId === 'jaguar' && (d.value >= 5 || (currentScore <= 18 && d.value === 4))) lockDie(d);
-                    else if (enemyId === 'molar' && (d.value === 6 || d.value === 5)) lockDie(d);
+                    if (d.value > remainingToPerfect && active.length > 1) return;
+                    if (d.value >= 5) lockDie(d);
+                    else if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
+                    else if (enemyId === 'rokr' && d.value >= 4 && remainingToPerfect <= 8) lockDie(d);
+                    else if (enemyId === 'hangman' && d.value >= 4) lockDie(d);
+                    else if (enemyId === 'jaguar' && d.value >= 4) lockDie(d);
+                    else if (remainingToPerfect <= d.value) lockDie(d);
                 });
             } else if (enemyId === 'jaguar') {
                 lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
@@ -1671,9 +1716,7 @@
                 else botScore += d.value;
             });
 
-            let humanId = latestGameState ? Object.keys(latestGameState.players || {}).find(id => id !== 'BOT_MOLAR') : null;
-            let humanScore = humanId && latestGameState.players[humanId] && latestGameState.players[humanId].score !== null && !latestGameState.players[humanId].busted ? latestGameState.players[humanId].score : null;
-            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore, humanScore);
+            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore);
 
             toLock.forEach((id, index) => {
                 setTimeout(() => {
