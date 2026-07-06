@@ -136,9 +136,29 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
         room.tavernRun.encounterKeepsakeUses[keepsakeId] = true;
     }
     io.to(roomCode).emit('keepsakeActivated', {
+        id: keepsakeId,
         name: keepsake.name,
         text: text || keepsake.text
     });
+}
+
+function getAbilityMaxUses(abilityId) {
+    return abilityId === 'constellationBlur' ? 2 : 1;
+}
+
+function getAbilityUseCount(room, abilityId) {
+    let used = room.tavernRun.abilityUsed[abilityId];
+    if (used === true) return 1;
+    return Number(used || 0);
+}
+
+function markAbilityUsed(room, abilityId) {
+    room.tavernRun.abilityUsed[abilityId] = getAbilityUseCount(room, abilityId) + 1;
+}
+
+function canUseTavernAbility(room, encounter, abilityId) {
+    let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
+    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < getAbilityMaxUses(abilityId);
 }
 
 function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
@@ -478,6 +498,7 @@ function evaluateTavernRound(roomCode) {
         io.to(roomCode).emit('offerKeepsakes', {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
+            transitionMessage: enemy.id === 'molar' ? 'Seething, The Molar leaves the table and you are invited to the high roller table' : null,
             choices: room.tavernRun.pendingKeepsakeChoices
         });
         return;
@@ -704,9 +725,8 @@ io.on('connection', (socket) => {
         let room = rooms[socket.roomCode];
         if (!room || room.mode !== 'tavern-crawl') return;
         let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-        let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-        if (encounter && encounter.ability === abilityId && abilityReady && !room.tavernRun.abilityUsed[abilityId]) {
-            room.tavernRun.abilityUsed[abilityId] = true;
+        if (canUseTavernAbility(room, encounter, abilityId)) {
+            markAbilityUsed(room, abilityId);
             io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
         }
     });
@@ -733,18 +753,17 @@ io.on('connection', (socket) => {
 
             if (room.mode === 'tavern-crawl') {
                 let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-                let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-                if (encounter && encounter.ability === 'deadeye24' && abilityReady && currentId === 'BOT_MOLAR' && !room.tavernRun.abilityUsed.deadeye24 && !turnData.busted && turnData.score >= 18 && turnData.score < 24) {
+                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && !turnData.busted && turnData.score >= 18 && turnData.score < 24) {
                     room.players[currentId].score = 24;
-                    room.tavernRun.abilityUsed.deadeye24 = true;
+                    markAbilityUsed(room, 'deadeye24');
                     io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Deadeye 24', text: 'The Hangman fires once. Perfect 24.' });
                     io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman fires once. Deadeye 24.', color: "#ffd54f" });
                 }
 
-                if (encounter && encounter.ability === 'smoothTalk' && abilityReady && currentId !== 'BOT_MOLAR' && !room.tavernRun.abilityUsed.smoothTalk && !turnData.busted && turnData.score > 0) {
+                if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== 'BOT_MOLAR' && !turnData.busted && turnData.score > 0) {
                     let reducedScore = Math.max(0, turnData.score - 3);
                     room.players[currentId].score = reducedScore;
-                    room.tavernRun.abilityUsed.smoothTalk = true;
+                    markAbilityUsed(room, 'smoothTalk');
                     io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
                     io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
                 }
