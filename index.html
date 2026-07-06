@@ -315,6 +315,284 @@
 
         .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
 
+        body.tavern-mode {
+            background-color: #120b08;
+            background-image:
+                radial-gradient(circle at 12% 16%, rgba(255, 184, 92, 0.2), transparent 18rem),
+                radial-gradient(circle at 88% 12%, rgba(255, 122, 48, 0.14), transparent 20rem),
+                linear-gradient(rgba(18, 9, 6, 0.25), rgba(18, 9, 6, 0.65)),
+                url('Background.png');
+        }
+
+        body.tavern-mode #game-page {
+            max-width: 1280px;
+            grid-template-columns: minmax(0, 2.35fr) minmax(280px, 0.9fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        body.tavern-mode #game-area {
+            overflow: hidden;
+            min-height: 690px;
+            padding: 86px 34px 30px 34px;
+            border: 10px solid #1b0d08;
+            border-radius: 18px;
+            background-image:
+                radial-gradient(ellipse at center, rgba(255, 192, 111, 0.18), rgba(38, 17, 9, 0.12) 42%, rgba(12, 6, 4, 0.72) 100%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 112px),
+                url('Table2.png');
+            background-size: cover, auto, 100% 100%;
+            box-shadow:
+                0 30px 70px rgba(0,0,0,0.95),
+                inset 0 0 0 8px rgba(89, 43, 22, 0.75),
+                inset 0 0 80px rgba(0,0,0,0.82);
+        }
+
+        body.tavern-mode #game-area::before {
+            content: "";
+            position: absolute;
+            inset: 18px;
+            border: 2px solid rgba(255, 204, 128, 0.18);
+            border-radius: 10px;
+            box-shadow: inset 0 0 22px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+
+        body.tavern-mode #game-area::after {
+            content: "";
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            top: 54%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 224, 178, 0.22), transparent);
+            box-shadow: 0 56px 0 rgba(255, 224, 178, 0.1);
+            pointer-events: none;
+        }
+
+        body.tavern-mode #room-indicator {
+            top: 18px;
+            right: 28px;
+            color: #e8c98c;
+            background: rgba(25, 11, 7, 0.72);
+            border: 1px solid rgba(255, 204, 128, 0.22);
+            border-radius: 4px;
+            padding: 5px 10px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.45);
+        }
+
+        body.tavern-mode #turn-indicator {
+            position: relative;
+            z-index: 1;
+            align-self: stretch;
+            margin: 0 auto 18px auto;
+            padding: 12px 18px;
+            max-width: 620px;
+            border: 1px solid rgba(255, 204, 128, 0.24);
+            border-radius: 4px;
+            background: linear-gradient(90deg, transparent, rgba(54, 24, 14, 0.78), transparent);
+            color: #ffe6b7;
+            font-size: 2rem;
+        }
+
+        body.tavern-mode .area-title {
+            position: relative;
+            z-index: 1;
+            color: #f4c266;
+            font-size: 1.35rem;
+            letter-spacing: 4px;
+        }
+
+        body.tavern-mode #locked-area,
+        body.tavern-mode #active-area {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 760px);
+            border-radius: 999px;
+            background:
+                radial-gradient(ellipse at center, rgba(29, 12, 7, 0.24), rgba(0,0,0,0.08) 58%, transparent 72%);
+        }
+
+        body.tavern-mode #locked-area {
+            min-height: 138px;
+            border-bottom: 1px solid rgba(255, 224, 178, 0.2);
+            box-shadow: 0 16px 28px rgba(0,0,0,0.18);
+        }
+
+        body.tavern-mode #active-area {
+            min-height: 154px;
+            margin-top: 6px;
+            margin-bottom: 24px;
+        }
+
+        body.tavern-mode .die {
+            border-radius: 10px;
+            border: 2px solid rgba(94, 62, 31, 0.55);
+            box-shadow:
+                inset 3px 3px 4px rgba(255,255,255,0.9),
+                inset -5px -6px 10px rgba(63,38,16,0.26),
+                0 14px 20px rgba(0,0,0,0.68);
+        }
+
+        body.tavern-mode .die.lockedThisTurn {
+            box-shadow:
+                0 0 0 4px rgba(255, 183, 77, 0.95),
+                0 0 22px rgba(255, 183, 77, 0.55),
+                inset 1px 1px 3px rgba(0,0,0,0.35),
+                0 8px 16px rgba(0,0,0,0.74) !important;
+        }
+
+        body.tavern-mode #controls {
+            position: relative;
+            z-index: 1;
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: rgba(18, 8, 5, 0.46);
+            border: 1px solid rgba(255, 204, 128, 0.16);
+        }
+
+        body.tavern-mode #sidebar {
+            border: 2px solid #8f6a34;
+            border-radius: 8px;
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.26), transparent 16rem),
+                linear-gradient(145deg, #f4e1b3, #d4b77a 58%, #b98d4c);
+            box-shadow:
+                0 24px 42px rgba(0,0,0,0.72),
+                inset 0 0 0 5px rgba(90, 54, 23, 0.18),
+                inset 0 0 55px rgba(80, 39, 13, 0.22);
+        }
+
+        body.tavern-mode #sidebar::before {
+            content: "";
+            position: absolute;
+            inset: 9px;
+            border: 1px dashed rgba(76, 42, 19, 0.34);
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        body.tavern-mode #sidebar .area-title,
+        body.tavern-mode .crawl-title {
+            color: #4b2b18;
+            border-bottom: 1px solid rgba(86, 51, 26, 0.35);
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.45);
+        }
+
+        body.tavern-mode #scoreboard {
+            gap: 10px;
+        }
+
+        body.tavern-mode .player-stat {
+            position: relative;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            text-align: left;
+            min-height: 86px;
+            padding: 10px;
+            border: 1px solid rgba(78, 46, 24, 0.28);
+            border-radius: 6px;
+            background:
+                linear-gradient(135deg, rgba(255, 248, 225, 0.8), rgba(173, 123, 60, 0.18)),
+                rgba(255, 248, 225, 0.55);
+            box-shadow: inset 0 0 18px rgba(92, 56, 24, 0.12);
+        }
+
+        body.tavern-mode .player-stat.active-player {
+            border-color: rgba(142, 28, 28, 0.62);
+            box-shadow: 0 0 0 2px rgba(183, 28, 28, 0.12), inset 0 0 20px rgba(183, 28, 28, 0.1);
+        }
+
+        body.tavern-mode .player-stat.enemy-card {
+            background:
+                linear-gradient(135deg, rgba(43, 19, 12, 0.12), rgba(255, 222, 145, 0.56)),
+                rgba(255, 248, 225, 0.72);
+        }
+
+        body.tavern-mode .player-stat .avatar-token {
+            width: 58px;
+            height: 58px;
+            margin: 0;
+            padding: 5px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #fff8dc, #bb8842);
+            border: 2px solid rgba(75, 43, 24, 0.4);
+        }
+
+        .player-card-copy strong {
+            display: block;
+            font-size: 1.12rem;
+            color: #3e2415;
+        }
+
+        .score-chip {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(62, 39, 35, 0.12);
+            color: #6d1b16;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        body.tavern-mode #tavern-crawl-panel {
+            border-top: 1px solid rgba(86, 51, 26, 0.35);
+        }
+
+        body.tavern-mode .crawl-line {
+            color: #402414;
+            line-height: 1.25;
+        }
+
+        body.tavern-mode .keepsake-list {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        body.tavern-mode .keepsake-pill {
+            position: relative;
+            min-height: 54px;
+            padding: 9px 10px 9px 50px;
+            border: 1px solid rgba(87, 51, 25, 0.36);
+            border-radius: 6px;
+            background:
+                linear-gradient(135deg, rgba(255, 248, 225, 0.86), rgba(176, 120, 52, 0.16));
+            box-shadow: inset 0 0 14px rgba(89, 54, 24, 0.12);
+        }
+
+        body.tavern-mode .keepsake-icon {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            width: 29px;
+            height: 29px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #5d3320;
+            color: #ffe0a3;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 2px 5px rgba(0,0,0,0.28);
+            font-size: 1rem;
+        }
+
+        body.tavern-mode .keepsake-pill.used::after {
+            content: "USED";
+            position: absolute;
+            right: 8px;
+            bottom: 7px;
+            padding: 1px 6px;
+            border: 1px solid rgba(123, 29, 29, 0.42);
+            color: #7b1d1d;
+            transform: rotate(-5deg);
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+        }
+
         /* Themed SVG Reaction Button Bar Styles */
         #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; gap: 5px;}
         .react-btn { padding: 4px; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; }
@@ -356,6 +634,42 @@
 
         #splash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 3000; display: none; justify-content: center; align-items: center; pointer-events: none; }
         #splash-text { color: #ffcc80; font-size: 5rem; text-shadow: 3px 3px 15px #000; font-family: 'Almendra', serif; transform: scale(0); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; display: flex; flex-direction: column; align-items: center; }
+        body.tavern-mode #splash-overlay { background: radial-gradient(circle, rgba(30, 12, 6, 0.52), rgba(0,0,0,0.86)); }
+        body.tavern-mode #splash-text.signature-splash,
+        body.tavern-mode #splash-text.result-splash {
+            min-width: min(640px, 86vw);
+            max-width: 86vw;
+            padding: 26px 34px;
+            border: 2px solid #cda434;
+            border-radius: 8px;
+            background:
+                linear-gradient(145deg, rgba(253, 246, 227, 0.96), rgba(206, 168, 94, 0.94)),
+                var(--parchment-bg);
+            color: #4a2817;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.62);
+            box-shadow: 0 24px 70px rgba(0,0,0,0.86), inset 0 0 42px rgba(109, 59, 21, 0.2);
+        }
+        body.tavern-mode #splash-text.signature-splash span:first-child,
+        body.tavern-mode #splash-text.result-splash span:first-child {
+            color: #7b1d1d !important;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        body.tavern-mode #splash-text.signature-splash span:nth-child(2),
+        body.tavern-mode #splash-text.result-splash span:nth-child(2) {
+            color: #2f1a0f;
+            line-height: 0.98;
+        }
+        body.tavern-mode #splash-text.signature-splash span:last-child,
+        body.tavern-mode #splash-text.result-splash span:last-child {
+            color: #543018 !important;
+            line-height: 1.25;
+            max-width: 540px;
+        }
+        body.tavern-mode #splash-text.turn-splash {
+            color: #ffe0a3;
+            text-shadow: 0 0 16px #000, 2px 4px 10px rgba(0,0,0,0.9);
+        }
 
         #tie-breaker-banner { display: none; color: #e57373; font-size: 1.4rem; letter-spacing: 1px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); text-align: center; margin-top: -10px; margin-bottom: 15px; animation: textFlicker 1.5s infinite alternate; }
         @keyframes textFlicker { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0.8; transform: scale(0.98); } }
@@ -470,6 +784,14 @@
             #sidebar .area-title { margin-bottom: 5px; }
             #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; width: 100%; }
             .player-stat { padding: 5px 0; }
+            body.tavern-mode #game-area { min-height: auto; padding: 62px 10px 15px 10px; border-width: 4px; }
+            body.tavern-mode #game-area::before { inset: 8px; }
+            body.tavern-mode #turn-indicator { max-width: none; padding: 8px 10px; }
+            body.tavern-mode #locked-area, body.tavern-mode #active-area { width: 100%; border-radius: 14px; }
+            body.tavern-mode .player-stat { grid-template-columns: auto 1fr; min-height: 70px; padding: 7px; }
+            body.tavern-mode .player-stat .avatar-token { width: 44px; height: 44px; }
+            body.tavern-mode #splash-text.signature-splash,
+            body.tavern-mode #splash-text.result-splash { padding: 20px 18px; }
             
             #reaction-bar { margin-top: 10px; padding-top: 10px; width: 100%; }
             .react-btn { font-size: 1.5rem; padding: 2px; }
@@ -655,6 +977,17 @@
             if (avatarString === '🪕') return `<img src="bard.png" class="${className}" alt="Bard">`;
             if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return `<img src="themolar.png" class="${className}" alt="The Molar">`;
             return `<span style="font-size: 1.8rem">${avatarString || '👤'}</span>`;
+        }
+
+        function getKeepsakeIcon(keepsakeId) {
+            const icons = {
+                bentCopper: '🛡',
+                blessedTankard: '◉',
+                luckySeat: '✦',
+                velvetCushion: '◆',
+                steadyHand: '✋'
+            };
+            return icons[keepsakeId] || '✧';
         }
 
         // Helper map to turn reaction triggers into high-fidelity inline SVGs
@@ -895,13 +1228,14 @@
                 const usedKeepsakes = tavernRun.encounterKeepsakeUses || {};
                 crawlKeepsakes.innerHTML = tavernRun.keepsakes.map(k => {
                     const used = !!usedKeepsakes[k.id];
-                    return `<div class="keepsake-pill ${used ? 'used' : ''}"><strong>${k.name}</strong>${used ? '<span class="keepsake-used-label">Used</span>' : ''}<br>${k.text}</div>`;
+                    return `<div class="keepsake-pill ${used ? 'used' : ''}"><span class="keepsake-icon">${getKeepsakeIcon(k.id)}</span><strong>${k.name}</strong>${used ? '<span class="keepsake-used-label">Used</span>' : ''}<br>${k.text}</div>`;
                 }).join('');
             }
         }
 
         socket.on('triggerNewGameSplash', () => {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+            text.className = 'signature-splash';
             text.innerHTML = `🎲<br>A New Game Begins!`; 
             overlay.style.display = 'flex'; playSound(sfxSwoosh); 
             setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
@@ -911,6 +1245,7 @@
         function showTurnSplash(name, avatar) {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
             let turnText = name === "Your" ? "Your turn!" : `${name}'s turn!`;
+            text.className = 'turn-splash';
             
             // Integrated premium tokens into splash overlay frame animations
             text.innerHTML = `${renderAvatarAsset(avatar, "splash-token")}${turnText}`; overlay.style.display = 'flex'; playSound(sfxSwoosh); 
@@ -918,8 +1253,9 @@
             setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; }, 400); }, 1500);
         }
 
-        function showSignatureSplash(name, ability, message) {
+        function showSignatureSplash(name, ability, message, variant = 'signature-splash') {
             const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+            text.className = variant;
             text.innerHTML = `<span style="font-size: 2.2rem; color: #ffcc80;">${name}</span><span style="font-size: 4rem;">${ability}</span><span style="font-size: 1.6rem; color: #fff3e0;">${message}</span>`;
             overlay.style.display = 'flex'; playSound(sfxSwoosh);
             setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
@@ -955,7 +1291,7 @@
             let lines = String(data.message || '').split('\n');
             let title = lines[0] || 'Round Result';
             let detail = lines.slice(1).join(' ') || '';
-            showSignatureSplash('Round Result', title, detail);
+            showSignatureSplash('Round Result', title, detail, 'result-splash');
         });
 
         function sendReaction(emoji) {
@@ -1023,6 +1359,7 @@
             latestGameState = state;
             currentMode = state.mode || 'classic';
             tavernRun = state.tavernRun || null;
+            document.body.classList.toggle('tavern-mode', currentMode === 'tavern-crawl');
             updateTavernCrawlPanel();
             reactionBar.style.display = currentMode === 'tavern-crawl' ? 'none' : 'flex';
 
@@ -1066,10 +1403,17 @@
                 let el = document.createElement('div'); el.className = 'player-stat';
                 let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
                 if (!isInRound || !p.connected) el.style.opacity = "0.4";
+                if (id === state.currentTurnId) el.classList.add('active-player');
+                if (id === 'BOT_MOLAR') el.classList.add('enemy-card');
+                if (id === myId) el.classList.add('hero-card');
 
                 // Injects the custom player graphical tokens into the sidebar adventurer listings
                 let avatarToRender = (id === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') ? 'BOT_MOLAR' : p.avatar;
-                el.innerHTML = `${renderAvatarAsset(avatarToRender)}<br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
+                if (currentMode === 'tavern-crawl') {
+                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<div class="player-card-copy"><strong>${p.name}</strong><div>${hearts}</div><span class="score-chip">Score: ${scoreText}</span></div>`;
+                } else {
+                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
+                }
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
             });
