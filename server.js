@@ -58,17 +58,17 @@ const TAVERN_ENCOUNTERS = [
 const TAVERN_KEEPSAKES = [
     {
         id: 'bentCopper',
-        name: 'Bent Copper Coin',
+        name: 'Shield',
         text: 'Once per encounter, the first life you would lose is ignored.'
     },
     {
         id: 'blessedTankard',
-        name: 'Blessed Tankard',
+        name: "Brodor's Sunglasses",
         text: 'A perfect 24 restores one extra life.'
     },
     {
         id: 'luckySeat',
-        name: 'Lucky Seat',
+        name: 'Trap Card',
         text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
     },
     {
@@ -80,11 +80,6 @@ const TAVERN_KEEPSAKES = [
         id: 'steadyHand',
         name: 'Steady Hand Wrap',
         text: 'Once per encounter, if you dust, it becomes a score of 0 instead of a dust result.'
-    },
-    {
-        id: 'markedCoaster',
-        name: 'Marked Coaster',
-        text: 'Once per encounter, your first score of 21 or higher cannot be reduced below 20.'
     }
 ];
 
@@ -382,7 +377,7 @@ function evaluateTavernRound(roomCode) {
 
         if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
             room.tavernRun.encounterKeepsakeUses.bentCopper = true;
-            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Bent Copper Coin catches the loss.');
+            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield catches the loss.');
             return;
         }
 
@@ -685,11 +680,6 @@ io.on('connection', (socket) => {
 
                 if (encounter && encounter.ability === 'smoothTalk' && currentId !== 'BOT_MOLAR' && !room.tavernRun.abilityUsed.smoothTalk && !turnData.busted && turnData.score > 0) {
                     let reducedScore = Math.max(0, turnData.score - 3);
-                    if (hasKeepsake(room, 'markedCoaster') && !room.tavernRun.encounterKeepsakeUses.markedCoaster && turnData.score >= 21) {
-                        reducedScore = Math.max(20, reducedScore);
-                        room.tavernRun.encounterKeepsakeUses.markedCoaster = true;
-                        emitKeepsakeActivated(socket.roomCode, room, 'markedCoaster', 'Marked Coaster keeps the score respectable.');
-                    }
                     room.players[currentId].score = reducedScore;
                     room.tavernRun.abilityUsed.smoothTalk = true;
                     io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
@@ -700,7 +690,7 @@ io.on('connection', (socket) => {
             if (room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
                 let restoredLives = (room.mode === 'tavern-crawl' && currentId !== 'BOT_MOLAR' && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
                 room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
-                if (restoredLives > 1) emitKeepsakeActivated(socket.roomCode, room, 'blessedTankard', 'Blessed Tankard restores an extra life.');
+                if (restoredLives > 1) emitKeepsakeActivated(socket.roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
                 io.to(socket.roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
             }
 
