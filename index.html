@@ -607,6 +607,7 @@
         let myStartingLives = 3;
         let currentActiveId = null;
         let currentMode = 'classic';
+        let latestGameState = null;
         let tavernRun = null;
         let rokrBlurActive = false;
         let klargStolenThisTurn = false;
@@ -851,7 +852,8 @@
 
         socket.on('offerKeepsakes', (data) => {
             document.getElementById('game-page').style.visibility = 'hidden';
-            customModalText.innerHTML = `<strong>${data.defeated} leaves the table.</strong><br><br>Choose a keepsake before battling your next opponent`;
+            const transitionMessage = data.transitionMessage || `${data.defeated} leaves the table.`;
+            customModalText.innerHTML = `<strong>${transitionMessage}</strong><br><br>Choose a keepsake before battling your next opponent`;
             customModalActions.innerHTML = '';
             data.choices.forEach(choice => {
                 const btn = document.createElement('button');
@@ -879,8 +881,10 @@
             crawlProgress.innerText = `Encounter ${tavernRun.encounterNumber} of ${tavernRun.totalEncounters}`;
             crawlEnemy.innerText = `${tavernRun.enemy.name}: ${tavernRun.enemy.intro}`;
             if (tavernRun.enemy.ability) {
-                let used = tavernRun.abilityUsed && tavernRun.abilityUsed[tavernRun.enemy.ability];
-                crawlAbility.innerText = `${abilityNames[tavernRun.enemy.ability]}: ${used ? 'spent' : 'ready'}`;
+                let abilityId = tavernRun.enemy.ability;
+                let used = getTavernAbilityUseCount(abilityId);
+                let maxUses = getTavernAbilityMaxUses(abilityId);
+                crawlAbility.innerText = `${abilityNames[abilityId]}: ${used >= maxUses ? 'spent' : `ready (${used}/${maxUses})`}`;
             } else {
                 crawlAbility.innerText = 'Introductory table. No signature trick.';
             }
@@ -939,6 +943,11 @@
             showSignatureSplash(data.name, data.ability, data.text);
         });
         socket.on('keepsakeActivated', (data) => {
+            if (tavernRun && data.id) {
+                tavernRun.encounterKeepsakeUses = tavernRun.encounterKeepsakeUses || {};
+                tavernRun.encounterKeepsakeUses[data.id] = true;
+                updateTavernCrawlPanel();
+            }
             showSignatureSplash("Keepsake", data.name, data.text);
         });
 
@@ -1011,6 +1020,7 @@
         socket.on('connect', () => { myId = socket.id; });
 
         socket.on('gameStateUpdate', (state) => {
+            latestGameState = state;
             currentMode = state.mode || 'classic';
             tavernRun = state.tavernRun || null;
             updateTavernCrawlPanel();
@@ -1069,6 +1079,7 @@
             } else {
                 isMyTurn = (myId === state.currentTurnId);
                 isBotTurn = (state.currentTurnId === 'BOT_MOLAR' && (myRoom.startsWith('COMP') || myRoom.startsWith('TVRN')));
+                let hasPendingKeepsakeChoice = currentMode === 'tavern-crawl' && tavernRun && tavernRun.pendingKeepsakeChoices;
                 
                 let activePlayerInfo = state.players[state.currentTurnId];
                 let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
@@ -1085,12 +1096,12 @@
                     turnIndicator.style.color = "#e57373";
                 } 
                 else {
-                    if (!isFirstLoad && state.currentTurnId !== lastTurnId) {
+                    if (!hasPendingKeepsakeChoice && state.currentTurnId && !isFirstLoad && state.currentTurnId !== lastTurnId) {
                         let splashAvatar = (state.currentTurnId === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') ? 'BOT_MOLAR' : activeAvatar;
                         showTurnSplash(isMyTurn ? "Your" : activeName, splashAvatar);
                     }
                     
-                    turnIndicator.innerText = isMyTurn ? "Your turn!" : `${activeName} is rolling...`;
+                    turnIndicator.innerText = hasPendingKeepsakeChoice ? "Choose a keepsake" : (isMyTurn ? "Your turn!" : `${activeName} is rolling...`);
                     turnIndicator.style.color = isMyTurn ? "#aed581" : "#ffcc80";
                 }
                 lastTurnId = state.currentTurnId; isFirstLoad = false;
@@ -1098,7 +1109,7 @@
             
             document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
             
-            if ((isMyTurn || isBotTurn) && previousTurnId !== state.currentTurnId) {
+            if (state.currentTurnId && (isMyTurn || isBotTurn) && previousTurnId !== state.currentTurnId) {
                 initGame(); 
                 if (isBotTurn) {
                     setTimeout(rollDice, 1000); 
@@ -1122,16 +1133,27 @@
             return `<div class="number-display">${value === 0 ? '?' : value}</div>`;
         }
 
+        function getTavernAbilityMaxUses(abilityId) {
+            return abilityId === 'constellationBlur' ? 2 : 1;
+        }
+
+        function getTavernAbilityUseCount(abilityId) {
+            if (!tavernRun || !tavernRun.abilityUsed) return 0;
+            const used = tavernRun.abilityUsed[abilityId];
+            if (used === true) return 1;
+            return Number(used || 0);
+        }
+
         function isTavernAbilityReady(abilityId) {
             const dueRound = tavernRun ? (tavernRun.abilityRound || 1) : 1;
             const currentRound = tavernRun ? (tavernRun.encounterRound || 1) : 1;
-            return currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy && tavernRun.enemy.ability === abilityId && currentRound >= dueRound && !(tavernRun.abilityUsed && tavernRun.abilityUsed[abilityId]);
+            return currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy && tavernRun.enemy.ability === abilityId && currentRound >= dueRound && getTavernAbilityUseCount(abilityId) < getTavernAbilityMaxUses(abilityId);
         }
 
         function useTavernAbility(abilityId, message, color = "#ffb74d") {
             if (!isTavernAbilityReady(abilityId)) return false;
             tavernRun.abilityUsed = tavernRun.abilityUsed || {};
-            tavernRun.abilityUsed[abilityId] = true;
+            tavernRun.abilityUsed[abilityId] = getTavernAbilityUseCount(abilityId) + 1;
             socket.emit('useEnemyAbility', abilityId);
             showSignatureSplash(tavernRun.enemy.name, abilityNames[abilityId], message);
             updateTavernCrawlPanel();
@@ -1249,10 +1271,12 @@
             }, (suspenseType !== 'none') ? 2000 : 500); 
         }
         
-        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore) {
+        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore, targetScore = null) {
             const active = activeDice.slice().sort((a, b) => b.value - a.value);
             let toLock = [];
             const enemyId = (currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy) ? tavernRun.enemy.id : 'molar';
+            const hasTarget = Number.isFinite(targetScore) && targetScore > 0;
+            const isHelpfulScoringDie = (die) => !hasTarget || currentScore >= targetScore || currentScore + die.value >= targetScore || active.length === 1;
             const lockDie = (die) => {
                 if (!die || toLock.includes(die.id)) return false;
                 toLock.push(die.id);
@@ -1274,6 +1298,7 @@
             if (hasTwo && hasFour) {
                 active.forEach(d => {
                     if (toLock.includes(d.id)) return;
+                    if (!isHelpfulScoringDie(d)) return;
                     if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
                     else if (enemyId === 'rokr' && (d.value === 6 || (d.value === 5 && currentScore <= 17 && active.length <= 2))) lockDie(d);
                     else if (enemyId === 'hangman' && ((currentScore < 18 && d.value >= 4) || (currentScore >= 18 && d.value >= 5))) lockDie(d);
@@ -1284,7 +1309,8 @@
                 lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
             }
 
-            if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
+            if (toLock.length === 0 && active.length === 1) lockDie(active[0]);
+            else if (toLock.length === 0 && active.length > 0 && (!hasTwo || !hasFour)) lockDie(active[0]);
             return toLock;
         }
 
@@ -1300,7 +1326,9 @@
                 else botScore += d.value;
             });
 
-            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore);
+            let humanId = latestGameState ? Object.keys(latestGameState.players || {}).find(id => id !== 'BOT_MOLAR') : null;
+            let humanScore = humanId && latestGameState.players[humanId] && latestGameState.players[humanId].score !== null && !latestGameState.players[humanId].busted ? latestGameState.players[humanId].score : null;
+            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore, humanScore);
 
             toLock.forEach((id, index) => {
                 setTimeout(() => {
