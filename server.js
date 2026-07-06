@@ -163,18 +163,29 @@ function canUseTavernAbility(room, encounter, abilityId) {
 
 function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
     let message;
+    let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
+    let dustNames = lifeLosers
+        .map(id => room.players[id] ? room.players[id].name : 'A player');
+    let safeNames = activeIds
+        .filter(id => !lifeLosers.includes(id))
+        .map(id => room.players[id] ? room.players[id].name : 'A player');
+    let resultLines = [
+        dustNames.length ? `Dust: ${dustNames.join(', ')}` : null,
+        safeNames.length ? `Safe: ${safeNames.join(', ')}` : null
+    ].filter(Boolean).join('\n');
+
     if (lifeLosers.length > 0) {
         let names = lifeLosers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
             .join(', ');
-        message = `${names} lost ${lifeLosers.length === 1 ? 'a life' : 'lives'}.\nThe round is over.`;
+        message = `${resultLines}\n${names} lost ${lifeLosers.length === 1 ? 'a life' : 'lives'}.\nThe round is over.`;
     } else if (tiedPlayers.length > 1) {
         let names = tiedPlayers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
             .join(' and ');
-        message = `${names} tied.\nNo lives lost.`;
+        message = `${resultLines}\n${names} tied.\nNo lives lost.`;
     } else {
-        message = `Safe for another round.\nNo lives lost.`;
+        message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
     }
     io.to(roomCode).emit('roundResult', { message });
 }
