@@ -977,16 +977,16 @@
         function renderAvatarAsset(avatarString, className = "avatar-token") {
             const fallbackAvatar = (avatarString || '👤').replace(/'/g, '');
             const imageTag = (src, alt) => `<img src="${src}" class="${className}" alt="${alt}" onerror="this.outerHTML='<span style=&quot;font-size: 1.8rem&quot;>${fallbackAvatar}</span>'">`;
-            if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('themolar.png', 'The Molar');
+            if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('Molar.png', 'The Molar');
             if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('klarg.png', 'Klarg');
-            if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('rokr.png', 'Rokr');
-            if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('hangman.png', 'The Hangman');
-            if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('jaguar.png', 'Jaguar Cantona');
+            if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('Rokr.png', 'Rokr');
+            if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('The Hangman.png', 'The Hangman');
+            if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('Jaguar.png', 'Jaguar Cantona');
             if (avatarString === '🛡️') return `<img src="paladin.png" class="${className}" alt="Paladin">`;
             if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
             if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
             if (avatarString === '🪕') return `<img src="bard.png" class="${className}" alt="Bard">`;
-            if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return `<img src="themolar.png" class="${className}" alt="The Molar">`;
+            if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return imageTag('Molar.png', 'The Molar');
             return `<span style="font-size: 1.8rem">${avatarString || '👤'}</span>`;
         }
 
