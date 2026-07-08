@@ -170,8 +170,8 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
         .filter(id => !lifeLosers.includes(id))
         .map(id => room.players[id] ? room.players[id].name : 'A player');
     let resultLines = [
-        dustNames.length ? `Dust: ${dustNames.join(', ')}` : null,
-        safeNames.length ? `Safe: ${safeNames.join(', ')}` : null
+        dustNames.length ? `Dust: ${dustNames.join(', ')}.` : null,
+        safeNames.length ? `Safe: ${safeNames.join(', ')}.` : null
     ].filter(Boolean).join('\n');
 
     if (lifeLosers.length > 0) {
