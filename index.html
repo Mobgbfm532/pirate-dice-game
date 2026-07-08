@@ -821,10 +821,12 @@
             <h2 style="color: #5d4037; font-size: 2.2rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
             
             <div class="avatar-picker" id="avatar-container">
-                <div class="avatar-option selected" onclick="selectAvatar(this, '🛡️')"><img src="paladin.png" alt="Paladin"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🧙‍♂️')"><img src="dicewizard.png" alt="Wizard"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🗡️')"><img src="rapier.png" alt="Rogue"></div>
-                <div class="avatar-option" onclick="selectAvatar(this, '🪕')"><img src="bard.png" alt="Bard"></div>
+                <div class="avatar-option selected" data-avatar="Devil" onclick="selectAvatar(this, 'Devil')"><img src="Devil.png" alt="Devil"></div>
+                <div class="avatar-option" data-avatar="Vaelin" onclick="selectAvatar(this, 'Vaelin')"><img src="vaelin.png" alt="Vaelin"></div>
+                <div class="avatar-option" data-avatar="Rokr" onclick="selectAvatar(this, 'Rokr')"><img src="Rokr.png" alt="Rokr"></div>
+                <div class="avatar-option" data-avatar="The Hangman" onclick="selectAvatar(this, 'The Hangman')"><img src="The Hangman.png" alt="The Hangman"></div>
+                <div class="avatar-option" data-avatar="Klarg" onclick="selectAvatar(this, 'Klarg')"><img src="Klarg.png" alt="Klarg"></div>
+                <div class="avatar-option" data-avatar="Jaguar Cantona" onclick="selectAvatar(this, 'Jaguar Cantona')"><img src="Jaguar.png" alt="Jaguar"></div>
             </div>
 
             <div class="input-group">
@@ -924,7 +926,7 @@
         let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         
         let myId = null, isMyTurn = false, isBotTurn = false, lastTurnId = null, isFirstLoad = true; 
-        let myAvatar = '🛡️'; 
+        let myAvatar = 'Devil'; 
         let myRoom = 'PUBLIC';
         let myStartingLives = 3;
         let currentActiveId = null;
@@ -976,12 +978,14 @@
         // Dynamic helper to turn emoji codes into premium asset image markup
         function renderAvatarAsset(avatarString, className = "avatar-token") {
             const fallbackAvatar = (avatarString || '👤').replace(/'/g, '');
-            const imageTag = (src, alt) => `<img src="${src}" class="${className}" alt="${alt}" onerror="this.outerHTML='<span style=&quot;font-size: 1.8rem&quot;>${fallbackAvatar}</span>'">`;
-            if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('Molar.png', 'The Molar');
-            if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('klarg.png', 'Klarg');
-            if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('Rokr.png', 'Rokr');
-            if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('The Hangman.png', 'The Hangman');
-            if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('Jaguar.png', 'Jaguar Cantona');
+            const imageTag = (src, alt, fallbackSrc = '') => `<img src="${src}" class="${className}" alt="${alt}" data-fallback-src="${fallbackSrc}" onerror="if(this.dataset.fallbackSrc){this.src=this.dataset.fallbackSrc;this.dataset.fallbackSrc='';}else{this.outerHTML='<span style=&quot;font-size: 1.8rem&quot;>${fallbackAvatar}</span>';}">`;
+            if (avatarString === 'Devil') return imageTag('Devil.png', 'Devil');
+            if (avatarString === 'Vaelin') return imageTag('vaelin.png', 'Vaelin');
+            if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('Molar.png', 'The Molar', 'themolar.png');
+            if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('Klarg.png', 'Klarg', 'klarg.png');
+            if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('Rokr.png', 'Rokr', 'rokr.png');
+            if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('The Hangman.png', 'The Hangman', 'hangman.png');
+            if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('Jaguar.png', 'Jaguar Cantona', 'jaguar.png');
             if (avatarString === '🛡️') return `<img src="paladin.png" class="${className}" alt="Paladin">`;
             if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
             if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
@@ -1094,14 +1098,11 @@
         if (savedRoom) roomInput.value = savedRoom;
         
         if (savedAvatar) {
-            myAvatar = ['🛡️', '🧙‍♂️', '🗡️', '🪕'].includes(savedAvatar) ? savedAvatar : '🛡️';
-            document.querySelectorAll('.avatar-option').forEach(el => {
-                const img = el.querySelector('img');
-                if (img && img.getAttribute('src').replace('.png', '') === (myAvatar === '🛡️' ? 'paladin' : myAvatar === '🧙‍♂️' ? 'dicewizard' : myAvatar === '🗡️' ? 'rapier' : 'bard')) {
-                    document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
-                    el.classList.add('selected');
-                }
-            });
+            const avatarChoices = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+            myAvatar = avatarChoices.includes(savedAvatar) ? savedAvatar : 'Devil';
+            document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
+            const savedAvatarOption = document.querySelector(`.avatar-option[data-avatar="${myAvatar}"]`);
+            if (savedAvatarOption) savedAvatarOption.classList.add('selected');
         }
         
         if (savedLives && [2,3,4].includes(parseInt(savedLives))) {
@@ -1307,6 +1308,16 @@
             });
         }
 
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
         const scoreDisplay = document.getElementById('score-display'); 
         function broadcastAnnouncement(text, color, altText = null) {
             if (currentMode === 'tavern-crawl') {
@@ -1334,9 +1345,8 @@
 
         socket.on('roundResult', (data) => {
             let lines = String(data.message || '').split('\n');
-            let title = lines[0] || 'Round Result';
-            let detail = lines.slice(1).join(' ') || '';
-            showSignatureSplash('Round Result', title, detail, 'result-splash');
+            let detail = lines.filter(Boolean).map(escapeHTML).join('<br>');
+            showSignatureSplash('Round Result', 'Round Result', detail, 'result-splash');
         });
 
         function sendReaction(emoji) {
