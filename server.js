@@ -1,843 +1,1909 @@
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-const path = require('path'); 
-
-app.use(express.static(__dirname));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-let rooms = {};
-
-const TAVERN_ENCOUNTERS = [
-    {
-        id: 'molar',
-        name: 'The Molar',
-        avatar: '🦷',
-        lives: 2,
-        ability: null,
-        intro: 'The Molar slides into the seat and teaches you the house game: find a 2, find a 4, then chase 24.'
-    },
-    {
-        id: 'klarg',
-        name: 'Klarg',
-        avatar: '🐻',
-        lives: 3,
-        ability: 'reachAround',
-        intro: 'Klarg, bugbear paladin of questionable table manners, may steal one active die with Reach Around.'
-    },
-    {
-        id: 'rokr',
-        name: 'Rokr',
-        avatar: '✨',
-        lives: 3,
-        ability: 'constellationBlur',
-        intro: 'Rokr reads the dice in the stars. Once per match, constellations can blur your active dice.'
-    },
-    {
-        id: 'hangman',
-        name: 'The Hangman',
-        avatar: '🤠',
-        lives: 3,
-        ability: 'deadeye24',
-        intro: 'The Hangman keeps one round in the chamber. Once per match, a strong hand can become a perfect 24.'
-    },
-    {
-        id: 'jaguar',
-        name: 'Jaguar Cantona',
-        avatar: '😎',
-        lives: 4,
-        ability: 'smoothTalk',
-        intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Once per match, Smooth Talk worsens your finished score.'
-    }
-];
-
-const TAVERN_KEEPSAKES = [
-    {
-        id: 'bentCopper',
-        name: 'Shield',
-        text: 'Once per encounter, the first life you would lose is ignored.'
-    },
-    {
-        id: 'blessedTankard',
-        name: "Brodor's Sunglasses",
-        text: 'A perfect 24 restores one extra life.'
-    },
-    {
-        id: 'luckySeat',
-        name: 'Trap Card',
-        text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
-    },
-    {
-        id: 'velvetCushion',
-        name: 'Velvet Cushion',
-        text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.'
-    },
-    {
-        id: 'steadyHand',
-        name: 'Steady Hand Wrap',
-        text: 'Once per encounter, if you dust, it becomes a score of 0 instead of a dust result.'
-    }
-];
-
-function getRoomState(roomCode) {
-    let room = rooms[roomCode];
-    if (!room) return {};
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2, 4, 24</title>
     
-    return {
-        players: room.players,
-        playerOrder: room.playerOrder,
-        roundPlayers: room.roundPlayers,
-        currentTurnId: room.roundPlayers[room.currentTurnIndex], 
-        isTieBreaker: room.isTieBreaker,
-        roundNumber: room.roundNumber,
-        startingLives: room.startingLives,
-        mode: room.mode || 'classic',
-        tavernRun: getTavernRunState(room)
-    };
-}
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3e2723">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-function getTavernRunState(room) {
-    if (!room || room.mode !== 'tavern-crawl') return null;
-    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-    return {
-        encounterNumber: room.tavernRun.encounterIndex + 1,
-        totalEncounters: TAVERN_ENCOUNTERS.length,
-        enemy: encounter,
-        keepsakes: room.tavernRun.keepsakes,
-        pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
-        abilityUsed: room.tavernRun.abilityUsed,
-        abilityRound: room.tavernRun.abilityRound,
-        encounterRound: room.tavernRun.encounterRound,
-        encounterKeepsakeUses: room.tavernRun.encounterKeepsakeUses,
-        stats: room.tavernRun.stats,
-        runComplete: room.tavernRun.runComplete
-    };
-}
-
-function hasKeepsake(room, keepsakeId) {
-    return room.mode === 'tavern-crawl' && room.tavernRun.keepsakes.some(k => k.id === keepsakeId);
-}
-
-function getKeepsake(room, keepsakeId) {
-    if (!room || room.mode !== 'tavern-crawl') return null;
-    return room.tavernRun.keepsakes.find(k => k.id === keepsakeId) || TAVERN_KEEPSAKES.find(k => k.id === keepsakeId) || null;
-}
-
-function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
-    let keepsake = getKeepsake(room, keepsakeId);
-    if (!keepsake) return;
-    if (room && room.mode === 'tavern-crawl' && room.tavernRun.stats) {
-        room.tavernRun.stats.keepsakesActivated++;
-        room.tavernRun.encounterKeepsakeUses = room.tavernRun.encounterKeepsakeUses || {};
-        room.tavernRun.encounterKeepsakeUses[keepsakeId] = true;
-    }
-    io.to(roomCode).emit('keepsakeActivated', {
-        id: keepsakeId,
-        name: keepsake.name,
-        text: text || keepsake.text
-    });
-}
-
-function getAbilityMaxUses(abilityId) {
-    return abilityId === 'constellationBlur' ? 2 : 1;
-}
-
-function getAbilityUseCount(room, abilityId) {
-    let used = room.tavernRun.abilityUsed[abilityId];
-    if (used === true) return 1;
-    return Number(used || 0);
-}
-
-function markAbilityUsed(room, abilityId) {
-    room.tavernRun.abilityUsed[abilityId] = getAbilityUseCount(room, abilityId) + 1;
-}
-
-function canUseTavernAbility(room, encounter, abilityId) {
-    let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < getAbilityMaxUses(abilityId);
-}
-
-function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
-    let message;
-    let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
-    let dustNames = lifeLosers
-        .map(id => room.players[id] ? room.players[id].name : 'A player');
-    let safeNames = activeIds
-        .filter(id => !lifeLosers.includes(id))
-        .map(id => room.players[id] ? room.players[id].name : 'A player');
-    let resultLines = [
-        dustNames.length ? `Dust: ${dustNames.join(', ')}.` : null,
-        safeNames.length ? `Safe: ${safeNames.join(', ')}.` : null
-    ].filter(Boolean).join('\n');
-
-    if (lifeLosers.length > 0) {
-        let names = lifeLosers
-            .map(id => room.players[id] ? room.players[id].name : 'A player')
-            .join(', ');
-        message = `${resultLines}\n${names} lost ${lifeLosers.length === 1 ? 'a life' : 'lives'}.\nThe round is over.`;
-    } else if (tiedPlayers.length > 1) {
-        let names = tiedPlayers
-            .map(id => room.players[id] ? room.players[id].name : 'A player')
-            .join(' and ');
-        message = `${resultLines}\n${names} tied.\nNo lives lost.`;
-    } else {
-        message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
-    }
-    io.to(roomCode).emit('roundResult', { message });
-}
-
-function getHumanPlayerId(room) {
-    return room.playerOrder.find(id => id !== 'BOT_MOLAR' && room.players[id]);
-}
-
-function createTavernRun() {
-    return {
-        encounterIndex: 0,
-        keepsakes: [],
-        pendingKeepsakeChoices: null,
-        abilityUsed: {},
-        abilityRound: 1,
-        encounterRound: 1,
-        encounterKeepsakeUses: {},
-        stats: {
-            encountersDefeated: 0,
-            livesLost: 0,
-            keepsakesActivated: 0,
-            perfect24s: 0
-        },
-        started: false,
-        runComplete: false
-    };
-}
-
-function getRandomAbilityRound(encounter) {
-    if (!encounter || !encounter.ability) return 0;
-    return Math.floor(Math.random() * 3) + 1;
-}
-
-function getTavernScoreSummary(room, completedRun = false) {
-    let stats = room.tavernRun.stats;
-    let progressGold = 0;
-    for (let i = 0; i < stats.encountersDefeated; i++) {
-        progressGold += (i + 1) * 100;
-    }
-    if (!completedRun && stats.encountersDefeated < TAVERN_ENCOUNTERS.length) {
-        progressGold += (stats.encountersDefeated + 1) * 25;
-    }
-    let lifeBonus = Math.max(0, (stats.encountersDefeated * 3 - stats.livesLost) * 25);
-    let restraintBonus = Math.max(0, 150 - stats.keepsakesActivated * 25);
-    let perfectBonus = stats.perfect24s * 75;
-    let totalGold = progressGold + lifeBonus + restraintBonus + perfectBonus;
-
-    return {
-        totalGold,
-        lines: [
-            `Gold earned: ${totalGold}`,
-            `Progress: ${progressGold}`,
-            `Lives spared bonus: ${lifeBonus}`,
-            `Keepsake restraint bonus: ${restraintBonus}`,
-            `Perfect 24 bonus: ${perfectBonus}`
-        ]
-    };
-}
-
-function pickKeepsakeChoices(room) {
-    let owned = new Set(room.tavernRun.keepsakes.map(k => k.id));
-    let pool = TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
-    for (let i = pool.length - 1; i > 0; i--) {
-        let j = Math.floor(Math.random() * (i + 1));
-        [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    return pool.slice(0, 3);
-}
-
-function resetTavernEncounter(roomCode, keepHumanLives = true) {
-    let room = rooms[roomCode];
-    if (!room || room.mode !== 'tavern-crawl') return;
-    room.startingLives = 3;
-
-    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-    let humanId = getHumanPlayerId(room);
-    room.players['BOT_MOLAR'] = {
-        id: 'BOT_MOLAR',
-        token: 'BOT_TOKEN',
-        name: encounter.name,
-        avatar: encounter.avatar,
-        lives: encounter.lives,
-        score: null,
-        busted: false,
-        connected: true
-    };
-
-    if (humanId && room.players[humanId]) {
-        room.players[humanId].lives = room.startingLives;
-        room.players[humanId].score = null;
-        room.players[humanId].busted = false;
-        room.playerOrder = [humanId, 'BOT_MOLAR'];
-        room.roundPlayers = [humanId, 'BOT_MOLAR'];
-    } else {
-        room.playerOrder = ['BOT_MOLAR'];
-        room.roundPlayers = ['BOT_MOLAR'];
-    }
-
-    room.currentTurnIndex = 0;
-    room.isTieBreaker = false;
-    room.dealerIndex = 0;
-    room.tavernRun.pendingKeepsakeChoices = null;
-    room.tavernRun.abilityUsed = {};
-    room.tavernRun.encounterRound = 1;
-    room.tavernRun.abilityRound = getRandomAbilityRound(encounter);
-    room.tavernRun.encounterKeepsakeUses = {};
-    room.tavernRun.started = true;
-}
-
-function evaluateRound(roomCode) {
-    let room = rooms[roomCode];
-    if (!room) return;
-
-    if (room.mode === 'tavern-crawl') {
-        evaluateTavernRound(roomCode);
-        return;
-    }
-
-    let losersThisRound = [];
-    let tiedPlayers = [];
-
-    let busted = room.roundPlayers.filter(id => room.players[id] && room.players[id].busted);
-    busted.forEach(id => {
-        room.players[id].lives -= 1;
-        losersThisRound.push({ id, reason: 'Dust!' });
-    });
-
-    let valid = room.roundPlayers.filter(id => room.players[id] && !room.players[id].busted);
-    if (valid.length > 1) {
-        let minScore = Math.min(...valid.map(id => room.players[id].score));
-        let lowest = valid.filter(id => room.players[id].score === minScore);
-
-        if (lowest.length === 1) {
-            room.players[lowest[0]].lives -= 1;
-            losersThisRound.push({ id: lowest[0], reason: 'You had the lowest score!' });
-        } else if (lowest.length > 1) {
-            tiedPlayers = lowest;
+    <style>
+        :root {
+            --text-light: #fdf6e3; --text-dark: #3e2723;
+            --dice-bone: #fffaee; --pip-red: #b71c1c; --pip-green: #2e7d32; --pip-black: #212121;
+            --parchment-bg: linear-gradient(to bottom right, #fdf6e3, #e6d5aa);
+            --parchment-shadow: inset 0 0 40px rgba(139, 69, 19, 0.15), 5px 5px 15px rgba(0,0,0,0.6);
+            --parchment-border: 1px solid #cda434;
         }
-    }
 
-    emitRoundLifeResult(roomCode, room, losersThisRound.map(l => l.id), tiedPlayers);
+        body {
+            background-color: #1a1210;
+            background-image: url('Background.png'); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: 'Almendra', serif; color: var(--text-light);
+            margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; overflow-x: hidden;
+        }
 
-    let humanLost = losersThisRound.some(l => l.id !== 'BOT_MOLAR');
-    if (room.players['BOT_MOLAR'] && humanLost) {
-        setTimeout(() => {
-            for(let i=0; i<3; i++) {
-                setTimeout(() => {
-                    io.to(roomCode).emit('receiveReaction', { name: "The Molar", emoji: "😉" });
-                }, i * 300);
+        .firelight-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 120%, rgba(255, 140, 0, 0.15), transparent 70%); pointer-events: none; z-index: 500; animation: flicker 4s infinite alternate; }
+        @keyframes flicker { 0%, 100% { opacity: 1; transform: scale(1); } 25% { opacity: 0.8; transform: scale(1.02); } 50% { opacity: 0.95; transform: scale(0.98); } 75% { opacity: 0.85; transform: scale(1.01); } }
+        .ember { position: fixed; bottom: -10px; width: 4px; height: 4px; background: #ffb300; border-radius: 50%; box-shadow: 0 0 8px 2px rgba(255, 160, 0, 0.8); pointer-events: none; z-index: 499; animation: floatEmber linear forwards; }
+        @keyframes floatEmber { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100vh) scale(0); opacity: 0; } }
+
+        #game-page { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; width: 100%; max-width: 1200px; margin-top: 20px; z-index: 10; }
+        
+        #game-area { 
+            background-color: #3e2723; 
+            background-image: url('Table2.png'); 
+            background-size: 100% 100%; 
+            background-position: center; 
+            border: 6px double #1a0f0d; 
+            border-radius: 14px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 0 80px rgba(0,0,0,0.85); 
+            padding: 70px 25px 25px 25px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center; 
+            position: relative; 
+            z-index: 10; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        
+        .area-title { 
+            margin-top: 15px; 
+            margin-bottom: 8px; 
+            font-size: 1.9rem; 
+            font-weight: 700;
+            letter-spacing: 3px; 
+            text-transform: uppercase; 
+            color: #ffb74d; 
+            text-shadow: 
+                -1px -1px 0 #1a0f0d,  
+                 1px -1px 0 #1a0f0d,
+                -1px  1px 0 #1a0f0d,
+                 1px  1px 0 #1a0f0d,
+                 2px  3px 5px rgba(0, 0, 0, 0.9),
+                 0px  0px 12px rgba(255, 140, 0, 0.4); 
+            transition: text-shadow 0.3s ease;
+        }
+        
+        #turn-indicator { 
+            color: #fff3e0; 
+            font-size: 2.2rem; 
+            text-shadow: 
+                -1px -1px 0 #000,  
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 3px  5px 8px rgba(0, 0, 0, 0.95),
+                 0px  0px 20px rgba(174, 213, 129, 0.3); 
+            margin-top: 5px; 
+            margin-bottom: 20px; 
+            letter-spacing: 1px;
+        }
+
+        #score-display { height: 35px; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); }
+
+        #locked-area { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 15px; 
+            min-height: 120px; 
+            background: transparent; 
+            box-shadow: none;
+            padding: 15px 15px 30px 15px; 
+            margin-bottom: 10px; 
+            border: none;
+            border-bottom: 2px dashed rgba(240, 235, 220, 0.35); 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        
+        #required-dice { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 10px; 
+            padding-right: 15px; 
+            border-right: 2px dashed rgba(240, 235, 220, 0.3); 
+            min-height: 80px; 
+        }
+        #remaining-locked { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; min-height: 80px; }
+        
+        #active-area { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 15px; 
+            min-height: 120px; 
+            background: transparent; 
+            box-shadow: none;
+            padding: 20px 15px 15px 15px; 
+            margin-bottom: 20px; 
+            border: none;
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+
+        .die { 
+            width: 80px; 
+            height: 80px; 
+            background: radial-gradient(circle at 35% 35%, #fffaee 0%, #ebdcb9 60%, #cebe97 100%);
+            border: 1px solid #dfd7c2;
+            border-radius: 12px; 
+            box-shadow: 
+                inset 2px 2px 4px rgba(255, 255, 255, 0.9),  
+                inset -4px -4px 8px rgba(0, 0, 0, 0.2),       
+                4px 8px 16px rgba(0, 0, 0, 0.65);            
+            cursor: pointer; 
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease; 
+            user-select: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            color: var(--pip-black); 
+            box-sizing: border-box; 
+        }
+        
+        .die:hover { 
+            transform: translateY(-8px) rotate(4deg); 
+            box-shadow: 
+                inset 2px 2px 4px rgba(255, 255, 255, 0.9),
+                inset -4px -4px 8px rgba(0, 0, 0, 0.2),
+                8px 16px 24px rgba(0, 0, 0, 0.75); 
+            border-color: #ffcc80; 
+        }
+        
+        .die.lockedThisTurn {
+            transform: translateY(2px) !important; 
+            box-shadow: 
+                0 0 0 4px #ffb74d, 
+                inset 1px 1px 3px rgba(0, 0, 0, 0.4), 
+                2px 3px 6px rgba(0, 0, 0, 0.8) !important;
+            border-color: #ffb74d !important;
+        }
+
+        .molar-tooth { 
+            border-radius: 16px 16px 45px 45px !important; 
+            background: radial-gradient(circle at 35% 35%, #ffffff 0%, #eaeaea 55%, #c5c5c5 100%) !important; 
+            box-shadow: 
+                inset 2px 2px 4px rgba(255, 255, 255, 0.9),
+                inset -3px -7px 12px rgba(0, 0, 0, 0.25), 
+                4px 8px 16px rgba(0, 0, 0, 0.65) !important; 
+            border-bottom: 4px solid #b0a4a0 !important; 
+        }
+        
+        .molar-tooth.lockedThisTurn { 
+            transform: translateY(2px) !important;
+            box-shadow: 
+                0 0 0 4px #4caf50, 
+                inset 1px 2px 4px rgba(0, 0, 0, 0.4),
+                2px 3px 6px rgba(0, 0, 0, 0.8) !important; 
+        }
+
+        .number-display { 
+            width: 100%; 
+            text-align: center; 
+            font-size: 3.5rem; 
+            font-weight: 900;
+            text-shadow: 
+                -1px -1px 1px rgba(0, 0, 0, 0.8),    
+                 1px  1px 1px rgba(255, 255, 255, 0.7); 
+        }
+        
+        .die[data-value="1"] { color: var(--pip-red); } .die[data-value="6"] { color: var(--pip-green); }
+
+        @keyframes tumble { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-40px) rotate(72deg) scale(1.1); } 40% { transform: translateY(-60px) rotate(144deg) scale(1.15); } 60% { transform: translateY(-20px) rotate(216deg) scale(1.1); } 80% { transform: translateY(-5px) rotate(288deg) scale(1.05); } 90% { transform: translateY(-10px) rotate(320deg) scale(1.02); } 100% { transform: translateY(0) rotate(360deg) scale(1); } }
+        .rolling { animation: tumble 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes tumble-suspense { 0% { transform: translateY(0) rotate(0deg) scale(1); } 20% { transform: translateY(-80px) rotate(144deg) scale(1.2); } 40% { transform: translateY(-100px) rotate(288deg) scale(1.25); } 60% { transform: translateY(-40px) rotate(576deg) scale(1.15); } 80% { transform: translateY(-10px) rotate(720deg) scale(1.05); } 90% { transform: translateY(-15px) rotate(760deg) scale(1.02); } 100% { transform: translateY(0) rotate(1080deg) scale(1); } }
+        .rolling-suspense { animation: tumble-suspense 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes screen-shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
+        .shake-screen { animation: screen-shake 0.3s infinite; }
+
+        #controls { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        
+        button { 
+            padding: 12px 25px; 
+            font-size: 1.3rem; 
+            font-family: 'Almendra', serif; 
+            font-weight: 700;
+            background: linear-gradient(to bottom, #5d4037 0%, #4e342e 40%, #3e2723 100%); 
+            color: #ffcc80; 
+            border: 2px solid #271612; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.1s ease; 
+            box-shadow: 0 6px 0 #271612, 0 8px 16px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.15); 
+            text-shadow: -1px -1px 0 rgba(0,0,0,0.7), 1px 1px 0 rgba(255,255,255,0.1); 
+        }
+        button:hover { 
+            background: linear-gradient(to bottom, #6d4c41 0%, #5d4037 40%, #4e342e 100%); 
+            color: #ffe0b2;
+            transform: translateY(1px);
+            box-shadow: 0 5px 0 #271612, 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.2);
+        }
+        button:active { 
+            transform: translateY(6px); 
+            box-shadow: 0 0px 0 #271612, 0 2px 4px rgba(0,0,0,0.8); 
+        }
+        button:disabled { 
+            background: #2d1f1c; 
+            color: #7d665f; 
+            cursor: not-allowed; 
+            transform: none !important; 
+            box-shadow: 0 4px 0 #1a0f0d, 0 4px 8px rgba(0,0,0,0.5) !important; 
+            border-color: #1a0f0d; 
+            text-shadow: none;
+        }
+        
+        #roll-btn {
+            background: linear-gradient(to bottom, #b71c1c 0%, #880e4f 100%);
+            color: #ffffff;
+            border-color: #4a0007;
+            box-shadow: 0 6px 0 #4a0007, 0 8px 16px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3);
+        }
+        #roll-btn:hover {
+            background: linear-gradient(to bottom, #d32f2f 0%, #ad1457 100%);
+            box-shadow: 0 5px 0 #4a0007, 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4);
+        }
+        #roll-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 #4a0007, 0 2px 4px rgba(0,0,0,0.8);
+        }
+        #roll-btn:disabled {
+            background: #4e342e; color: #9e9e9e; border-color: #3e2723;
+            box-shadow: 0 4px 0 #271612, 0 4px 8px rgba(0,0,0,0.5) !important;
+        }
+
+        #play-again-btn, #join-game-btn { 
+            background: linear-gradient(to bottom, #2e7d32 0%, #1b5e20 100%) !important; 
+            color: #fff !important; 
+            border-color: #0d230d !important; 
+            box-shadow: 0 6px 0 #0d230d, 0 8px 16px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3) !important;
+        }
+        #play-again-btn:hover, #join-game-btn:hover { 
+            background: linear-gradient(to bottom, #388e3c 0%, #2e7d32 100%) !important; 
+            box-shadow: 0 5px 0 #0d230d, 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4) !important;
+        }
+        #play-again-btn:active, #join-game-btn:active {
+            transform: translateY(6px) !important;
+            box-shadow: 0 0px 0 #0d230d, 0 2px 4px rgba(0,0,0,0.8) !important;
+        }
+
+        #install-app-btn { background: linear-gradient(to bottom, #1565c0, #0d47a1); display: none; margin-top: 15px; width: 100%; border-color: #0d47a1; color: #fff; }
+        #install-app-btn:hover { background: linear-gradient(to bottom, #1976d2, #1565c0); }
+
+        #sidebar { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 20px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text-dark); z-index: 10; position: relative; width: 100%; box-sizing: border-box; }
+        #sidebar .area-title { color: #8d6e63; text-shadow: none; border-bottom: 2px solid #a1887f; padding-bottom: 5px; margin-bottom: 15px; width: 100%; }
+        #scoreboard { width: 100%; display: grid; gap: 15px; align-items: start; transition: font-size 0.3s; }
+        #tavern-crawl-panel { display: none; width: 100%; margin-top: 18px; padding-top: 15px; border-top: 2px solid #a1887f; text-align: left; }
+        .crawl-title { margin: 0 0 8px 0; color: #5d4037; font-size: 1.25rem; text-align: center; }
+        .crawl-line { margin: 6px 0; font-size: 1rem; color: #4e342e; }
+        .keepsake-list { margin-top: 8px; display: grid; gap: 6px; }
+        .keepsake-pill { padding: 7px 9px; background: rgba(93, 64, 55, 0.1); border: 1px solid rgba(93, 64, 55, 0.28); border-radius: 4px; font-size: 0.95rem; }
+        .keepsake-pill.used { opacity: 0.58; border-style: dashed; background: rgba(93, 64, 55, 0.05); }
+        .keepsake-used-label { float: right; color: #7b1d1d; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+        .choice-btn { display: block; width: 100%; margin: 10px 0; text-align: left; font-size: 1.05rem; }
+        .choice-btn small { display: block; margin-top: 4px; color: #ffe0b2; font-size: 0.85rem; line-height: 1.25; }
+        .mode-note { color: #8d6e63; font-size: 0.95rem; margin-top: -5px; margin-bottom: 12px; }
+        .die.blurred .number-display { color: transparent; text-shadow: 0 0 12px #4fc3f7, 0 0 18px #fff3e0; }
+        
+        #sidebar h2:has(#current-score-span) {
+            font-size: 4.5rem !important;
+            font-weight: 700;
+            color: #8e1c1c !important;
+            letter-spacing: -1px;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.6), 2px 3px 4px rgba(0,0,0,0.3) !important;
+        }
+
+        .player-stat { width: 100%; text-align: center; padding: 10px 0; border-bottom: 1px dashed #bcaaa4; transition: opacity 0.3s; }
+
+        body.tavern-mode {
+            background-color: #120b08;
+            background-image:
+                radial-gradient(circle at 12% 16%, rgba(255, 184, 92, 0.2), transparent 18rem),
+                radial-gradient(circle at 88% 12%, rgba(255, 122, 48, 0.14), transparent 20rem),
+                linear-gradient(rgba(18, 9, 6, 0.25), rgba(18, 9, 6, 0.65)),
+                url('Background.png');
+        }
+
+        body.tavern-mode #game-page {
+            max-width: 1280px;
+            grid-template-columns: minmax(0, 2.35fr) minmax(280px, 0.9fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        body.tavern-mode #game-area {
+            overflow: hidden;
+            min-height: 690px;
+            padding: 86px 34px 30px 34px;
+            border: 10px solid #1b0d08;
+            border-radius: 18px;
+            background-image:
+                radial-gradient(ellipse at center, rgba(255, 192, 111, 0.18), rgba(38, 17, 9, 0.12) 42%, rgba(12, 6, 4, 0.72) 100%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 112px),
+                url('Table2.png');
+            background-size: cover, auto, 100% 100%;
+            box-shadow:
+                0 30px 70px rgba(0,0,0,0.95),
+                inset 0 0 0 8px rgba(89, 43, 22, 0.75),
+                inset 0 0 80px rgba(0,0,0,0.82);
+        }
+
+        body.tavern-mode #game-area::before {
+            content: "";
+            position: absolute;
+            inset: 18px;
+            border: 2px solid rgba(255, 204, 128, 0.18);
+            border-radius: 10px;
+            box-shadow: inset 0 0 22px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+
+        body.tavern-mode #game-area::after {
+            content: "";
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            top: 54%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 224, 178, 0.22), transparent);
+            box-shadow: 0 56px 0 rgba(255, 224, 178, 0.1);
+            pointer-events: none;
+        }
+
+        body.tavern-mode #room-indicator {
+            top: 18px;
+            right: 28px;
+            color: #e8c98c;
+            background: rgba(25, 11, 7, 0.72);
+            border: 1px solid rgba(255, 204, 128, 0.22);
+            border-radius: 4px;
+            padding: 5px 10px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.45);
+        }
+
+        body.tavern-mode #turn-indicator {
+            position: relative;
+            z-index: 1;
+            align-self: stretch;
+            margin: 0 auto 18px auto;
+            padding: 12px 18px;
+            max-width: 620px;
+            border: 1px solid rgba(255, 204, 128, 0.24);
+            border-radius: 4px;
+            background: linear-gradient(90deg, transparent, rgba(54, 24, 14, 0.78), transparent);
+            color: #ffe6b7;
+            font-size: 2rem;
+        }
+
+        body.tavern-mode .area-title {
+            position: relative;
+            z-index: 1;
+            color: #f4c266;
+            font-size: 1.35rem;
+            letter-spacing: 4px;
+        }
+
+        body.tavern-mode #locked-area,
+        body.tavern-mode #active-area {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 760px);
+            border-radius: 999px;
+            background:
+                radial-gradient(ellipse at center, rgba(29, 12, 7, 0.24), rgba(0,0,0,0.08) 58%, transparent 72%);
+        }
+
+        body.tavern-mode #locked-area {
+            min-height: 138px;
+            border-bottom: 1px solid rgba(255, 224, 178, 0.2);
+            box-shadow: 0 16px 28px rgba(0,0,0,0.18);
+        }
+
+        body.tavern-mode #active-area {
+            min-height: 154px;
+            margin-top: 6px;
+            margin-bottom: 24px;
+        }
+
+        body.tavern-mode .die {
+            border-radius: 10px;
+            border: 2px solid rgba(94, 62, 31, 0.55);
+            box-shadow:
+                inset 3px 3px 4px rgba(255,255,255,0.9),
+                inset -5px -6px 10px rgba(63,38,16,0.26),
+                0 14px 20px rgba(0,0,0,0.68);
+        }
+
+        body.tavern-mode .die.lockedThisTurn {
+            box-shadow:
+                0 0 0 4px rgba(255, 183, 77, 0.95),
+                0 0 22px rgba(255, 183, 77, 0.55),
+                inset 1px 1px 3px rgba(0,0,0,0.35),
+                0 8px 16px rgba(0,0,0,0.74) !important;
+        }
+
+        body.tavern-mode #controls {
+            position: relative;
+            z-index: 1;
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: rgba(18, 8, 5, 0.46);
+            border: 1px solid rgba(255, 204, 128, 0.16);
+        }
+
+        body.tavern-mode #sidebar {
+            border: 2px solid #8f6a34;
+            border-radius: 8px;
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.26), transparent 16rem),
+                linear-gradient(145deg, #f4e1b3, #d4b77a 58%, #b98d4c);
+            box-shadow:
+                0 24px 42px rgba(0,0,0,0.72),
+                inset 0 0 0 5px rgba(90, 54, 23, 0.18),
+                inset 0 0 55px rgba(80, 39, 13, 0.22);
+        }
+
+        body.tavern-mode #sidebar::before {
+            content: "";
+            position: absolute;
+            inset: 9px;
+            border: 1px dashed rgba(76, 42, 19, 0.34);
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        body.tavern-mode #sidebar .area-title,
+        body.tavern-mode .crawl-title {
+            color: #4b2b18;
+            border-bottom: 1px solid rgba(86, 51, 26, 0.35);
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.45);
+        }
+
+        body.tavern-mode #scoreboard {
+            gap: 10px;
+        }
+
+        body.tavern-mode .player-stat {
+            position: relative;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            text-align: left;
+            min-height: 86px;
+            padding: 10px;
+            border: 1px solid rgba(78, 46, 24, 0.28);
+            border-radius: 6px;
+            background:
+                linear-gradient(135deg, rgba(255, 248, 225, 0.8), rgba(173, 123, 60, 0.18)),
+                rgba(255, 248, 225, 0.55);
+            box-shadow: inset 0 0 18px rgba(92, 56, 24, 0.12);
+        }
+
+        body.tavern-mode .player-stat.active-player {
+            border-color: rgba(142, 28, 28, 0.62);
+            box-shadow: 0 0 0 2px rgba(183, 28, 28, 0.12), inset 0 0 20px rgba(183, 28, 28, 0.1);
+        }
+
+        body.tavern-mode .player-stat.enemy-card {
+            background:
+                linear-gradient(135deg, rgba(43, 19, 12, 0.12), rgba(255, 222, 145, 0.56)),
+                rgba(255, 248, 225, 0.72);
+        }
+
+        body.tavern-mode .player-stat .avatar-token {
+            width: 58px;
+            height: 58px;
+            margin: 0;
+            padding: 5px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #fff8dc, #bb8842);
+            border: 2px solid rgba(75, 43, 24, 0.4);
+        }
+
+        .player-card-copy strong {
+            display: block;
+            font-size: 1.12rem;
+            color: #3e2415;
+        }
+
+        .score-chip {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(62, 39, 35, 0.12);
+            color: #6d1b16;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        body.tavern-mode #tavern-crawl-panel {
+            border-top: 1px solid rgba(86, 51, 26, 0.35);
+        }
+
+        body.tavern-mode .crawl-line {
+            color: #402414;
+            line-height: 1.25;
+        }
+
+        body.tavern-mode .keepsake-list {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        body.tavern-mode .keepsake-pill {
+            position: relative;
+            min-height: 54px;
+            padding: 9px 10px 9px 50px;
+            border: 1px solid rgba(87, 51, 25, 0.36);
+            border-radius: 6px;
+            background:
+                linear-gradient(135deg, rgba(255, 248, 225, 0.86), rgba(176, 120, 52, 0.16));
+            box-shadow: inset 0 0 14px rgba(89, 54, 24, 0.12);
+        }
+
+        body.tavern-mode .keepsake-icon {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            width: 29px;
+            height: 29px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #5d3320;
+            color: #ffe0a3;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 2px 5px rgba(0,0,0,0.28);
+            font-size: 1rem;
+        }
+
+        body.tavern-mode .keepsake-pill.used::after {
+            content: "USED";
+            position: absolute;
+            right: 8px;
+            bottom: 7px;
+            padding: 1px 6px;
+            border: 1px solid rgba(123, 29, 29, 0.42);
+            color: #7b1d1d;
+            transform: rotate(-5deg);
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+        }
+
+        /* Themed SVG Reaction Button Bar Styles */
+        #reaction-bar { display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%; margin-top: 20px; padding-top: 15px; border-top: 2px solid #a1887f; gap: 5px;}
+        .react-btn { padding: 4px; background: transparent; border: none; box-shadow: none; cursor: pointer; transition: transform 0.2s; margin: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; }
+        .react-btn svg { width: 100%; height: 100%; fill: #5d4037; filter: drop-shadow(0px 1px 1px rgba(255,255,255,0.6)); transition: fill 0.2s; }
+        .react-btn:hover { transform: scale(1.25); background: transparent; box-shadow: none; }
+        .react-btn:hover svg { fill: #b71c1c; }
+        
+        /* Immersive High-Fidelity Floating Reaction Bubbles */
+        .floating-reaction { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(43, 24, 20, 0.95); color: #fdf6e3; padding: 10px 20px; border-radius: 8px; font-size: 1.2rem; z-index: 9999; pointer-events: none; animation: floatUp 3s ease-out forwards; box-shadow: 0 8px 24px rgba(0,0,0,0.7); border: 2px solid #cda434; display: flex; align-items: center; gap: 12px; font-family: 'Almendra', serif; white-space: nowrap;}
+        .floating-reaction img { width: 28px; height: 28px; object-fit: contain; }
+        .floating-reaction svg { width: 24px; height: 24px; fill: #ffcc80; }
+        @keyframes floatUp { 0% { bottom: 50px; opacity: 0; transform: translateX(-50%) scale(0.5); } 10% { opacity: 1; transform: translateX(-50%) scale(1.1); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { bottom: 250px; opacity: 0; transform: translateX(-50%) scale(1); } }
+
+        /* Premium Fantasy Character Token Assets */
+        .avatar-token { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); margin-bottom: 4px; }
+        .splash-token { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(4px 8px 15px rgba(0,0,0,0.7)); margin-bottom: 10px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
+        .modal-box { background: var(--parchment-bg); box-shadow: var(--parchment-shadow); border: var(--parchment-border); padding: 30px; border-radius: 4px; text-align: center; width: 100%; max-width: 450px; animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); color: var(--text-dark); box-sizing: border-box;}
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        #name-modal { display: flex; z-index: 2000; } 
+        .input-group { margin-bottom: 15px; text-align: center; width: 100%;}
+        .styled-input { padding: 12px; font-size: 1.2rem; font-family: 'Almendra', serif; background: #fff8e1; color: #3e2723; border: 1px solid #8d6e63; border-radius: 4px; width: 90%; text-align: center; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; }
+        .styled-input::placeholder { color: #bcaaa4; }
+        
+        .lives-picker { display: flex; justify-content: space-around; background: transparent; border: none; padding: 5px; width: 90%; margin: 0 auto; box-sizing: border-box; }
+        .lives-option { cursor: pointer; transition: all 0.2s; opacity: 0.5; user-select: none; padding: 5px 10px; font-size: 1.2rem; letter-spacing: -2px; border-radius: 8px; border: 2px solid transparent; }
+        .lives-option:hover { transform: scale(1.1); opacity: 0.8; }
+        .lives-option.selected { transform: scale(1.1); opacity: 1; border: 2px solid #cda434; background: rgba(205, 164, 52, 0.1); box-shadow: 0 0 8px rgba(205, 164, 52, 0.5); }
+        .lives-label { color: #8d6e63; margin-bottom: 5px; font-size: 1.1rem; font-weight: bold;}
+
+        /* Premium Token Selection Grid UI Layout */
+        .avatar-picker { display: flex; justify-content: space-around; margin-bottom: 25px; flex-wrap: wrap; gap: 12px;}
+        .avatar-option { cursor: pointer; transition: transform 0.2s, filter 0.2s; filter: grayscale(85%) opacity(0.4); user-select: none; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; }
+        .avatar-option img { width: 100%; height: 100%; object-fit: contain; }
+        .avatar-option:hover { transform: scale(1.15); filter: grayscale(0%) opacity(1); }
+        .avatar-option.selected { transform: scale(1.25); filter: grayscale(0%) opacity(1); filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.9)); }
+
+        #splash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 3000; display: none; justify-content: center; align-items: center; pointer-events: none; }
+        #splash-text { color: #ffcc80; font-size: 5rem; text-shadow: 3px 3px 15px #000; font-family: 'Almendra', serif; transform: scale(0); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; display: flex; flex-direction: column; align-items: center; }
+        body.tavern-mode #splash-overlay { background: radial-gradient(circle, rgba(30, 12, 6, 0.52), rgba(0,0,0,0.86)); }
+        body.tavern-mode #splash-text.signature-splash,
+        body.tavern-mode #splash-text.result-splash {
+            min-width: min(640px, 86vw);
+            max-width: 86vw;
+            padding: 26px 34px;
+            border: 2px solid #cda434;
+            border-radius: 8px;
+            background:
+                linear-gradient(145deg, rgba(253, 246, 227, 0.96), rgba(206, 168, 94, 0.94)),
+                var(--parchment-bg);
+            color: #4a2817;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.62);
+            box-shadow: 0 24px 70px rgba(0,0,0,0.86), inset 0 0 42px rgba(109, 59, 21, 0.2);
+        }
+        body.tavern-mode #splash-text.signature-splash span:first-child,
+        body.tavern-mode #splash-text.result-splash span:first-child {
+            color: #7b1d1d !important;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        body.tavern-mode #splash-text.signature-splash span:nth-child(2),
+        body.tavern-mode #splash-text.result-splash span:nth-child(2) {
+            color: #2f1a0f;
+            line-height: 0.98;
+        }
+        body.tavern-mode #splash-text.signature-splash span:last-child,
+        body.tavern-mode #splash-text.result-splash span:last-child {
+            color: #543018 !important;
+            line-height: 1.25;
+            max-width: 540px;
+        }
+        body.tavern-mode #splash-text.turn-splash {
+            color: #ffe0a3;
+            text-shadow: 0 0 16px #000, 2px 4px 10px rgba(0,0,0,0.9);
+        }
+
+        #tie-breaker-banner { display: none; color: #e57373; font-size: 1.4rem; letter-spacing: 1px; text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 15px rgba(0,0,0,0.9); text-align: center; margin-top: -10px; margin-bottom: 15px; animation: textFlicker 1.5s infinite alternate; }
+        @keyframes textFlicker { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0.8; transform: scale(0.98); } }
+        
+        #room-indicator { position: absolute; top: 10px; right: 15px; color: rgba(255,255,255,0.4); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 2px #000; }
+
+        #devil-effect-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 0, 0, 0.95); z-index: 4000; justify-content: center; align-items: center; flex-direction: column; animation: explodeIn 0.5s ease-out forwards; }
+        @keyframes explodeIn { 0% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.05); box-shadow: inset 0 0 150px 50px #ff0000; } 100% { opacity: 1; transform: scale(1); box-shadow: inset 0 0 80px 20px #ff0000; } }
+        .devil-text { color: #ff0000; font-size: 4rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 20px #ff5500, 0 0 40px #ff0000, 4px 4px 0 #000; margin-bottom: 20px; animation: shake-violent 0.4s infinite; text-align: center; padding: 0 10px; }
+        @keyframes shake-violent { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-2px, -3px) rotate(-2deg); } 50% { transform: translate(4px, 1px) rotate(2deg); } 75% { transform: translate(-3px, 2px) rotate(-1deg); } }
+        #devil-image { max-width: 90%; max-height: 50%; border: 4px solid #ff0000; box-shadow: 0 0 30px #ff0000; border-radius: 8px; }
+
+        @media screen and (max-width: 900px) {
+            body { padding: 5px; }
+            #game-page { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 5px; }
+            #game-area { padding: 60px 10px 15px 10px; border-width: 2px; width: 100%; box-sizing: border-box; }
+            #sidebar { padding: 10px; width: 100%; box-sizing: border-box; }
+            
+            #locked-area, #active-area { 
+                gap: 6px; 
+                min-height: 65px; 
+                padding: 8px; 
+                margin-bottom: 8px; 
+                width: 100%; 
+                box-sizing: border-box; 
+                background: transparent;
+                box-shadow: none;
+                border-top: none; border-left: none; border-right: none;
             }
-        }, 1000); 
-    }
+            #locked-area { border-bottom: 2px dashed rgba(240, 235, 220, 0.35); }
+            #required-dice { padding-right: 8px; gap: 6px; border-right: 2px dashed rgba(240, 235, 220, 0.3); }
+            #remaining-locked { gap: 6px; }
 
-    room.roundPlayers.forEach(id => {
-        if (room.players[id]) {
-            room.players[id].score = null;
-            room.players[id].busted = false;
+            .die { 
+                width: 45px; 
+                height: 45px; 
+                padding: 4px; 
+                border-radius: 8px; 
+                box-shadow: 
+                    inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.2),
+                    2px 4px 8px rgba(0, 0, 0, 0.65); 
+            }
+            .die:hover { 
+                transform: translateY(-4px) rotate(2deg); 
+                box-shadow: 
+                    inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.2),
+                    4px 8px 12px rgba(0, 0, 0, 0.75);
+            }
+            .die.lockedThisTurn {
+                transform: translateY(1px) !important;
+                box-shadow: 
+                    0 0 0 3px #ffb74d, 
+                    inset 1px 1px 2px rgba(0, 0, 0, 0.4), 
+                    1px 2px 4px rgba(0, 0, 0, 0.8) !important;
+            }
+            .molar-tooth.lockedThisTurn {
+                box-shadow: 
+                    0 0 0 3px #4caf50, 
+                    inset 1px 1px 2px rgba(0, 0, 0, 0.4), 
+                    1px 2px 4px rgba(0, 0, 0, 0.8) !important;
+            }
+            .number-display { font-size: 1.8rem; }
+            
+            .area-title { font-size: 1.2rem; margin-top: 5px; margin-bottom: 2px;}
+            #turn-indicator { font-size: 1.3rem !important; margin-bottom: 5px; margin-top: 0; }
+            #score-display { font-size: 1.1rem; height: 24px; margin-bottom: 2px;}
+            
+            #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 20px;}
+            
+            button {
+                font-size: 1rem; padding: 8px 12px; margin: 2px;
+                box-shadow: 0 3px 0 #271612, 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.15);
+            }
+            button:hover {
+                box-shadow: 0 2px 0 #271612, 0 3px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+                transform: translateY(1px);
+            }
+            button:active {
+                transform: translateY(3px);
+                box-shadow: 0 0px 0 #271612, 0 1px 2px rgba(0,0,0,0.8);
+            }
+            button:disabled {
+                transform: none !important;
+                box-shadow: 0 2px 0 #1a0f0d, 0 2px 4px rgba(0,0,0,0.5) !important;
+            }
+            #roll-btn {
+                box-shadow: 0 3px 0 #4a0007, 0 4px 8px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3);
+            }
+            #roll-btn:hover {
+                box-shadow: 0 2px 0 #4a0007, 0 3px 6px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4);
+            }
+            #roll-btn:active {
+                transform: translateY(3px);
+                box-shadow: 0 0px 0 #4a0007, 0 1px 2px rgba(0,0,0,0.8);
+            }
+            #roll-btn:disabled {
+                box-shadow: 0 2px 0 #271612, 0 2px 4px rgba(0,0,0,0.5) !important;
+            }
+            #play-again-btn, #join-game-btn {
+                box-shadow: 0 3px 0 #0d230d, 0 4px 8px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.3) !important;
+            }
+            #play-again-btn:hover, #join-game-btn:hover {
+                box-shadow: 0 2px 0 #0d230d, 0 3px 6px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.4) !important;
+            }
+            #play-again-btn:active, #join-game-btn:active {
+                transform: translateY(3px) !important;
+                box-shadow: 0 0px 0 #0d230d, 1px 2px rgba(0,0,0,0.8) !important;
+            }
+            
+            #sidebar .area-title { margin-bottom: 5px; }
+            #scoreboard { grid-template-columns: 1fr 1fr !important; gap: 8px; width: 100%; }
+            .player-stat { padding: 5px 0; }
+            body.tavern-mode #game-area { min-height: auto; padding: 62px 10px 15px 10px; border-width: 4px; }
+            body.tavern-mode #game-area::before { inset: 8px; }
+            body.tavern-mode #turn-indicator { max-width: none; padding: 8px 10px; }
+            body.tavern-mode #locked-area, body.tavern-mode #active-area { width: 100%; border-radius: 14px; }
+            body.tavern-mode .player-stat { grid-template-columns: auto 1fr; min-height: 70px; padding: 7px; }
+            body.tavern-mode .player-stat .avatar-token { width: 44px; height: 44px; }
+            body.tavern-mode #splash-text.signature-splash,
+            body.tavern-mode #splash-text.result-splash { padding: 20px 18px; }
+            
+            #reaction-bar { margin-top: 10px; padding-top: 10px; width: 100%; }
+            .react-btn { font-size: 1.5rem; padding: 2px; }
+            
+            #splash-text { font-size: 3.5rem; }
+            .devil-text { font-size: 2.5rem; }
         }
-    });
 
-    let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
-    if (survivors.length <= 1) {
-        let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
-        // Fixed: Ensure the final UI state is synced before ending the game
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
-        room.roundPlayers = []; 
-    } else if (tiedPlayers.length > 1) {
-        room.isTieBreaker = true;
-        room.roundNumber++; 
-        room.roundPlayers = tiedPlayers;
-        room.currentTurnIndex = 0;
+        @media screen and (max-width: 400px) {
+            .die { width: 40px; height: 40px; padding: 3px; }
+            .number-display { font-size: 1.6rem; }
+            #scoreboard { grid-template-columns: 1fr !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="devil-effect-container">
+        <h1 class="devil-text">The Devil's titties!</h1>
+        <img id="devil-image" src="666.jpg" alt="666">
+    </div>
+
+    <div class="firelight-overlay"></div>
+
+    <div id="name-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2 style="color: #5d4037; font-size: 2.2rem; margin-top: 0; border-bottom: 2px solid #8d6e63; padding-bottom: 10px;">Pull Up a Chair</h2>
+            
+            <div class="avatar-picker" id="avatar-container">
+                <div class="avatar-option selected" data-avatar="Devil" onclick="selectAvatar(this, 'Devil')"><img src="Devil.png" alt="Devil"></div>
+                <div class="avatar-option" data-avatar="Vaelin" onclick="selectAvatar(this, 'Vaelin')"><img src="vaelin.png" alt="Vaelin"></div>
+                <div class="avatar-option" data-avatar="Rokr" onclick="selectAvatar(this, 'Rokr')"><img src="Rokr.png" alt="Rokr"></div>
+                <div class="avatar-option" data-avatar="The Hangman" onclick="selectAvatar(this, 'The Hangman')"><img src="The Hangman.png" alt="The Hangman"></div>
+                <div class="avatar-option" data-avatar="Klarg" onclick="selectAvatar(this, 'Klarg')"><img src="klarg.png" alt="Klarg"></div>
+                <div class="avatar-option" data-avatar="Jaguar Cantona" onclick="selectAvatar(this, 'Jaguar Cantona')"><img src="Jaguar.png" alt="Jaguar"></div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="name-input" class="styled-input" placeholder="Adventurer Name" maxlength="15">
+            </div>
+            <div class="input-group">
+                <input type="text" id="room-input" class="styled-input" placeholder="Table Code" maxlength="10" style="text-transform: uppercase;">
+            </div>
+            <div class="mode-note">Type TAVERN to challenge the House Table.</div>
+            
+            <div class="input-group" id="lives-group">
+                <div class="lives-label">How many lives? (Host)</div>
+                <div class="lives-picker" id="lives-container">
+                    <div class="lives-option" onclick="selectLives(this, 2)">❤️❤️</div>
+                    <div class="lives-option selected" onclick="selectLives(this, 3)">❤️❤️❤️</div>
+                    <div class="lives-option" onclick="selectLives(this, 4)">❤️❤️❤️❤️</div>
+                </div>
+            </div>
+            
+            <button id="join-game-btn">Enter Tavern</button>
+            <button id="install-app-btn">📲 Install App</button>
+        </div>
+    </div>
+
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="custom-modal-text" style="color: var(--text-dark); margin-bottom: 30px; font-size: 1.5rem; white-space: pre-line;"></div>
+            <div id="custom-modal-actions"></div>
+            <button id="custom-modal-btn">Continue</button>
+        </div>
+    </div>
+
+    <div id="splash-overlay"><h1 id="splash-text">Player's Turn!</h1></div>
+
+    <div id="game-page">
+        <div id="game-area"> 
+            <div id="room-indicator">Tavern: <span id="room-code-display">...</span></div>
+            
+            <h3 id="turn-indicator">Connecting to Tavern...</h3>
+            <h2 id="tie-breaker-banner">⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️<br><span style="font-size: 1.1rem; color: #ffcc80;">You are spectating</span></h2>
+            
+            <h2 class="area-title">Locked Dice</h2>
+            <div id="locked-area"><div id="required-dice"></div><div id="remaining-locked"></div></div>
+            
+            <h2 class="area-title">Active Dice</h2>
+            <div id="active-area"></div>
+            
+            <h3 id="score-display"></h3> 
+            
+            <div id="controls">
+                <button id="roll-btn">Roll Dice</button>
+                <button id="play-again-btn">Play Again</button>
+                <button id="mute-btn">🎵 Mute Tavern</button>
+            </div>
+        </div>
         
-        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-            room.currentTurnIndex++;
+        <div id="sidebar"> 
+            <h2 class="area-title">Turn Score</h2>
+            <h2 style="margin: 0; color: #b71c1c; font-size: 4rem; text-shadow: 1px 1px 2px rgba(255,255,255,0.5); border-bottom: 2px solid #a1887f; width: 100%; text-align: center; padding-bottom: 10px; margin-bottom: 20px;"><span id="current-score-span">0</span></h2>
+            
+            <h2 class="area-title" id="players-heading">Adventurers</h2>
+            <div id="scoreboard"></div> 
+
+            <div id="tavern-crawl-panel">
+                <h3 class="crawl-title">House Table</h3>
+                <div class="crawl-line" id="crawl-progress"></div>
+                <div class="crawl-line" id="crawl-enemy"></div>
+                <div class="crawl-line" id="crawl-ability"></div>
+                <h3 class="crawl-title">Keepsakes</h3>
+                <div class="keepsake-list" id="crawl-keepsakes"></div>
+            </div>
+
+            <div id="reaction-bar">
+                <button class="react-btn" onclick="sendReaction('😀')" title="Smile">😀</button>
+                <button class="react-btn" onclick="sendReaction('😂')" title="Laugh">😂</button>
+                <button class="react-btn" onclick="sendReaction('😮')" title="Gasp">😮</button>
+                <button class="react-btn" onclick="sendReaction('😎')" title="Cool">😎</button>
+                <button class="react-btn" onclick="sendReaction('😭')" title="Cry">😭</button>
+                <button class="react-btn" onclick="sendReaction('🧔 Early Ross')" title="Early Ross">🧔</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        let sessionToken = sessionStorage.getItem('tavernToken');
+        if (!sessionToken) {
+            sessionToken = Math.random().toString(36).substring(2, 15);
+            sessionStorage.setItem('tavernToken', sessionToken);
         }
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
+        let dice = [];
+        let hasRolled = false, locksThisRoll = 0, rollCount = 0;
+        let isAnimating = false;
+        let suspenseType = 'none', inTrouble = false, turnFinalized = false;
         
-        if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
-    } else {
-        room.isTieBreaker = false;
-        room.roundNumber++; 
+        let myId = null, isMyTurn = false, isBotTurn = false, lastTurnId = null, isFirstLoad = true; 
+        let myAvatar = 'Devil'; 
+        let myRoom = 'PUBLIC';
+        let myStartingLives = 3;
+        let currentActiveId = null;
+        let currentMode = 'classic';
+        let latestGameState = null;
+        let tavernRun = null;
+        let rokrBlurActive = false;
+        let klargStolenThisTurn = false;
+
+        const turnIndicator = document.getElementById('turn-indicator');
+        const scoreboard = document.getElementById('scoreboard');
+        const tieBanner = document.getElementById('tie-breaker-banner');
+        const roomCodeDisplay = document.getElementById('room-code-display');
+        const playersHeading = document.getElementById('players-heading');
+        const playAgainBtn = document.getElementById('play-again-btn'); 
+        const reactionBar = document.getElementById('reaction-bar');
+        const tavernCrawlPanel = document.getElementById('tavern-crawl-panel');
+        const crawlProgress = document.getElementById('crawl-progress');
+        const crawlEnemy = document.getElementById('crawl-enemy');
+        const crawlAbility = document.getElementById('crawl-ability');
+        const crawlKeepsakes = document.getElementById('crawl-keepsakes');
+
+        const abilityNames = {
+            reachAround: 'Reach Around',
+            constellationBlur: 'Constellation Blur',
+            deadeye24: 'Deadeye 24',
+            smoothTalk: 'Smooth Talk'
+        };
+
+        const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
+        const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
+        const sfxWin = new Audio('win.mp3'); sfxWin.volume = 0.6;
+        const sfxBust = new Audio('bust.mp3'); sfxBust.volume = 0.6;
+        const sfxAww = new Audio('Aww.mp3'); sfxAww.volume = 0.6;
+        const sfxYay = new Audio('yay.mp3'); sfxYay.volume = 0.6;
+        const sfxOhWell = new Audio('ohwell.mp3'); sfxOhWell.volume = 0.6;
+        const sfxSwoosh = new Audio('Swoosh.mp3'); sfxSwoosh.volume = 0.6;
+        const sfxReachAround = new Audio('Reach Around.mp3'); sfxReachAround.volume = 0.75;
+        const sfxConstellation = new Audio('Constellation.mp3'); sfxConstellation.volume = 0.75;
+        const sfxGunshot = new Audio('Gunshot.mp3'); sfxGunshot.volume = 0.85;
+        const sfxWinner = new Audio('Winner.mp3'); sfxWinner.volume = 0.75;
         
-        if (room.playerOrder.length > 0) {
-            room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
+        const sfxDevilsTeets = new Audio('DevilsTeets.wav'); 
+        sfxDevilsTeets.preload = 'auto'; 
+        sfxDevilsTeets.volume = 0.6;
+        
+        const bgm = new Audio('BackgroundMusic.mp3'); bgm.loop = true; bgm.volume = 0.4;
+        const sfxAmbience = new Audio('Ambience.mp3'); sfxAmbience.loop = true; sfxAmbience.volume = 0.5;
+
+        // Dynamic helper to turn emoji codes into premium asset image markup
+        function renderAvatarAsset(avatarString, className = "avatar-token") {
+            const fallbackAvatar = (avatarString || '👤').replace(/'/g, '');
+            const imageTag = (src, alt, fallbackSrc = '') => `<img src="${src}" class="${className}" alt="${alt}" data-fallback-src="${fallbackSrc}" onerror="if(this.dataset.fallbackSrc){this.src=this.dataset.fallbackSrc;this.dataset.fallbackSrc='';}else{this.outerHTML='<span style=&quot;font-size: 1.8rem&quot;>${fallbackAvatar}</span>';}">`;
+            if (avatarString === 'Devil') return imageTag('Devil.png', 'Devil');
+            if (avatarString === 'Vaelin') return imageTag('vaelin.png', 'Vaelin');
+            if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('Molar.png', 'The Molar', 'themolar.png');
+            if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('klarg.png', 'Klarg', 'Klarg.png');
+            if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('Rokr.png', 'Rokr', 'rokr.png');
+            if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('The Hangman.png', 'The Hangman', 'hangman.png');
+            if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('Jaguar.png', 'Jaguar Cantona', 'jaguar.png');
+            if (avatarString === '🛡️') return `<img src="paladin.png" class="${className}" alt="Paladin">`;
+            if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
+            if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
+            if (avatarString === '🪕') return `<img src="bard.png" class="${className}" alt="Bard">`;
+            if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return imageTag('Molar.png', 'The Molar');
+            return `<span style="font-size: 1.8rem">${avatarString || '👤'}</span>`;
         }
-        
-        room.roundPlayers = [];
-        for (let i = 0; i < room.playerOrder.length; i++) {
-            let idx = (room.dealerIndex + i) % room.playerOrder.length;
-            let playerId = room.playerOrder[idx];
-            if (room.players[playerId] && room.players[playerId].lives > 0) {
-                room.roundPlayers.push(playerId);
+
+        function getKeepsakeIcon(keepsakeId) {
+            const icons = {
+                bentCopper: '🛡',
+                blessedTankard: '◉',
+                luckySeat: '✦',
+                velvetCushion: '◆',
+                steadyHand: '✋'
+            };
+            return icons[keepsakeId] || '✧';
+        }
+
+        // Helper map to turn reaction triggers into high-fidelity inline SVGs
+        function getReactionSVG(type) {
+            if (type === 'shield') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M256 22.25L52.88 77.84v166.46c0 128.47 88.08 214.28 203.12 245.45 115.04-31.17 203.12-116.98 203.12-245.45V77.84zm0 37.15l166 45.46v139.44c0 109-72.33 182-166 209.68-93.67-27.68-166-100.68-166-209.68V104.86z"/></svg>`;
+            if (type === 'swords') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M441.9 22.12c-12 0-23.7 4.7-32.3 13.3l-90.8 90.8-43.2-12.3-51.5 51.5 54.3 22.3-157 157-36.9-11 11.2 35.2-15.3 15.3-33-9.5-22.3 22.3 46.2 19 19 46.2 22.3-22.3-9.5-33 15.3-15.3 35.2 11.2-11-36.9 157-157 22.3 54.3 51.5-51.5-12.3-43.2 90.8-90.8c17.3-17.3 17.3-45.5 0-62.8-8.7-8.6-20.4-13.3-32.4-13.3z"/></svg>`;
+            if (type === 'mug') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M128 32v32h224V32zm32 64v320h192V96zm224 32v192h48c26.5 0 48-21.5 48-48v-96c0-26.5-21.5-48-48-48zm-256 32h128v32H128zm0 96h128v32H128zm0 96h128v32H128z"/></svg>`;
+            if (type === 'hood') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M256 26.63c-94.8 0-176.1 63.34-203.4 150.37L32 245.3l37.2 11.7 5.5-17.3C100.8 159.2 172.5 102.6 256 102.6s155.2 56.6 181.3 137.1l5.5 17.3 37.2-11.7-20.6-68.3C432.1 89.97 350.8 26.63 256 26.63zm0 112c-61.8 0-112 50.2-112 112v128c0 35.3 28.7 64 64 64h96c35.3 0 64-28.7 64-64v-128c0-61.8-50.2-112-112-112z"/></svg>`;
+            if (type === 'skull') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M256 42c-83.4 0-150 66.6-150 150 0 55.4 33.3 111.4 78 136.1v49.9h144v-49.9c44.7-24.7 78-80.7 78-136.1 0-83.4-66.6-150-150-150zm-60 120c-16.6 0-30-13.4-30-30s13.4-30 30-30 30 13.4 30 30-13.4 30-30 30zm120 0c-16.6 0-30-13.4-30-30s13.4-30 30-30 30 13.4 30 30-13.4 30-30 30zm-90 150c-27.6 0-50-22.4-50-50h100c0 27.6-22.4 50-50 50z"/></svg>`;
+            return `<span>${type}</span>`;
+        }
+
+        function createEmber() {
+            const ember = document.createElement('div'); ember.className = 'ember';
+            ember.style.left = Math.random() * 100 + 'vw'; ember.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(ember); setTimeout(() => ember.remove(), 5000); 
+        }
+        setInterval(createEmber, 400); 
+
+        function playSound(audioEl) { 
+            audioEl.currentTime = 0; 
+            let playPromise = audioEl.play(); 
+            if (playPromise !== undefined) {
+                playPromise.catch(error => { console.warn("Audio play failed:", error); }); 
             }
         }
-        
-        room.currentTurnIndex = 0;
-        
-        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-            room.currentTurnIndex++;
+
+        const signatureSounds = {
+            'Reach Around': sfxReachAround,
+            'Constellation Blur': sfxConstellation,
+            'Deadeye 24': sfxGunshot
+        };
+
+        let splashQueue = [];
+        let splashShowing = false;
+
+        function queueSplash(renderSplash) {
+            splashQueue.push(renderSplash);
+            if (!splashShowing) playNextSplash();
         }
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        if(room.currentTurnIndex >= room.roundPlayers.length && room.roundPlayers.length > 0) evaluateRound(roomCode);
-    }
-}
-
-function evaluateTavernRound(roomCode) {
-    let room = rooms[roomCode];
-    if (!room) return;
-
-    let humanId = getHumanPlayerId(room);
-    let enemyId = 'BOT_MOLAR';
-    if (!humanId || !room.players[humanId] || !room.players[enemyId]) return;
-
-    let human = room.players[humanId];
-    let enemy = room.players[enemyId];
-    let losersThisRound = [];
-    let lifeLosersThisRound = [];
-    let tiedPlayers = [];
-    let protectedBySteadyHand = false;
-
-    if (human.busted && hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand) {
-        human.busted = false;
-        human.score = 0;
-        protectedBySteadyHand = true;
-        room.tavernRun.encounterKeepsakeUses.steadyHand = true;
-        emitKeepsakeActivated(roomCode, room, 'steadyHand', 'Steady Hand Wrap catches the dice. Dust becomes safe.');
-        io.to(roomCode).emit('displayMessage', { text: 'Steady Hand Wrap catches the dice. Dust becomes safe.', color: '#aed581' });
-    }
-
-    let roundPlayers = [humanId, enemyId].filter(id => room.players[id]);
-    let busted = roundPlayers.filter(id => room.players[id].busted);
-    busted.forEach(id => losersThisRound.push({ id, reason: 'Dust!' }));
-
-    let valid = roundPlayers.filter(id => !room.players[id].busted);
-    if (valid.length > 1) {
-        let minScore = Math.min(...valid.map(id => room.players[id].score));
-        let lowest = valid.filter(id => room.players[id].score === minScore);
-        if (lowest.length === 1) {
-            losersThisRound.push({ id: lowest[0], reason: 'Lowest score at the table.' });
-        } else {
-            tiedPlayers = lowest;
-        }
-    }
-
-    if (protectedBySteadyHand) {
-        losersThisRound = losersThisRound.filter(loser => loser.id !== humanId);
-    }
-
-    if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && human.score + 1 === enemy.score) {
-        room.tavernRun.encounterKeepsakeUses.velvetCushion = true;
-        losersThisRound = [];
-        tiedPlayers = [humanId, enemyId];
-        emitKeepsakeActivated(roomCode, room, 'velvetCushion', 'Velvet Cushion softens the loss into a tie.');
-        io.to(roomCode).emit('displayMessage', { text: 'Velvet Cushion softens the loss into a tie.', color: '#ffd54f' });
-    }
-
-    if (tiedPlayers.length > 1 && hasKeepsake(room, 'luckySeat') && !room.tavernRun.encounterKeepsakeUses.luckySeat) {
-        room.tavernRun.encounterKeepsakeUses.luckySeat = true;
-        tiedPlayers = [];
-        losersThisRound.push({ id: enemyId, reason: 'Trap Card breaks the tie your way.' });
-        emitKeepsakeActivated(roomCode, room, 'luckySeat', 'Trap Card breaks the tie your way.');
-        io.to(roomCode).emit('displayMessage', { text: 'Trap Card breaks the tie your way.', color: '#ffd54f' });
-    }
-
-    losersThisRound.forEach(loser => {
-        let player = room.players[loser.id];
-        if (!player) return;
-
-        if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
-            room.tavernRun.encounterKeepsakeUses.bentCopper = true;
-            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield catches the loss.');
-            return;
+        function playNextSplash() {
+            if (splashQueue.length === 0) {
+                splashShowing = false;
+                return;
+            }
+            splashShowing = true;
+            splashQueue.shift()(() => {
+                splashShowing = false;
+                playNextSplash();
+            });
         }
 
-        player.lives -= 1;
-        lifeLosersThisRound.push(loser.id);
-        if (loser.id === humanId && room.tavernRun.stats) room.tavernRun.stats.livesLost++;
-    });
-
-    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers);
-
-    roundPlayers.forEach(id => {
-        if (!room.players[id]) return;
-        room.players[id].score = null;
-        room.players[id].busted = false;
-    });
-
-    if (human.lives <= 0) {
-        let reached = room.tavernRun.encounterIndex + 1;
-        let scoreSummary = getTavernScoreSummary(room);
-        room.roundPlayers = [];
-        room.tavernRun.runComplete = true;
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?` });
-        return;
-    }
-
-    if (enemy.lives <= 0) {
-        if (room.tavernRun.stats) room.tavernRun.stats.encountersDefeated++;
-        room.tavernRun.encounterIndex++;
-        if (room.tavernRun.encounterIndex >= TAVERN_ENCOUNTERS.length) {
-            let scoreSummary = getTavernScoreSummary(room, true);
-            room.roundPlayers = [];
-            room.tavernRun.runComplete = true;
-            io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}` });
-            return;
+        function playRollSound() {
+            sfxRoll.currentTime = 0; sfxRoll.playbackRate = 0.85 + (Math.random() * 0.3); 
+            let playPromise = sfxRoll.play(); if (playPromise !== undefined) playPromise.catch(e => {});
         }
 
-        room.tavernRun.pendingKeepsakeChoices = pickKeepsakeChoices(room);
-        room.roundPlayers = [];
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('offerKeepsakes', {
-            defeated: enemy.name,
-            nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
-            transitionMessage: enemy.id === 'molar' ? 'Seething, The Molar leaves the table and you are invited to the high roller table' : null,
-            choices: room.tavernRun.pendingKeepsakeChoices
+        const muteBtn = document.getElementById('mute-btn');
+        let isMuted = false;
+        muteBtn.onclick = () => {
+            isMuted = !isMuted; bgm.muted = isMuted; sfxAmbience.muted = isMuted;
+            muteBtn.innerText = isMuted ? "🔇 Unmute Tavern" : "🎵 Mute Tavern";
+        };
+
+        function triggerGlobalMusic() {
+            if (bgm.paused) {
+                let p1 = bgm.play(); if (p1 !== undefined) p1.catch(e => {});
+                let p2 = sfxAmbience.play(); if (p2 !== undefined) p2.catch(e => {});
+                socket.emit('startGlobalMusic');
+            }
+        }
+
+        socket.on('playGlobalMusic', () => {
+            if (bgm.paused) {
+                let p1 = bgm.play(); if (p1 !== undefined) p1.catch(e => {});
+                let p2 = sfxAmbience.play(); if (p2 !== undefined) p2.catch(e => {});
+            }
         });
-        return;
-    }
 
-    room.roundNumber++;
-    room.tavernRun.encounterRound++;
-    room.isTieBreaker = tiedPlayers.length > 1;
-    room.roundPlayers = [humanId, enemyId];
-    room.currentTurnIndex = 0;
-    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-}
+        const nameModal = document.getElementById('name-modal');
+        const nameInput = document.getElementById('name-input');
+        const roomInput = document.getElementById('room-input');
+        const joinGameBtn = document.getElementById('join-game-btn');
+        const livesGroup = document.getElementById('lives-group');
 
-io.on('connection', (socket) => {
-    
-    socket.on('checkRoom', (roomCode) => {
-        let code = roomCode.trim().toUpperCase() || "PUBLIC";
-        let exists = rooms[code] ? true : false;
-        socket.emit('roomStatus', { exists: exists });
-    });
-
-    socket.on('joinTavern', (data) => {
-        let roomCode = data.roomCode.trim().toUpperCase();
-        if (roomCode === "") roomCode = "PUBLIC"; 
-        if (roomCode.length > 10) roomCode = roomCode.substring(0, 10);
+        const savedName = localStorage.getItem('tavernName');
+        const savedRoom = localStorage.getItem('tavernRoom');
+        const savedAvatar = localStorage.getItem('tavernAvatar');
+        const savedLives = localStorage.getItem('tavernLives');
         
-        socket.roomCode = roomCode;
-        socket.join(roomCode);
-
-        let requestedLives = parseInt(data.startingLives) || 3;
-        requestedLives = Math.max(1, Math.min(5, requestedLives));
-        if (roomCode.startsWith("TVRN")) requestedLives = 3;
-
-        if (!rooms[roomCode]) {
-            let isTavernCrawl = roomCode.startsWith("TVRN");
-            rooms[roomCode] = {
-                players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1,
-                startingLives: requestedLives,
-                mode: isTavernCrawl ? 'tavern-crawl' : 'classic',
-                tavernRun: isTavernCrawl ? createTavernRun() : null
-            };
-            
-            if (roomCode.startsWith("COMP")) {
-                rooms[roomCode].players['BOT_MOLAR'] = { 
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
-                };
-                rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
-            } else if (isTavernCrawl) {
-                rooms[roomCode].players['BOT_MOLAR'] = {
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
-                };
-                rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
-            }
+        if (savedName) nameInput.value = savedName;
+        if (savedRoom) roomInput.value = savedRoom;
+        
+        if (savedAvatar) {
+            const avatarChoices = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+            myAvatar = avatarChoices.includes(savedAvatar) ? savedAvatar : 'Devil';
+            document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
+            const savedAvatarOption = document.querySelector(`.avatar-option[data-avatar="${myAvatar}"]`);
+            if (savedAvatarOption) savedAvatarOption.classList.add('selected');
         }
         
-        let room = rooms[roomCode];
-        let finalName = data.name.trim();
-        if (finalName === "") finalName = "Mysterious Traveler";
-        if (finalName.length > 15) finalName = finalName.substring(0, 15);
-
-        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
-
-        if (existingPlayerId && existingPlayerId !== 'BOT_MOLAR') {
-            let p = room.players[existingPlayerId];
-            p.id = socket.id;
-            p.avatar = data.avatar;
-            p.name = finalName; 
-            p.connected = true;
-            
-            room.players[socket.id] = p;
-            
-            if (existingPlayerId !== socket.id) {
-                delete room.players[existingPlayerId];
-                let oldSocket = io.sockets.sockets.get(existingPlayerId);
-                if (oldSocket) oldSocket.disconnect(true);
-            }
-
-            room.playerOrder = room.playerOrder.map(id => id === existingPlayerId ? socket.id : id);
-            room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
-            
-        } else {
-            room.players[socket.id] = { 
-                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: room.startingLives, score: null, busted: false, connected: true 
-            };
-            room.playerOrder.push(socket.id);
-
-            if (!room.isTieBreaker) {
-                if (!room.roundPlayers.includes(socket.id)) room.roundPlayers.push(socket.id);
-            }
-        }
-
-        let humanPlayers = room.playerOrder.filter(id => id !== 'BOT_MOLAR' && room.players[id] && room.players[id].connected);
-        
-        if (room.roundPlayers.length === 0 && humanPlayers.length > 0) {
-            room.playerOrder.forEach(id => {
-                if (room.players[id]) {
-                    room.players[id].lives = room.startingLives; 
-                    room.players[id].score = null;
-                    room.players[id].busted = false;
+        if (savedLives && [2,3,4].includes(parseInt(savedLives))) {
+            myStartingLives = parseInt(savedLives);
+            document.querySelectorAll('.lives-option').forEach((el, index) => {
+                el.classList.remove('selected');
+                if (index + 2 === myStartingLives) {
+                    el.classList.add('selected');
                 }
             });
-            room.dealerIndex = 0; 
-            room.roundPlayers = room.playerOrder.filter(id => room.players[id].connected);
-            room.currentTurnIndex = 0;
-            room.isTieBreaker = false;
-            room.roundNumber = 1;
         }
 
-        if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== 'BOT_MOLAR') {
-            room.currentTurnIndex = 0;
-        }
-
-        if (room.mode === 'tavern-crawl' && !room.tavernRun.started) {
-            resetTavernEncounter(roomCode, false);
-        }
-
-        if (room.isMusicPlaying) socket.emit('playGlobalMusic');
-
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-    });
-
-    socket.on('playAgain', () => {
-        let room = rooms[socket.roomCode];
-        if (room && room.roundPlayers.length === 0) {
-            if (room.mode === 'tavern-crawl') {
-                room.playerOrder.forEach(id => {
-                    if (room.players[id]) {
-                        room.players[id].lives = room.startingLives;
-                        room.players[id].score = null;
-                        room.players[id].busted = false;
-                        room.players[id].connected = true;
-                    }
+        function updateLivesPickerForRoom(code, roomExists = false) {
+            if (code === 'TAVERN') {
+                livesGroup.style.display = 'none';
+                myStartingLives = 3;
+                document.querySelectorAll('.lives-option').forEach((el, index) => {
+                    el.classList.toggle('selected', index === 1);
                 });
-                room.tavernRun = createTavernRun();
-                room.roundNumber = 1;
-                resetTavernEncounter(socket.roomCode, false);
-                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-                io.to(socket.roomCode).emit('triggerNewGameSplash');
+                return;
+            }
+            livesGroup.style.display = roomExists ? 'none' : 'block';
+        }
+
+        roomInput.addEventListener('input', (e) => {
+            let code = e.target.value.trim().toUpperCase() || 'PUBLIC';
+            updateLivesPickerForRoom(code);
+            socket.emit('checkRoom', code);
+        });
+        
+        socket.emit('checkRoom', roomInput.value.trim().toUpperCase() || 'PUBLIC');
+
+        socket.on('roomStatus', (data) => {
+            let code = roomInput.value.trim().toUpperCase() || 'PUBLIC';
+            updateLivesPickerForRoom(code, data.exists);
+        });
+
+        function selectAvatar(element, icon) {
+            document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected'); myAvatar = icon; playSound(sfxClick);
+        }
+        
+        function selectLives(element, count) {
+            document.querySelectorAll('.lives-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected'); myStartingLives = count; playSound(sfxClick);
+        }
+
+        joinGameBtn.onclick = () => {
+            playSound(sfxClick); 
+            const chosenName = nameInput.value;
+            let chosenRoom = roomInput.value.trim().toUpperCase();
+            
+            if (chosenRoom === "COMP") {
+                chosenRoom = "COMP-" + Math.floor(1000 + Math.random() * 9000);
+            } else if (chosenRoom === "TAVERN") {
+                chosenRoom = "TVRN-" + Math.floor(1000 + Math.random() * 9000);
+                myStartingLives = 3;
+            }
+            
+            localStorage.setItem('tavernName', chosenName);
+            localStorage.setItem('tavernRoom', roomInput.value.trim().toUpperCase()); 
+            localStorage.setItem('tavernAvatar', myAvatar);
+            localStorage.setItem('tavernLives', myStartingLives);
+            
+            myRoom = chosenRoom === "" ? "PUBLIC" : chosenRoom;
+            roomCodeDisplay.innerText = myRoom.startsWith("COMP-") ? "SOLO" : (myRoom.startsWith("TVRN-") ? "HOUSE TABLE" : myRoom); 
+            
+            socket.emit('joinTavern', { name: chosenName, avatar: myAvatar, roomCode: myRoom, token: sessionToken, startingLives: myStartingLives }); 
+            nameModal.style.display = 'none'; triggerGlobalMusic();
+            if (myRoom.startsWith("TVRN-")) {
+                setTimeout(() => {
+                    showModal("You enter a tavern. An Orc with a big toothy grin ushers you to a table for a friendly game of 2, 4, 24...");
+                }, 250);
+            }
+        };
+
+        const customModal = document.getElementById('custom-modal');
+        const customModalText = document.getElementById('custom-modal-text');
+        const customModalActions = document.getElementById('custom-modal-actions');
+        const customModalBtn = document.getElementById('custom-modal-btn');
+        
+        function showModal(message, isGameOver = false) { 
+            customModalText.innerText = message; 
+            customModalActions.innerHTML = '';
+            customModal.style.display = 'flex'; 
+            customModalBtn.innerText = "Continue";
+            customModalBtn.style.display = 'inline-block';
+            customModalBtn.onclick = () => { 
+                playSound(sfxClick); 
+                customModal.style.display = 'none'; 
+                document.getElementById('game-page').style.visibility = 'visible';
+            };
+            
+            if (isGameOver) {
+                playAgainBtn.style.display = 'inline-block';
+            }
+        }
+        
+        playAgainBtn.onclick = () => {
+            playSound(sfxClick);
+            socket.emit('playAgain');
+        };
+
+        function showDevilEffect() {
+            playSound(sfxDevilsTeets); 
+            setTimeout(() => {
+                const container = document.getElementById('devil-effect-container');
+                container.style.display = 'flex';
+                setTimeout(() => { container.style.display = 'none'; }, 1000); 
+            }, 100);
+        }
+        
+        socket.on('triggerDevilEffect', showDevilEffect);
+
+        socket.on('gameOver', (data) => {
+            showModal(data.message, true);
+        });
+
+        socket.on('offerKeepsakes', (data) => {
+            playSound(sfxWinner);
+            document.getElementById('game-page').style.visibility = 'hidden';
+            const transitionMessage = data.transitionMessage || `${data.defeated} leaves the table.`;
+            customModalText.innerHTML = `<strong>${transitionMessage}</strong><br><br>Choose a keepsake before battling your next opponent`;
+            customModalActions.innerHTML = '';
+            data.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerHTML = `${choice.name}<small>${choice.text}</small>`;
+                btn.onclick = () => {
+                    playSound(sfxClick);
+                    socket.emit('chooseKeepsake', choice.id);
+                    customModal.style.display = 'none';
+                    document.getElementById('game-page').style.visibility = 'visible';
+                };
+                customModalActions.appendChild(btn);
+            });
+            customModalBtn.style.display = 'none';
+            customModal.style.display = 'flex';
+        });
+
+        function updateTavernCrawlPanel() {
+            if (currentMode !== 'tavern-crawl' || !tavernRun) {
+                tavernCrawlPanel.style.display = 'none';
                 return;
             }
 
-            room.playerOrder.forEach(id => {
-                if (room.players[id]) {
-                    room.players[id].lives = room.startingLives;
-                    room.players[id].score = null;
-                    room.players[id].busted = false;
-                }
-            });
-            
-            if (room.playerOrder.length > 0) {
-                room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
-            }
-            
-            room.roundPlayers = [];
-            for (let i = 0; i < room.playerOrder.length; i++) {
-                let idx = (room.dealerIndex + i) % room.playerOrder.length;
-                let playerId = room.playerOrder[idx];
-                if (room.players[playerId] && room.players[playerId].connected) {
-                    room.roundPlayers.push(playerId);
-                }
-            }
-            
-            room.currentTurnIndex = 0;
-            room.isTieBreaker = false;
-            room.roundNumber++;
-            
-            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-            io.to(socket.roomCode).emit('triggerNewGameSplash');
-        }
-    });
-
-    socket.on('startGlobalMusic', () => {
-        let room = rooms[socket.roomCode];
-        if (room && !room.isMusicPlaying) {
-            room.isMusicPlaying = true;
-            io.to(socket.roomCode).emit('playGlobalMusic'); 
-        }
-    });
-
-    socket.on('sendReaction', (emoji) => {
-        let room = rooms[socket.roomCode];
-        if (room) {
-            if (room.mode === 'tavern-crawl') return;
-            let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
-            io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
-        }
-    });
-
-    socket.on('sendBotReaction', (emoji) => {
-        let room = rooms[socket.roomCode];
-        if (room && isAuthorized(socket, socket.roomCode)) {
-            if (room.mode === 'tavern-crawl') return;
-            io.to(socket.roomCode).emit('receiveReaction', { name: "The Molar", emoji: emoji });
-        }
-    });
-
-    function isAuthorized(socket, roomCode) {
-        let room = rooms[roomCode];
-        if (!room) return false;
-        let currentId = room.roundPlayers[room.currentTurnIndex];
-        return (socket.id === currentId) || ((roomCode.startsWith('COMP') || roomCode.startsWith('TVRN')) && currentId === 'BOT_MOLAR');
-    }
-
-    socket.on('playerRolledDice', (suspenseType) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playerRolledDice', suspenseType) });
-    socket.on('playGameSound', (soundId) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playGameSound', soundId) });
-    socket.on('triggerConfetti', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerConfetti') });
-    socket.on('triggerDevilEffect', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerDevilEffect') });
-    
-    socket.on('updateBoard', (gameData) => {
-        if (isAuthorized(socket, socket.roomCode)) {
-            socket.to(socket.roomCode).emit('boardUpdated', gameData);
-        }
-    });
-
-    socket.on('broadcastMessage', (msgData) => {
-        if (isAuthorized(socket, socket.roomCode)) {
-            socket.to(socket.roomCode).emit('displayMessage', msgData);
-        }
-    });
-
-    socket.on('useEnemyAbility', (abilityId) => {
-        let room = rooms[socket.roomCode];
-        if (!room || room.mode !== 'tavern-crawl') return;
-        let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-        if (canUseTavernAbility(room, encounter, abilityId)) {
-            markAbilityUsed(room, abilityId);
-            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-        }
-    });
-
-    socket.on('chooseKeepsake', (keepsakeId) => {
-        let room = rooms[socket.roomCode];
-        if (!room || room.mode !== 'tavern-crawl' || !room.tavernRun.pendingKeepsakeChoices) return;
-        let selected = room.tavernRun.pendingKeepsakeChoices.find(k => k.id === keepsakeId);
-        if (!selected) return;
-
-        room.tavernRun.keepsakes.push(selected);
-        resetTavernEncounter(socket.roomCode, true);
-        io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-        io.to(socket.roomCode).emit('displayMessage', { text: selected.name, color: "#ffd54f" });
-    });
-
-    socket.on('endTurn', (turnData) => {
-        let room = rooms[socket.roomCode];
-        if (room && isAuthorized(socket, socket.roomCode)) {
-            let currentId = room.roundPlayers[room.currentTurnIndex];
-            
-            room.players[currentId].score = turnData.score;
-            room.players[currentId].busted = turnData.busted;
-
-            if (room.mode === 'tavern-crawl') {
-                let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && !turnData.busted && turnData.score > 0 && turnData.score < 24) {
-                    room.players[currentId].score = 24;
-                    markAbilityUsed(room, 'deadeye24');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Deadeye 24', text: 'The Hangman fires once. Perfect 24.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman fires once. Deadeye 24.', color: "#ffd54f" });
-                }
-
-                if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== 'BOT_MOLAR' && !turnData.busted && turnData.score > 0) {
-                    let reducedScore = Math.max(0, turnData.score - 3);
-                    room.players[currentId].score = reducedScore;
-                    markAbilityUsed(room, 'smoothTalk');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
-                }
-
-                if (currentId !== 'BOT_MOLAR' && room.players[currentId].score === 24 && room.tavernRun.stats) {
-                    room.tavernRun.stats.perfect24s++;
-                }
-            }
-            
-            let tavernEnemyPerfect = room.mode === 'tavern-crawl' && currentId === 'BOT_MOLAR';
-            if (!tavernEnemyPerfect && room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
-                let restoredLives = (room.mode === 'tavern-crawl' && currentId !== 'BOT_MOLAR' && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
-                room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
-                if (restoredLives > 1) emitKeepsakeActivated(socket.roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
-                io.to(socket.roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
-            }
-
-            room.currentTurnIndex++;
-            
-            while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-                room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-                room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-                room.currentTurnIndex++;
-            }
-
-            if (room.currentTurnIndex >= room.roundPlayers.length) {
-                evaluateRound(socket.roomCode);
+            tavernCrawlPanel.style.display = 'block';
+            crawlProgress.innerText = `Encounter ${tavernRun.encounterNumber} of ${tavernRun.totalEncounters}`;
+            crawlEnemy.innerText = `${tavernRun.enemy.name}: ${tavernRun.enemy.intro}`;
+            if (tavernRun.enemy.ability) {
+                let abilityId = tavernRun.enemy.ability;
+                let used = getTavernAbilityUseCount(abilityId);
+                let maxUses = getTavernAbilityMaxUses(abilityId);
+                crawlAbility.innerText = `${abilityNames[abilityId]}: ${used >= maxUses ? 'spent' : `ready (${used}/${maxUses})`}`;
             } else {
-                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+                crawlAbility.innerText = 'Introductory table. No signature trick.';
+            }
+
+            if (tavernRun.keepsakes.length === 0) {
+                crawlKeepsakes.innerHTML = '<div class="keepsake-pill">No keepsakes yet.</div>';
+            } else {
+                const usedKeepsakes = tavernRun.encounterKeepsakeUses || {};
+                crawlKeepsakes.innerHTML = tavernRun.keepsakes.map(k => {
+                    const used = !!usedKeepsakes[k.id];
+                    return `<div class="keepsake-pill ${used ? 'used' : ''}"><span class="keepsake-icon">${getKeepsakeIcon(k.id)}</span><strong>${k.name}</strong>${used ? '<span class="keepsake-used-label">Used</span>' : ''}<br>${k.text}</div>`;
+                }).join('');
             }
         }
-    });
 
-    socket.on('disconnect', () => {
-        let roomCode = socket.roomCode;
-        if (roomCode && rooms[roomCode]) {
-            let room = rooms[roomCode];
-            if (room.players[socket.id]) {
-                room.players[socket.id].connected = false;
+        socket.on('triggerNewGameSplash', () => {
+            queueSplash((done) => {
+                const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+                text.className = 'signature-splash';
+                text.innerHTML = `🎲<br>A New Game Begins!`; 
+                overlay.style.display = 'flex'; playSound(sfxSwoosh); 
+                setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+                setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; done(); }, 400); }, 1500);
+            });
+        });
+
+        function showTurnSplash(name, avatar) {
+            queueSplash((done) => {
+                const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+                let turnText = name === "Your" ? "Your turn!" : `${name}'s turn!`;
+                text.className = 'turn-splash';
                 
-                if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
-                    room.players[socket.id].busted = true;
-                    room.players[socket.id].score = 0;
-                    room.currentTurnIndex++;
-                    
-                    while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-                        room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-                        room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-                        room.currentTurnIndex++;
-                    }
+                // Integrated premium tokens into splash overlay frame animations
+                text.innerHTML = `${renderAvatarAsset(avatar, "splash-token")}${turnText}`; overlay.style.display = 'flex'; playSound(sfxSwoosh); 
+                setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+                setTimeout(() => { text.style.transform = 'scale(1.5)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; done(); }, 400); }, 1500);
+            });
+        }
 
-                    if (room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
-                    else io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-                } else {
-                    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-                }
+        function showSignatureSplash(name, ability, message, variant = 'signature-splash', sound = null) {
+            queueSplash((done) => {
+                const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
+                text.className = variant;
+                text.innerHTML = `<span style="font-size: 2.2rem; color: #ffcc80;">${name}</span><span style="font-size: 4rem;">${ability}</span><span style="font-size: 1.6rem; color: #fff3e0;">${message}</span>`;
+                overlay.style.display = 'flex';
+                playSound(sound || sfxSwoosh);
+                setTimeout(() => { text.style.transform = 'scale(1)'; text.style.opacity = '1'; }, 50);
+                setTimeout(() => { text.style.transform = 'scale(1.16)'; text.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; text.style.transform = 'scale(0)'; done(); }, 450); }, 3200);
+            });
+        }
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        const scoreDisplay = document.getElementById('score-display'); 
+        function broadcastAnnouncement(text, color, altText = null) {
+            if (currentMode === 'tavern-crawl') {
+                let allowed = text === "" || text === "The Early Ross!";
+                if (!allowed) return;
+            }
+            scoreDisplay.innerText = text; scoreDisplay.style.color = color;
+            if (isMyTurn || isBotTurn) socket.emit('broadcastMessage', { text: altText !== null ? altText : text, color });
+        }
+        socket.on('displayMessage', (msgData) => {
+            if (currentMode === 'tavern-crawl') return;
+            scoreDisplay.innerText = msgData.text; scoreDisplay.style.color = msgData.color;
+        });
+        socket.on('signatureMove', (data) => {
+            showSignatureSplash(data.name, data.ability, data.text, 'signature-splash', signatureSounds[data.ability] || null);
+        });
+        socket.on('keepsakeActivated', (data) => {
+            if (tavernRun && data.id) {
+                tavernRun.encounterKeepsakeUses = tavernRun.encounterKeepsakeUses || {};
+                tavernRun.encounterKeepsakeUses[data.id] = true;
+                updateTavernCrawlPanel();
+            }
+            showSignatureSplash("Keepsake", data.name, data.text);
+        });
+
+        socket.on('roundResult', (data) => {
+            let lines = String(data.message || '').split('\n');
+            let detail = lines.filter(Boolean).map(escapeHTML).join('<br>');
+            showSignatureSplash('Round Result', 'Round Result', detail, 'result-splash');
+        });
+
+        function sendReaction(emoji) {
+            if (currentMode === 'tavern-crawl') return;
+            socket.emit('sendReaction', emoji); playSound(sfxClick);
+        }
+        
+        socket.on('receiveReaction', (data) => {
+            const reactionDiv = document.createElement('div'); reactionDiv.className = 'floating-reaction';
+            
+            if (data.emoji === '🧔 Early Ross' || data.emoji === '🧔🏼‍♂️ Early Ross') {
+                reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
+            } else if (['😀', '😂', '😮', '😎', '😭'].includes(data.emoji)) {
+                reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.8rem">${data.emoji}</span>`;
+            } else {
+                // Renders custom inline high fidelity graphics to float up over the felt tray
+                reactionDiv.innerHTML = `<strong>${data.name}</strong> ${getReactionSVG(data.emoji)}`;
             }
             
-            let anyConnected = Object.values(room.players).some(p => p.connected && p.id !== 'BOT_MOLAR');
-            if (!anyConnected) delete rooms[roomCode];
-        }
-    });
-});
+            document.body.appendChild(reactionDiv);
+            const randomOffset = Math.floor(Math.random() * 60) - 30; reactionDiv.style.left = `calc(50% + ${randomOffset}px)`;
+            setTimeout(() => { reactionDiv.remove(); }, 3000);
+        });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
+        function triggerGameSound(soundId) {
+            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
+            if (isMyTurn || isBotTurn) socket.emit('playGameSound', soundId);
+        }
+        
+        socket.on('playGameSound', (soundId) => {
+            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
+            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
+            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
+        });
+
+        function triggerRollAnimation(suspense) {
+            playRollSound(); const activeDOMDice = document.getElementById('active-area').querySelectorAll('.die');
+            if (suspense !== 'none') { document.body.classList.add('shake-screen'); activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); } 
+            else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
+        }
+        socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
+
+        socket.on('boardUpdated', (gameData) => {
+            if (isMyTurn || isBotTurn || !gameData || !Array.isArray(gameData.dice)) return;
+            dice = gameData.dice.map(d => ({ ...d }));
+            rollCount = gameData.rollCount || 0;
+            inTrouble = !!gameData.inTrouble;
+            turnFinalized = !!gameData.turnFinalized;
+            hasRolled = dice.some(d => d.value !== 0);
+            locksThisRoll = dice.filter(d => d.status === 'lockedThisTurn').length;
+            renderDice(false);
+        });
+        
+        function triggerCelebration() {
+            playSound(sfxYay);
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); 
+        }
+        socket.on('triggerConfetti', triggerCelebration);
+
+        socket.on('connect', () => { myId = socket.id; });
+
+        socket.on('gameStateUpdate', (state) => {
+            latestGameState = state;
+            currentMode = state.mode || 'classic';
+            tavernRun = state.tavernRun || null;
+            document.body.classList.toggle('tavern-mode', currentMode === 'tavern-crawl');
+            playersHeading.innerText = currentMode === 'tavern-crawl' ? 'Players' : 'Adventurers';
+            updateTavernCrawlPanel();
+            reactionBar.style.display = currentMode === 'tavern-crawl' ? 'none' : 'flex';
+
+            if (typeof window.currentRoundNumber === 'undefined') window.currentRoundNumber = state.roundNumber;
+            if (window.currentRoundNumber !== state.roundNumber) {
+                window.currentRoundNumber = state.roundNumber;
+                lastTurnId = null; 
+            }
+
+            let previousTurnId = lastTurnId;
+            scoreboard.innerHTML = '';
+            
+            if (state.roundPlayers.length > 0 || state.playerOrder.length === 1) {
+                playAgainBtn.style.display = 'none';
+            }
+            
+            if (state.playerOrder.length > 4) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))'; } 
+            else if (state.playerOrder.length > 2) { scoreboard.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))'; } 
+            else { scoreboard.style.gridTemplateColumns = '1fr'; }
+
+            let amIInRound = state.roundPlayers && state.roundPlayers.includes(myId);
+            if (state.isTieBreaker && !amIInRound && state.playerOrder.length > 1 && state.players[myId] && state.players[myId].lives > 0) {
+                tieBanner.style.display = 'block';
+            } else { tieBanner.style.display = 'none'; }
+
+            currentActiveId = state.currentTurnId;
+
+            state.playerOrder.forEach(id => {
+                let p = state.players[id];
+                
+                let sLives = state.startingLives || 3;
+                let pLives = Math.max(0, p.lives);
+                let emptyHearts = Math.max(0, sLives - pLives);
+                let hearts = `<span style="font-size: 0.8rem; letter-spacing: -2px;">` + "❤️".repeat(pLives) + "🖤".repeat(emptyHearts) + `</span>`;
+                
+                let scoreText = p.score !== null ? (p.busted ? "DUST" : p.score) : "Waiting...";
+                
+                if (!p.connected) scoreText = "OFFLINE";
+                else if (p.lives <= 0) scoreText = "Dust!"; 
+                
+                let el = document.createElement('div'); el.className = 'player-stat';
+                let isInRound = state.roundPlayers && state.roundPlayers.includes(id);
+                if (!isInRound || !p.connected) el.style.opacity = "0.4";
+                if (id === state.currentTurnId) el.classList.add('active-player');
+                if (id === 'BOT_MOLAR') el.classList.add('enemy-card');
+                if (id === myId) el.classList.add('hero-card');
+
+                // Injects the custom player graphical tokens into the sidebar adventurer listings
+                let avatarToRender = id === 'BOT_MOLAR' ? (currentMode === 'tavern-crawl' ? p.name : 'BOT_MOLAR') : p.avatar;
+                if (currentMode === 'tavern-crawl') {
+                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<div class="player-card-copy"><strong>${p.name}</strong><div>${hearts}</div><span class="score-chip">Score: ${scoreText}</span></div>`;
+                } else {
+                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
+                }
+                if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
+                scoreboard.appendChild(el);
+            });
+
+            if (state.playerOrder.length < 2 && !myRoom.startsWith('COMP') && !myRoom.startsWith('TVRN')) {
+                turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; isFirstLoad = true; 
+            } else {
+                isMyTurn = (myId === state.currentTurnId);
+                isBotTurn = (state.currentTurnId === 'BOT_MOLAR' && (myRoom.startsWith('COMP') || myRoom.startsWith('TVRN')));
+                let hasPendingKeepsakeChoice = currentMode === 'tavern-crawl' && tavernRun && tavernRun.pendingKeepsakeChoices;
+                
+                let activePlayerInfo = state.players[state.currentTurnId];
+                let activeName = activePlayerInfo ? activePlayerInfo.name : "Opponent";
+                let activeAvatar = activePlayerInfo ? activePlayerInfo.avatar : "👤";
+                
+                let myPlayerInfo = state.players[myId];
+                if (myPlayerInfo && myPlayerInfo.lives <= 0) { 
+                    isMyTurn = false; 
+                    if (state.currentTurnId) {
+                        turnIndicator.innerText = `You're dust! (${activeName} is rolling...)`;
+                    } else {
+                        turnIndicator.innerText = "You're dust!";
+                    }
+                    turnIndicator.style.color = "#e57373";
+                } 
+                else {
+                    if (!hasPendingKeepsakeChoice && state.currentTurnId && !isFirstLoad && state.currentTurnId !== lastTurnId) {
+                        let splashAvatar = state.currentTurnId === 'BOT_MOLAR' ? (currentMode === 'tavern-crawl' ? activeName : 'BOT_MOLAR') : activeAvatar;
+                        showTurnSplash(isMyTurn ? "Your" : activeName, splashAvatar);
+                    }
+                    
+                    turnIndicator.innerText = hasPendingKeepsakeChoice ? "Choose a keepsake" : (isMyTurn ? "Your turn!" : `${activeName} is rolling...`);
+                    turnIndicator.style.color = isMyTurn ? "#aed581" : "#ffcc80";
+                }
+                lastTurnId = state.currentTurnId; isFirstLoad = false;
+            }
+            
+            document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
+            
+            if (state.currentTurnId && (isMyTurn || isBotTurn) && previousTurnId !== state.currentTurnId) {
+                initGame(); 
+                if (isBotTurn) {
+                    setTimeout(rollDice, 1000); 
+                }
+            }
+        });
+
+        const activeArea = document.getElementById('active-area'); const requiredArea = document.getElementById('required-dice'); const remainingArea = document.getElementById('remaining-locked');
+        const rollBtn = document.getElementById('roll-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
+
+        function initGame() {
+            dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
+            hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
+            rokrBlurActive = false; klargStolenThisTurn = false;
+            scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
+            if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
+            rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
+        }
+
+        function getPipsHTML(value) {
+            return `<div class="number-display">${value === 0 ? '?' : value}</div>`;
+        }
+
+        function getTavernAbilityMaxUses(abilityId) {
+            return abilityId === 'constellationBlur' ? 2 : 1;
+        }
+
+        function getTavernAbilityUseCount(abilityId) {
+            if (!tavernRun || !tavernRun.abilityUsed) return 0;
+            const used = tavernRun.abilityUsed[abilityId];
+            if (used === true) return 1;
+            return Number(used || 0);
+        }
+
+        function isTavernAbilityReady(abilityId) {
+            const dueRound = tavernRun ? (tavernRun.abilityRound || 1) : 1;
+            const currentRound = tavernRun ? (tavernRun.encounterRound || 1) : 1;
+            return currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy && tavernRun.enemy.ability === abilityId && currentRound >= dueRound && getTavernAbilityUseCount(abilityId) < getTavernAbilityMaxUses(abilityId);
+        }
+
+        function useTavernAbility(abilityId, message, color = "#ffb74d") {
+            if (!isTavernAbilityReady(abilityId)) return false;
+            tavernRun.abilityUsed = tavernRun.abilityUsed || {};
+            tavernRun.abilityUsed[abilityId] = getTavernAbilityUseCount(abilityId) + 1;
+            socket.emit('useEnemyAbility', abilityId);
+            showSignatureSplash(tavernRun.enemy.name, abilityNames[abilityId], message, 'signature-splash', signatureSounds[abilityNames[abilityId]] || null);
+            updateTavernCrawlPanel();
+            return true;
+        }
+
+        function applyKlargReachAround() {
+            if (!isMyTurn || klargStolenThisTurn || !isTavernAbilityReady('reachAround')) return;
+            let activeDice = dice.filter(d => d.status === 'active');
+            if (activeDice.length <= 1) return;
+            let stolen = activeDice.slice().sort((a, b) => b.value - a.value)[0];
+            stolen.status = 'stolen';
+            klargStolenThisTurn = true;
+            useTavernAbility('reachAround', 'Klarg uses Reach Around and steals one die.', '#ff8a65');
+        }
+
+        function applyRokrConstellationBlur() {
+            if (!isMyTurn || rokrBlurActive || !isTavernAbilityReady('constellationBlur')) return;
+            rokrBlurActive = true;
+            useTavernAbility('constellationBlur', 'Rokr blurs the dice with constellations.', '#81d4fa');
+        }
+
+        function rollDice() {
+            if (isAnimating) return; 
+            if (!isMyTurn && !isBotTurn) return; 
+            triggerGlobalMusic();
+            if (rokrBlurActive && locksThisRoll > 0) rokrBlurActive = false;
+
+            if (rollCount > 0) { 
+                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "The Molar NEVER bites" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
+                    broadcastAnnouncement("", ""); 
+                }
+            }
+
+            if (rollCount === 1) {
+                let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
+                let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
+                let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
+                let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
+                
+                if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
+                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
+                    let msg = isBotTurn ? "The Molar NEVER bites" : "You didn't bite!";
+                    let altMsg = isBotTurn ? "The Molar NEVER bites" : "They didn't bite!";
+                    broadcastAnnouncement(msg, "#4fc3f7", altMsg);
+                }
+            }
+
+            if (rollCount === 1) { 
+                let allSame = dice.every(d => d.value === dice[0].value);
+                if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
+                else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
+                    inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
+                } 
+            }
+
+            if (rollCount > 0) { 
+                let allLocked = dice.filter(d => d.status !== 'active' && d.status !== 'stolen');
+                let lockedHas2 = allLocked.some(d => d.value === 2);
+                let lockedHas4 = allLocked.some(d => d.value === 4);
+                let locked6sCount = allLocked.filter(d => d.value === 6).length;
+                let activeCount = dice.filter(d => d.status === 'active').length;
+
+                if (lockedHas2 && lockedHas4 && locked6sCount === 3 && activeCount === 1) {
+                    broadcastAnnouncement("The door is open!", "#b2ff59", "The door is open!");
+                } else if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
+                    broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
+                }
+            }
+
+            rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
+            isAnimating = true; rollBtn.disabled = true; 
+            
+            if (isMyTurn || isBotTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
+
+            let postLockActiveCount = dice.filter(d => d.status === 'active').length;
+            let postLockLockedDice = dice.filter(d => d.status !== 'active' && d.status !== 'stolen');
+            let postLockHas2 = postLockLockedDice.some(d => d.value === 2); 
+            let postLockHas4 = postLockLockedDice.some(d => d.value === 4);
+            let postLock6sCount = postLockLockedDice.filter(d => d.value === 6).length;
+            
+            suspenseType = (postLockActiveCount === 1 && (!postLockHas2 || !postLockHas4)) ? 'survival' : ((postLockActiveCount === 1 && postLockHas2 && postLockHas4 && postLock6sCount === 3) ? 'perfect' : 'none');
+            
+            triggerRollAnimation(suspenseType);
+            if (isMyTurn || isBotTurn) socket.emit('playerRolledDice', suspenseType);
+
+            setTimeout(() => {
+                dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
+                hasRolled = true; locksThisRoll = 0; isAnimating = false;
+
+                if (rollCount === 1) {
+                    applyKlargReachAround();
+                    applyRokrConstellationBlur();
+                }
+                
+                let newlyRolled6s = dice.filter(d => d.status === 'active' && d.value === 6).length;
+                if (newlyRolled6s >= 3) {
+                    showDevilEffect();
+                    if (isMyTurn || isBotTurn) socket.emit('triggerDevilEffect');
+                    if (myRoom.startsWith('COMP') || myRoom.startsWith('TVRN')) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'hood'), i * 300); }
+                    }
+                }
+
+                if (newlyRolled6s === 0 && (scoreDisplay.innerText === "You're knocking at the door" || scoreDisplay.innerText === "They're knocking at the door" || scoreDisplay.innerText === "The door is open!")) {
+                    if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
+                }
+                
+                renderDice();
+                
+                if (isBotTurn) {
+                    setTimeout(makeBotDecision, 1000); 
+                }
+                
+            }, (suspenseType !== 'none') ? 2000 : 500); 
+        }
+        
+        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore) {
+            const active = activeDice.slice().sort((a, b) => b.value - a.value);
+            let toLock = [];
+            const enemyId = (currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy) ? tavernRun.enemy.id : 'molar';
+            const lockDie = (die) => {
+                if (!die || toLock.includes(die.id)) return false;
+                toLock.push(die.id);
+                return true;
+            };
+            const lockRequired = () => {
+                if (!hasTwo) {
+                    const two = active.find(d => d.value === 2);
+                    if (lockDie(two)) hasTwo = true;
+                }
+                if (!hasFour) {
+                    const four = active.find(d => d.value === 4 && !toLock.includes(d.id));
+                    if (lockDie(four)) hasFour = true;
+                }
+            };
+
+            lockRequired();
+
+            if (hasTwo && hasFour) {
+                const remainingToPerfect = Math.max(0, 24 - currentScore);
+                active.forEach(d => {
+                    if (toLock.includes(d.id)) return;
+                    if (d.value > remainingToPerfect && active.length > 1) return;
+                    if (d.value >= 5) lockDie(d);
+                    else if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
+                    else if (enemyId === 'rokr' && d.value >= 4 && remainingToPerfect <= 8) lockDie(d);
+                    else if (enemyId === 'hangman' && d.value >= 4) lockDie(d);
+                    else if (enemyId === 'jaguar' && d.value >= 4) lockDie(d);
+                    else if (remainingToPerfect <= d.value) lockDie(d);
+                });
+            } else if (enemyId === 'jaguar') {
+                lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
+            }
+
+            if (toLock.length === 0 && active.length === 1) lockDie(active[0]);
+            else if (toLock.length === 0 && active.length > 0 && (!hasTwo || !hasFour)) lockDie(active[0]);
+            else if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
+            return toLock;
+        }
+
+        function makeBotDecision() {
+            let active = dice.filter(d => d.status === 'active').sort((a, b) => b.value - a.value);
+
+            let lockedForBot = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').sort((a, b) => a.value - b.value);
+            let bReq2 = false, bReq4 = false, botScore = 0;
+            
+            lockedForBot.forEach(d => {
+                if (d.value === 2 && !bReq2) bReq2 = true;
+                else if (d.value === 4 && !bReq4) bReq4 = true;
+                else botScore += d.value;
+            });
+
+            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore);
+
+            toLock.forEach((id, index) => {
+                setTimeout(() => {
+                    toggleDie(id, true);
+                }, index * 400); 
+            });
+
+            setTimeout(() => {
+                let remainingCount = dice.filter(d => d.status === 'active').length;
+                
+                let finalLocked = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').sort((a, b) => a.value - b.value);
+                bReq2 = false; bReq4 = false; botScore = 0;
+                finalLocked.forEach(d => {
+                    if (d.value === 2 && !bReq2) bReq2 = true;
+                    else if (d.value === 4 && !bReq4) bReq4 = true;
+                    else botScore += d.value;
+                });
+
+                let stopRolling = false;
+                if (remainingCount === 0) stopRolling = true;
+
+                if (stopRolling) {
+                    let busted = (!bReq2 || !bReq4);
+                    let finalScore = busted ? 0 : botScore;
+                    
+                    if (busted) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'swords'), i * 300); }
+                    } else if (finalScore === 24) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'hood'), i * 300); }
+                    } else if (finalScore >= 22) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'shield'), i * 300); }
+                    } else if (finalScore <= 17) {
+                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'skull'), i * 300); }
+                    }
+                    
+                    setTimeout(() => {
+                        socket.emit('endTurn', { score: finalScore, busted: busted });
+                    }, 1500);
+                    
+                } else {
+                    rollDice();
+                }
+            }, (toLock.length * 400) + 800); 
+        }
+
+        function toggleDie(id, isBotForced = false) {
+            if (!hasRolled || isAnimating || turnFinalized) return; 
+            if (!isMyTurn && !isBotForced) return; 
+            
+            triggerGlobalMusic();
+            let die = dice.find(d => d.id === id); if (!die || die.status === 'permanentlyLocked') return; 
+            triggerGameSound('click');
+            die.status = (die.status === 'active') ? 'lockedThisTurn' : 'active';
+            if (die.status === 'lockedThisTurn') locksThisRoll++; else locksThisRoll--;
+            renderDice();
+        }
+
+        function createDieElement(die) {
+            const div = document.createElement('div'); div.className = 'die'; 
+            
+            if (currentActiveId === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') {
+                div.classList.add('molar-tooth');
+            }
+            
+            let shouldBlur = rokrBlurActive && isMyTurn && (die.status === 'active' || die.status === 'lockedThisTurn');
+            div.dataset.value = shouldBlur ? '?' : die.value; div.innerHTML = getPipsHTML(shouldBlur ? 0 : die.value); div.onclick = () => toggleDie(die.id);
+            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
+            else if (die.status === 'stolen') {
+                div.classList.add('stolen');
+                div.title = 'Stolen by Klarg';
+            }
+            else if (die.status === 'lockedThisTurn') { 
+                div.classList.add('lockedThisTurn'); 
+            }
+            if (shouldBlur) div.classList.add('blurred');
+            return div;
+        }
+
+        function renderDice(shouldBroadcast = true) {
+            activeArea.innerHTML = ''; requiredArea.innerHTML = ''; remainingArea.innerHTML = '';
+            let lockedDice = dice.filter(d => d.status !== 'active' && d.status !== 'stolen'); let activeDice = dice.filter(d => d.status === 'active');
+            let req2 = null, req4 = null, remainingLocked = [];
+
+            lockedDice.forEach(d => {
+                if (rokrBlurActive && isMyTurn && d.status === 'lockedThisTurn') remainingLocked.push(d);
+                else if (d.value === 2 && !req2) req2 = d;
+                else if (d.value === 4 && !req4) req4 = d;
+                else remainingLocked.push(d);
+            });
+            remainingLocked.sort((a, b) => a.value - b.value);
+
+            if (req2) requiredArea.appendChild(createDieElement(req2)); if (req4) requiredArea.appendChild(createDieElement(req4));
+            remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d))); activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
+
+            let hiddenLockedCount = remainingLocked.filter(d => rokrBlurActive && isMyTurn && d.status === 'lockedThisTurn').length;
+            let currentScore = remainingLocked.reduce((sum, die) => {
+                if (rokrBlurActive && isMyTurn && die.status === 'lockedThisTurn') return sum;
+                return sum + die.value;
+            }, 0);
+
+            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
+            else { currentScoreSpan.innerText = hiddenLockedCount > 0 ? '?' : currentScore; currentScoreSpan.style.color = "#b71c1c"; }
+
+            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
+
+            if (activeDice.length === 0 && hasRolled) {
+                rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
+                
+                rollBtn.onclick = () => {
+                    rollBtn.disabled = true; 
+                    rollBtn.innerText = "Ending..."; 
+                    
+                    let busted = (!req2 || !req4); let finalScore = busted ? 0 : currentScore;
+                    
+                    socket.emit('endTurn', { score: finalScore, busted: busted });
+                };
+
+                if (!req2 || !req4) {
+                    if (!turnFinalized) { 
+                        broadcastAnnouncement("Result: DUST! (Missing 2 or 4)", "#e57373"); 
+                        triggerGameSound(suspenseType === 'survival' ? 'aww' : 'bust'); 
+                        turnFinalized = true; 
+                    }
+                } else {
+                    if (!turnFinalized) {
+                        turnFinalized = true; 
+                        
+                        if (currentScore === 24) {
+                            triggerCelebration(); 
+                            if (isMyTurn || isBotTurn) socket.emit('triggerConfetti'); 
+                        }
+                        else { 
+                            if (suspenseType === 'perfect') triggerGameSound('ohwell'); 
+                            else if (suspenseType === 'survival') triggerGameSound('yay'); 
+                            else triggerGameSound('click'); 
+                        }
+                        
+                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
+                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784");
+                    }
+                }
+            } else { rollBtn.disabled = hasRolled && locksThisRoll === 0; }
+
+            if (shouldBroadcast && (isMyTurn || isBotTurn)) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
+        }
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-app-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'inline-block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('2, 4, 24 App registered!'))
+                    .catch(err => console.log('Registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
