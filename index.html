@@ -825,7 +825,7 @@
                 <div class="avatar-option" data-avatar="Vaelin" onclick="selectAvatar(this, 'Vaelin')"><img src="vaelin.png" alt="Vaelin"></div>
                 <div class="avatar-option" data-avatar="Rokr" onclick="selectAvatar(this, 'Rokr')"><img src="Rokr.png" alt="Rokr"></div>
                 <div class="avatar-option" data-avatar="The Hangman" onclick="selectAvatar(this, 'The Hangman')"><img src="The Hangman.png" alt="The Hangman"></div>
-                <div class="avatar-option" data-avatar="Klarg" onclick="selectAvatar(this, 'Klarg')"><img src="Klarg.png" alt="Klarg"></div>
+                <div class="avatar-option" data-avatar="Klarg" onclick="selectAvatar(this, 'Klarg')"><img src="klarg.png" alt="Klarg"></div>
                 <div class="avatar-option" data-avatar="Jaguar Cantona" onclick="selectAvatar(this, 'Jaguar Cantona')"><img src="Jaguar.png" alt="Jaguar"></div>
             </div>
 
@@ -887,7 +887,7 @@
             <h2 class="area-title">Turn Score</h2>
             <h2 style="margin: 0; color: #b71c1c; font-size: 4rem; text-shadow: 1px 1px 2px rgba(255,255,255,0.5); border-bottom: 2px solid #a1887f; width: 100%; text-align: center; padding-bottom: 10px; margin-bottom: 20px;"><span id="current-score-span">0</span></h2>
             
-            <h2 class="area-title">Adventurers</h2>
+            <h2 class="area-title" id="players-heading">Adventurers</h2>
             <div id="scoreboard"></div> 
 
             <div id="tavern-crawl-panel">
@@ -940,6 +940,7 @@
         const scoreboard = document.getElementById('scoreboard');
         const tieBanner = document.getElementById('tie-breaker-banner');
         const roomCodeDisplay = document.getElementById('room-code-display');
+        const playersHeading = document.getElementById('players-heading');
         const playAgainBtn = document.getElementById('play-again-btn'); 
         const reactionBar = document.getElementById('reaction-bar');
         const tavernCrawlPanel = document.getElementById('tavern-crawl-panel');
@@ -982,7 +983,7 @@
             if (avatarString === 'Devil') return imageTag('Devil.png', 'Devil');
             if (avatarString === 'Vaelin') return imageTag('vaelin.png', 'Vaelin');
             if (avatarString === 'The Molar' || avatarString === 'molar') return imageTag('Molar.png', 'The Molar', 'themolar.png');
-            if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('Klarg.png', 'Klarg', 'klarg.png');
+            if (avatarString === 'Klarg' || avatarString === 'klarg') return imageTag('klarg.png', 'Klarg', 'Klarg.png');
             if (avatarString === 'Rokr' || avatarString === 'rokr') return imageTag('Rokr.png', 'Rokr', 'rokr.png');
             if (avatarString === 'The Hangman' || avatarString === 'hangman') return imageTag('The Hangman.png', 'The Hangman', 'hangman.png');
             if (avatarString === 'Jaguar Cantona' || avatarString === 'jaguar') return imageTag('Jaguar.png', 'Jaguar Cantona', 'jaguar.png');
@@ -1174,7 +1175,7 @@
             nameModal.style.display = 'none'; triggerGlobalMusic();
             if (myRoom.startsWith("TVRN-")) {
                 setTimeout(() => {
-                    showModal("You enter a tavern. A man with a big toothy grin ushers you to a table for a friendly game of 2, 4, 24...");
+                    showModal("You enter a tavern. An Orc with a big toothy grin ushers you to a table for a friendly game of 2, 4, 24...");
                 }, 250);
             }
         };
@@ -1415,6 +1416,7 @@
             currentMode = state.mode || 'classic';
             tavernRun = state.tavernRun || null;
             document.body.classList.toggle('tavern-mode', currentMode === 'tavern-crawl');
+            playersHeading.innerText = currentMode === 'tavern-crawl' ? 'Players' : 'Adventurers';
             updateTavernCrawlPanel();
             reactionBar.style.display = currentMode === 'tavern-crawl' ? 'none' : 'flex';
 
