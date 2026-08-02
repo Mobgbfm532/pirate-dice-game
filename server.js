@@ -3,6 +3,7 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path'); 
+const fs = require('fs');
 
 app.use(express.static(__dirname));
 
@@ -10,7 +11,57 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+app.get('/leaderboard', (req, res) => {
+    res.json(tavernLeaderboard);
+});
+
 let rooms = {};
+
+const LEADERBOARD_PATH = path.join(__dirname, 'leaderboard.json');
+const DEFAULT_TAVERN_LEADERBOARD = [
+    { name: 'Dr. Dice', gold: 1900 },
+    { name: 'SlyVestWearer', gold: 1800 }
+];
+
+function normalizeLeaderboard(entries) {
+    let bestByName = new Map();
+    entries.forEach(entry => {
+        let name = String(entry.name || '').trim().substring(0, 20);
+        let gold = Math.max(0, parseInt(entry.gold, 10) || 0);
+        if (!name) return;
+        let existing = bestByName.get(name);
+        if (!existing || gold > existing.gold) bestByName.set(name, { name, gold });
+    });
+    return Array.from(bestByName.values()).sort((a, b) => b.gold - a.gold).slice(0, 20);
+}
+
+function loadTavernLeaderboard() {
+    try {
+        if (fs.existsSync(LEADERBOARD_PATH)) {
+            let parsed = JSON.parse(fs.readFileSync(LEADERBOARD_PATH, 'utf8'));
+            return normalizeLeaderboard(parsed);
+        }
+    } catch (error) {
+        console.warn('Could not load leaderboard:', error.message);
+    }
+    return normalizeLeaderboard(DEFAULT_TAVERN_LEADERBOARD);
+}
+
+let tavernLeaderboard = loadTavernLeaderboard();
+
+function saveTavernLeaderboard() {
+    try {
+        fs.writeFileSync(LEADERBOARD_PATH, JSON.stringify(tavernLeaderboard, null, 2));
+    } catch (error) {
+        console.warn('Could not save leaderboard:', error.message);
+    }
+}
+
+function submitTavernLeaderboardScore(name, gold) {
+    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, gold }]);
+    saveTavernLeaderboard();
+    return tavernLeaderboard;
+}
 
 const TAVERN_ENCOUNTERS = [
     {
@@ -43,7 +94,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🤠',
         lives: 3,
         ability: 'deadeye24',
-        intro: 'The Hangman keeps one round in the chamber. Once per match, a strong hand can become a perfect 24.'
+        intro: 'The Hangman keeps one round in the chamber. At one life, The Ace of Spades can turn a score of 16 or higher into a perfect 24.'
     },
     {
         id: 'jaguar',
@@ -486,6 +537,7 @@ function evaluateTavernRound(roomCode) {
         let scoreSummary = getTavernScoreSummary(room);
         room.roundPlayers = [];
         room.tavernRun.runComplete = true;
+        io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
         io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
         io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?` });
         return;
@@ -498,6 +550,7 @@ function evaluateTavernRound(roomCode) {
             let scoreSummary = getTavernScoreSummary(room, true);
             room.roundPlayers = [];
             room.tavernRun.runComplete = true;
+            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
             io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
             io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}` });
             return;
@@ -509,7 +562,7 @@ function evaluateTavernRound(roomCode) {
         io.to(roomCode).emit('offerKeepsakes', {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
-            transitionMessage: enemy.id === 'molar' ? 'Seething, The Molar leaves the table and you are invited to the high roller table' : null,
+            transitionMessage: enemy.id === 'molar' ? 'After defeating the Molar, you are invited to the high roller table...' : null,
             choices: room.tavernRun.pendingKeepsakeChoices
         });
         return;
@@ -524,6 +577,7 @@ function evaluateTavernRound(roomCode) {
 }
 
 io.on('connection', (socket) => {
+    socket.emit('leaderboardUpdate', tavernLeaderboard);
     
     socket.on('checkRoom', (roomCode) => {
         let code = roomCode.trim().toUpperCase() || "PUBLIC";
@@ -764,11 +818,11 @@ io.on('connection', (socket) => {
 
             if (room.mode === 'tavern-crawl') {
                 let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && !turnData.busted && turnData.score > 0 && turnData.score < 24) {
+                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && room.players[currentId].lives <= 1 && !turnData.busted && turnData.score >= 16 && turnData.score < 24) {
                     room.players[currentId].score = 24;
                     markAbilityUsed(room, 'deadeye24');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Deadeye 24', text: 'The Hangman fires once. Perfect 24.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman fires once. Deadeye 24.', color: "#ffd54f" });
+                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman plays his last card. Perfect 24.' });
+                    io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman plays The Ace of Spades.', color: "#ffd54f" });
                 }
 
                 if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== 'BOT_MOLAR' && !turnData.busted && turnData.score > 0) {
@@ -841,3 +895,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
+
