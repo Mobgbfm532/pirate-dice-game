@@ -1706,7 +1706,16 @@
             }, (suspenseType !== 'none') ? 2000 : 500); 
         }
         
-        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore) {
+        function getHumanRoundResultForBot() {
+            if (!latestGameState || !latestGameState.players) return { hasResult: false, busted: false, score: null };
+            let humanId = Object.keys(latestGameState.players).find(id => id !== 'BOT_MOLAR');
+            if (!humanId) return { hasResult: false, busted: false, score: null };
+            let human = latestGameState.players[humanId];
+            if (!human || human.score === null || typeof human.score === 'undefined') return { hasResult: false, busted: false, score: null };
+            return { hasResult: true, busted: !!human.busted, score: Number(human.score || 0) };
+        }
+
+        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore, humanResult = { hasResult: false, busted: false, score: null }) {
             const active = activeDice.slice().sort((a, b) => b.value - a.value);
             let toLock = [];
             const enemyId = (currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy) ? tavernRun.enemy.id : 'molar';
@@ -1729,24 +1738,46 @@
             lockRequired();
 
             if (hasTwo && hasFour) {
+                if (humanResult.hasResult && humanResult.busted) {
+                    active.forEach(d => {
+                        if (!toLock.includes(d.id)) lockDie(d);
+                    });
+                    return toLock;
+                }
+
                 const remainingToPerfect = Math.max(0, 24 - currentScore);
-                active.forEach(d => {
-                    if (toLock.includes(d.id)) return;
-                    if (d.value > remainingToPerfect && active.length > 1) return;
-                    if (d.value >= 5) lockDie(d);
-                    else if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
-                    else if (enemyId === 'rokr' && d.value >= 4 && remainingToPerfect <= 8) lockDie(d);
-                    else if (enemyId === 'hangman' && d.value >= 4) lockDie(d);
-                    else if (enemyId === 'jaguar' && d.value >= 4) lockDie(d);
-                    else if (remainingToPerfect <= d.value) lockDie(d);
-                });
+                let targetScore = humanResult.hasResult && Number.isFinite(humanResult.score) ? humanResult.score : null;
+                let scoringDice = active.filter(d => !toLock.includes(d.id) && d.value <= remainingToPerfect);
+
+                if (targetScore !== null) {
+                    let winningDice = scoringDice.filter(d => currentScore + d.value > targetScore);
+                    if (currentScore > targetScore) {
+                        scoringDice.forEach(lockDie);
+                    } else if (winningDice.length > 0) {
+                        lockDie(winningDice.sort((a, b) => a.value - b.value)[0]);
+                    } else if (active.length === 1 && scoringDice.length === 1) {
+                        lockDie(scoringDice[0]);
+                    } else {
+                        let bestDie = scoringDice[0];
+                        if (bestDie && currentScore + bestDie.value >= Math.min(24, targetScore)) lockDie(bestDie);
+                    }
+                } else {
+                    scoringDice.forEach(d => {
+                        if (d.value >= 5) lockDie(d);
+                        else if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
+                        else if (enemyId === 'rokr' && d.value >= 4 && remainingToPerfect <= 8) lockDie(d);
+                        else if (enemyId === 'hangman' && d.value >= 4) lockDie(d);
+                        else if (enemyId === 'jaguar' && d.value >= 4) lockDie(d);
+                        else if (remainingToPerfect <= d.value) lockDie(d);
+                    });
+                }
             } else if (enemyId === 'jaguar') {
                 lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
             }
 
             if (toLock.length === 0 && active.length === 1) lockDie(active[0]);
             else if (toLock.length === 0 && active.length > 0 && (!hasTwo || !hasFour)) lockDie(active[0]);
-            else if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
+            else if (toLock.length === 0 && active.length > 0 && !(humanResult.hasResult && !humanResult.busted)) lockDie(active[0]);
             return toLock;
         }
 
@@ -1762,7 +1793,7 @@
                 else botScore += d.value;
             });
 
-            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore);
+            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore, getHumanRoundResultForBot());
 
             toLock.forEach((id, index) => {
                 setTimeout(() => {
