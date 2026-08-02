@@ -571,8 +571,7 @@ function evaluateTavernRound(roomCode) {
     room.roundNumber++;
     room.tavernRun.encounterRound++;
     room.isTieBreaker = tiedPlayers.length > 1;
-    room.dealerIndex = room.dealerIndex === 0 ? 1 : 0;
-    room.roundPlayers = room.dealerIndex === 0 ? [humanId, enemyId] : [enemyId, humanId];
+    room.roundPlayers = [humanId, enemyId];
     room.currentTurnIndex = 0;
     io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
 }
@@ -896,4 +895,3 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
-
