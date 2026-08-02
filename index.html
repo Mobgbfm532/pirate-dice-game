@@ -300,6 +300,10 @@
         .keepsake-pill { padding: 7px 9px; background: rgba(93, 64, 55, 0.1); border: 1px solid rgba(93, 64, 55, 0.28); border-radius: 4px; font-size: 0.95rem; }
         .keepsake-pill.used { opacity: 0.58; border-style: dashed; background: rgba(93, 64, 55, 0.05); }
         .keepsake-used-label { float: right; color: #7b1d1d; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+        .leaderboard-list { margin-top: 8px; display: grid; gap: 5px; }
+        .leaderboard-row { display: flex; justify-content: space-between; gap: 8px; padding: 5px 7px; border-bottom: 1px dashed rgba(93, 64, 55, 0.25); font-size: 0.95rem; }
+        .leaderboard-row strong { color: #4e342e; }
+        .leaderboard-gold { color: #8e5b14; font-weight: 700; white-space: nowrap; }
         .choice-btn { display: block; width: 100%; margin: 10px 0; text-align: left; font-size: 1.05rem; }
         .choice-btn small { display: block; margin-top: 4px; color: #ffe0b2; font-size: 0.85rem; line-height: 1.25; }
         .mode-note { color: #8d6e63; font-size: 0.95rem; margin-top: -5px; margin-bottom: 12px; }
@@ -591,6 +595,12 @@
             font-weight: 700;
             font-size: 0.72rem;
             letter-spacing: 1px;
+        }
+
+        body.tavern-mode .leaderboard-row {
+            border: 1px solid rgba(87, 51, 25, 0.22);
+            border-radius: 4px;
+            background: rgba(255, 248, 225, 0.45);
         }
 
         /* Themed SVG Reaction Button Bar Styles */
@@ -897,6 +907,8 @@
                 <div class="crawl-line" id="crawl-ability"></div>
                 <h3 class="crawl-title">Keepsakes</h3>
                 <div class="keepsake-list" id="crawl-keepsakes"></div>
+                <h3 class="crawl-title">Global Leaderboard</h3>
+                <div class="leaderboard-list" id="crawl-leaderboard"></div>
             </div>
 
             <div id="reaction-bar">
@@ -933,6 +945,7 @@
         let currentMode = 'classic';
         let latestGameState = null;
         let tavernRun = null;
+        let tavernLeaderboard = [];
         let rokrBlurActive = false;
         let klargStolenThisTurn = false;
 
@@ -948,11 +961,12 @@
         const crawlEnemy = document.getElementById('crawl-enemy');
         const crawlAbility = document.getElementById('crawl-ability');
         const crawlKeepsakes = document.getElementById('crawl-keepsakes');
+        const crawlLeaderboard = document.getElementById('crawl-leaderboard');
 
         const abilityNames = {
             reachAround: 'Reach Around',
             constellationBlur: 'Constellation Blur',
-            deadeye24: 'Deadeye 24',
+            deadeye24: 'The Ace of Spades',
             smoothTalk: 'Smooth Talk'
         };
 
@@ -1034,6 +1048,7 @@
         const signatureSounds = {
             'Reach Around': sfxReachAround,
             'Constellation Blur': sfxConstellation,
+            'The Ace of Spades': sfxGunshot,
             'Deadeye 24': sfxGunshot
         };
 
@@ -1055,6 +1070,19 @@
                 splashShowing = false;
                 playNextSplash();
             });
+        }
+
+        function renderLeaderboard() {
+            if (!crawlLeaderboard) return;
+            if (!tavernLeaderboard || tavernLeaderboard.length === 0) {
+                crawlLeaderboard.innerHTML = '<div class="leaderboard-row"><strong>No scores yet</strong><span class="leaderboard-gold">0 gold</span></div>';
+                return;
+            }
+            crawlLeaderboard.innerHTML = tavernLeaderboard.slice(0, 10).map((entry, index) => {
+                let name = escapeHTML(entry.name || 'Traveler');
+                let gold = Number(entry.gold || 0);
+                return `<div class="leaderboard-row"><strong>${index + 1}. ${name}</strong><span class="leaderboard-gold">${gold} gold</span></div>`;
+            }).join('');
         }
 
         function playRollSound() {
@@ -1222,11 +1250,16 @@
             showModal(data.message, true);
         });
 
+        socket.on('leaderboardUpdate', (entries) => {
+            tavernLeaderboard = Array.isArray(entries) ? entries : [];
+            renderLeaderboard();
+        });
+
         socket.on('offerKeepsakes', (data) => {
             playSound(sfxWinner);
             document.getElementById('game-page').style.visibility = 'hidden';
             const transitionMessage = data.transitionMessage || `${data.defeated} leaves the table.`;
-            customModalText.innerHTML = `<strong>${transitionMessage}</strong><br><br>Choose a keepsake before battling your next opponent`;
+            customModalText.innerHTML = `<strong>${transitionMessage}</strong><br><br><strong>New Opponent: ${escapeHTML(data.nextEnemy || 'Unknown')}</strong><br><br>Choose a keepsake before battling your next opponent`;
             customModalActions.innerHTML = '';
             data.choices.forEach(choice => {
                 const btn = document.createElement('button');
@@ -1271,6 +1304,7 @@
                     return `<div class="keepsake-pill ${used ? 'used' : ''}"><span class="keepsake-icon">${getKeepsakeIcon(k.id)}</span><strong>${k.name}</strong>${used ? '<span class="keepsake-used-label">Used</span>' : ''}<br>${k.text}</div>`;
                 }).join('');
             }
+            renderLeaderboard();
         }
 
         socket.on('triggerNewGameSplash', () => {
