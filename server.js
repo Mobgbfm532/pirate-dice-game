@@ -571,7 +571,8 @@ function evaluateTavernRound(roomCode) {
     room.roundNumber++;
     room.tavernRun.encounterRound++;
     room.isTieBreaker = tiedPlayers.length > 1;
-    room.roundPlayers = [humanId, enemyId];
+    room.dealerIndex = room.dealerIndex === 0 ? 1 : 0;
+    room.roundPlayers = room.dealerIndex === 0 ? [humanId, enemyId] : [enemyId, humanId];
     room.currentTurnIndex = 0;
     io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
 }
