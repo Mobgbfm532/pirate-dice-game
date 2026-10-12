@@ -1,0 +1,277 @@
+// 2, 4, 24 game rules.
+//
+// Pure functions shared by the server (which runs every turn) and the browser
+// (which only displays them). Nothing in here touches the DOM, sockets or timers.
+// Loaded with require() on the server and as window.GameRules in the browser.
+(function (root, factory) {
+    if (typeof module === 'object' && module.exports) module.exports = factory();
+    else root.GameRules = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+    'use strict';
+
+    const DICE_COUNT = 6;
+    const PERFECT_SCORE = 24;
+
+    const STATUS = {
+        ACTIVE: 'active',
+        LOCKED_THIS_ROLL: 'lockedThisTurn',
+        LOCKED: 'permanentlyLocked',
+        STOLEN: 'stolen'
+    };
+
+    const SUSPENSE = { NONE: 'none', SURVIVAL: 'survival', PERFECT: 'perfect' };
+
+    // Announcement keys. The browser turns these into text (see CALLOUT_TEXT in index.html).
+    const CALLOUT = {
+        EARLY_ROSS: 'earlyRoss',
+        DIDNT_BITE: 'didntBite',
+        ODDS: 'odds',
+        TROUBLE: 'trouble',
+        PHEW: 'phew',
+        KNOCKING: 'knocking',
+        DOOR_OPEN: 'doorOpen',
+        DUST: 'dust',
+        BLESSED: 'blessed',
+        PERFECT: 'perfect',
+        RESULT: 'result'
+    };
+
+    const ABILITY_NAMES = {
+        reachAround: 'Reach Around',
+        constellationBlur: 'Constellation Blur',
+        deadeye24: 'The Ace of Spades',
+        smoothTalk: 'Smooth Talk'
+    };
+
+    function getAbilityMaxUses(abilityId) {
+        return abilityId === 'constellationBlur' ? 2 : 1;
+    }
+
+    function defaultRollFace() {
+        return Math.floor(Math.random() * 6) + 1;
+    }
+
+    const isActive = d => d.status === STATUS.ACTIVE;
+    const isLocked = d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN;
+
+    // The first locked 2 and first locked 4 are "required"; every other locked die scores.
+    function scoreDice(dice) {
+        let has2 = false, has4 = false, score = 0;
+        dice.filter(isLocked).forEach(d => {
+            if (d.value === 2 && !has2) has2 = true;
+            else if (d.value === 4 && !has4) has4 = true;
+            else score += d.value;
+        });
+        return { has2, has4, score };
+    }
+
+    function createTurn(playerId) {
+        return {
+            playerId,
+            dice: Array.from({ length: DICE_COUNT }, (_, id) => ({ id, value: 0, status: STATUS.ACTIVE })),
+            rollCount: 0,
+            locksThisRoll: 0,
+            hasRolled: false,
+            inTrouble: false,
+            blurActive: false,
+            suspense: SUSPENSE.NONE,
+            callout: null,
+            finalized: false,
+            outcome: null
+        };
+    }
+
+    function canRoll(turn) {
+        if (turn.finalized) return false;
+        if (!turn.dice.some(isActive)) return false;
+        return !turn.hasRolled || turn.locksThisRoll > 0;
+    }
+
+    const CLEARED_ON_NEXT_ROLL = [CALLOUT.EARLY_ROSS, CALLOUT.DIDNT_BITE, CALLOUT.PHEW, CALLOUT.DOOR_OPEN];
+
+    // Announcements decided when the player presses Roll, before the dice move.
+    function applyPreRollCallouts(turn) {
+        const dice = turn.dice;
+        if (turn.rollCount > 0 && CLEARED_ON_NEXT_ROLL.includes(turn.callout)) turn.callout = null;
+
+        if (turn.rollCount === 1) {
+            const justLocked = dice.filter(d => d.status === STATUS.LOCKED_THIS_ROLL);
+            const stillActive = dice.filter(isActive);
+            const has2 = justLocked.some(d => d.value === 2);
+            const has4 = justLocked.some(d => d.value === 4);
+            const has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value));
+            const activeHas6 = stillActive.some(d => d.value === 6);
+            const exactlyOneRequired = has2 !== has4;
+
+            if (exactlyOneRequired && has1356) turn.callout = CALLOUT.EARLY_ROSS;
+            else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) turn.callout = CALLOUT.DIDNT_BITE;
+
+            if (dice.every(d => d.value === dice[0].value)) {
+                turn.callout = CALLOUT.ODDS;
+            } else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) {
+                turn.inTrouble = true;
+                turn.callout = CALLOUT.TROUBLE;
+            }
+        }
+
+        if (turn.rollCount > 0) {
+            const locked = dice.filter(isLocked);
+            const lockedHas2 = locked.some(d => d.value === 2);
+            const lockedHas4 = locked.some(d => d.value === 4);
+            const locked6s = locked.filter(d => d.value === 6).length;
+            const activeCount = dice.filter(isActive).length;
+
+            if (lockedHas2 && lockedHas4 && locked6s === 3 && activeCount === 1) turn.callout = CALLOUT.DOOR_OPEN;
+            else if (lockedHas2 && lockedHas4 && locked6s === 2 && activeCount >= 2) turn.callout = CALLOUT.KNOCKING;
+        }
+    }
+
+    // "survival": one die left and still missing a 2 or 4. "perfect": one die left for a 24.
+    function getSuspense(dice) {
+        const activeCount = dice.filter(isActive).length;
+        if (activeCount !== 1) return SUSPENSE.NONE;
+        const locked = dice.filter(isLocked);
+        const has2 = locked.some(d => d.value === 2);
+        const has4 = locked.some(d => d.value === 4);
+        if (!has2 || !has4) return SUSPENSE.SURVIVAL;
+        if (locked.filter(d => d.value === 6).length === 3) return SUSPENSE.PERFECT;
+        return SUSPENSE.NONE;
+    }
+
+    // Rolls every active die. `onRolled(turn)` runs after the new values land and before
+    // the post-roll checks, so enemy abilities (e.g. stealing a die) can change the board.
+    // Returns null if the roll isn't allowed, otherwise { suspense, devil }.
+    function rollTurn(turn, { rollFace = defaultRollFace, onRolled = null } = {}) {
+        if (!canRoll(turn)) return null;
+
+        if (turn.blurActive && turn.locksThisRoll > 0) turn.blurActive = false;
+        applyPreRollCallouts(turn);
+
+        turn.rollCount++;
+        turn.dice.forEach(d => { if (d.status === STATUS.LOCKED_THIS_ROLL) d.status = STATUS.LOCKED; });
+        turn.suspense = getSuspense(turn.dice);
+
+        turn.dice.forEach(d => { if (isActive(d)) d.value = rollFace(); });
+        turn.hasRolled = true;
+        turn.locksThisRoll = 0;
+
+        if (onRolled) onRolled(turn);
+
+        const newSixes = turn.dice.filter(d => isActive(d) && d.value === 6).length;
+        if (newSixes === 0 && (turn.callout === CALLOUT.KNOCKING || turn.callout === CALLOUT.DOOR_OPEN)) turn.callout = null;
+
+        settleTurn(turn);
+        return { suspense: turn.suspense, devil: newSixes >= 3 };
+    }
+
+    // Locks or unlocks a die rolled this roll. Returns { finalizedNow } or null if not allowed.
+    function toggleDie(turn, dieId) {
+        if (!turn.hasRolled || turn.finalized) return null;
+        const die = turn.dice.find(d => d.id === dieId);
+        if (!die || die.status === STATUS.LOCKED || die.status === STATUS.STOLEN) return null;
+
+        if (die.status === STATUS.ACTIVE) { die.status = STATUS.LOCKED_THIS_ROLL; turn.locksThisRoll++; }
+        else { die.status = STATUS.ACTIVE; turn.locksThisRoll--; }
+
+        let wasFinalized = turn.finalized;
+        settleTurn(turn);
+        return { finalizedNow: !wasFinalized && turn.finalized };
+    }
+
+    // Updates "Phew!" and, once every die is locked, fixes the turn's outcome.
+    function settleTurn(turn) {
+        if (turn.finalized) return;
+
+        if (turn.inTrouble && !turn.blurActive) {
+            const { has2, has4 } = scoreDice(turn.dice);
+            if (has2 && has4) { turn.callout = CALLOUT.PHEW; turn.inTrouble = false; }
+        }
+
+        if (turn.hasRolled && !turn.dice.some(isActive)) {
+            const { has2, has4, score } = scoreDice(turn.dice);
+            const busted = !has2 || !has4;
+            turn.finalized = true;
+            turn.blurActive = false;
+            turn.outcome = { busted, score: busted ? 0 : score, suspense: turn.suspense, rollCount: turn.rollCount };
+            if (busted) turn.callout = CALLOUT.DUST;
+            else if (score === PERFECT_SCORE) turn.callout = turn.rollCount === 1 ? CALLOUT.BLESSED : CALLOUT.PERFECT;
+            else turn.callout = CALLOUT.RESULT;
+        }
+    }
+
+    // Klarg's Reach Around: removes the highest active die from play. Needs 2+ active dice.
+    function stealHighestActiveDie(turn) {
+        const active = turn.dice.filter(isActive);
+        if (active.length <= 1) return null;
+        const stolen = active.slice().sort((a, b) => b.value - a.value)[0];
+        stolen.status = STATUS.STOLEN;
+        return stolen;
+    }
+
+    // What players are allowed to see. While Rokr's blur is up, dice that are still
+    // in play this roll are hidden from everyone (value 0, hidden: true).
+    function viewTurn(turn) {
+        if (!turn) return null;
+        const hide = d => turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL);
+        return {
+            key: turn.key,
+            playerId: turn.playerId,
+            dice: turn.dice.map(d => hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }),
+            rollCount: turn.rollCount,
+            locksThisRoll: turn.locksThisRoll,
+            hasRolled: turn.hasRolled,
+            blurActive: turn.blurActive,
+            suspense: turn.suspense,
+            callout: turn.callout,
+            finalized: turn.finalized,
+            outcome: turn.outcome,
+            canRoll: canRoll(turn)
+        };
+    }
+
+    // ---- Bot (The Molar and the Tavern Crawl enemies) ----
+
+    function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore, enemyId = 'molar') {
+        const active = activeDice.slice().sort((a, b) => b.value - a.value);
+        const toLock = [];
+        const lockDie = die => {
+            if (!die || toLock.includes(die.id)) return false;
+            toLock.push(die.id);
+            return true;
+        };
+
+        if (!hasTwo && lockDie(active.find(d => d.value === 2))) hasTwo = true;
+        if (!hasFour && lockDie(active.find(d => d.value === 4 && !toLock.includes(d.id)))) hasFour = true;
+
+        if (hasTwo && hasFour) {
+            const remainingToPerfect = Math.max(0, PERFECT_SCORE - currentScore);
+            active.forEach(d => {
+                if (toLock.includes(d.id)) return;
+                if (d.value > remainingToPerfect && active.length > 1) return;
+                if (d.value >= 5) lockDie(d);
+                else if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
+                else if (enemyId === 'rokr' && d.value >= 4 && remainingToPerfect <= 8) lockDie(d);
+                else if (enemyId === 'hangman' && d.value >= 4) lockDie(d);
+                else if (enemyId === 'jaguar' && d.value >= 4) lockDie(d);
+                else if (remainingToPerfect <= d.value) lockDie(d);
+            });
+        } else if (enemyId === 'jaguar') {
+            lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
+        }
+
+        // Always lock at least one die so the bot can roll again.
+        if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
+        return toLock;
+    }
+
+    function planBotLocks(turn, enemyId) {
+        const { has2, has4, score } = scoreDice(turn.dice);
+        return chooseBotDiceToLock(turn.dice.filter(isActive), has2, has4, score, enemyId);
+    }
+
+    return {
+        DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
+        getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
+        stealHighestActiveDie, viewTurn, chooseBotDiceToLock, planBotLocks
+    };
+});

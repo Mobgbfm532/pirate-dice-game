@@ -923,6 +923,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/rules.js"></script>
     <script>
         const socket = io();
 
@@ -932,12 +933,7 @@
             sessionStorage.setItem('tavernToken', sessionToken);
         }
 
-        let dice = [];
-        let hasRolled = false, locksThisRoll = 0, rollCount = 0;
-        let isAnimating = false;
-        let suspenseType = 'none', inTrouble = false, turnFinalized = false;
-        
-        let myId = null, isMyTurn = false, isBotTurn = false, lastTurnId = null, isFirstLoad = true; 
+        let myId = null, isMyTurn = false, lastTurnId = null, isFirstLoad = true;
         let myAvatar = 'Devil'; 
         let myRoom = 'PUBLIC';
         let myStartingLives = 3;
@@ -946,8 +942,6 @@
         let latestGameState = null;
         let tavernRun = null;
         let tavernLeaderboard = [];
-        let rokrBlurActive = false;
-        let klargStolenThisTurn = false;
 
         const turnIndicator = document.getElementById('turn-indicator');
         const scoreboard = document.getElementById('scoreboard');
@@ -963,12 +957,7 @@
         const crawlKeepsakes = document.getElementById('crawl-keepsakes');
         const crawlLeaderboard = document.getElementById('crawl-leaderboard');
 
-        const abilityNames = {
-            reachAround: 'Reach Around',
-            constellationBlur: 'Constellation Blur',
-            deadeye24: 'The Ace of Spades',
-            smoothTalk: 'Smooth Talk'
-        };
+        const abilityNames = GameRules.ABILITY_NAMES;
 
         const sfxRoll = new Audio('roll.mp3'); sfxRoll.volume = 0.6;
         const sfxClick = new Audio('click.mp3'); sfxClick.volume = 0.6;
@@ -1027,7 +1016,7 @@
             if (type === 'mug') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M128 32v32h224V32zm32 64v320h192V96zm224 32v192h48c26.5 0 48-21.5 48-48v-96c0-26.5-21.5-48-48-48zm-256 32h128v32H128zm0 96h128v32H128zm0 96h128v32H128z"/></svg>`;
             if (type === 'hood') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M256 26.63c-94.8 0-176.1 63.34-203.4 150.37L32 245.3l37.2 11.7 5.5-17.3C100.8 159.2 172.5 102.6 256 102.6s155.2 56.6 181.3 137.1l5.5 17.3 37.2-11.7-20.6-68.3C432.1 89.97 350.8 26.63 256 26.63zm0 112c-61.8 0-112 50.2-112 112v128c0 35.3 28.7 64 64 64h96c35.3 0 64-28.7 64-64v-128c0-61.8-50.2-112-112-112z"/></svg>`;
             if (type === 'skull') return `<svg viewBox="0 0 512 512" style="width:28px;height:28px;fill:#ffcc80;"><path d="M256 42c-83.4 0-150 66.6-150 150 0 55.4 33.3 111.4 78 136.1v49.9h144v-49.9c44.7-24.7 78-80.7 78-136.1 0-83.4-66.6-150-150-150zm-60 120c-16.6 0-30-13.4-30-30s13.4-30 30-30 30 13.4 30 30-13.4 30-30 30zm120 0c-16.6 0-30-13.4-30-30s13.4-30 30-30 30 13.4 30 30-13.4 30-30 30zm-90 150c-27.6 0-50-22.4-50-50h100c0 27.6-22.4 50-50 50z"/></svg>`;
-            return `<span>${type}</span>`;
+            return `<span>${escapeHTML(type)}</span>`;
         }
 
         function createEmber() {
@@ -1277,6 +1266,17 @@
             customModal.style.display = 'flex';
         });
 
+        function getTavernAbilityMaxUses(abilityId) {
+            return GameRules.getAbilityMaxUses(abilityId);
+        }
+
+        function getTavernAbilityUseCount(abilityId) {
+            if (!tavernRun || !tavernRun.abilityUsed) return 0;
+            const used = tavernRun.abilityUsed[abilityId];
+            if (used === true) return 1;
+            return Number(used || 0);
+        }
+
         function updateTavernCrawlPanel() {
             if (currentMode !== 'tavern-crawl' || !tavernRun) {
                 tavernCrawlPanel.style.display = 'none';
@@ -1321,7 +1321,7 @@
         function showTurnSplash(name, avatar) {
             queueSplash((done) => {
                 const overlay = document.getElementById('splash-overlay'); const text = document.getElementById('splash-text');
-                let turnText = name === "Your" ? "Your turn!" : `${name}'s turn!`;
+                let turnText = name === "Your" ? "Your turn!" : `${escapeHTML(name)}'s turn!`;
                 text.className = 'turn-splash';
                 
                 // Integrated premium tokens into splash overlay frame animations
@@ -1354,13 +1354,12 @@
         }
 
         const scoreDisplay = document.getElementById('score-display'); 
-        function broadcastAnnouncement(text, color, altText = null) {
+        function showAnnouncement(text, color) {
             if (currentMode === 'tavern-crawl') {
                 let allowed = text === "" || text === "The Early Ross!";
                 if (!allowed) return;
             }
             scoreDisplay.innerText = text; scoreDisplay.style.color = color;
-            if (isMyTurn || isBotTurn) socket.emit('broadcastMessage', { text: altText !== null ? altText : text, color });
         }
         socket.on('displayMessage', (msgData) => {
             if (currentMode === 'tavern-crawl') return;
@@ -1395,10 +1394,10 @@
             if (data.emoji === '🧔 Early Ross' || data.emoji === '🧔🏼‍♂️ Early Ross') {
                 reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
             } else if (['😀', '😂', '😮', '😎', '😭'].includes(data.emoji)) {
-                reactionDiv.innerHTML = `<strong>${data.name}</strong> <span style="font-size: 1.8rem">${data.emoji}</span>`;
+                reactionDiv.innerHTML = `<strong>${escapeHTML(data.name)}</strong> <span style="font-size: 1.8rem">${data.emoji}</span>`;
             } else {
                 // Renders custom inline high fidelity graphics to float up over the felt tray
-                reactionDiv.innerHTML = `<strong>${data.name}</strong> ${getReactionSVG(data.emoji)}`;
+                reactionDiv.innerHTML = `<strong>${escapeHTML(data.name)}</strong> ${getReactionSVG(data.emoji)}`;
             }
             
             document.body.appendChild(reactionDiv);
@@ -1406,42 +1405,15 @@
             setTimeout(() => { reactionDiv.remove(); }, 3000);
         });
 
-        function triggerGameSound(soundId) {
-            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
-            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
-            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
-            if (isMyTurn || isBotTurn) socket.emit('playGameSound', soundId);
-        }
-        
-        socket.on('playGameSound', (soundId) => {
-            if (soundId === 'yay') playSound(sfxYay); else if (soundId === 'aww') playSound(sfxAww);
-            else if (soundId === 'bust') playSound(sfxBust); else if (soundId === 'win') playSound(sfxWin);
-            else if (soundId === 'ohwell') playSound(sfxOhWell); else if (soundId === 'click') playSound(sfxClick);
-        });
-
         function triggerRollAnimation(suspense) {
             playRollSound(); const activeDOMDice = document.getElementById('active-area').querySelectorAll('.die');
             if (suspense !== 'none') { document.body.classList.add('shake-screen'); activeDOMDice.forEach(die => die.classList.add('rolling-suspense')); setTimeout(() => { document.body.classList.remove('shake-screen'); }, 2000); } 
             else { activeDOMDice.forEach(die => die.classList.add('rolling')); }
         }
-        socket.on('playerRolledDice', (suspenseType) => { triggerRollAnimation(suspenseType); });
-
-        socket.on('boardUpdated', (gameData) => {
-            if (isMyTurn || isBotTurn || !gameData || !Array.isArray(gameData.dice)) return;
-            dice = gameData.dice.map(d => ({ ...d }));
-            rollCount = gameData.rollCount || 0;
-            inTrouble = !!gameData.inTrouble;
-            turnFinalized = !!gameData.turnFinalized;
-            hasRolled = dice.some(d => d.value !== 0);
-            locksThisRoll = dice.filter(d => d.status === 'lockedThisTurn').length;
-            renderDice(false);
-        });
-        
         function triggerCelebration() {
             playSound(sfxYay);
-            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] }); 
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#cda434'] });
         }
-        socket.on('triggerConfetti', triggerCelebration);
 
         socket.on('connect', () => { myId = socket.id; });
 
@@ -1501,19 +1473,18 @@
                 // Injects the custom player graphical tokens into the sidebar adventurer listings
                 let avatarToRender = id === 'BOT_MOLAR' ? (currentMode === 'tavern-crawl' ? p.name : 'BOT_MOLAR') : p.avatar;
                 if (currentMode === 'tavern-crawl') {
-                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<div class="player-card-copy"><strong>${p.name}</strong><div>${hearts}</div><span class="score-chip">Score: ${scoreText}</span></div>`;
+                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<div class="player-card-copy"><strong>${escapeHTML(p.name)}</strong><div>${hearts}</div><span class="score-chip">Score: ${scoreText}</span></div>`;
                 } else {
-                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<br><strong>${p.name}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
+                    el.innerHTML = `${renderAvatarAsset(avatarToRender)}<br><strong>${escapeHTML(p.name)}</strong><br>${hearts}<br><strong>Score: ${scoreText}</strong>`;
                 }
                 if (id === state.currentTurnId) el.style.color = "#b71c1c"; 
                 scoreboard.appendChild(el);
             });
 
             if (state.playerOrder.length < 2 && !myRoom.startsWith('COMP') && !myRoom.startsWith('TVRN')) {
-                turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isBotTurn = false; isFirstLoad = true; 
+                turnIndicator.innerText = "Waiting for travelers to join..."; turnIndicator.style.color = "#9e9e9e"; isMyTurn = false; isFirstLoad = true;
             } else {
                 isMyTurn = (myId === state.currentTurnId);
-                isBotTurn = (state.currentTurnId === 'BOT_MOLAR' && (myRoom.startsWith('COMP') || myRoom.startsWith('TVRN')));
                 let hasPendingKeepsakeChoice = currentMode === 'tavern-crawl' && tavernRun && tavernRun.pendingKeepsakeChoices;
                 
                 let activePlayerInfo = state.players[state.currentTurnId];
@@ -1543,311 +1514,158 @@
             }
             
             document.getElementById('roll-btn').style.display = isMyTurn ? "inline-block" : "none";
-            
-            if (state.currentTurnId && (isMyTurn || isBotTurn) && previousTurnId !== state.currentTurnId) {
-                initGame(); 
-                if (isBotTurn) {
-                    setTimeout(rollDice, 1000); 
-                }
-            }
+            if (!isAnimating) renderDice();
         });
 
         const activeArea = document.getElementById('active-area'); const requiredArea = document.getElementById('required-dice'); const remainingArea = document.getElementById('remaining-locked');
         const rollBtn = document.getElementById('roll-btn'); const currentScoreSpan = document.getElementById('current-score-span'); 
 
-        function initGame() {
-            dice = Array.from({ length: 6 }, (_, i) => ({ id: i, value: 0, status: 'active' }));
-            hasRolled = false; locksThisRoll = 0; rollCount = 0; suspenseType = 'none'; inTrouble = false; turnFinalized = false; 
-            rokrBlurActive = false; klargStolenThisTurn = false;
-            scoreDisplay.innerText = ''; currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c"; 
-            if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
-            rollBtn.innerText = "Roll Dice"; rollBtn.onclick = rollDice; renderDice();
+        // ---- Dice table ----
+        // The server owns the dice. This code sends roll / lock / end-turn requests and
+        // draws the turn the server sends back (GameRules.viewTurn in shared/rules.js).
+
+        let turn = null;
+        let endingTurn = false;
+        let shownCallout = null;
+
+        const CALLOUT_TEXT = {
+            earlyRoss: () => ["The Early Ross!", "#ffb74d"],
+            didntBite: mine => [currentActiveId === 'BOT_MOLAR' ? "The Molar NEVER bites" : (mine ? "You didn't bite!" : "They didn't bite!"), "#4fc3f7"],
+            odds: () => ["What are the odds? (1/36)", "#ce93d8"],
+            trouble: mine => [mine ? "Ooh you might be in trouble here" : "Ooh they might be in trouble here", "#e57373"],
+            phew: () => ["Phew!", "#81c784"],
+            knocking: mine => [mine ? "You're knocking at the door" : "They're knocking at the door", "#ffd54f"],
+            doorOpen: () => ["The door is open!", "#b2ff59"],
+            dust: () => ["Result: DUST! (Missing 2 or 4)", "#e57373"],
+            blessed: () => ["Blessed by the dice gods! 🎲✨", "#ffd54f"],
+            perfect: () => ["Perfect! ⭐ (24 Points)", "#ffd54f"],
+            result: (mine, outcome) => [`Result: ${outcome ? outcome.score : 0} Points!`, "#81c784"]
+        };
+
+        function showCallout(turnKey, callout, outcome) {
+            let id = `${turnKey}|${callout}`;
+            if (id === shownCallout) return;
+            shownCallout = id;
+            if (!callout || !CALLOUT_TEXT[callout]) { showAnnouncement("", ""); return; }
+            let [text, color] = CALLOUT_TEXT[callout](isMyTurn, outcome);
+            showAnnouncement(text, color);
+        }
+
+        // Turn updates are applied in order, waiting for each roll animation to finish.
+        let turnTasks = [];
+        let turnTaskRunning = false;
+        let isAnimating = false;
+
+        function enqueueTurnTask(task) {
+            turnTasks.push(task);
+            if (!turnTaskRunning) runNextTurnTask();
+        }
+
+        function runNextTurnTask() {
+            let task = turnTasks.shift();
+            if (!task) { turnTaskRunning = false; return; }
+            turnTaskRunning = true;
+            task(runNextTurnTask);
+        }
+
+        function applyTurn(view) {
+            let isNewTurn = !turn || !view || turn.key !== view.key;
+            turn = view;
+            if (isNewTurn) endingTurn = false;
+            if (view) showCallout(view.key, view.callout, view.outcome);
+            renderDice();
+        }
+
+        function playTurnEventSounds(event) {
+            if (!event) return;
+            if (event.type === 'toggle' && !isMyTurn) playSound(sfxClick);
+            if (event.type !== 'finalized') return;
+
+            let { busted, score, suspense } = event.outcome;
+            if (!isMyTurn) playSound(sfxClick);
+            if (busted) playSound(suspense === 'survival' ? sfxAww : sfxBust);
+            else if (score === 24) triggerCelebration();
+            else if (suspense === 'perfect') playSound(sfxOhWell);
+            else if (suspense === 'survival') playSound(sfxYay);
+        }
+
+        socket.on('turnState', (data) => {
+            enqueueTurnTask(done => {
+                applyTurn(data.turn);
+                playTurnEventSounds(data.event);
+                done();
+            });
+        });
+
+        socket.on('diceRolled', (data) => {
+            enqueueTurnTask(done => {
+                isAnimating = true;
+                rollBtn.disabled = true;
+                if (data.turn) showCallout(data.turn.key, data.preRollCallout, null);
+                triggerRollAnimation(data.suspense);
+                setTimeout(() => {
+                    isAnimating = false;
+                    if (data.devil) showDevilEffect();
+                    applyTurn(data.turn);
+                    done();
+                }, data.animationMs);
+            });
+        });
+
+        rollBtn.onclick = () => {
+            if (!turn || !isMyTurn || isAnimating || endingTurn) return;
+            triggerGlobalMusic();
+            if (turn.finalized) {
+                endingTurn = true;
+                renderDice();
+                socket.emit('endTurn');
+            } else if (turn.canRoll) {
+                rollBtn.disabled = true;
+                socket.emit('rollDice');
+            }
+        };
+
+        function toggleDie(die) {
+            if (!turn || !isMyTurn || isAnimating || !turn.hasRolled || turn.finalized) return;
+            if (die.status === 'permanentlyLocked') return;
+            triggerGlobalMusic();
+            playSound(sfxClick);
+            socket.emit('toggleDie', die.id);
         }
 
         function getPipsHTML(value) {
             return `<div class="number-display">${value === 0 ? '?' : value}</div>`;
         }
 
-        function getTavernAbilityMaxUses(abilityId) {
-            return abilityId === 'constellationBlur' ? 2 : 1;
-        }
-
-        function getTavernAbilityUseCount(abilityId) {
-            if (!tavernRun || !tavernRun.abilityUsed) return 0;
-            const used = tavernRun.abilityUsed[abilityId];
-            if (used === true) return 1;
-            return Number(used || 0);
-        }
-
-        function isTavernAbilityReady(abilityId) {
-            const dueRound = tavernRun ? (tavernRun.abilityRound || 1) : 1;
-            const currentRound = tavernRun ? (tavernRun.encounterRound || 1) : 1;
-            return currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy && tavernRun.enemy.ability === abilityId && currentRound >= dueRound && getTavernAbilityUseCount(abilityId) < getTavernAbilityMaxUses(abilityId);
-        }
-
-        function useTavernAbility(abilityId, message, color = "#ffb74d") {
-            if (!isTavernAbilityReady(abilityId)) return false;
-            tavernRun.abilityUsed = tavernRun.abilityUsed || {};
-            tavernRun.abilityUsed[abilityId] = getTavernAbilityUseCount(abilityId) + 1;
-            socket.emit('useEnemyAbility', abilityId);
-            showSignatureSplash(tavernRun.enemy.name, abilityNames[abilityId], message, 'signature-splash', signatureSounds[abilityNames[abilityId]] || null);
-            updateTavernCrawlPanel();
-            return true;
-        }
-
-        function applyKlargReachAround() {
-            if (!isMyTurn || klargStolenThisTurn || !isTavernAbilityReady('reachAround')) return;
-            let activeDice = dice.filter(d => d.status === 'active');
-            if (activeDice.length <= 1) return;
-            let stolen = activeDice.slice().sort((a, b) => b.value - a.value)[0];
-            stolen.status = 'stolen';
-            klargStolenThisTurn = true;
-            useTavernAbility('reachAround', 'Klarg uses Reach Around and steals one die.', '#ff8a65');
-        }
-
-        function applyRokrConstellationBlur() {
-            if (!isMyTurn || rokrBlurActive || !isTavernAbilityReady('constellationBlur')) return;
-            rokrBlurActive = true;
-            useTavernAbility('constellationBlur', 'Rokr blurs the dice with constellations.', '#81d4fa');
-        }
-
-        function rollDice() {
-            if (isAnimating) return; 
-            if (!isMyTurn && !isBotTurn) return; 
-            triggerGlobalMusic();
-            if (rokrBlurActive && locksThisRoll > 0) rokrBlurActive = false;
-
-            if (rollCount > 0) { 
-                if (scoreDisplay.innerText === "The Early Ross!" || scoreDisplay.innerText === "You didn't bite!" || scoreDisplay.innerText === "The Molar NEVER bites" || scoreDisplay.innerText === "Phew!" || scoreDisplay.innerText === "The door is open!") {
-                    broadcastAnnouncement("", ""); 
-                }
-            }
-
-            if (rollCount === 1) {
-                let justLocked = dice.filter(d => d.status === 'lockedThisTurn'); let stillActive = dice.filter(d => d.status === 'active');
-                let has2 = justLocked.some(d => d.value === 2); let has4 = justLocked.some(d => d.value === 4);
-                let has1356 = justLocked.some(d => [1, 3, 5, 6].includes(d.value)); let activeHas6 = stillActive.some(d => d.value === 6);
-                let exactlyOneRequired = (has2 && !has4) || (!has2 && has4);
-                
-                if (exactlyOneRequired && has1356) broadcastAnnouncement("The Early Ross!", "#ffb74d");
-                else if (justLocked.length === 1 && exactlyOneRequired && activeHas6) {
-                    let msg = isBotTurn ? "The Molar NEVER bites" : "You didn't bite!";
-                    let altMsg = isBotTurn ? "The Molar NEVER bites" : "They didn't bite!";
-                    broadcastAnnouncement(msg, "#4fc3f7", altMsg);
-                }
-            }
-
-            if (rollCount === 1) { 
-                let allSame = dice.every(d => d.value === dice[0].value);
-                if (allSame) broadcastAnnouncement("What are the odds? (1/36)", "#ce93d8");
-                else if (!dice.some(d => d.value === 2) && !dice.some(d => d.value === 4)) { 
-                    inTrouble = true; broadcastAnnouncement("Ooh you might be in trouble here", "#e57373", "Ooh they might be in trouble here"); 
-                } 
-            }
-
-            if (rollCount > 0) { 
-                let allLocked = dice.filter(d => d.status !== 'active' && d.status !== 'stolen');
-                let lockedHas2 = allLocked.some(d => d.value === 2);
-                let lockedHas4 = allLocked.some(d => d.value === 4);
-                let locked6sCount = allLocked.filter(d => d.value === 6).length;
-                let activeCount = dice.filter(d => d.status === 'active').length;
-
-                if (lockedHas2 && lockedHas4 && locked6sCount === 3 && activeCount === 1) {
-                    broadcastAnnouncement("The door is open!", "#b2ff59", "The door is open!");
-                } else if (lockedHas2 && lockedHas4 && locked6sCount === 2 && activeCount >= 2) {
-                    broadcastAnnouncement("You're knocking at the door", "#ffd54f", "They're knocking at the door");
-                }
-            }
-
-            rollCount++; dice.forEach(d => { if (d.status === 'lockedThisTurn') d.status = 'permanentlyLocked'; });
-            isAnimating = true; rollBtn.disabled = true; 
-            
-            if (isMyTurn || isBotTurn) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
-
-            let postLockActiveCount = dice.filter(d => d.status === 'active').length;
-            let postLockLockedDice = dice.filter(d => d.status !== 'active' && d.status !== 'stolen');
-            let postLockHas2 = postLockLockedDice.some(d => d.value === 2); 
-            let postLockHas4 = postLockLockedDice.some(d => d.value === 4);
-            let postLock6sCount = postLockLockedDice.filter(d => d.value === 6).length;
-            
-            suspenseType = (postLockActiveCount === 1 && (!postLockHas2 || !postLockHas4)) ? 'survival' : ((postLockActiveCount === 1 && postLockHas2 && postLockHas4 && postLock6sCount === 3) ? 'perfect' : 'none');
-            
-            triggerRollAnimation(suspenseType);
-            if (isMyTurn || isBotTurn) socket.emit('playerRolledDice', suspenseType);
-
-            setTimeout(() => {
-                dice.forEach(d => { if (d.status === 'active') d.value = Math.floor(Math.random() * 6) + 1; });
-                hasRolled = true; locksThisRoll = 0; isAnimating = false;
-
-                if (rollCount === 1) {
-                    applyKlargReachAround();
-                    applyRokrConstellationBlur();
-                }
-                
-                let newlyRolled6s = dice.filter(d => d.status === 'active' && d.value === 6).length;
-                if (newlyRolled6s >= 3) {
-                    showDevilEffect();
-                    if (isMyTurn || isBotTurn) socket.emit('triggerDevilEffect');
-                    if (myRoom.startsWith('COMP') || myRoom.startsWith('TVRN')) {
-                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'hood'), i * 300); }
-                    }
-                }
-
-                if (newlyRolled6s === 0 && (scoreDisplay.innerText === "You're knocking at the door" || scoreDisplay.innerText === "They're knocking at the door" || scoreDisplay.innerText === "The door is open!")) {
-                    if (isMyTurn || isBotTurn) broadcastAnnouncement("", "");
-                }
-                
-                renderDice();
-                
-                if (isBotTurn) {
-                    setTimeout(makeBotDecision, 1000); 
-                }
-                
-            }, (suspenseType !== 'none') ? 2000 : 500); 
-        }
-        
-        function chooseBotDiceToLock(activeDice, hasTwo, hasFour, currentScore) {
-            const active = activeDice.slice().sort((a, b) => b.value - a.value);
-            let toLock = [];
-            const enemyId = (currentMode === 'tavern-crawl' && tavernRun && tavernRun.enemy) ? tavernRun.enemy.id : 'molar';
-            const lockDie = (die) => {
-                if (!die || toLock.includes(die.id)) return false;
-                toLock.push(die.id);
-                return true;
-            };
-            const lockRequired = () => {
-                if (!hasTwo) {
-                    const two = active.find(d => d.value === 2);
-                    if (lockDie(two)) hasTwo = true;
-                }
-                if (!hasFour) {
-                    const four = active.find(d => d.value === 4 && !toLock.includes(d.id));
-                    if (lockDie(four)) hasFour = true;
-                }
-            };
-
-            lockRequired();
-
-            if (hasTwo && hasFour) {
-                const remainingToPerfect = Math.max(0, 24 - currentScore);
-                active.forEach(d => {
-                    if (toLock.includes(d.id)) return;
-                    if (d.value > remainingToPerfect && active.length > 1) return;
-                    if (d.value >= 5) lockDie(d);
-                    else if (enemyId === 'klarg' && d.value >= 4) lockDie(d);
-                    else if (enemyId === 'rokr' && d.value >= 4 && remainingToPerfect <= 8) lockDie(d);
-                    else if (enemyId === 'hangman' && d.value >= 4) lockDie(d);
-                    else if (enemyId === 'jaguar' && d.value >= 4) lockDie(d);
-                    else if (remainingToPerfect <= d.value) lockDie(d);
-                });
-            } else if (enemyId === 'jaguar') {
-                lockDie(active.find(d => d.value === 6 && !toLock.includes(d.id)));
-            }
-
-            if (toLock.length === 0 && active.length === 1) lockDie(active[0]);
-            else if (toLock.length === 0 && active.length > 0 && (!hasTwo || !hasFour)) lockDie(active[0]);
-            else if (toLock.length === 0 && active.length > 0) lockDie(active[0]);
-            return toLock;
-        }
-
-        function makeBotDecision() {
-            let active = dice.filter(d => d.status === 'active').sort((a, b) => b.value - a.value);
-
-            let lockedForBot = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').sort((a, b) => a.value - b.value);
-            let bReq2 = false, bReq4 = false, botScore = 0;
-            
-            lockedForBot.forEach(d => {
-                if (d.value === 2 && !bReq2) bReq2 = true;
-                else if (d.value === 4 && !bReq4) bReq4 = true;
-                else botScore += d.value;
-            });
-
-            let toLock = chooseBotDiceToLock(active, bReq2, bReq4, botScore);
-
-            toLock.forEach((id, index) => {
-                setTimeout(() => {
-                    toggleDie(id, true);
-                }, index * 400); 
-            });
-
-            setTimeout(() => {
-                let remainingCount = dice.filter(d => d.status === 'active').length;
-                
-                let finalLocked = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').sort((a, b) => a.value - b.value);
-                bReq2 = false; bReq4 = false; botScore = 0;
-                finalLocked.forEach(d => {
-                    if (d.value === 2 && !bReq2) bReq2 = true;
-                    else if (d.value === 4 && !bReq4) bReq4 = true;
-                    else botScore += d.value;
-                });
-
-                let stopRolling = false;
-                if (remainingCount === 0) stopRolling = true;
-
-                if (stopRolling) {
-                    let busted = (!bReq2 || !bReq4);
-                    let finalScore = busted ? 0 : botScore;
-                    
-                    if (busted) {
-                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'swords'), i * 300); }
-                    } else if (finalScore === 24) {
-                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'hood'), i * 300); }
-                    } else if (finalScore >= 22) {
-                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'shield'), i * 300); }
-                    } else if (finalScore <= 17) {
-                        for(let i=0; i<3; i++) { setTimeout(() => socket.emit('sendBotReaction', 'skull'), i * 300); }
-                    }
-                    
-                    setTimeout(() => {
-                        socket.emit('endTurn', { score: finalScore, busted: busted });
-                    }, 1500);
-                    
-                } else {
-                    rollDice();
-                }
-            }, (toLock.length * 400) + 800); 
-        }
-
-        function toggleDie(id, isBotForced = false) {
-            if (!hasRolled || isAnimating || turnFinalized) return; 
-            if (!isMyTurn && !isBotForced) return; 
-            
-            triggerGlobalMusic();
-            let die = dice.find(d => d.id === id); if (!die || die.status === 'permanentlyLocked') return; 
-            triggerGameSound('click');
-            die.status = (die.status === 'active') ? 'lockedThisTurn' : 'active';
-            if (die.status === 'lockedThisTurn') locksThisRoll++; else locksThisRoll--;
-            renderDice();
-        }
-
         function createDieElement(die) {
-            const div = document.createElement('div'); div.className = 'die'; 
-            
+            const div = document.createElement('div'); div.className = 'die';
+
             if (currentActiveId === 'BOT_MOLAR' && currentMode !== 'tavern-crawl') {
                 div.classList.add('molar-tooth');
             }
-            
-            let shouldBlur = rokrBlurActive && isMyTurn && (die.status === 'active' || die.status === 'lockedThisTurn');
-            div.dataset.value = shouldBlur ? '?' : die.value; div.innerHTML = getPipsHTML(shouldBlur ? 0 : die.value); div.onclick = () => toggleDie(die.id);
-            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; } 
-            else if (die.status === 'stolen') {
-                div.classList.add('stolen');
-                div.title = 'Stolen by Klarg';
+
+            div.dataset.value = die.hidden ? '?' : die.value; div.innerHTML = getPipsHTML(die.hidden ? 0 : die.value); div.onclick = () => toggleDie(die);
+            if (die.status === 'permanentlyLocked') { div.style.opacity = '0.4'; div.style.cursor = 'not-allowed'; }
+            else if (die.status === 'lockedThisTurn') {
+                div.classList.add('lockedThisTurn');
             }
-            else if (die.status === 'lockedThisTurn') { 
-                div.classList.add('lockedThisTurn'); 
-            }
-            if (shouldBlur) div.classList.add('blurred');
+            if (die.hidden) div.classList.add('blurred');
             return div;
         }
 
-        function renderDice(shouldBroadcast = true) {
+        function renderDice() {
             activeArea.innerHTML = ''; requiredArea.innerHTML = ''; remainingArea.innerHTML = '';
-            let lockedDice = dice.filter(d => d.status !== 'active' && d.status !== 'stolen'); let activeDice = dice.filter(d => d.status === 'active');
+            if (!turn) {
+                currentScoreSpan.innerText = '0'; currentScoreSpan.style.color = "#b71c1c";
+                rollBtn.innerText = "Roll Dice"; rollBtn.disabled = true;
+                return;
+            }
+
+            let lockedDice = turn.dice.filter(d => d.status !== 'active' && d.status !== 'stolen'); let activeDice = turn.dice.filter(d => d.status === 'active');
             let req2 = null, req4 = null, remainingLocked = [];
 
             lockedDice.forEach(d => {
-                if (rokrBlurActive && isMyTurn && d.status === 'lockedThisTurn') remainingLocked.push(d);
+                if (d.hidden) remainingLocked.push(d);
                 else if (d.value === 2 && !req2) req2 = d;
                 else if (d.value === 4 && !req4) req4 = d;
                 else remainingLocked.push(d);
@@ -1857,56 +1675,18 @@
             if (req2) requiredArea.appendChild(createDieElement(req2)); if (req4) requiredArea.appendChild(createDieElement(req4));
             remainingLocked.forEach(d => remainingArea.appendChild(createDieElement(d))); activeDice.forEach(d => activeArea.appendChild(createDieElement(d)));
 
-            let hiddenLockedCount = remainingLocked.filter(d => rokrBlurActive && isMyTurn && d.status === 'lockedThisTurn').length;
-            let currentScore = remainingLocked.reduce((sum, die) => {
-                if (rokrBlurActive && isMyTurn && die.status === 'lockedThisTurn') return sum;
-                return sum + die.value;
-            }, 0);
+            let { score } = GameRules.scoreDice(turn.dice);
+            currentScoreSpan.style.color = "#b71c1c";
+            if (turn.finalized && turn.outcome.busted) currentScoreSpan.innerText = 'X';
+            else currentScoreSpan.innerText = remainingLocked.some(d => d.hidden) ? '?' : score;
 
-            if (activeDice.length === 0 && hasRolled && (!req2 || !req4)) { currentScoreSpan.innerText = 'X'; currentScoreSpan.style.color = "#b71c1c"; } 
-            else { currentScoreSpan.innerText = hiddenLockedCount > 0 ? '?' : currentScore; currentScoreSpan.style.color = "#b71c1c"; }
-
-            if (inTrouble && req2 && req4 && !turnFinalized) { broadcastAnnouncement("Phew!", "#81c784"); inTrouble = false; }
-
-            if (activeDice.length === 0 && hasRolled) {
-                rollBtn.disabled = false; rollBtn.innerText = "End Turn"; 
-                
-                rollBtn.onclick = () => {
-                    rollBtn.disabled = true; 
-                    rollBtn.innerText = "Ending..."; 
-                    
-                    let busted = (!req2 || !req4); let finalScore = busted ? 0 : currentScore;
-                    
-                    socket.emit('endTurn', { score: finalScore, busted: busted });
-                };
-
-                if (!req2 || !req4) {
-                    if (!turnFinalized) { 
-                        broadcastAnnouncement("Result: DUST! (Missing 2 or 4)", "#e57373"); 
-                        triggerGameSound(suspenseType === 'survival' ? 'aww' : 'bust'); 
-                        turnFinalized = true; 
-                    }
-                } else {
-                    if (!turnFinalized) {
-                        turnFinalized = true; 
-                        
-                        if (currentScore === 24) {
-                            triggerCelebration(); 
-                            if (isMyTurn || isBotTurn) socket.emit('triggerConfetti'); 
-                        }
-                        else { 
-                            if (suspenseType === 'perfect') triggerGameSound('ohwell'); 
-                            else if (suspenseType === 'survival') triggerGameSound('yay'); 
-                            else triggerGameSound('click'); 
-                        }
-                        
-                        if (currentScore === 24) broadcastAnnouncement(rollCount === 1 ? "Blessed by the dice gods! 🎲✨" : "Perfect! ⭐ (24 Points)", "#ffd54f");
-                        else broadcastAnnouncement(`Result: ${currentScore} Points!`, "#81c784");
-                    }
-                }
-            } else { rollBtn.disabled = hasRolled && locksThisRoll === 0; }
-
-            if (shouldBroadcast && (isMyTurn || isBotTurn)) socket.emit('updateBoard', { dice, rollCount, inTrouble, turnFinalized });
+            if (turn.finalized) {
+                rollBtn.innerText = endingTurn ? "Ending..." : "End Turn";
+                rollBtn.disabled = endingTurn;
+            } else {
+                rollBtn.innerText = "Roll Dice";
+                rollBtn.disabled = isAnimating || !turn.canRoll;
+            }
         }
 
         let deferredPrompt;

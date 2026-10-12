@@ -2,13 +2,27 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const path = require('path'); 
+const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const Rules = require('./shared/rules');
 
-app.use(express.static(__dirname));
+const BOT_ID = 'BOT_MOLAR';
+
+// Scales every server-side delay (bot thinking time, roll animations). Tests set this low.
+const TIME_SCALE = Number(process.env.GAME_TIME_SCALE) || 1;
+const delay = msValue => Math.round(msValue * TIME_SCALE);
+
+const rollFace = () => crypto.randomInt(1, 7);
+
+const AVATARS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross'];
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/shared', express.static(path.join(__dirname, 'shared')));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/leaderboard', (req, res) => {
@@ -50,6 +64,7 @@ function loadTavernLeaderboard() {
 let tavernLeaderboard = loadTavernLeaderboard();
 
 function saveTavernLeaderboard() {
+    if (process.env.LEADERBOARD_READONLY) return;
     try {
         fs.writeFileSync(LEADERBOARD_PATH, JSON.stringify(tavernLeaderboard, null, 2));
     } catch (error) {
@@ -137,12 +152,12 @@ const TAVERN_KEEPSAKES = [
 function getRoomState(roomCode) {
     let room = rooms[roomCode];
     if (!room) return {};
-    
+
     return {
         players: room.players,
         playerOrder: room.playerOrder,
         roundPlayers: room.roundPlayers,
-        currentTurnId: room.roundPlayers[room.currentTurnIndex], 
+        currentTurnId: room.roundPlayers[room.currentTurnIndex],
         isTieBreaker: room.isTieBreaker,
         roundNumber: room.roundNumber,
         startingLives: room.startingLives,
@@ -169,6 +184,233 @@ function getTavernRunState(room) {
     };
 }
 
+// ---- Turns ----
+// The server owns the dice. Browsers ask to roll, lock or end; the server decides
+// what happens and broadcasts the result, so every screen shows the same board.
+
+function isBotRoom(roomCode) {
+    return roomCode.startsWith('COMP') || roomCode.startsWith('TVRN');
+}
+
+function getTurnKey(room) {
+    let id = room.roundPlayers[room.currentTurnIndex];
+    if (!id || !room.players[id]) return null;
+    return `${room.turnEpoch}:${room.roundNumber}:${room.currentTurnIndex}:${id}`;
+}
+
+// A classic table needs two players; a tavern table pauses while a keepsake is chosen.
+function isTurnPlayable(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || !room.turn || room.turn.ended) return false;
+    if (room.mode === 'tavern-crawl' && room.tavernRun.pendingKeepsakeChoices) return false;
+    return isBotRoom(roomCode) || room.playerOrder.length >= 2;
+}
+
+// Starts a fresh turn whenever the current player changes.
+function syncTurn(roomCode) {
+    let room = rooms[roomCode];
+    if (!room) return;
+    let key = getTurnKey(room);
+    if (!key) { room.turn = null; return; }
+    if (room.turn && room.turn.key === key) return;
+
+    room.turn = Rules.createTurn(room.roundPlayers[room.currentTurnIndex]);
+    room.turn.key = key;
+    room.turn.busyUntil = 0;
+    room.turn.ended = false;
+    if (room.turn.playerId === BOT_ID && isTurnPlayable(roomCode)) {
+        botLater(roomCode, key, 1000, () => runBotRoll(roomCode));
+    }
+}
+
+function emitTurn(roomCode, event = null) {
+    let room = rooms[roomCode];
+    if (!room) return;
+    io.to(roomCode).emit('turnState', { turn: Rules.viewTurn(room.turn), event });
+}
+
+function emitState(roomCode) {
+    syncTurn(roomCode);
+    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    emitTurn(roomCode);
+}
+
+function sendBotReaction(roomCode, emoji, times = 3) {
+    let room = rooms[roomCode];
+    if (!room || room.mode === 'tavern-crawl') return;
+    for (let i = 0; i < times; i++) {
+        setTimeout(() => io.to(roomCode).emit('receiveReaction', { name: 'The Molar', emoji }), delay(i * 300));
+    }
+}
+
+function applyTavernRollAbilities(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID || turn.rollCount !== 1) return [];
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    let moves = [];
+
+    if (canUseTavernAbility(room, encounter, 'reachAround') && Rules.stealHighestActiveDie(turn)) {
+        markAbilityUsed(room, 'reachAround');
+        moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: 'Klarg uses Reach Around and steals one die.' });
+    }
+    if (canUseTavernAbility(room, encounter, 'constellationBlur')) {
+        turn.blurActive = true;
+        markAbilityUsed(room, 'constellationBlur');
+        moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.constellationBlur, text: 'Rokr blurs the dice with constellations.' });
+    }
+    return moves;
+}
+
+// Returns the roll's animation length in ms, or 0 if the roll wasn't allowed.
+function performRoll(roomCode) {
+    let room = rooms[roomCode];
+    if (!isTurnPlayable(roomCode)) return 0;
+    let turn = room.turn;
+    if (Date.now() < turn.busyUntil) return 0;
+
+    let signatureMoves = [];
+    let preRollCallout = null;
+    let result = Rules.rollTurn(turn, {
+        rollFace,
+        onRolled: t => {
+            preRollCallout = t.callout;
+            signatureMoves = applyTavernRollAbilities(roomCode, room, t);
+        }
+    });
+    if (!result) return 0;
+
+    // Browsers show the pre-roll announcement while the dice tumble, then the final board.
+    let animationMs = result.suspense !== Rules.SUSPENSE.NONE ? 2000 : 500;
+    turn.busyUntil = Date.now() + delay(animationMs);
+    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs });
+
+    let key = turn.key;
+    if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, animationMs, () => sendBotReaction(roomCode, 'hood'));
+    if (signatureMoves.length) {
+        setTimeout(() => {
+            if (!rooms[roomCode]) return;
+            signatureMoves.forEach(move => io.to(roomCode).emit('signatureMove', move));
+            io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        }, delay(animationMs));
+    }
+    return animationMs;
+}
+
+function performToggle(roomCode, dieId) {
+    let room = rooms[roomCode];
+    if (!isTurnPlayable(roomCode)) return;
+    let turn = room.turn;
+    if (Date.now() < turn.busyUntil) return;
+
+    let result = Rules.toggleDie(turn, dieId);
+    if (!result) return;
+    emitTurn(roomCode, result.finalizedNow ? { type: 'finalized', outcome: turn.outcome } : { type: 'toggle' });
+}
+
+function performEndTurn(roomCode) {
+    let room = rooms[roomCode];
+    if (!isTurnPlayable(roomCode) || !room.turn.finalized) return;
+    room.turn.ended = true;
+
+    let currentId = room.roundPlayers[room.currentTurnIndex];
+    let { score, busted } = room.turn.outcome;
+    room.players[currentId].score = score;
+    room.players[currentId].busted = busted;
+
+    if (room.mode === 'tavern-crawl') {
+        let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+        if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === BOT_ID && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24) {
+            room.players[currentId].score = 24;
+            markAbilityUsed(room, 'deadeye24');
+            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman plays his last card. Perfect 24.' });
+            io.to(roomCode).emit('displayMessage', { text: 'The Hangman plays The Ace of Spades.', color: "#ffd54f" });
+        }
+
+        if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== BOT_ID && !busted && score > 0) {
+            room.players[currentId].score = Math.max(0, score - 3);
+            markAbilityUsed(room, 'smoothTalk');
+            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
+            io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
+        }
+
+        if (currentId !== BOT_ID && room.players[currentId].score === 24 && room.tavernRun.stats) {
+            room.tavernRun.stats.perfect24s++;
+        }
+    }
+
+    let tavernEnemyPerfect = room.mode === 'tavern-crawl' && currentId === BOT_ID;
+    if (!tavernEnemyPerfect && room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
+        let restoredLives = (room.mode === 'tavern-crawl' && currentId !== BOT_ID && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
+        room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
+        if (restoredLives > 1) emitKeepsakeActivated(roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
+        io.to(roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
+    }
+
+    advanceTurn(roomCode);
+}
+
+// Moves to the next connected player, or scores the round if everyone has gone.
+function advanceTurn(roomCode) {
+    let room = rooms[roomCode];
+    room.currentTurnIndex++;
+    skipDisconnectedPlayers(room);
+
+    if (room.currentTurnIndex >= room.roundPlayers.length) {
+        evaluateRound(roomCode);
+    } else {
+        emitState(roomCode);
+    }
+}
+
+function skipDisconnectedPlayers(room) {
+    while (room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
+        room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
+        room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
+        room.currentTurnIndex++;
+    }
+}
+
+// Runs `fn` after `ms` unless the room is gone or the turn has moved on.
+function botLater(roomCode, key, ms, fn) {
+    let room = rooms[roomCode];
+    setTimeout(() => {
+        let current = rooms[roomCode];
+        if (current !== room || !current.turn || current.turn.key !== key) return;
+        fn();
+    }, delay(ms));
+}
+
+function runBotRoll(roomCode) {
+    let room = rooms[roomCode];
+    let key = room.turn.key;
+    let animationMs = performRoll(roomCode);
+    if (animationMs) botLater(roomCode, key, animationMs + 1000, () => runBotDecision(roomCode));
+}
+
+function runBotDecision(roomCode) {
+    let room = rooms[roomCode];
+    let turn = room.turn;
+    let key = turn.key;
+    let enemyId = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id : 'molar';
+    let toLock = Rules.planBotLocks(turn, enemyId);
+
+    toLock.forEach((dieId, index) => botLater(roomCode, key, index * 400, () => performToggle(roomCode, dieId)));
+
+    botLater(roomCode, key, toLock.length * 400 + 800, () => {
+        if (!turn.finalized) {
+            runBotRoll(roomCode);
+            return;
+        }
+        let { busted, score } = turn.outcome;
+        if (busted) sendBotReaction(roomCode, 'swords');
+        else if (score === 24) sendBotReaction(roomCode, 'hood');
+        else if (score >= 22) sendBotReaction(roomCode, 'shield');
+        else if (score <= 17) sendBotReaction(roomCode, 'skull');
+        botLater(roomCode, key, 1500, () => performEndTurn(roomCode));
+    });
+}
+
+// ---- Tavern Crawl ----
+
 function hasKeepsake(room, keepsakeId) {
     return room.mode === 'tavern-crawl' && room.tavernRun.keepsakes.some(k => k.id === keepsakeId);
 }
@@ -193,10 +435,6 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
     });
 }
 
-function getAbilityMaxUses(abilityId) {
-    return abilityId === 'constellationBlur' ? 2 : 1;
-}
-
 function getAbilityUseCount(room, abilityId) {
     let used = room.tavernRun.abilityUsed[abilityId];
     if (used === true) return 1;
@@ -209,7 +447,7 @@ function markAbilityUsed(room, abilityId) {
 
 function canUseTavernAbility(room, encounter, abilityId) {
     let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < getAbilityMaxUses(abilityId);
+    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < Rules.getAbilityMaxUses(abilityId);
 }
 
 function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
@@ -242,7 +480,7 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
 }
 
 function getHumanPlayerId(room) {
-    return room.playerOrder.find(id => id !== 'BOT_MOLAR' && room.players[id]);
+    return room.playerOrder.find(id => id !== BOT_ID && room.players[id]);
 }
 
 function createTavernRun() {
@@ -313,8 +551,8 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     let humanId = getHumanPlayerId(room);
-    room.players['BOT_MOLAR'] = {
-        id: 'BOT_MOLAR',
+    room.players[BOT_ID] = {
+        id: BOT_ID,
         token: 'BOT_TOKEN',
         name: encounter.name,
         avatar: encounter.avatar,
@@ -328,16 +566,17 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
         room.players[humanId].lives = room.startingLives;
         room.players[humanId].score = null;
         room.players[humanId].busted = false;
-        room.playerOrder = [humanId, 'BOT_MOLAR'];
-        room.roundPlayers = [humanId, 'BOT_MOLAR'];
+        room.playerOrder = [humanId, BOT_ID];
+        room.roundPlayers = [humanId, BOT_ID];
     } else {
-        room.playerOrder = ['BOT_MOLAR'];
-        room.roundPlayers = ['BOT_MOLAR'];
+        room.playerOrder = [BOT_ID];
+        room.roundPlayers = [BOT_ID];
     }
 
     room.currentTurnIndex = 0;
     room.isTieBreaker = false;
     room.dealerIndex = 0;
+    room.turnEpoch++;
     room.tavernRun.pendingKeepsakeChoices = null;
     room.tavernRun.abilityUsed = {};
     room.tavernRun.encounterRound = 1;
@@ -345,6 +584,8 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.encounterKeepsakeUses = {};
     room.tavernRun.started = true;
 }
+
+// ---- Rounds ----
 
 function evaluateRound(roomCode) {
     let room = rooms[roomCode];
@@ -379,15 +620,9 @@ function evaluateRound(roomCode) {
 
     emitRoundLifeResult(roomCode, room, losersThisRound.map(l => l.id), tiedPlayers);
 
-    let humanLost = losersThisRound.some(l => l.id !== 'BOT_MOLAR');
-    if (room.players['BOT_MOLAR'] && humanLost) {
-        setTimeout(() => {
-            for(let i=0; i<3; i++) {
-                setTimeout(() => {
-                    io.to(roomCode).emit('receiveReaction', { name: "The Molar", emoji: "😉" });
-                }, i * 300);
-            }
-        }, 1000); 
+    let humanLost = losersThisRound.some(l => l.id !== BOT_ID);
+    if (room.players[BOT_ID] && humanLost) {
+        setTimeout(() => sendBotReaction(roomCode, '😉'), delay(1000));
     }
 
     room.roundPlayers.forEach(id => {
@@ -400,34 +635,29 @@ function evaluateRound(roomCode) {
     let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
-        // Fixed: Ensure the final UI state is synced before ending the game
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        // Sync the final scoreboard before ending the game
+        emitState(roomCode);
         io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
-        room.roundPlayers = []; 
+        room.roundPlayers = [];
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
-        room.roundNumber++; 
+        room.roundNumber++;
         room.roundPlayers = tiedPlayers;
         room.currentTurnIndex = 0;
-        
-        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-            room.currentTurnIndex++;
-        }
+        skipDisconnectedPlayers(room);
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        emitState(roomCode);
         io.to(roomCode).emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
-        
-        if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
+
+        if (room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
     } else {
         room.isTieBreaker = false;
-        room.roundNumber++; 
-        
+        room.roundNumber++;
+
         if (room.playerOrder.length > 0) {
             room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
         }
-        
+
         room.roundPlayers = [];
         for (let i = 0; i < room.playerOrder.length; i++) {
             let idx = (room.dealerIndex + i) % room.playerOrder.length;
@@ -436,17 +666,12 @@ function evaluateRound(roomCode) {
                 room.roundPlayers.push(playerId);
             }
         }
-        
-        room.currentTurnIndex = 0;
-        
-        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-            room.currentTurnIndex++;
-        }
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        if(room.currentTurnIndex >= room.roundPlayers.length && room.roundPlayers.length > 0) evaluateRound(roomCode);
+        room.currentTurnIndex = 0;
+        skipDisconnectedPlayers(room);
+
+        emitState(roomCode);
+        if (room.currentTurnIndex >= room.roundPlayers.length && room.roundPlayers.length > 0) evaluateRound(roomCode);
     }
 }
 
@@ -455,7 +680,7 @@ function evaluateTavernRound(roomCode) {
     if (!room) return;
 
     let humanId = getHumanPlayerId(room);
-    let enemyId = 'BOT_MOLAR';
+    let enemyId = BOT_ID;
     if (!humanId || !room.players[humanId] || !room.players[enemyId]) return;
 
     let human = room.players[humanId];
@@ -538,7 +763,7 @@ function evaluateTavernRound(roomCode) {
         room.roundPlayers = [];
         room.tavernRun.runComplete = true;
         io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        emitState(roomCode);
         io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?` });
         return;
     }
@@ -551,14 +776,14 @@ function evaluateTavernRound(roomCode) {
             room.roundPlayers = [];
             room.tavernRun.runComplete = true;
             io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
-            io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+            emitState(roomCode);
             io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}` });
             return;
         }
 
         room.tavernRun.pendingKeepsakeChoices = pickKeepsakeChoices(room);
         room.roundPlayers = [];
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        emitState(roomCode);
         io.to(roomCode).emit('offerKeepsakes', {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
@@ -573,23 +798,27 @@ function evaluateTavernRound(roomCode) {
     room.isTieBreaker = tiedPlayers.length > 1;
     room.roundPlayers = [humanId, enemyId];
     room.currentTurnIndex = 0;
-    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    emitState(roomCode);
 }
+
+// ---- Sockets ----
+
+const asText = value => (typeof value === 'string' ? value : '');
 
 io.on('connection', (socket) => {
     socket.emit('leaderboardUpdate', tavernLeaderboard);
-    
+
     socket.on('checkRoom', (roomCode) => {
-        let code = roomCode.trim().toUpperCase() || "PUBLIC";
-        let exists = rooms[code] ? true : false;
-        socket.emit('roomStatus', { exists: exists });
+        let code = asText(roomCode).trim().toUpperCase() || "PUBLIC";
+        socket.emit('roomStatus', { exists: !!rooms[code] });
     });
 
     socket.on('joinTavern', (data) => {
-        let roomCode = data.roomCode.trim().toUpperCase();
-        if (roomCode === "") roomCode = "PUBLIC"; 
+        if (!data || typeof data !== 'object') return;
+        let roomCode = asText(data.roomCode).trim().toUpperCase();
+        if (roomCode === "") roomCode = "PUBLIC";
         if (roomCode.length > 10) roomCode = roomCode.substring(0, 10);
-        
+
         socket.roomCode = roomCode;
         socket.join(roomCode);
 
@@ -601,42 +830,45 @@ io.on('connection', (socket) => {
             let isTavernCrawl = roomCode.startsWith("TVRN");
             rooms[roomCode] = {
                 players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1,
+                turnEpoch: 0, turn: null,
                 startingLives: requestedLives,
                 mode: isTavernCrawl ? 'tavern-crawl' : 'classic',
                 tavernRun: isTavernCrawl ? createTavernRun() : null
             };
-            
+
             if (roomCode.startsWith("COMP")) {
-                rooms[roomCode].players['BOT_MOLAR'] = { 
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
+                rooms[roomCode].players[BOT_ID] = {
+                    id: BOT_ID, token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true
                 };
-                rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
+                rooms[roomCode].playerOrder.push(BOT_ID);
+                rooms[roomCode].roundPlayers.push(BOT_ID);
             } else if (isTavernCrawl) {
-                rooms[roomCode].players['BOT_MOLAR'] = {
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
+                rooms[roomCode].players[BOT_ID] = {
+                    id: BOT_ID, token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
                 };
-                rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
+                rooms[roomCode].playerOrder.push(BOT_ID);
+                rooms[roomCode].roundPlayers.push(BOT_ID);
             }
         }
-        
+
         let room = rooms[roomCode];
-        let finalName = data.name.trim();
+        let finalName = asText(data.name).trim();
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
+        let avatar = AVATARS.includes(data.avatar) ? data.avatar : AVATARS[0];
+        let token = asText(data.token).substring(0, 64);
 
-        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
+        let existingPlayerId = token && Object.keys(room.players).find(id => room.players[id].token === token);
 
-        if (existingPlayerId && existingPlayerId !== 'BOT_MOLAR') {
+        if (existingPlayerId && existingPlayerId !== BOT_ID) {
             let p = room.players[existingPlayerId];
             p.id = socket.id;
-            p.avatar = data.avatar;
-            p.name = finalName; 
+            p.avatar = avatar;
+            p.name = finalName;
             p.connected = true;
-            
+
             room.players[socket.id] = p;
-            
+
             if (existingPlayerId !== socket.id) {
                 delete room.players[existingPlayerId];
                 let oldSocket = io.sockets.sockets.get(existingPlayerId);
@@ -645,10 +877,14 @@ io.on('connection', (socket) => {
 
             room.playerOrder = room.playerOrder.map(id => id === existingPlayerId ? socket.id : id);
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
-            
+            if (room.turn && room.turn.playerId === existingPlayerId) {
+                room.turn.playerId = socket.id;
+                room.turn.key = getTurnKey(room);
+            }
+
         } else {
-            room.players[socket.id] = { 
-                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: room.startingLives, score: null, busted: false, connected: true 
+            room.players[socket.id] = {
+                id: socket.id, token, name: finalName, avatar, lives: room.startingLives, score: null, busted: false, connected: true
             };
             room.playerOrder.push(socket.id);
 
@@ -657,24 +893,24 @@ io.on('connection', (socket) => {
             }
         }
 
-        let humanPlayers = room.playerOrder.filter(id => id !== 'BOT_MOLAR' && room.players[id] && room.players[id].connected);
-        
+        let humanPlayers = room.playerOrder.filter(id => id !== BOT_ID && room.players[id] && room.players[id].connected);
+
         if (room.roundPlayers.length === 0 && humanPlayers.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
-                    room.players[id].lives = room.startingLives; 
+                    room.players[id].lives = room.startingLives;
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
             });
-            room.dealerIndex = 0; 
+            room.dealerIndex = 0;
             room.roundPlayers = room.playerOrder.filter(id => room.players[id].connected);
             room.currentTurnIndex = 0;
             room.isTieBreaker = false;
             room.roundNumber = 1;
         }
 
-        if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== 'BOT_MOLAR') {
+        if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== BOT_ID) {
             room.currentTurnIndex = 0;
         }
 
@@ -684,12 +920,13 @@ io.on('connection', (socket) => {
 
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        emitState(roomCode);
     });
 
     socket.on('playAgain', () => {
         let room = rooms[socket.roomCode];
         if (room && room.roundPlayers.length === 0) {
+            room.turnEpoch++;
             if (room.mode === 'tavern-crawl') {
                 room.playerOrder.forEach(id => {
                     if (room.players[id]) {
@@ -702,7 +939,7 @@ io.on('connection', (socket) => {
                 room.tavernRun = createTavernRun();
                 room.roundNumber = 1;
                 resetTavernEncounter(socket.roomCode, false);
-                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+                emitState(socket.roomCode);
                 io.to(socket.roomCode).emit('triggerNewGameSplash');
                 return;
             }
@@ -714,11 +951,11 @@ io.on('connection', (socket) => {
                     room.players[id].busted = false;
                 }
             });
-            
+
             if (room.playerOrder.length > 0) {
                 room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
             }
-            
+
             room.roundPlayers = [];
             for (let i = 0; i < room.playerOrder.length; i++) {
                 let idx = (room.dealerIndex + i) % room.playerOrder.length;
@@ -727,12 +964,12 @@ io.on('connection', (socket) => {
                     room.roundPlayers.push(playerId);
                 }
             }
-            
+
             room.currentTurnIndex = 0;
             room.isTieBreaker = false;
             room.roundNumber++;
-            
-            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+
+            emitState(socket.roomCode);
             io.to(socket.roomCode).emit('triggerNewGameSplash');
         }
     });
@@ -741,60 +978,25 @@ io.on('connection', (socket) => {
         let room = rooms[socket.roomCode];
         if (room && !room.isMusicPlaying) {
             room.isMusicPlaying = true;
-            io.to(socket.roomCode).emit('playGlobalMusic'); 
+            io.to(socket.roomCode).emit('playGlobalMusic');
         }
     });
 
     socket.on('sendReaction', (emoji) => {
         let room = rooms[socket.roomCode];
-        if (room) {
-            if (room.mode === 'tavern-crawl') return;
-            let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
-            io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
-        }
+        if (!room || room.mode === 'tavern-crawl' || !PLAYER_REACTIONS.includes(emoji)) return;
+        let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
+        io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
     });
 
-    socket.on('sendBotReaction', (emoji) => {
+    const isMyTurn = () => {
         let room = rooms[socket.roomCode];
-        if (room && isAuthorized(socket, socket.roomCode)) {
-            if (room.mode === 'tavern-crawl') return;
-            io.to(socket.roomCode).emit('receiveReaction', { name: "The Molar", emoji: emoji });
-        }
-    });
+        return !!(room && room.turn && room.turn.playerId === socket.id);
+    };
 
-    function isAuthorized(socket, roomCode) {
-        let room = rooms[roomCode];
-        if (!room) return false;
-        let currentId = room.roundPlayers[room.currentTurnIndex];
-        return (socket.id === currentId) || ((roomCode.startsWith('COMP') || roomCode.startsWith('TVRN')) && currentId === 'BOT_MOLAR');
-    }
-
-    socket.on('playerRolledDice', (suspenseType) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playerRolledDice', suspenseType) });
-    socket.on('playGameSound', (soundId) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playGameSound', soundId) });
-    socket.on('triggerConfetti', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerConfetti') });
-    socket.on('triggerDevilEffect', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerDevilEffect') });
-    
-    socket.on('updateBoard', (gameData) => {
-        if (isAuthorized(socket, socket.roomCode)) {
-            socket.to(socket.roomCode).emit('boardUpdated', gameData);
-        }
-    });
-
-    socket.on('broadcastMessage', (msgData) => {
-        if (isAuthorized(socket, socket.roomCode)) {
-            socket.to(socket.roomCode).emit('displayMessage', msgData);
-        }
-    });
-
-    socket.on('useEnemyAbility', (abilityId) => {
-        let room = rooms[socket.roomCode];
-        if (!room || room.mode !== 'tavern-crawl') return;
-        let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-        if (canUseTavernAbility(room, encounter, abilityId)) {
-            markAbilityUsed(room, abilityId);
-            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-        }
-    });
+    socket.on('rollDice', () => { if (isMyTurn()) performRoll(socket.roomCode); });
+    socket.on('toggleDie', (dieId) => { if (isMyTurn() && Number.isInteger(dieId)) performToggle(socket.roomCode, dieId); });
+    socket.on('endTurn', () => { if (isMyTurn()) performEndTurn(socket.roomCode); });
 
     socket.on('chooseKeepsake', (keepsakeId) => {
         let room = rooms[socket.roomCode];
@@ -804,62 +1006,8 @@ io.on('connection', (socket) => {
 
         room.tavernRun.keepsakes.push(selected);
         resetTavernEncounter(socket.roomCode, true);
-        io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+        emitState(socket.roomCode);
         io.to(socket.roomCode).emit('displayMessage', { text: selected.name, color: "#ffd54f" });
-    });
-
-    socket.on('endTurn', (turnData) => {
-        let room = rooms[socket.roomCode];
-        if (room && isAuthorized(socket, socket.roomCode)) {
-            let currentId = room.roundPlayers[room.currentTurnIndex];
-            
-            room.players[currentId].score = turnData.score;
-            room.players[currentId].busted = turnData.busted;
-
-            if (room.mode === 'tavern-crawl') {
-                let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && room.players[currentId].lives <= 1 && !turnData.busted && turnData.score >= 16 && turnData.score < 24) {
-                    room.players[currentId].score = 24;
-                    markAbilityUsed(room, 'deadeye24');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman plays his last card. Perfect 24.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman plays The Ace of Spades.', color: "#ffd54f" });
-                }
-
-                if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== 'BOT_MOLAR' && !turnData.busted && turnData.score > 0) {
-                    let reducedScore = Math.max(0, turnData.score - 3);
-                    room.players[currentId].score = reducedScore;
-                    markAbilityUsed(room, 'smoothTalk');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
-                }
-
-                if (currentId !== 'BOT_MOLAR' && room.players[currentId].score === 24 && room.tavernRun.stats) {
-                    room.tavernRun.stats.perfect24s++;
-                }
-            }
-            
-            let tavernEnemyPerfect = room.mode === 'tavern-crawl' && currentId === 'BOT_MOLAR';
-            if (!tavernEnemyPerfect && room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
-                let restoredLives = (room.mode === 'tavern-crawl' && currentId !== 'BOT_MOLAR' && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
-                room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
-                if (restoredLives > 1) emitKeepsakeActivated(socket.roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
-                io.to(socket.roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
-            }
-
-            room.currentTurnIndex++;
-            
-            while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-                room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-                room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-                room.currentTurnIndex++;
-            }
-
-            if (room.currentTurnIndex >= room.roundPlayers.length) {
-                evaluateRound(socket.roomCode);
-            } else {
-                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-            }
-        }
     });
 
     socket.on('disconnect', () => {
@@ -868,30 +1016,31 @@ io.on('connection', (socket) => {
             let room = rooms[roomCode];
             if (room.players[socket.id]) {
                 room.players[socket.id].connected = false;
-                
+
                 if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
                     room.players[socket.id].busted = true;
                     room.players[socket.id].score = 0;
-                    room.currentTurnIndex++;
-                    
-                    while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-                        room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-                        room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-                        room.currentTurnIndex++;
-                    }
-
-                    if (room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
-                    else io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+                    advanceTurn(roomCode);
                 } else {
-                    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+                    emitState(roomCode);
                 }
             }
-            
-            let anyConnected = Object.values(room.players).some(p => p.connected && p.id !== 'BOT_MOLAR');
+
+            let anyConnected = Object.values(room.players).some(p => p.connected && p.id !== BOT_ID);
             if (!anyConnected) delete rooms[roomCode];
         }
     });
 });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
+function start(port = process.env.PORT || 3000) {
+    return new Promise(resolve => {
+        http.listen(port, () => {
+            console.log(`Server is running on port ${http.address().port}`);
+            resolve(http);
+        });
+    });
+}
+
+if (require.main === module) start();
+
+module.exports = { start, http, io, rooms };

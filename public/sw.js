@@ -1,7 +1,8 @@
-const CACHE_NAME = '2424-cache-v62'; // Bumped to v62
+const CACHE_NAME = '2424-cache-v63'; // Bumped to v63
 const urlsToCache = [
   '/',
   '/index.html',
+  '/shared/rules.js',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
