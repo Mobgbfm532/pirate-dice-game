@@ -9,7 +9,7 @@ import { DIE_HALF, TRAY, faceNormal, valueFacingUp } from './layout';
 
 const STEP = 1 / 120;
 const RECORD_EVERY = 2; // frames are recorded at 60 per second
-const MAX_SECONDS = 3;
+const MAX_SECONDS = 3.5;
 const FLOATS_PER_DIE = 7; // x, y, z, qx, qy, qz, qw
 
 export interface RollTrack {
@@ -80,44 +80,67 @@ function simulateOnce(count: number) {
             sleepSpeedLimit: 0.25,
             sleepTimeLimit: 0.25
         });
-        // Thrown from the player's side of the tray, away from the camera.
-        const spread = Math.min(1.0, 5.4 / Math.max(1, count));
-        body.position.set((i - (count - 1) / 2) * spread + rand(-0.15, 0.15), rand(1.6, 2.6), TRAY.maxZ - 0.7 + rand(-0.2, 0.2));
+        // Tossed from the player's side of the tray, spread across its width, so the dice
+        // tumble across the felt rather than piling up against the back wall.
+        const spread = Math.min(1.15, 6.2 / Math.max(1, count));
+        const x = (i - (count - 1) / 2) * spread + rand(-0.15, 0.15);
+        body.position.set(x, rand(1.4, 2.2), TRAY.maxZ - 0.7 + rand(-0.2, 0.2));
         body.quaternion.setFromEuler(rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2));
-        body.velocity.set(rand(-2.5, 2.5), rand(0, 2), rand(-11, -7));
-        body.angularVelocity.set(rand(-20, 20), rand(-20, 20), rand(-20, 20));
+        body.velocity.set(x * 0.35 + rand(-1.2, 1.2), rand(0, 1.5), rand(-8, -5));
+        body.angularVelocity.set(rand(-18, 18), rand(-18, 18), rand(-18, 18));
         world.addBody(body);
         bodies.push(body);
     }
 
-    // Stop once every die has been almost still for a quarter of a second.
+    // Run until every die has been almost still for a quarter of a second. A die that
+    // comes to rest cocked (leaning on another die or a wall) gets a small tap, like a
+    // player nudging it, and the simulation carries on until it falls flat.
     const recorded: number[] = [];
     const maxSteps = Math.round(MAX_SECONDS / STEP);
     let stillSteps = 0;
+    let nudges = 0;
     for (let step = 0; step <= maxSteps; step++) {
         if (step % RECORD_EVERY === 0) {
             bodies.forEach(b => recorded.push(b.position.x, b.position.y, b.position.z, b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w));
         }
         const still = bodies.every(b => b.velocity.lengthSquared() < 0.04 && b.angularVelocity.lengthSquared() < 0.09);
         stillSteps = still ? stillSteps + 1 : 0;
-        if (step > 30 && stillSteps * STEP >= 0.25) break;
+        if (step > 30 && stillSteps * STEP >= 0.25) {
+            const cocked = bodies.filter(b => !isFlat(b));
+            if (cocked.length === 0 || nudges >= 3) break;
+            nudges++;
+            stillSteps = 0;
+            cocked.forEach(b => {
+                b.wakeUp();
+                b.velocity.set(rand(-1.5, 1.5) - b.position.x * 0.3, rand(3, 4.5), rand(-1.5, 1.5) - b.position.z * 0.3);
+                b.angularVelocity.set(rand(-8, 8), rand(-8, 8), rand(-8, 8));
+            });
+        }
         world.step(STEP);
     }
 
-    // A good roll ends with every die flat on the felt (not leaning on a wall or another die).
-    const flat = bodies.every(b => {
-        const q = new THREE.Quaternion(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
-        const topNormal = faceNormal(valueFacingUp(q)).clone().applyQuaternion(q);
-        return topNormal.y > 0.97 && b.position.y < DIE_HALF + 0.05;
-    });
+    return { recorded, bodies, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
+}
 
-    return { recorded, bodies, flat, frames: recorded.length / (count * FLOATS_PER_DIE) };
+// Flat on the felt: one face pointing straight up and not resting on another die.
+function isFlat(b: CANNON.Body) {
+    const q = new THREE.Quaternion(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
+    const topNormal = faceNormal(valueFacingUp(q)).clone().applyQuaternion(q);
+    return topNormal.y > 0.97 && b.position.y < DIE_HALF + 0.05;
 }
 
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
 export function simulateRoll(dieIds: number[], targetValues: number[]): RollTrack {
+    // Prefer a throw that ends flat within ~2.2s; otherwise keep the best one seen
+    // (flat beats cocked, then shorter beats longer).
+    const QUICK_FRAMES = 2.2 * 60;
+    const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
+        a.flat !== b.flat ? a.flat : a.frames < b.frames;
     let result = simulateOnce(dieIds.length);
-    for (let attempt = 0; attempt < 8 && !result.flat; attempt++) result = simulateOnce(dieIds.length);
+    for (let attempt = 0; attempt < 6 && !(result.flat && result.frames <= QUICK_FRAMES); attempt++) {
+        const next = simulateOnce(dieIds.length);
+        if (better(next, result)) result = next;
+    }
 
     const offsets = result.bodies.map((b, i) => {
         const q = new THREE.Quaternion(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);

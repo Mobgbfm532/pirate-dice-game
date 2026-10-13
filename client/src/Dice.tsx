@@ -10,6 +10,10 @@ import { createDiceMaterials } from './textures';
 
 const DICE_IDS = [0, 1, 2, 3, 4, 5];
 
+// Starting positions are created once. Passing a fresh Vector3 on every render would make
+// React Three Fiber snap each die back to its start whenever the HUD re-renders.
+const START_POSITIONS = DICE_IDS.map(waitingPosition);
+
 // Scratch objects reused every frame to avoid garbage.
 const targetPos = new THREE.Vector3();
 const targetQuat = new THREE.Quaternion();
@@ -28,7 +32,7 @@ export function Dice() {
     useFrame((_, delta) => {
         const now = performance.now();
         const dice: Die[] = turn ? turn.dice : DICE_IDS.map(id => ({ id, value: 0, status: 'active' }));
-        const slots = assignSlots(dice);
+        const slots = assignSlots(dice, table.lockOrder);
         const scoringCount = dice.filter(isLocked).length - [...slots.values()].filter(s => s < 2).length;
         const ease = 1 - Math.exp(-delta * 12);
         const roll = table.roll;
@@ -98,7 +102,7 @@ export function Dice() {
                         ref={el => { meshes.current[id] = el; }}
                         geometry={geometry}
                         material={materials.faces}
-                        position={waitingPosition(id)}
+                        position={START_POSITIONS[id]}
                         castShadow
                         receiveShadow
                         onClick={onTap(id)}

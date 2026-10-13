@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
-import { calloutText, type TurnOutcome, type TurnView } from './rules';
+import { calloutText, isLocked, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, trackDuration, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { playSound, startMusic, ABILITY_SOUNDS } from './sounds';
@@ -69,6 +69,7 @@ export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion
 export const table = {
     roll: null as null | { track: RollTrack; startedAt: number; speed: number; hidden: Set<number> },
     rest: new Map<number, DiePose>(), // where each unlocked die is lying in the tray
+    lockOrder: new Map<number, number>(), // die id -> when it was locked, so slots never reshuffle
     stolenAt: new Map<number, number>(), // die id -> time Klarg took it
     devilAt: 0,
     celebrateAt: 0
@@ -150,14 +151,24 @@ function setCallout(turn: TurnView | null, callout: string | null, outcome: Turn
 function resetTrayForNewTurn() {
     table.rest.clear();
     table.stolenAt.clear();
+    table.lockOrder.clear();
     for (let id = 0; id < 6; id++) {
         table.rest.set(id, { position: waitingPosition(id), quaternion: new THREE.Quaternion() });
     }
 }
 
+let lockCounter = 0;
+function recordLockOrder(turn: TurnView) {
+    turn.dice.forEach(d => {
+        if (!isLocked(d)) table.lockOrder.delete(d.id);
+        else if (!table.lockOrder.has(d.id)) table.lockOrder.set(d.id, ++lockCounter);
+    });
+}
+
 function applyTurn(turn: TurnView | null) {
     const isNewTurn = !turn || !snapshot.turn || snapshot.turn.key !== turn.key;
     if (isNewTurn) resetTrayForNewTurn();
+    if (turn) recordLockOrder(turn);
     update({
         turn,
         isMyTurn: computeIsMyTurn(snapshot.state, turn),

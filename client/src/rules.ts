@@ -42,22 +42,22 @@ interface GameRulesApi {
     scoreDice(dice: Die[]): { has2: boolean; has4: boolean; score: number };
 }
 
-export const Rules = (self as unknown as { GameRules: GameRulesApi }).GameRules;
+export const Rules = (globalThis as unknown as { GameRules: GameRulesApi }).GameRules;
 
 export const isLocked = (d: Die) => d.status === 'lockedThisTurn' || d.status === 'permanentlyLocked';
 
-// Where each locked die sits: the first 2 and first 4 take the "required" slots,
-// the rest fill the score slots lowest first. Hidden dice always go to score slots.
-export function assignSlots(dice: Die[]): Map<number, number> {
+// Where each locked die sits. Dice are placed in the order they were locked, so a die
+// never shifts once it is down: the first 2 and first 4 take the "required" slots and
+// every other die takes the next free scoring slot. Hidden dice always go to scoring slots.
+export function assignSlots(dice: Die[], lockOrder: Map<number, number>): Map<number, number> {
     const slots = new Map<number, number>();
-    let has2 = false, has4 = false;
-    const scoring: Die[] = [];
-    dice.filter(isLocked).forEach(d => {
+    let has2 = false, has4 = false, nextScoring = 2;
+    const order = (d: Die) => lockOrder.get(d.id) ?? Infinity;
+    dice.filter(isLocked).sort((a, b) => order(a) - order(b) || a.id - b.id).forEach(d => {
         if (!d.hidden && d.value === 2 && !has2) { has2 = true; slots.set(d.id, 0); }
         else if (!d.hidden && d.value === 4 && !has4) { has4 = true; slots.set(d.id, 1); }
-        else scoring.push(d);
+        else slots.set(d.id, nextScoring++);
     });
-    scoring.sort((a, b) => a.value - b.value).forEach((d, i) => slots.set(d.id, 2 + i));
     return slots;
 }
 

@@ -16,7 +16,7 @@ describe('simulateRoll', () => {
                 expect(faceNormal(target).clone().applyQuaternion(quat).y).toBeGreaterThan(0.97); // lying flat
                 expect(pos.y).toBeLessThan(0.55);
             });
-            expect(trackDuration(track)).toBeLessThanOrEqual(3.05);
+            expect(trackDuration(track)).toBeLessThanOrEqual(3.55);
         }
     });
 
