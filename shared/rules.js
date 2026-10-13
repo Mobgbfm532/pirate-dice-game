@@ -2,11 +2,13 @@
 //
 // Pure functions shared by the server (which runs every turn) and the browser
 // (which only displays them). Nothing in here touches the DOM, sockets or timers.
-// Loaded with require() on the server and as window.GameRules in the browser.
+// Loaded with require() on the server and as self.GameRules in the browser. Bundlers may
+// give it a `module` object even in the browser, so both are set whenever both exist.
 (function (root, factory) {
-    if (typeof module === 'object' && module.exports) module.exports = factory();
-    else root.GameRules = factory();
-})(typeof self !== 'undefined' ? self : this, function () {
+    const rules = factory();
+    if (typeof module === 'object' && module.exports) module.exports = rules;
+    if (root) root.GameRules = rules;
+})(typeof self !== 'undefined' ? self : null, function () {
     'use strict';
 
     const DICE_COUNT = 6;

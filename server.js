@@ -20,6 +20,8 @@ const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ro
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/shared', express.static(path.join(__dirname, 'shared')));
+// The 3D client prototype (client/), once built with `npm run build:client`.
+app.use('/next', express.static(path.join(__dirname, 'client', 'dist')));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

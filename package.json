@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test \"test/*.test.js\""
+    "test": "node --test \"test/*.test.js\"",
+    "build:client": "npm --prefix client install && npm --prefix client run build",
+    "dev:client": "npm --prefix client run dev"
   },
   "keywords": [],
   "author": "",

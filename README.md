@@ -14,6 +14,23 @@ npm start
 
 Then open http://localhost:3000.
 
+## 3D table prototype (`/next`)
+
+A new 3D client lives in `client/` (Vite + React Three Fiber, physics with cannon-es).
+It talks to the same server as the classic page, so both can be played side by side.
+
+```bash
+npm run build:client
+npm start
+```
+
+Then open http://localhost:3000/next/. While working on the client, run `npm start` in one
+terminal and `npm run dev:client` in another for hot reload at http://localhost:5173/next/.
+
+Rolls are simulated ahead of time and played back. The server has already chosen each
+value, so when a simulated die stops, its faces are relabelled so the server's value is on
+top (`client/src/physics.ts`). Client tests: `npm --prefix client test`.
+
 ## Table codes
 
 | Code | Mode |
@@ -29,6 +46,7 @@ Then open http://localhost:3000.
 | `server.js` | Node server (Express + Socket.IO). Owns rooms, turns, dice rolls, the bot and scoring. |
 | `shared/rules.js` | The game rules as pure functions, used by both the server and the browser. |
 | `public/` | Everything the browser loads: `index.html`, art, audio, service worker, app manifest. |
+| `client/` | The 3D table prototype, served at `/next` once built. |
 | `test/` | `rules.test.js` (rules) and `server.test.js` (real server driven by socket clients). |
 | `leaderboard.json` | Tavern Crawl high scores, written by the server. |
 
