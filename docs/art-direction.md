@@ -26,7 +26,8 @@ into a dungeon.
 | Brass (slots, trim) | Warm brass | `#c9973a` |
 | Dice | Aged ivory | `#f3e6c8` |
 | Pips | Ink black | `#231a14` |
-| Required pips (2 and 4) | Wax-seal red | `#b71c1c` |
+| The 1 pip | Wax-seal red | `#a3201c` |
+| The 6 pips | Felt green | `#2e7d32` |
 | Candlelight | Ember orange | `#ff9e40` |
 | Magic (Rokr's blur) | Midnight blue + star gold | `#1c3d6e` / `#ffd54f` |
 
@@ -52,7 +53,7 @@ baked shadows** (the game lights them). Generate at 2048 and downscale to 1024 f
 | Table wood | 1024², seamless | Honey oak planks, nicks, one tankard ring |
 | Rail wood | 1024², seamless | Dark walnut with fine grain |
 | Brass slot plates | 512², transparent PNG | Two plates engraved "2" and "4", one plain |
-| Dice faces | 6 × 256², or one 3×2 sheet | Aged ivory, inked pips; 2 and 4 in wax-seal red |
+| Dice faces | 6 × 256², or one 3×2 sheet | Aged ivory, inked pips; the 1 in wax-seal red, the 6 in green |
 | Backdrop | 2048×1024 | Blurred tavern interior behind the table: fireplace, shelves, lanterns |
 | Character busts | 512², transparent PNG | Molar, Klarg, Rokr, Hangman, Jaguar, plus player avatars, in one matching style |
 | UI parchment | 1024², seamless | For panels and dialogs |
@@ -83,8 +84,9 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 
 **Dice faces**
 > A 3 by 2 sprite sheet of six square die faces on aged ivory, showing 1 to 6 pips in
-> standard layouts, pips painted in ink black except the 2 and 4 faces whose pips are
-> wax-seal red, viewed straight on, flat lighting, no shadows. *+ style line*
+> standard layouts, pips painted in ink black except the single pip of the 1 in wax-seal
+> red and the six pips of the 6 in green, viewed straight on, flat lighting, no shadows.
+> *+ style line*
 
 **Backdrop**
 > Wide interior view of a cosy fantasy tavern at night seen from a seat at a gaming
@@ -103,6 +105,15 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | Rokr | Elderly star-reader with constellations on her robe | serene, knowing | a glowing star chart |
 | The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | a revolver and an ace of spades |
 | Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
+
+## Status
+
+| Asset | Status | File |
+|---|---|---|
+| Table wood | Done | `client/public/textures/table-wood.webp` (also used, tinted, for the rails) |
+| Felt | Done | `client/public/textures/felt.webp` |
+| Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
+| Rail wood, brass plates, backdrop, characters, parchment | To do | |
 
 ## Process
 

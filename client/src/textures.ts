@@ -5,9 +5,9 @@ import { FACE_VALUES } from './layout';
 
 const SIZE = 256;
 
-function canvasTexture(draw: (ctx: CanvasRenderingContext2D) => void) {
+function canvasTexture(draw: (ctx: CanvasRenderingContext2D) => void, size = SIZE) {
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = SIZE;
+    canvas.width = canvas.height = size;
     draw(canvas.getContext('2d')!);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -32,8 +32,8 @@ function faceTexture(value: number) {
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, SIZE, SIZE);
 
-        // The 2 and the 4 are the dice you must find, so their pips are red.
-        const color = value === 2 || value === 4 ? '#b71c1c' : '#231a14';
+        // Same colours as the painted dice: a red 1, green 6s, ink black for the rest.
+        const color = value === 1 ? '#a3201c' : value === 6 ? '#2e7d32' : '#231a14';
         const radius = value === 1 ? SIZE * 0.12 : SIZE * 0.085;
         PIPS[value].forEach(([x, y]) => {
             ctx.beginPath();
@@ -73,6 +73,7 @@ export function createDiceMaterials() {
     const faces = FACE_VALUES.map(v => new THREE.MeshStandardMaterial({ map: faceTexture(v), ...diceMaterialProps }));
     const hiddenMap = hiddenTexture();
     const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
+    loadPaintedFaces(faces);
     return { faces, hidden };
 }
 
@@ -80,12 +81,12 @@ export function createDiceMaterials() {
 export function slotTexture(label: string) {
     return canvasTexture(ctx => {
         ctx.clearRect(0, 0, SIZE, SIZE);
-        ctx.strokeStyle = label ? 'rgba(229, 115, 115, 0.9)' : 'rgba(255, 213, 79, 0.45)';
+        ctx.strokeStyle = label ? 'rgba(232, 184, 92, 0.95)' : 'rgba(232, 184, 92, 0.45)';
         ctx.lineWidth = 10;
         ctx.setLineDash(label ? [] : [22, 14]);
         ctx.strokeRect(14, 14, SIZE - 28, SIZE - 28);
         if (label) {
-            ctx.fillStyle = 'rgba(229, 115, 115, 0.85)';
+            ctx.fillStyle = 'rgba(232, 184, 92, 0.95)';
             ctx.font = `bold ${SIZE * 0.55}px Georgia, serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -94,19 +95,38 @@ export function slotTexture(label: string) {
     });
 }
 
-// A little noise so the felt and wood aren't flat colour.
-export function noiseTexture(base: string, speck: string, repeat: number) {
-    const texture = canvasTexture(ctx => {
-        ctx.fillStyle = base;
-        ctx.fillRect(0, 0, SIZE, SIZE);
-        for (let i = 0; i < 4000; i++) {
-            ctx.fillStyle = speck;
-            ctx.globalAlpha = Math.random() * 0.12;
-            ctx.fillRect(Math.random() * SIZE, Math.random() * SIZE, 1 + Math.random() * 2, 1);
-        }
-        ctx.globalAlpha = 1;
-    });
+// The painted dice sheet (docs/art-direction.md): six faces in a 3x2 grid, values 1-6
+// row by row. Each rectangle is the outer edge of a face's inked outline.
+const DICE_SHEET_URL = `${import.meta.env.BASE_URL}textures/dice-faces.jpg`;
+const DICE_SHEET_FACES: Record<number, [number, number]> = {
+    1: [38, 45], 2: [462, 44], 3: [886, 44],
+    4: [38, 465], 5: [462, 465], 6: [886, 464]
+};
+const DICE_SHEET_FACE_SIZE = 339;
+
+// Swaps the drawn placeholder faces for the painted ones once the sheet has loaded.
+function loadPaintedFaces(materials: THREE.MeshStandardMaterial[]) {
+    const image = new Image();
+    image.onload = () => {
+        FACE_VALUES.forEach((value, i) => {
+            const [sx, sy] = DICE_SHEET_FACES[value];
+            const texture = canvasTexture(ctx => {
+                ctx.drawImage(image, sx, sy, DICE_SHEET_FACE_SIZE, DICE_SHEET_FACE_SIZE, 0, 0, 512, 512);
+            }, 512);
+            materials[i].map?.dispose();
+            materials[i].map = texture;
+            materials[i].needsUpdate = true;
+        });
+    };
+    image.src = DICE_SHEET_URL;
+}
+
+// A painted, tiling texture from client/public/textures.
+export function paintedTexture(file: string, repeatX: number, repeatY = repeatX) {
+    const texture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/${file}`);
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(repeat, repeat);
+    texture.repeat.set(repeatX, repeatY);
+    texture.anisotropy = 8;
     return texture;
 }

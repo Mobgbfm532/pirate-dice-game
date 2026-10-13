@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Dice } from './Dice';
 import { table } from './game';
 import { REQUIRED_SLOT_X, SLOT_ROW_Z, TRAY, slotPosition } from './layout';
-import { noiseTexture, slotTexture } from './textures';
+import { paintedTexture, slotTexture } from './textures';
 
 const LOOK_AT = new THREE.Vector3(0, 0, 0.7);
 
@@ -45,9 +45,12 @@ function CameraRig() {
 }
 
 function Tray() {
-    const felt = useMemo(() => noiseTexture('#1f5a34', '#0b2614', 6), []);
-    const wood = useMemo(() => noiseTexture('#5a3519', '#1d0e05', 3), []);
-    const darkWood = useMemo(() => noiseTexture('#3a210f', '#120802', 4), []);
+    // Painted textures (docs/art-direction.md). Each tiles at roughly real-world scale:
+    // the felt image covers ~3 units, a table plank is about one die wide.
+    const felt = useMemo(() => paintedTexture('felt.webp', 2.4, 1.4), []);
+    const tabletop = useMemo(() => paintedTexture('table-wood.webp', 7), []);
+    const rails = useMemo(() => paintedTexture('table-wood.webp', 2, 0.35), []);
+    const slotRail = useMemo(() => paintedTexture('table-wood.webp', 1.6, 0.25), []);
     const width = TRAY.maxX - TRAY.minX;
     const depth = TRAY.maxZ - TRAY.minZ;
     const cx = (TRAY.minX + TRAY.maxX) / 2;
@@ -67,7 +70,7 @@ function Tray() {
             {/* Tabletop */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
                 <planeGeometry args={[40, 40]} />
-                <meshStandardMaterial map={darkWood} roughness={0.85} />
+                <meshStandardMaterial map={tabletop} roughness={0.85} />
             </mesh>
             {/* Felt */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.001, cz]} receiveShadow>
@@ -78,13 +81,13 @@ function Tray() {
             {railBoxes.map(([x, z, w, d], i) => (
                 <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
                     <boxGeometry args={[w, h, d]} />
-                    <meshStandardMaterial map={wood} roughness={0.6} />
+                    <meshStandardMaterial map={rails} color="#8a6448" roughness={0.6} />
                 </mesh>
             ))}
             {/* Slot rail in front of the tray */}
             <mesh position={[0.05, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[width + 0.9, 1.25]} />
-                <meshStandardMaterial map={wood} roughness={0.7} />
+                <meshStandardMaterial map={slotRail} color="#a0785a" roughness={0.7} />
             </mesh>
             <Slots />
         </group>
