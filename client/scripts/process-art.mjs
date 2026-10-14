@@ -215,6 +215,24 @@ async function backdrop() {
     console.log(`tavern.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
 }
 
+// Tiling wood for the 3D table, and parchment for dialogs (used once per panel, not tiled).
+async function surfaces() {
+    const textures = path.resolve(here, '../public/textures');
+    // Every plank ends in a dark joint at both image edges; trimming one edge's worth means
+    // two tiles meet as a single, normal-width joint.
+    const planks = await sharp(path.join(ART, 'table-planks.jpg')).metadata();
+    const outputs = [
+        [sharp(path.join(ART, 'table-planks.jpg')).extract({ left: 0, top: 0, width: planks.width - 6, height: planks.height }), textures, 'table-planks.webp'],
+        [sharp(path.join(ART, 'rail-walnut.jpg')).resize({ width: 1024 }), textures, 'rail-walnut.webp'],
+        [sharp(path.join(ART, 'parchment.jpg')).resize({ width: 1024 }), OUT, 'parchment.webp']
+    ];
+    for (const [image, dir, name] of outputs) {
+        const info = await image.webp({ quality: 80 }).toFile(path.join(dir, name));
+        console.log(`${name}  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    }
+}
+
+await surfaces();
 await backdrop();
 await slotPlates();
 await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches: [[684, 300, 760, 700, 85, 110, 190], [668, 555, 760, 705, 255]] });

@@ -77,6 +77,12 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > Seamless tileable texture of dark polished walnut wood grain, fine straight grain,
 > flat even lighting, no shadows. *+ style line*
 
+**UI parchment (seamless)**
+> Top-down seamless tileable texture of aged parchment paper, warm cream and light tan,
+> faint fibres, soft uneven mottling, a few very faint tea stains, evenly light across the
+> whole image so dark text stays readable, flat even lighting, no shadows, no text, no
+> writing, no torn or burnt edges, no border. *+ style line*
+
 **Brass slot plates**
 > 1 *+ style line*
 
@@ -108,14 +114,15 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 
 | Asset | Status | File |
 |---|---|---|
-| Table wood | Done | `client/public/textures/table-wood.webp` (also used, tinted, for the rails) |
+| Table wood | Done | `art/table-planks.jpg` → `textures/table-planks.webp` (first version kept as `art/table-wood-v1.webp`) |
+| Rail wood | Done | `art/rail-walnut.jpg` → `textures/rail-walnut.webp` (tray rails and slot rail) |
+| UI parchment | Done | `art/parchment.jpg` → `art/parchment.webp` (dialogs; covers each panel, not tiled) |
 | Felt | Done | `client/public/textures/felt.webp` |
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
 | Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
 | Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
-| Player avatars Devil, Vaelin | To do | Still the classic game's portraits |
-| Rail wood, UI parchment | To do | Rails use tinted table wood for now |
+| Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 
 ## Processing art
 

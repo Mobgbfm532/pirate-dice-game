@@ -113,23 +113,25 @@ header {
     color: var(--gold-bright);
 }
 
-.callout-area {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 6vh;
-}
+/* Fills the space between header and footer; the callout inside is pinned just above the
+   table's far edge, so it never covers the opponent's face or the dice. */
+.callout-area { flex: 1; }
 .callout {
-    font-size: clamp(1.6rem, 6vw, 2.8rem);
+    position: fixed;
+    left: 50%;
+    top: calc(var(--horizon, 30vh) - 1.55em);
+    transform: translate(-50%, -100%);
+    width: max-content;
+    max-width: 92vw;
+    font-size: clamp(1.5rem, 5.5vw, 2.6rem);
     font-weight: 700;
     text-align: center;
-    text-shadow: 0 3px 10px #000, 0 0 24px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 3px 10px #000, 0 0 24px rgba(0, 0, 0, 0.9);
     animation: callout-in 0.35s ease-out;
 }
 @keyframes callout-in {
-    from { transform: scale(0.6); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+    from { transform: translate(-50%, -100%) scale(0.6); opacity: 0; }
+    to { transform: translate(-50%, -100%) scale(1); opacity: 1; }
 }
 
 .toasts {
@@ -150,7 +152,7 @@ header {
     padding: 8px 14px;
     text-align: center;
     white-space: pre-line;
-    animation: callout-in 0.25s ease-out;
+    animation: toast-in 0.25s ease-out;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -219,7 +221,11 @@ footer {
     width: min(100%, 440px);
     max-height: 100%;
     overflow-y: auto;
-    background: linear-gradient(#f6ead0, #e6d3aa);
+    /* Painted parchment, with the edges darkened a little like old paper. */
+    background:
+        radial-gradient(ellipse at center, transparent 55%, rgba(110, 70, 25, 0.22)),
+        url('/art/parchment.webp') center / cover,
+        #f1e2c2;
     color: var(--ink);
     border: 3px solid #8d6e3f;
     border-radius: 16px;
@@ -377,4 +383,9 @@ footer {
     footer .hint { max-width: 180px; text-align: right; }
     .roll { min-width: 150px; padding: 10px 20px; font-size: 1.2rem; }
     .reactions { position: fixed; left: 16px; bottom: max(14px, env(safe-area-inset-bottom)); flex-direction: column; }
+}
+
+@keyframes toast-in {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
