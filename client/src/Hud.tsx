@@ -1,4 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { screenInsets } from './layout';
 import { actions, store, BOT_ID, type GameState, type Snapshot } from './game';
 import { Rules } from './rules';
 import { isMuted, playSound, setMuted } from './sounds';
@@ -144,9 +145,10 @@ function OpponentPlate({ state }: { state: GameState }) {
     );
 }
 
+// Always the same size, whoever's turn it is, so the table doesn't shift between turns.
 function TurnControls({ snap }: { snap: Snapshot }) {
     const turn = snap.turn;
-    if (!turn) return null;
+    if (!turn) return <div className="controls" />;
     const hiddenLocked = turn.dice.some(d => d.hidden && d.status !== 'active');
     const scoreText = turn.finalized && turn.outcome?.busted ? 'X' : hiddenLocked ? '?' : String(Rules.scoreDice(turn.dice).score);
 
@@ -163,9 +165,13 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 <span className="label">Turn score</span>
                 <span className={`value ${turn.finalized && turn.outcome?.busted ? 'dust' : ''}`}>{scoreText}</span>
             </div>
-            {snap.isMyTurn && (
-                <button className={`roll ${turn.finalized ? 'end' : ''}`} disabled={disabled} onClick={actions.roll}>{label}</button>
-            )}
+            <button
+                className={`roll ${turn.finalized ? 'end' : ''}`}
+                disabled={disabled || !snap.isMyTurn}
+                onClick={actions.roll}
+                style={snap.isMyTurn ? undefined : { visibility: 'hidden' }}
+                aria-hidden={!snap.isMyTurn}
+            >{label}</button>
             <div className="hint">{hint}</div>
         </div>
     );
@@ -240,9 +246,26 @@ function Modals({ snap }: { snap: Snapshot }) {
     );
 }
 
+// Reports how much of the bottom of the screen the controls cover, for the camera.
+function useFooterInset() {
+    const ref = useRef<HTMLElement>(null);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const measure = () => { screenInsets.bottom = Math.max(0, window.innerHeight - el.getBoundingClientRect().top); };
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        window.addEventListener('resize', measure);
+        measure();
+        return () => { observer.disconnect(); window.removeEventListener('resize', measure); screenInsets.bottom = 0; };
+    }, []);
+    return ref;
+}
+
 export function Hud() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
     const [muted, setMutedState] = useState(isMuted());
+    const footerRef = useFooterInset();
 
     if (!snap.joined) return <JoinScreen />;
     const state = snap.state;
@@ -277,7 +300,7 @@ export function Hud() {
                 ))}
             </div>
 
-            <footer>
+            <footer ref={footerRef}>
                 {state && <TavernStrip state={state} />}
                 {state && <Players snap={snap} state={state} ids={chips} className="side-players" />}
                 <TurnControls snap={snap} />

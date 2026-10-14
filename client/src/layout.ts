@@ -21,6 +21,10 @@ export function slotPosition(slot: number, scoringCount: number): THREE.Vector3 
     return new THREE.Vector3(first + (slot - 2) * step, DIE_HALF, SLOT_ROW_Z);
 }
 
+// Screen space the on-screen controls take up (px), measured by the HUD. On phones the
+// camera keeps the table above the controls at the bottom.
+export const screenInsets = { bottom: 0 };
+
 // Where unrolled dice wait at the start of a turn.
 export function waitingPosition(id: number): THREE.Vector3 {
     return new THREE.Vector3(-2.75 + id * 1.1, DIE_HALF, -0.6);

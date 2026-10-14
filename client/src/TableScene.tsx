@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Dice } from './Dice';
 import { table } from './game';
-import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, slotPosition } from './layout';
+import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slotPosition } from './layout';
 import { artTexture, paintedTexture } from './textures';
 import { layoutBackdrop } from './Backdrop';
 
@@ -26,8 +26,14 @@ function CameraRig() {
         const aspect = size.width / size.height;
         const portrait = aspect < 0.9;
         const direction = new THREE.Vector3(0, 1, portrait ? 0.22 : 0.5).normalize();
-        const top = portrait ? 0.32 : 0.33;
-        const bottom = portrait ? 0.76 : 0.94;
+        // On phones the controls sit under the table, so the table must end above them
+        // (their real height, measured by the HUD); on wide screens they're in the corners.
+        // (Ignore implausible measurements, e.g. before the page has laid out.)
+        const measured = (screenInsets.bottom + 10) / size.height;
+        const controls = portrait && measured > 0.05 && measured < 0.6 ? measured : 0.24;
+        const bottom = portrait ? Math.min(0.8, 1 - controls) : 0.94;
+        // Keep a sensible amount of table if the controls are very tall: give up tavern first.
+        const top = portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
 
         // On narrow screens the outer rails may crop slightly so the dice stay big enough to tap.
         const vHalf = THREE.MathUtils.degToRad(cam.fov / 2);
@@ -41,13 +47,23 @@ function CameraRig() {
         };
         const screenY = (p: THREE.Vector3) => (1 - projected.copy(p).project(cam).y) / 2;
 
-        let distance = Math.max(minDistance, cam.position.distanceTo(lookAt.current) || minDistance);
+        // The solve carries over between frames, so a bad value would stick: start again if
+        // anything has gone non-finite, and keep both values within sane limits.
+        if (!Number.isFinite(lookAt.current.z) || !Number.isFinite(cam.position.lengthSq())) {
+            lookAt.current.set(0, 0, 0.7);
+            cam.position.set(0, 10, 8);
+        }
+        let distance = THREE.MathUtils.clamp(cam.position.distanceTo(lookAt.current) || minDistance, minDistance, minDistance * 4);
         for (let i = 0; i < 6; i++) {
             place(distance);
             const far = screenY(farPoint), near = screenY(nearPoint);
             const span = near - far;
-            distance = Math.max(minDistance, distance * (span / (bottom - top)));
-            lookAt.current.z += ((far + near) / 2 - (top + bottom) / 2) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span);
+            if (!(span > 0.01)) break;
+            distance = THREE.MathUtils.clamp(distance * (span / (bottom - top)), minDistance, minDistance * 4);
+            lookAt.current.z = THREE.MathUtils.clamp(
+                lookAt.current.z + ((far + near) / 2 - (top + bottom) / 2) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span),
+                TABLE_FAR_EDGE_Z, NEAR_EDGE_Z + 3
+            );
         }
 
         // Lean in slowly while dice are in the air during a suspense roll.

@@ -454,3 +454,13 @@ footer {
     from { transform: scale(0.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+
+/* Short phone screens (e.g. with the browser's address bar showing): tighter controls so
+   the table keeps its room. */
+@media (orientation: portrait) and (max-height: 760px) {
+    footer { gap: 4px; }
+    .turn-score .value { font-size: 1.7rem; }
+    .roll { padding: 9px 26px; font-size: 1.2rem; }
+    .reactions button { width: 34px; height: 34px; font-size: 1rem; }
+    .hint { min-height: 1em; font-size: 0.8rem; }
+}
