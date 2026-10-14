@@ -25,7 +25,7 @@ export interface Keepsake { id: string; name: string; text: string }
 export interface TavernRun {
     encounterNumber: number;
     totalEncounters: number;
-    enemy: { id: string; name: string; intro: string; ability: string | null };
+    enemy: { id: string; name: string; intro: string; ability: string | null; lives: number };
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
 }

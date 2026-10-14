@@ -31,6 +31,9 @@ Rolls are simulated ahead of time and played back. The server has already chosen
 value, so when a simulated die stops, its faces are relabelled so the server's value is on
 top (`client/src/physics.ts`). Client tests: `npm --prefix client test`.
 
+Art: originals are in `art/`; `npm --prefix client run art` regenerates the game files in
+`client/public/art` (see `docs/art-direction.md`).
+
 ## Table codes
 
 | Code | Mode |

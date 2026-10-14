@@ -78,9 +78,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > flat even lighting, no shadows. *+ style line*
 
 **Brass slot plates**
-> Three square brass plaques on a transparent background, slightly worn and rounded,
-> the first engraved with a bold red numeral "2", the second with a bold red numeral "4",
-> the third plain, viewed straight on, flat lighting. *+ style line*
+> 1 *+ style line*
 
 **Dice faces**
 > A 3 by 2 sprite sheet of six square die faces on aged ivory, showing 1 to 6 pips in
@@ -95,8 +93,8 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 
 **Character bust (template)**
 > Head-and-shoulders portrait of [CHARACTER], three-quarter view, looking at the viewer
-> with [EXPRESSION], holding [PROP], transparent background, warm rim light from a
-> fireplace. *+ style line*
+> with [EXPRESSION], holding [PROP], warm rim light from a fireplace, on a plain flat
+> solid magenta background, no checkerboard. *+ style line*
 
 | Character | Description | Expression | Prop |
 |---|---|---|---|
@@ -113,7 +111,23 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | Table wood | Done | `client/public/textures/table-wood.webp` (also used, tinted, for the rails) |
 | Felt | Done | `client/public/textures/felt.webp` |
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
-| Rail wood, brass plates, backdrop, characters, parchment | To do | |
+| Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
+| Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
+| Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
+| Player avatars Devil, Vaelin | To do | Still the classic game's portraits |
+| Rail wood, UI parchment | To do | Rails use tinted table wood for now |
+
+## Processing art
+
+Originals live in `art/` and are never edited. `npm run art` (in `client/`) turns them
+into game files in `client/public/art`: it removes painted checkerboard "transparency",
+trims and resizes busts, and splits the slot plates. Per-image fixes (firelight corners,
+patches boxed in by a hand) are listed at the bottom of `client/scripts/process-art.mjs`.
+
+**Ask for a flat background.** Most AI tools can't make real transparency and paint a
+checkerboard instead, which takes per-image cleanup. Ending character and plate prompts
+with *"on a plain flat solid magenta background, no checkerboard"* makes cut-outs
+automatic.
 
 ## Process
 

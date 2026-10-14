@@ -2,26 +2,13 @@ import { useState, useSyncExternalStore } from 'react';
 import { actions, store, BOT_ID, type GameState, type Snapshot } from './game';
 import { Rules } from './rules';
 import { isMuted, playSound, setMuted } from './sounds';
-
-const AVATARS: { id: string; file: string }[] = [
-    { id: 'Devil', file: 'Devil.png' },
-    { id: 'Vaelin', file: 'vaelin.png' },
-    { id: 'Rokr', file: 'Rokr.png' },
-    { id: 'The Hangman', file: 'The Hangman.png' },
-    { id: 'Klarg', file: 'klarg.png' },
-    { id: 'Jaguar Cantona', file: 'Jaguar.png' }
-];
-
-const ENEMY_ART: Record<string, string> = {
-    'The Molar': 'Molar.png', Klarg: 'klarg.png', Rokr: 'Rokr.png', 'The Hangman': 'The Hangman.png', 'Jaguar Cantona': 'Jaguar.png'
-};
+import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
+import { opponentName } from './Backdrop';
 
 const REACTIONS = ['😀', '😂', '😮', '😎', '😭'];
 
-function avatarSrc(playerId: string, name: string, avatar: string) {
-    const file = playerId === BOT_ID ? ENEMY_ART[name] ?? 'Molar.png' : AVATARS.find(a => a.id === avatar)?.file ?? 'Devil.png';
-    return `/${encodeURI(file)}`;
-}
+// The bot's portrait is its name (one per Tavern Crawl encounter); players pick an avatar.
+const playerPortrait = (id: string, name: string, avatar: string) => portraitFor(id === BOT_ID ? name : avatar);
 
 function readPrefs() {
     try {
@@ -46,7 +33,7 @@ function savePrefs(name: string, avatar: string, code: string) {
 function JoinScreen() {
     const prefs = readPrefs();
     const [name, setName] = useState(prefs.name);
-    const [avatar, setAvatar] = useState(AVATARS.some(a => a.id === prefs.avatar) ? prefs.avatar : 'Devil');
+    const [avatar, setAvatar] = useState(AVATAR_IDS.includes(prefs.avatar) ? prefs.avatar : 'Devil');
     const [code, setCode] = useState(['COMP', 'TAVERN'].includes(prefs.code) ? '' : prefs.code);
 
     const join = (tableCode: string) => {
@@ -60,10 +47,8 @@ function JoinScreen() {
                 <h1>2, 4, 24</h1>
                 <p className="subtitle">Find a 2, find a 4, then chase 24.</p>
                 <div className="avatars">
-                    {AVATARS.map(a => (
-                        <button key={a.id} className={`avatar ${a.id === avatar ? 'selected' : ''}`} onClick={() => { setAvatar(a.id); playSound('click'); }} aria-label={a.id}>
-                            <img src={`/${encodeURI(a.file)}`} alt="" />
-                        </button>
+                    {AVATAR_IDS.map(id => (
+                        <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
                     ))}
                 </div>
                 <input value={name} maxLength={15} placeholder="Adventurer name" onChange={e => setName(e.target.value)} />
@@ -90,26 +75,50 @@ function turnLine(snap: Snapshot, state: GameState) {
     return current ? `${current.name} is rolling…` : '';
 }
 
-function Players({ snap, state }: { snap: Snapshot; state: GameState }) {
+function scoreText(p: GameState['players'][string]) {
+    return !p.connected ? 'Offline' : p.lives <= 0 ? 'Out' : p.score === null ? '–' : p.busted ? 'Dust' : String(p.score);
+}
+
+function Hearts({ lives, starting }: { lives: number; starting: number }) {
+    const n = Math.max(0, lives);
+    return <div className="hearts" aria-label={`${n} lives`}>{'♥'.repeat(n)}<span>{'♥'.repeat(Math.max(0, starting - n))}</span></div>;
+}
+
+// Player chips. With an opponent sitting across the table, the bot gets a nameplate
+// there instead (see OpponentPlate), so only the human players are listed here.
+function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: GameState; ids: string[]; className?: string }) {
     return (
-        <div className="players">
-            {state.playerOrder.map(id => {
+        <div className={`players ${className}`}>
+            {ids.map(id => {
                 const p = state.players[id];
                 if (!p) return null;
                 const inRound = state.roundPlayers.includes(id) && p.connected;
-                const lives = Math.max(0, p.lives);
-                const score = !p.connected ? 'Offline' : p.lives <= 0 ? 'Out' : p.score === null ? '–' : p.busted ? 'Dust' : String(p.score);
                 return (
                     <div key={id} className={`player ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${id === snap.myId ? 'me' : ''}`}>
-                        <img src={avatarSrc(id, p.name, p.avatar)} alt="" />
+                        <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                         <div>
                             <div className="name">{p.name}</div>
-                            <div className="hearts" aria-label={`${lives} lives`}>{'♥'.repeat(lives)}<span>{'♥'.repeat(Math.max(0, state.startingLives - lives))}</span></div>
+                            <Hearts lives={p.lives} starting={state.startingLives} />
                         </div>
-                        <div className="score">{score}</div>
+                        <div className="score">{scoreText(p)}</div>
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+// The opponent's name, lives and score on the table edge, under their portrait.
+function OpponentPlate({ state }: { state: GameState }) {
+    const bot = state.players[BOT_ID];
+    if (!bot) return null;
+    const starting = state.mode === 'tavern-crawl' && state.tavernRun ? state.tavernRun.enemy.lives : state.startingLives;
+    return (
+        <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
+            {state.tavernRun && <span className="encounter">{state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
+            <span className="name">{opponentName() ?? bot.name}</span>
+            <Hearts lives={bot.lives} starting={starting} />
+            <span className="score">{scoreText(bot)}</span>
         </div>
     );
 }
@@ -141,12 +150,13 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     );
 }
 
-function TavernStrip({ state }: { state: GameState }) {
+// Keepsakes won so far, plus the encounter count when no nameplate is showing it.
+function TavernStrip({ state, showEncounter }: { state: GameState; showEncounter: boolean }) {
     const run = state.tavernRun;
-    if (!run) return null;
+    if (!run || (!showEncounter && run.keepsakes.length === 0)) return null;
     return (
         <div className="tavern-strip">
-            <span>Encounter {run.encounterNumber} of {run.totalEncounters}: <strong>{run.enemy.name}</strong></span>
+            {showEncounter && <span>Encounter {run.encounterNumber} of {run.totalEncounters}: <strong>{run.enemy.name}</strong></span>}
             {run.keepsakes.map(k => <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
         </div>
     );
@@ -192,16 +202,21 @@ export function Hud() {
 
     if (!snap.joined) return <JoinScreen />;
     const state = snap.state;
+    const opponentAcross = !!state && !!opponentName() && portraitFor(opponentName()!).bust;
+    const humans = state ? state.playerOrder.filter(id => id !== BOT_ID) : [];
 
     return (
         <div className="hud">
             <header>
-                <span className="room">{snap.roomLabel}</span>
+                {state && opponentAcross
+                    ? <Players snap={snap} state={state} ids={humans} className="header-players" />
+                    : <span className="room">{snap.roomLabel}</span>}
                 <span className={`turn-line ${snap.isMyTurn ? 'mine' : ''}`}>{state ? turnLine(snap, state) : 'Connecting…'}</span>
                 <button className="mute" onClick={() => { setMuted(!muted); setMutedState(!muted); }} aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🎵'}</button>
             </header>
-            {state && <Players snap={snap} state={state} />}
-            {state && <TavernStrip state={state} />}
+            {state && !opponentAcross && <Players snap={snap} state={state} ids={state.playerOrder} />}
+            {state && opponentAcross && <OpponentPlate state={state} />}
+            {state && !opponentAcross && <TavernStrip state={state} showEncounter />}
 
             <div className="callout-area" aria-live="polite">
                 {snap.callout && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}
@@ -217,6 +232,8 @@ export function Hud() {
             </div>
 
             <footer>
+                {state && opponentAcross && <TavernStrip state={state} showEncounter={false} />}
+                {state && opponentAcross && <Players snap={snap} state={state} ids={humans} className="footer-players" />}
                 <TurnControls snap={snap} />
                 {state && state.mode !== 'tavern-crawl' && (
                     <div className="reactions">

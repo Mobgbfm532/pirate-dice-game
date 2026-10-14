@@ -35,6 +35,7 @@ button:disabled { cursor: default; }
 .hud {
     position: fixed;
     inset: 0;
+    z-index: 2;
     pointer-events: none;
     display: flex;
     flex-direction: column;
@@ -85,7 +86,7 @@ header {
     min-width: 0;
     transition: transform 0.2s, border-color 0.2s;
 }
-.player img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #000; }
+.player .portrait { width: 36px; height: 36px; border-radius: 50%; background-color: #1d120a; background-repeat: no-repeat; flex: none; }
 .player .name { font-size: 0.95rem; font-weight: 700; max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player .hearts { color: #e53935; font-size: 0.8rem; letter-spacing: 1px; }
 .player .hearts span { color: #4a3a30; }
@@ -272,7 +273,7 @@ footer {
     filter: grayscale(0.8) opacity(0.6);
     transition: transform 0.15s, filter 0.15s;
 }
-.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar { background-color: #1d120a; background-repeat: no-repeat; }
 .avatar.selected { filter: none; border-color: var(--gold); transform: scale(1.12); }
 
 .choices { display: flex; flex-direction: column; gap: 8px; }
@@ -293,6 +294,87 @@ footer {
 @media (max-width: 480px) {
     .turn-line { font-size: 1.1rem; }
     .room { display: none; }
-    .player img { width: 30px; height: 30px; }
+    .player .portrait { width: 30px; height: 30px; }
     .player .name { max-width: 6.5em; font-size: 0.85rem; }
+}
+
+/* ---- The tavern behind the table (under the transparent 3D canvas) ---- */
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: var(--bg);
+}
+.backdrop .tavern-room {
+    position: absolute;
+    left: var(--room-left, 0);
+    top: var(--room-top, 0);
+    width: var(--room-w, 100%);
+    height: var(--room-h, 60%);
+    background-size: 100% 100%;
+    filter: brightness(0.8) saturate(0.95);
+}
+/* The opponent sits across the table: anchored so the table hides their lower fifth. */
+.backdrop .opponent {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--horizon, 0px) - var(--bust-h, 0px) * 0.8);
+    height: var(--bust-h, 0px);
+    transform: translateX(-50%);
+    filter: brightness(0.82) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6));
+    transition: filter 0.4s, transform 0.4s;
+    animation: opponent-in 0.6s ease-out;
+}
+.backdrop .opponent.active {
+    filter: brightness(1.02) drop-shadow(0 0 22px rgba(255, 158, 64, 0.45));
+    transform: translateX(-50%) scale(1.03);
+}
+@keyframes opponent-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(12%); }
+    to { opacity: 1; transform: translateX(-50%); }
+}
+
+.opponent-plate {
+    position: fixed;
+    left: 50%;
+    top: var(--horizon, 30%);
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 14px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.opponent-plate .name { font-weight: 700; }
+.opponent-plate .encounter { font-size: 0.8rem; color: var(--parchment-dim); border-right: 1px solid var(--panel-border); padding-right: 8px; }
+.opponent-plate .score { font-size: 1.1rem; font-weight: 700; color: var(--gold-bright); min-width: 1.2em; text-align: right; }
+.opponent-plate.current { border-color: var(--gold-bright); box-shadow: 0 0 14px rgba(255, 213, 79, 0.35); }
+
+/* Your own chip: in the header on wide screens, above the controls on tall ones. */
+.header-players { margin-top: 0; justify-content: flex-start; flex: 0 1 auto; min-width: 0; }
+.footer-players { margin-top: 0; display: none; }
+@media (orientation: portrait) {
+    .header-players { display: none; }
+    .footer-players { display: flex; }
+}
+
+/* Wide screens: the table takes the full height, so the controls sit in the empty
+   corners beside the slot rail instead of underneath it. */
+@media (orientation: landscape) {
+    footer {
+        position: fixed;
+        right: 16px;
+        bottom: max(14px, env(safe-area-inset-bottom));
+        align-items: flex-end;
+    }
+    footer .controls { align-items: flex-end; }
+    footer .hint { max-width: 180px; text-align: right; }
+    .roll { min-width: 150px; padding: 10px 20px; font-size: 1.2rem; }
+    .reactions { position: fixed; left: 16px; bottom: max(14px, env(safe-area-inset-bottom)); flex-direction: column; }
 }

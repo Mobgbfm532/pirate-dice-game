@@ -7,6 +7,9 @@ export const DIE_HALF = DIE_SIZE / 2;
 // The felt tray the dice are thrown into.
 export const TRAY = { minX: -3.6, maxX: 3.6, minZ: -2.7, maxZ: 1.5, wallHeight: 0.8 };
 
+// The tabletop stops just behind the tray; the tavern backdrop shows beyond it.
+export const TABLE_FAR_EDGE_Z = TRAY.minZ - 1.0;
+
 // The rail in front of the tray where locked dice are set down.
 export const SLOT_ROW_Z = 2.55;
 export const REQUIRED_SLOT_X = [-3.0, -2.0];

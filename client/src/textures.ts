@@ -77,24 +77,6 @@ export function createDiceMaterials() {
     return { faces, hidden };
 }
 
-// The engraved slots on the front rail: "2" and "4" for the required dice, plain for scoring dice.
-export function slotTexture(label: string) {
-    return canvasTexture(ctx => {
-        ctx.clearRect(0, 0, SIZE, SIZE);
-        ctx.strokeStyle = label ? 'rgba(232, 184, 92, 0.95)' : 'rgba(232, 184, 92, 0.45)';
-        ctx.lineWidth = 10;
-        ctx.setLineDash(label ? [] : [22, 14]);
-        ctx.strokeRect(14, 14, SIZE - 28, SIZE - 28);
-        if (label) {
-            ctx.fillStyle = 'rgba(232, 184, 92, 0.95)';
-            ctx.font = `bold ${SIZE * 0.55}px Georgia, serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, SIZE / 2, SIZE / 2 + 8);
-        }
-    });
-}
-
 // The painted dice sheet (docs/art-direction.md): six faces in a 3x2 grid, values 1-6
 // row by row. Each rectangle is the outer edge of a face's inked outline.
 const DICE_SHEET_URL = `${import.meta.env.BASE_URL}textures/dice-faces.jpg`;
@@ -127,6 +109,14 @@ export function paintedTexture(file: string, repeatX: number, repeatY = repeatX)
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(repeatX, repeatY);
+    texture.anisotropy = 8;
+    return texture;
+}
+
+// A single painted image from client/public/art (no tiling).
+export function artTexture(file: string) {
+    const texture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}art/${file}`);
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 8;
     return texture;
 }
