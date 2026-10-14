@@ -9,7 +9,7 @@ import { DIE_HALF, TRAY, faceNormal, valueFacingUp } from './layout';
 
 const STEP = 1 / 120;
 const RECORD_EVERY = 2; // frames are recorded at 60 per second
-const MAX_SECONDS = 3.5;
+const MAX_SECONDS = 4.5;
 const FLOATS_PER_DIE = 7; // x, y, z, qx, qy, qz, qw
 
 export interface RollTrack {
@@ -33,15 +33,54 @@ export function readFrame(track: RollTrack, frame: number, dieIndex: number, pos
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
+// A cube with its corners clipped off, matching the rounded dice drawn on screen. A sharp
+// physics cube loses most of its energy every time it tips over an edge and stops dead;
+// clipped corners let it keep tumbling, like a real die. It still rests flat on a face.
+function clippedCube(half: number, clip: number) {
+    const inner = half - clip;
+    const vertices: CANNON.Vec3[] = [];
+    const signs = [-1, 1];
+    for (const sx of signs) for (const sy of signs) for (const sz of signs) {
+        vertices.push(new CANNON.Vec3(sx * half, sy * half, sz * inner));
+        vertices.push(new CANNON.Vec3(sx * half, sy * inner, sz * half));
+        vertices.push(new CANNON.Vec3(sx * inner, sy * half, sz * half));
+    }
+    // Faces: six octagons (one per side) and eight corner triangles. Each face's vertices are
+    // ordered counter-clockwise seen from outside, as cannon-es requires.
+    const faceOf = (normal: CANNON.Vec3, test: (v: CANNON.Vec3) => boolean) => {
+        const ids = vertices.map((v, i) => (test(v) ? i : -1)).filter(i => i >= 0);
+        const centre = ids.reduce((c, i) => c.vadd(vertices[i]), new CANNON.Vec3()).scale(1 / ids.length);
+        const u = Math.abs(normal.x) < 0.9 ? new CANNON.Vec3(1, 0, 0).cross(normal) : new CANNON.Vec3(0, 1, 0).cross(normal);
+        u.normalize();
+        const v = normal.cross(u);
+        const angle = (i: number) => { const d = vertices[i].vsub(centre); return Math.atan2(d.dot(v), d.dot(u)); };
+        return ids.sort((a, b) => angle(a) - angle(b));
+    };
+    const faces: number[][] = [];
+    const eps = 1e-6;
+    for (const axis of ['x', 'y', 'z'] as const) for (const s of signs) {
+        const n = new CANNON.Vec3(axis === 'x' ? s : 0, axis === 'y' ? s : 0, axis === 'z' ? s : 0);
+        faces.push(faceOf(n, p => Math.abs(p[axis] - s * half) < eps));
+    }
+    for (const sx of signs) for (const sy of signs) for (const sz of signs) {
+        const n = new CANNON.Vec3(sx, sy, sz);
+        n.normalize();
+        faces.push(faceOf(n, p => Math.sign(p.x) === sx && Math.sign(p.y) === sy && Math.sign(p.z) === sz));
+    }
+    return new CANNON.ConvexPolyhedron({ vertices, faces });
+}
+
+const DIE_SHAPE = clippedCube(DIE_HALF, 0.14); // matches the drawn dice's corner radius (0.13)
+
 function buildWorld() {
-    const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -42, 0) });
+    const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -24, 0) });
     world.allowSleep = true;
     world.broadphase = new CANNON.NaiveBroadphase();
 
     const diceMaterial = new CANNON.Material('dice');
     const tableMaterial = new CANNON.Material('table');
-    world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, tableMaterial, { friction: 0.32, restitution: 0.32 }));
-    world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, diceMaterial, { friction: 0.18, restitution: 0.4 }));
+    world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, tableMaterial, { friction: 0.3, restitution: 0.3 }));
+    world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, diceMaterial, { friction: 0.2, restitution: 0.4 }));
 
     const floor = new CANNON.Body({ mass: 0, material: tableMaterial, shape: new CANNON.Plane() });
     floor.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
@@ -66,7 +105,8 @@ function buildWorld() {
     return { world, diceMaterial };
 }
 
-function simulateOnce(count: number) {
+// direction: 1 throws left to right across the tray's long side, -1 right to left.
+function simulateOnce(count: number, direction: 1 | -1) {
     const { world, diceMaterial } = buildWorld();
     const bodies: CANNON.Body[] = [];
 
@@ -74,20 +114,29 @@ function simulateOnce(count: number) {
         const body = new CANNON.Body({
             mass: 1,
             material: diceMaterial,
-            shape: new CANNON.Box(new CANNON.Vec3(DIE_HALF, DIE_HALF, DIE_HALF)),
-            linearDamping: 0.08,
-            angularDamping: 0.12,
+            shape: DIE_SHAPE,
+            linearDamping: 0.04,
+            angularDamping: 0.02,
             sleepSpeedLimit: 0.25,
             sleepTimeLimit: 0.25
         });
-        // Tossed from the player's side of the tray, spread across its width, so the dice
-        // tumble across the felt rather than piling up against the back wall.
-        const spread = Math.min(1.15, 6.2 / Math.max(1, count));
-        const x = (i - (count - 1) / 2) * spread + rand(-0.15, 0.15);
-        body.position.set(x, rand(1.4, 2.2), TRAY.maxZ - 0.7 + rand(-0.2, 0.2));
+        // A low, fast toss in from one end of the tray, along its long side, so the dice
+        // land early and tumble across the felt. They start in a loose two-column cluster.
+        const rows = Math.ceil(count / 2);
+        const col = i % 2, row = Math.floor(i / 2);
+        const startX = direction > 0 ? TRAY.minX + 0.7 : TRAY.maxX - 0.7;
+        const cz = (TRAY.minZ + TRAY.maxZ) / 2;
+        body.position.set(
+            startX + direction * col * 1.0 + rand(-0.1, 0.1),
+            rand(0.85, 1.1),
+            cz + (row - (rows - 1) / 2) * 1.05 + rand(-0.15, 0.15)
+        );
         body.quaternion.setFromEuler(rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2));
-        body.velocity.set(x * 0.35 + rand(-1.2, 1.2), rand(0, 1.5), rand(-8, -5));
-        body.angularVelocity.set(rand(-18, 18), rand(-18, 18), rand(-18, 18));
+        const speed = rand(10, 13);
+        body.velocity.set(direction * speed, rand(-1, 0.3), rand(-1.6, 1.6));
+        // Forward roll: spinning about z at about the rate that matches rolling on the felt
+        // (speed / half-size), plus some wobble so it isn't a perfect wheel.
+        body.angularVelocity.set(rand(-7, 7), rand(-7, 7), -direction * (speed / DIE_HALF) * rand(0.5, 0.95));
         world.addBody(body);
         bodies.push(body);
     }
@@ -131,14 +180,15 @@ function isFlat(b: CANNON.Body) {
 
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
 export function simulateRoll(dieIds: number[], targetValues: number[]): RollTrack {
-    // Prefer a throw that ends flat within ~2.2s; otherwise keep the best one seen
+    // Prefer a throw that ends flat within ~3.2s; otherwise keep the best one seen
     // (flat beats cocked, then shorter beats longer).
-    const QUICK_FRAMES = 2.2 * 60;
+    const QUICK_FRAMES = 3.2 * 60;
     const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
         a.flat !== b.flat ? a.flat : a.frames < b.frames;
-    let result = simulateOnce(dieIds.length);
+    const direction = Math.random() < 0.5 ? 1 : -1;
+    let result = simulateOnce(dieIds.length, direction);
     for (let attempt = 0; attempt < 6 && !(result.flat && result.frames <= QUICK_FRAMES); attempt++) {
-        const next = simulateOnce(dieIds.length);
+        const next = simulateOnce(dieIds.length, direction);
         if (better(next, result)) result = next;
     }
 
