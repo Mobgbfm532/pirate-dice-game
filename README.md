@@ -31,6 +31,12 @@ Rolls are simulated ahead of time and played back. The server has already chosen
 value, so when a simulated die stops, its faces are relabelled so the server's value is on
 top (`client/src/physics.ts`). Client tests: `npm --prefix client test`.
 
+Multiplayer: start a table with any code; the waiting screen has a **Share invite link**
+button (`/next/?table=CODE`). Each tab remembers its seat, so a refresh or a phone waking
+up rejoins the table. The server keeps an empty table for 2 minutes and gives the player
+whose turn it is 30 seconds to reconnect. To point the dev server at a game server other
+than :3000, set `GAME_SERVER` (e.g. `GAME_SERVER=http://localhost:3002 npm run dev:client`).
+
 Art: originals are in `art/`; `npm --prefix client run art` regenerates the game files in
 `client/public/art` (see `docs/art-direction.md`).
 

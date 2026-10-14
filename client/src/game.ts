@@ -61,6 +61,9 @@ export interface Snapshot {
     toasts: Toast[];
     modal: Modal | null;
     leaderboard: { name: string; gold: number }[];
+    roomCode: string;
+    waiting: boolean; // a classic table with nobody to play yet
+    yourTurnAt: number; // when play last came round to you (for the banner)
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -89,7 +92,10 @@ let snapshot: Snapshot = {
     callout: null,
     toasts: [],
     modal: null,
-    leaderboard: []
+    leaderboard: [],
+    roomCode: '',
+    waiting: false,
+    yourTurnAt: 0
 };
 
 const listeners = new Set<() => void>();
@@ -133,8 +139,13 @@ function runNext() {
     task(runNext);
 }
 
+// A classic table needs a second player before anyone can roll.
+function isWaiting(state: GameState | null) {
+    return !!state && state.mode === 'classic' && !state.players[BOT_ID] && state.playerOrder.length < 2;
+}
+
 function computeIsMyTurn(state: GameState | null, turn: TurnView | null) {
-    if (!state || !turn || !snapshot.myId) return false;
+    if (!state || !turn || !snapshot.myId || isWaiting(state)) return false;
     const me = state.players[snapshot.myId];
     return turn.playerId === snapshot.myId && !!me && me.lives > 0;
 }
@@ -169,11 +180,13 @@ function applyTurn(turn: TurnView | null) {
     const isNewTurn = !turn || !snapshot.turn || snapshot.turn.key !== turn.key;
     if (isNewTurn) resetTrayForNewTurn();
     if (turn) recordLockOrder(turn);
+    const isMyTurn = computeIsMyTurn(snapshot.state, turn);
     update({
         turn,
-        isMyTurn: computeIsMyTurn(snapshot.state, turn),
+        isMyTurn,
         endingTurn: isNewTurn ? false : snapshot.endingTurn
     });
+    if (isNewTurn && isMyTurn) announceYourTurn();
     if (turn) setCallout(turn, turn.callout, turn.outcome);
 }
 
@@ -197,14 +210,14 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
     });
 });
 
-socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean }) => {
+socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number }) => {
     enqueue(done => {
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
 
         // Dice that were in play before this roll: still active, or just stolen by Klarg.
         const rolled = turn.dice.filter(d => d.status === 'active' || d.status === 'stolen');
-        const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)));
+        const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed);
         const speed = data.suspense !== 'none' ? 0.55 : 1;
         const durationMs = (trackDuration(track) / speed) * 1000;
 
@@ -230,11 +243,58 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
     });
 });
 
-socket.on('connect', () => update({ myId: socket.id ?? null }));
+// Play has come round to you: a banner, a swoosh, and a short buzz on phones.
+function announceYourTurn() {
+    update({ yourTurnAt: performance.now() });
+    playSound('swoosh');
+    try { navigator.vibrate?.(120); } catch { /* not supported */ }
+}
+
+// ---- Your seat ----
+// The table you're at is remembered for this browser tab, so a refresh or a dropped
+// connection (a phone going to sleep) puts you straight back in your seat. The server
+// recognises you by the session token and hands your seat back.
+
+interface Seat { roomCode: string; name: string; avatar: string; lives: number }
+
+function readSeat(): Seat | null {
+    try { return JSON.parse(sessionStorage.getItem('tavernSeat') ?? 'null'); } catch { return null; }
+}
+
+function writeSeat(seat: Seat | null) {
+    try {
+        if (seat) sessionStorage.setItem('tavernSeat', JSON.stringify(seat));
+        else sessionStorage.removeItem('tavernSeat');
+    } catch { /* storage unavailable */ }
+}
+
+function takeSeat(seat: Seat) {
+    socket.emit('joinTavern', { name: seat.name, avatar: seat.avatar, roomCode: seat.roomCode, token: getSessionToken(), startingLives: seat.lives });
+}
+
+function roomLabel(code: string) {
+    return code.startsWith('COMP-') ? 'Solo vs The Molar' : code.startsWith('TVRN-') ? 'House Table' : `Table ${code}`;
+}
+
+socket.on('connect', () => {
+    update({ myId: socket.id ?? null });
+    const seat = readSeat();
+    if (seat) takeSeat(seat);
+});
 
 socket.on('gameStateUpdate', (state: GameState) => {
-    update({ state, isMyTurn: computeIsMyTurn(state, snapshot.turn) });
+    const waiting = isWaiting(state);
+    const isMyTurn = computeIsMyTurn(state, snapshot.turn);
+    // The second player arriving starts play; if it starts with you, say so.
+    const nowYourTurn = snapshot.waiting && !waiting && isMyTurn;
+    update({ state, isMyTurn, waiting });
+    if (nowYourTurn) announceYourTurn();
 });
+
+// Invite link for a classic table: opens the 3D table with the code filled in.
+export function inviteLink(code: string) {
+    return `${location.origin}${import.meta.env.BASE_URL}?table=${encodeURIComponent(code)}`;
+}
 
 socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
     update({ leaderboard: Array.isArray(entries) ? entries : [] });
@@ -273,6 +333,8 @@ socket.on('gameOver', (data: { message: string }) => {
 });
 
 socket.on('triggerNewGameSplash', () => {
+    // Whoever pressed Play again, the new game has started for everyone at the table.
+    if (snapshot.modal?.type === 'gameOver') update({ modal: null });
     playSound('swoosh');
     showToast('', 'A new game begins!', 'signature', 2000);
 });
@@ -293,16 +355,34 @@ function getSessionToken() {
 }
 
 export const actions = {
-    join(name: string, avatar: string, tableCode: string) {
+    join(name: string, avatar: string, tableCode: string, lives = 3) {
         let roomCode = tableCode.trim().toUpperCase();
         if (roomCode === 'COMP') roomCode = `COMP-${Math.floor(1000 + Math.random() * 9000)}`;
         else if (roomCode === 'TAVERN') roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
         if (!roomCode) roomCode = 'PUBLIC';
 
         startMusic();
-        socket.emit('joinTavern', { name, avatar, roomCode, token: getSessionToken(), startingLives: 3 });
-        const roomLabel = roomCode.startsWith('COMP-') ? 'Solo vs The Molar' : roomCode.startsWith('TVRN-') ? 'House Table' : `Table ${roomCode}`;
-        update({ joined: true, roomLabel });
+        const seat = { roomCode, name, avatar, lives };
+        writeSeat(seat);
+        takeSeat(seat);
+        update({ joined: true, roomLabel: roomLabel(roomCode), roomCode });
+    },
+    leave() {
+        writeSeat(null);
+        // A fresh page is the simplest clean slate: new socket, no table state.
+        location.href = import.meta.env.BASE_URL;
+    },
+    async share() {
+        const url = inviteLink(snapshot.roomCode);
+        try {
+            if (navigator.share) { await navigator.share({ title: '2, 4, 24', text: `Join my table ${snapshot.roomCode}`, url }); return; }
+        } catch { /* cancelled or unavailable: fall back to copying */ }
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('', 'Invite link copied', 'info', 2200);
+        } catch {
+            showToast('Invite link', url, 'info', 8000);
+        }
     },
     roll() {
         const { turn, isMyTurn, rolling } = snapshot;
@@ -342,3 +422,7 @@ export const actions = {
 };
 
 resetTrayForNewTurn();
+
+// Back in your seat after a refresh (the socket rejoins the table when it connects).
+const savedSeat = readSeat();
+if (savedSeat) snapshot = { ...snapshot, joined: true, roomLabel: roomLabel(savedSeat.roomCode), roomCode: savedSeat.roomCode };

@@ -1,9 +1,9 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { actions, store, BOT_ID, type GameState, type Snapshot } from './game';
 import { Rules } from './rules';
 import { isMuted, playSound, setMuted } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
-import { opponentName } from './Backdrop';
+import { acrossTheTable, opponentName } from './Backdrop';
 
 const REACTIONS = ['😀', '😂', '😮', '😎', '😭'];
 
@@ -30,15 +30,23 @@ function savePrefs(name: string, avatar: string, code: string) {
     } catch { /* storage unavailable */ }
 }
 
+// An invite link looks like /next/?table=CODE.
+function invitedTable() {
+    const code = new URLSearchParams(location.search).get('table');
+    return code ? code.trim().toUpperCase().slice(0, 10) : '';
+}
+
 function JoinScreen() {
     const prefs = readPrefs();
+    const invite = invitedTable();
     const [name, setName] = useState(prefs.name);
     const [avatar, setAvatar] = useState(AVATAR_IDS.includes(prefs.avatar) ? prefs.avatar : 'Devil');
-    const [code, setCode] = useState(['COMP', 'TAVERN'].includes(prefs.code) ? '' : prefs.code);
+    const [code, setCode] = useState(invite || (['COMP', 'TAVERN'].includes(prefs.code) ? '' : prefs.code));
+    const [lives, setLives] = useState(3);
 
     const join = (tableCode: string) => {
         savePrefs(name, avatar, tableCode);
-        actions.join(name, avatar, tableCode);
+        actions.join(name, avatar, tableCode, lives);
     };
 
     return (
@@ -52,12 +60,23 @@ function JoinScreen() {
                     ))}
                 </div>
                 <input value={name} maxLength={15} placeholder="Adventurer name" onChange={e => setName(e.target.value)} />
-                <button className="primary" onClick={() => join('COMP')}>Solo vs The Molar</button>
-                <button className="primary alt" onClick={() => join('TAVERN')}>Tavern Crawl</button>
+                {invite && <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>}
+                <button className={invite ? 'secondary' : 'primary'} onClick={() => join('COMP')}>Solo vs The Molar</button>
+                <button className={invite ? 'secondary' : 'primary alt'} onClick={() => join('TAVERN')}>Tavern Crawl</button>
                 <div className="row">
                     <input value={code} maxLength={10} placeholder="Table code" onChange={e => setCode(e.target.value.toUpperCase())} />
                     <button className="secondary" onClick={() => join(code)}>Join table</button>
                 </div>
+                {code && !invite && (
+                    <div className="lives-pick" role="radiogroup" aria-label="Starting lives for a new table">
+                        <span>Lives (new tables)</span>
+                        {[2, 3, 4].map(n => (
+                            <button key={n} role="radio" aria-checked={lives === n} className={lives === n ? 'selected' : ''} onClick={() => setLives(n)}>
+                                {'♥'.repeat(n)}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <p className="fine">Prototype of the 3D table. The classic game is still at <a href="/">the main page</a>.</p>
             </div>
         </div>
@@ -66,12 +85,14 @@ function JoinScreen() {
 
 function turnLine(snap: Snapshot, state: GameState) {
     const tavern = state.mode === 'tavern-crawl';
-    if (!tavern && !snap.roomLabel.startsWith('Solo') && state.playerOrder.length < 2) return 'Waiting for travelers to join…';
+    if (snap.waiting) return 'Waiting for travelers to join…';
     if (tavern && state.tavernRun?.pendingKeepsakeChoices) return 'Choose a keepsake';
     const me = snap.myId ? state.players[snap.myId] : null;
     const current = state.currentTurnId ? state.players[state.currentTurnId] : null;
     if (me && me.lives <= 0) return current ? `You're dust! ${current.name} is rolling…` : "You're dust!";
     if (snap.isMyTurn) return 'Your turn!';
+    // The server holds their turn for a short while so a phone can reconnect.
+    if (current && !current.connected) return `Waiting for ${current.name} to reconnect…`;
     return current ? `${current.name} is rolling…` : '';
 }
 
@@ -84,8 +105,8 @@ function Hearts({ lives, starting }: { lives: number; starting: number }) {
     return <div className="hearts" aria-label={`${n} lives`}>{'♥'.repeat(n)}<span>{'♥'.repeat(Math.max(0, starting - n))}</span></div>;
 }
 
-// Player chips. With an opponent sitting across the table, the bot gets a nameplate
-// there instead (see OpponentPlate), so only the human players are listed here.
+// Player chips: a column at the top left on wide screens, a scrolling row above the
+// controls on phones. A bot opponent has a nameplate on the table edge instead.
 function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: GameState; ids: string[]; className?: string }) {
     return (
         <div className={`players ${className}`}>
@@ -150,16 +171,39 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     );
 }
 
-// Keepsakes won so far, plus the encounter count when no nameplate is showing it.
-function TavernStrip({ state, showEncounter }: { state: GameState; showEncounter: boolean }) {
+// Keepsakes won so far in a Tavern Crawl (the encounter number is on the nameplate).
+function TavernStrip({ state }: { state: GameState }) {
     const run = state.tavernRun;
-    if (!run || (!showEncounter && run.keepsakes.length === 0)) return null;
+    if (!run || run.keepsakes.length === 0) return null;
     return (
         <div className="tavern-strip">
-            {showEncounter && <span>Encounter {run.encounterNumber} of {run.totalEncounters}: <strong>{run.enemy.name}</strong></span>}
             {run.keepsakes.map(k => <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
         </div>
     );
+}
+
+// Shown on a classic table until a second player arrives.
+function WaitingCard({ snap }: { snap: Snapshot }) {
+    return (
+        <div className="panel waiting-card">
+            <h2>Waiting for friends</h2>
+            <p>Your table is <strong className="table-code">{snap.roomCode}</strong></p>
+            <button className="primary" onClick={actions.share}>Share invite link</button>
+            <p className="fine">Friends can also type the code on the start screen.</p>
+        </div>
+    );
+}
+
+// A big "Your turn!" when play comes round to you.
+function YourTurnBanner({ at }: { at: number }) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        if (!at) return;
+        setVisible(true);
+        const timer = setTimeout(() => setVisible(false), 1600);
+        return () => clearTimeout(timer);
+    }, [at]);
+    return visible ? <div key={at} className="your-turn" aria-live="assertive">Your turn!</div> : null;
 }
 
 function Modals({ snap }: { snap: Snapshot }) {
@@ -202,21 +246,23 @@ export function Hud() {
 
     if (!snap.joined) return <JoinScreen />;
     const state = snap.state;
-    const opponentAcross = !!state && !!opponentName() && portraitFor(opponentName()!).bust;
-    const humans = state ? state.playerOrder.filter(id => id !== BOT_ID) : [];
+    const botAcross = acrossTheTable()?.isBot ?? false;
+    // A bot opponent has its nameplate; everyone else gets a chip.
+    // You first, so your own chip is always in view; the rest in turn order.
+    const chips = state ? state.playerOrder.filter(id => !(botAcross && id === BOT_ID))
+        .sort((x, y) => Number(y === snap.myId) - Number(x === snap.myId)) : [];
 
     return (
         <div className="hud">
             <header>
-                {state && opponentAcross
-                    ? <Players snap={snap} state={state} ids={humans} className="header-players" />
-                    : <span className="room">{snap.roomLabel}</span>}
+                <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
+                <span className="room">{snap.roomLabel}</span>
                 <span className={`turn-line ${snap.isMyTurn ? 'mine' : ''}`}>{state ? turnLine(snap, state) : 'Connecting…'}</span>
                 <button className="mute" onClick={() => { setMuted(!muted); setMutedState(!muted); }} aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🎵'}</button>
             </header>
-            {state && !opponentAcross && <Players snap={snap} state={state} ids={state.playerOrder} />}
-            {state && opponentAcross && <OpponentPlate state={state} />}
-            {state && !opponentAcross && <TavernStrip state={state} showEncounter />}
+            {state && botAcross && <OpponentPlate state={state} />}
+            {snap.waiting && <WaitingCard snap={snap} />}
+            <YourTurnBanner at={snap.yourTurnAt} />
 
             <div className="callout-area" aria-live="polite">
                 {snap.callout && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}
@@ -232,8 +278,8 @@ export function Hud() {
             </div>
 
             <footer>
-                {state && opponentAcross && <TavernStrip state={state} showEncounter={false} />}
-                {state && opponentAcross && <Players snap={snap} state={state} ids={humans} className="footer-players" />}
+                {state && <TavernStrip state={state} />}
+                {state && <Players snap={snap} state={state} ids={chips} className="side-players" />}
                 <TurnControls snap={snap} />
                 {state && state.mode !== 'tavern-crawl' && (
                     <div className="reactions">

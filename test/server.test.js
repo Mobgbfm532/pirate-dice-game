@@ -83,6 +83,8 @@ test('only the current player can roll, and every player sees the same dice', as
     current.emit('rollDice');
     const [a, b] = await Promise.all([seenByCurrent, seenByOther]);
     assert.deepEqual(a.turn.dice, b.turn.dice);
+    assert.equal(a.throwSeed, b.throwSeed, 'both screens get the same throw');
+    assert.ok(Number.isInteger(a.throwSeed));
     assert.ok(a.turn.dice.every(d => d.value >= 1 && d.value <= 6));
 });
 
@@ -161,4 +163,78 @@ test('a Tavern Crawl run plays through to the end', async () => {
     autoPlay(hero, offer => hero.emit('chooseKeepsake', offer.choices[0].id));
     const over = await waitFor(hero, 'gameOver', () => true, 60000);
     assert.match(over.message, /Gold earned: \d+/);
+});
+
+// Times in the server are scaled by GAME_TIME_SCALE (0.01): the 30s turn grace is 0.3s
+// here and the 2-minute empty-table grace is 1.2s.
+
+test('a table survives everyone dropping off briefly, and they get their seats back', async () => {
+    const a = await join('Ann', 'GRACE1', { token: 'ann-token', startingLives: 2 });
+    const b = await join('Bob', 'GRACE1', { token: 'bob-token' });
+    await waitFor(b, 'gameStateUpdate', s => s.playerOrder.length === 2);
+    a.disconnect();
+    b.disconnect();
+    await sleep(200);
+    assert.ok(server.rooms.GRACE1, 'the table is still there');
+
+    const a2 = await join('Ann', 'GRACE1', { token: 'ann-token' });
+    const state = await waitFor(a2, 'gameStateUpdate', s => s.players[a2.id]);
+    assert.equal(state.playerOrder.length, 2, 'same two seats, no new player');
+    assert.equal(state.startingLives, 2, 'same game, not a fresh one');
+});
+
+test('an empty table is cleared after the grace period', async () => {
+    const lone = await join('Lone', 'GRACE2');
+    await waitFor(lone, 'gameStateUpdate');
+    lone.disconnect();
+    await sleep(1500);
+    assert.equal(server.rooms.GRACE2, undefined);
+});
+
+test('the player whose turn it is can reconnect and carry on', async () => {
+    const c = await join('Cat', 'GRACE3', { token: 'cat-token' });
+    const d = await join('Dan', 'GRACE3', { token: 'dan-token' });
+    const state = await waitFor(d, 'gameStateUpdate', s => s.playerOrder.length === 2);
+    const [current, currentToken, other] = state.currentTurnId === c.id ? [c, 'cat-token', d] : [d, 'dan-token', c];
+    current.emit('rollDice');
+    await waitFor(current, 'diceRolled');
+    current.disconnect();
+    await sleep(100); // well inside the 0.3s grace
+
+    const back = await join('Back', 'GRACE3', { token: currentToken });
+    const after = await waitFor(back, 'turnState', t => t.turn && t.turn.playerId === back.id);
+    assert.equal(after.turn.rollCount, 1, 'same turn, with the roll they already made');
+    await sleep(500); // past the grace: nothing should be forfeited now they're back
+    assert.equal(server.rooms.GRACE3.roundPlayers[server.rooms.GRACE3.currentTurnIndex], back.id);
+    other.disconnect();
+    back.disconnect();
+});
+
+test('if they do not come back while others wait, their turn is dust', async () => {
+    const e = await join('Eve', 'GRACE4', { token: 'eve-token' });
+    const f = await join('Fay', 'GRACE4', { token: 'fay-token' });
+    const state = await waitFor(f, 'gameStateUpdate', s => s.playerOrder.length === 2);
+    const [current, waiting] = state.currentTurnId === e.id ? [e, f] : [f, e];
+    const currentId = current.id;
+    current.disconnect();
+    const next = await waitFor(waiting, 'gameStateUpdate', s => s.currentTurnId === waiting.id, 3000);
+    assert.equal(next.players[currentId].busted, true);
+    waiting.disconnect();
+});
+
+test('a bot waits for you instead of playing to an empty room', async () => {
+    const g = await join('Gil', 'COMP-GRACE', { token: 'gil-token' });
+    await waitFor(g, 'gameStateUpdate');
+    g.disconnect();
+    await sleep(400);
+    const room = server.rooms['COMP-GRACE'];
+    assert.ok(room);
+    const rollsBefore = room.turn ? room.turn.rollCount : 0;
+    await sleep(400);
+    assert.equal(room.turn ? room.turn.rollCount : 0, rollsBefore, 'the bot is paused');
+
+    const g2 = await join('Gil', 'COMP-GRACE', { token: 'gil-token' });
+    autoPlay(g2);
+    const over = await waitFor(g2, 'gameOver', () => true, 20000);
+    assert.match(over.message, /wins the table/);
 });

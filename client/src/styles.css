@@ -58,15 +58,6 @@ header {
     text-shadow: 0 2px 6px #000;
 }
 .turn-line.mine { color: #aed581; }
-.mute {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    color: var(--parchment);
-    border-radius: 999px;
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
-}
 
 .players {
     display: flex;
@@ -301,7 +292,9 @@ footer {
     .turn-line { font-size: 1.1rem; }
     .room { display: none; }
     .player .portrait { width: 30px; height: 30px; }
-    .player .name { max-width: 6.5em; font-size: 0.85rem; }
+    .player .name { max-width: 5em; font-size: 0.85rem; }
+    .side-players { gap: 5px; }
+    .side-players .player { padding: 4px 8px 4px 4px; gap: 6px; }
 }
 
 /* ---- The tavern behind the table (under the transparent 3D canvas) ---- */
@@ -362,12 +355,84 @@ footer {
 .opponent-plate .score { font-size: 1.1rem; font-weight: 700; color: var(--gold-bright); min-width: 1.2em; text-align: right; }
 .opponent-plate.current { border-color: var(--gold-bright); box-shadow: 0 0 14px rgba(255, 213, 79, 0.35); }
 
-/* Your own chip: in the header on wide screens, above the controls on tall ones. */
-.header-players { margin-top: 0; justify-content: flex-start; flex: 0 1 auto; min-width: 0; }
-.footer-players { margin-top: 0; display: none; }
-@media (orientation: portrait) {
-    .header-players { display: none; }
-    .footer-players { display: flex; }
+/* Player chips: a scrolling row above the controls on phones... */
+.side-players {
+    margin-top: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    justify-content: safe center;
+    padding: 4px 2px;
+    pointer-events: auto;
+    scrollbar-width: none;
+}
+.side-players::-webkit-scrollbar { display: none; }
+.side-players .player { flex: none; }
+/* ...and a column at the top left on wide screens, clear of the table. */
+@media (orientation: landscape) {
+    .side-players {
+        position: fixed;
+        top: 58px;
+        left: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        overflow: visible;
+        max-width: none;
+    }
+}
+
+.mute, .leave {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    color: var(--parchment);
+    border-radius: 999px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+    flex: none;
+}
+
+.waiting-card {
+    position: fixed;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    width: min(88vw, 360px);
+    z-index: 3;
+}
+.waiting-card .table-code { font-size: 1.5rem; letter-spacing: 2px; color: var(--red); }
+
+.lives-pick { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.9rem; color: #6d4c2a; }
+.lives-pick button {
+    background: #fffaf0;
+    border: 2px solid #d9c49a;
+    border-radius: 8px;
+    padding: 3px 7px;
+    color: #c62828;
+    letter-spacing: -1px;
+}
+.lives-pick button.selected { border-color: var(--gold); box-shadow: 0 0 6px rgba(224, 180, 76, 0.6); }
+
+.your-turn {
+    position: fixed;
+    left: 50%;
+    top: 45%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(2.6rem, 12vw, 5rem);
+    font-weight: 700;
+    color: #aed581;
+    text-shadow: 0 4px 16px #000, 0 0 40px rgba(174, 213, 129, 0.5);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 4;
+    animation: your-turn 1.6s ease-out forwards;
+}
+@keyframes your-turn {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+    25% { transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
 }
 
 /* Wide screens: the table takes the full height, so the controls sit in the empty

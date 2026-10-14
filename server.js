@@ -15,6 +15,12 @@ const delay = msValue => Math.round(msValue * TIME_SCALE);
 
 const rollFace = () => crypto.randomInt(1, 7);
 
+// Phones drop their connection when the screen locks or the app is switched. A table with
+// nobody connected is kept this long so players can come back to it, and the player whose
+// turn it is gets this long to reconnect before their turn counts as dust.
+const EMPTY_TABLE_GRACE_MS = 120000;
+const TURN_RECONNECT_GRACE_MS = 30000;
+
 const AVATARS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
 const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross'];
 
@@ -283,7 +289,9 @@ function performRoll(roomCode) {
     // Browsers show the pre-roll announcement while the dice tumble, then the final board.
     let animationMs = result.suspense !== Rules.SUSPENSE.NONE ? 2000 : 500;
     turn.busyUntil = Date.now() + delay(animationMs);
-    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs });
+    // throwSeed lets every screen simulate the identical tumble (the values are already decided).
+    let throwSeed = crypto.randomInt(0, 2 ** 31);
+    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed });
 
     let key = turn.key;
     if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, animationMs, () => sendBotReaction(roomCode, 'hood'));
@@ -363,6 +371,21 @@ function advanceTurn(roomCode) {
     }
 }
 
+// After the reconnect grace: if the player whose turn it is still hasn't come back and
+// others are waiting on them, their turn is dust and play moves on. With nobody else
+// connected there's no rush; the table just waits (and is cleared if no one returns).
+function forfeitIfStillAway(roomCode, room, token) {
+    if (rooms[roomCode] !== room) return;
+    let id = room.roundPlayers[room.currentTurnIndex];
+    let player = room.players[id];
+    if (!player || player.token !== token || player.connected) return;
+    if (!anyHumanConnected(room)) return;
+    player.busted = true;
+    player.score = 0;
+    if (room.turn) room.turn.ended = true;
+    advanceTurn(roomCode);
+}
+
 function skipDisconnectedPlayers(room) {
     while (room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
         room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
@@ -371,14 +394,42 @@ function skipDisconnectedPlayers(room) {
     }
 }
 
-// Runs `fn` after `ms` unless the room is gone or the turn has moved on.
+function anyHumanConnected(room) {
+    return Object.values(room.players).some(p => p.connected && p.id !== BOT_ID);
+}
+
+// Runs `fn` after `ms` unless the room is gone or the turn has moved on. The bot doesn't
+// play to an empty room: it pauses, and resumeBot picks up when someone comes back.
 function botLater(roomCode, key, ms, fn) {
     let room = rooms[roomCode];
     setTimeout(() => {
         let current = rooms[roomCode];
         if (current !== room || !current.turn || current.turn.key !== key) return;
+        if (!anyHumanConnected(room)) { room.botPaused = true; return; }
         fn();
     }, delay(ms));
+}
+
+// Carries on a bot turn that paused while everyone was away.
+function resumeBot(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || !room.botPaused) return;
+    room.botPaused = false;
+    let turn = room.turn;
+    if (!turn || turn.playerId !== BOT_ID || turn.ended) return;
+    if (turn.finalized) botLater(roomCode, turn.key, 1500, () => performEndTurn(roomCode));
+    else if (turn.hasRolled) botLater(roomCode, turn.key, 1000, () => runBotDecision(roomCode));
+    else botLater(roomCode, turn.key, 1000, () => runBotRoll(roomCode));
+}
+
+// Deletes a table once it has had nobody connected for EMPTY_TABLE_GRACE_MS.
+function scheduleEmptyTableCleanup(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || room.cleanupTimer || anyHumanConnected(room)) return;
+    room.cleanupTimer = setTimeout(() => {
+        room.cleanupTimer = null;
+        if (rooms[roomCode] === room && !anyHumanConnected(room)) delete rooms[roomCode];
+    }, delay(EMPTY_TABLE_GRACE_MS));
 }
 
 function runBotRoll(roomCode) {
@@ -854,6 +905,7 @@ io.on('connection', (socket) => {
         }
 
         let room = rooms[roomCode];
+        if (room.cleanupTimer) { clearTimeout(room.cleanupTimer); room.cleanupTimer = null; }
         let finalName = asText(data.name).trim();
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
@@ -923,6 +975,7 @@ io.on('connection', (socket) => {
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
 
         emitState(roomCode);
+        resumeBot(roomCode);
     });
 
     socket.on('playAgain', () => {
@@ -1014,23 +1067,19 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         let roomCode = socket.roomCode;
-        if (roomCode && rooms[roomCode]) {
-            let room = rooms[roomCode];
-            if (room.players[socket.id]) {
-                room.players[socket.id].connected = false;
-
-                if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
-                    room.players[socket.id].busted = true;
-                    room.players[socket.id].score = 0;
-                    advanceTurn(roomCode);
-                } else {
-                    emitState(roomCode);
-                }
+        let room = roomCode && rooms[roomCode];
+        if (!room) return;
+        let player = room.players[socket.id];
+        if (player) {
+            player.connected = false;
+            if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
+                // Their turn: give them a chance to come back before it counts as dust.
+                let token = player.token;
+                setTimeout(() => forfeitIfStillAway(roomCode, room, token), delay(TURN_RECONNECT_GRACE_MS));
             }
-
-            let anyConnected = Object.values(room.players).some(p => p.connected && p.id !== BOT_ID);
-            if (!anyConnected) delete rooms[roomCode];
+            emitState(roomCode);
         }
+        scheduleEmptyTableCleanup(roomCode);
     });
 });
 

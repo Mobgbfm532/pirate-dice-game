@@ -4,7 +4,11 @@ import { Canvas } from '@react-three/fiber';
 import { TableScene } from './TableScene';
 import { Hud } from './Hud';
 import { Backdrop } from './Backdrop';
+import { actions, store } from './game';
 import './styles.css';
+
+// Development only (left out of production builds): lets test scripts drive the game.
+if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, store };
 
 function App() {
     return (

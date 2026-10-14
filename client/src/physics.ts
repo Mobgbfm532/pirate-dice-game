@@ -31,7 +31,22 @@ export function readFrame(track: RollTrack, frame: number, dieIndex: number, pos
     quat.set(d[o + 3], d[o + 4], d[o + 5], d[o + 6]).multiply(track.offsets[dieIndex]);
 }
 
-const rand = (min: number, max: number) => min + Math.random() * (max - min);
+// All randomness in a throw comes from this generator. Seeded from the server's throwSeed,
+// every screen at the table simulates exactly the same tumble.
+let random: () => number = Math.random;
+const rand = (min: number, max: number) => min + random() * (max - min);
+
+// mulberry32: a small, fast seeded generator; plenty for dice throws.
+function seededRandom(seed: number) {
+    let a = seed >>> 0;
+    return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
 
 // A cube with its corners clipped off, matching the rounded dice drawn on screen. A sharp
 // physics cube loses most of its energy every time it tips over an edge and stops dead;
@@ -179,13 +194,14 @@ function isFlat(b: CANNON.Body) {
 }
 
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
-export function simulateRoll(dieIds: number[], targetValues: number[]): RollTrack {
+export function simulateRoll(dieIds: number[], targetValues: number[], seed?: number): RollTrack {
+    random = seed === undefined ? Math.random : seededRandom(seed);
     // Prefer a throw that ends flat within ~3.2s; otherwise keep the best one seen
     // (flat beats cocked, then shorter beats longer).
     const QUICK_FRAMES = 3.2 * 60;
     const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
         a.flat !== b.flat ? a.flat : a.frames < b.frames;
-    const direction = Math.random() < 0.5 ? 1 : -1;
+    const direction = random() < 0.5 ? 1 : -1;
     let result = simulateOnce(dieIds.length, direction);
     for (let attempt = 0; attempt < 6 && !(result.flat && result.frames <= QUICK_FRAMES); attempt++) {
         const next = simulateOnce(dieIds.length, direction);

@@ -29,6 +29,21 @@ describe('simulateRoll', () => {
     });
 });
 
+describe('seeded throws', () => {
+    it('the same seed gives the identical tumble on every screen', () => {
+        const a = simulateRoll([0, 2, 5], [6, 1, 4], 12345);
+        const b = simulateRoll([0, 2, 5], [6, 1, 4], 12345);
+        expect(a.frames).toBe(b.frames);
+        expect(Array.from(a.data)).toEqual(Array.from(b.data));
+    });
+
+    it('different seeds give different throws', () => {
+        const a = simulateRoll([0, 1], [3, 3], 1);
+        const b = simulateRoll([0, 1], [3, 3], 2);
+        expect(Array.from(a.data)).not.toEqual(Array.from(b.data));
+    });
+});
+
 describe('faceUpQuaternion', () => {
     it('puts the requested value on top', () => {
         for (let v = 1; v <= 6; v++) expect(valueFacingUp(faceUpQuaternion(v, 0.3))).toBe(v);

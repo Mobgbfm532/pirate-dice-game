@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { BOT_ID, store } from './game';
-import { portraitFor } from './portraits';
+import { PORTRAITS, type Portrait } from './portraits';
 
 // The tavern behind the table, and the current opponent sitting across from you.
 // It is drawn underneath the transparent 3D canvas, so the table covers whatever is
@@ -43,11 +43,26 @@ export function opponentName(): string | null {
     return state.players[BOT_ID].name;
 }
 
+// Who sits across the table: the bot opponent, or at a multiplayer table whoever is
+// rolling (unless it's you). Only characters with a painted bust can sit there.
+export function acrossTheTable(): { key: string; portrait: Portrait; isBot: boolean } | null {
+    const { state, myId, joined } = store.get();
+    if (!joined || !state) return null;
+    const bot = opponentName();
+    if (bot) return PORTRAITS[bot]?.bust ? { key: bot, portrait: PORTRAITS[bot], isBot: true } : null;
+    const id = state.currentTurnId;
+    if (!id || id === myId || !state.players[id]) return null;
+    const avatar = state.players[id].avatar;
+    return PORTRAITS[avatar]?.bust ? { key: id, portrait: PORTRAITS[avatar], isBot: false } : null;
+}
+
 export function Backdrop() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
-    const name = snap.joined ? opponentName() : null;
-    const portrait = name ? portraitFor(name) : null;
-    const theirTurn = snap.state?.currentTurnId === BOT_ID;
+    const across = acrossTheTable();
+    const portrait = across?.portrait ?? null;
+    const name = across?.key;
+    // A bot brightens on its turn; a player across the table is always the one rolling.
+    const theirTurn = across ? (!across.isBot || snap.state?.currentTurnId === BOT_ID) : false;
 
     return (
         <div className="backdrop" aria-hidden="true">
