@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "art": "node scripts/process-art.mjs"
+    "art": "node scripts/process-art.mjs",
+    "build:deploy": "vite build"
   },
   "dependencies": {
     "@react-three/fiber": "^8.18.0",
