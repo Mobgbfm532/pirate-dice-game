@@ -1,9 +1,9 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
-import { calloutText, isLocked, type TurnOutcome, type TurnView } from './rules';
+import { calloutText, isLocked, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, trackDuration, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
-import { playSound, startMusic, ABILITY_SOUNDS } from './sounds';
+import { playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -150,8 +150,11 @@ function computeIsMyTurn(state: GameState | null, turn: TurnView | null) {
     return turn.playerId === snapshot.myId && !!me && me.lives > 0;
 }
 
+// No commentary in a Tavern Crawl: the opponents' signature moves are the show there.
+const quietTable = () => snapshot.state?.mode === 'tavern-crawl';
+
 function setCallout(turn: TurnView | null, callout: string | null, outcome: TurnOutcome | null) {
-    if (!turn) { update({ callout: null }); return; }
+    if (!turn || quietTable()) { if (snapshot.callout) update({ callout: null }); return; }
     const mine = turn.playerId === snapshot.myId;
     const shown = calloutText(callout, mine, turn.playerId === BOT_ID, outcome);
     const key = `${turn.key}|${callout}`;
@@ -176,7 +179,31 @@ function recordLockOrder(turn: TurnView) {
     });
 }
 
-function applyTurn(turn: TurnView | null) {
+// Taps move a die at once instead of waiting for the server. Each tap is kept as pending
+// and shown on top of the server's turns until the server confirms it (or 1.5s passes,
+// e.g. if the server refused it, and the board falls back to what the server says).
+const PENDING_MS = 1500;
+let serverTurn: TurnView | null = null;
+const pendingTaps = new Map<number, { status: DieStatus; at: number }>();
+
+function withPendingTaps(turn: TurnView | null): TurnView | null {
+    if (!turn || pendingTaps.size === 0) return turn;
+    const now = performance.now();
+    pendingTaps.forEach((tap, id) => {
+        const confirmed = turn.dice.find(d => d.id === id)?.status === tap.status;
+        if (confirmed || now - tap.at > PENDING_MS) pendingTaps.delete(id);
+    });
+    if (pendingTaps.size === 0 || turn.finalized) return turn;
+    const dice = turn.dice.map(d => (pendingTaps.has(d.id) ? { ...d, status: pendingTaps.get(d.id)!.status } : d));
+    const locksThisRoll = dice.filter(d => d.status === 'lockedThisTurn').length;
+    const canRoll = dice.some(d => d.status === 'active') && (!turn.hasRolled || locksThisRoll > 0);
+    return { ...turn, dice, locksThisRoll, canRoll };
+}
+
+function applyTurn(serverView: TurnView | null) {
+    if (!serverView || !serverTurn || serverTurn.key !== serverView.key) pendingTaps.clear();
+    serverTurn = serverView;
+    const turn = withPendingTaps(serverView);
     const isNewTurn = !turn || !snapshot.turn || snapshot.turn.key !== turn.key;
     if (isNewTurn) resetTrayForNewTurn();
     if (turn) recordLockOrder(turn);
@@ -215,8 +242,12 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
 
-        // Dice that were in play before this roll: still active, or just stolen by Klarg.
-        const rolled = turn.dice.filter(d => d.status === 'active' || d.status === 'stolen');
+        // The dice this roll threw: the ones that were active just before it. (A die Klarg
+        // stole earlier in the turn stays out of play; one he takes now was thrown first.)
+        const before = snapshot.turn && snapshot.turn.key === turn.key ? snapshot.turn : null;
+        const thrownIds = new Set((before ? before.dice : turn.dice.filter(d => d.status !== 'stolen'))
+            .filter(d => d.status === 'active').map(d => d.id));
+        const rolled = turn.dice.filter(d => thrownIds.has(d.id));
         const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed);
         const speed = data.suspense !== 'none' ? 0.55 : 1;
         const durationMs = (trackDuration(track) / speed) * 1000;
@@ -224,7 +255,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         table.roll = { track, startedAt: performance.now(), speed, hidden: new Set(rolled.filter(d => d.hidden).map(d => d.id)) };
         update({ rolling: true });
         setCallout(turn, data.preRollCallout, null);
-        playSound('roll', 0.85 + Math.random() * 0.3);
+        playDiceImpacts(track.impacts, speed);
 
         setTimeout(() => {
             // Leave each die exactly where its throw ended.
@@ -247,7 +278,8 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
 function announceYourTurn() {
     update({ yourTurnAt: performance.now() });
     playSound('swoosh');
-    try { navigator.vibrate?.(120); } catch { /* not supported */ }
+    // Browsers only allow vibration after the player has tapped the page.
+    try { if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(120); } catch { /* not supported */ }
 }
 
 // ---- Your seat ----
@@ -315,7 +347,7 @@ socket.on('roundResult', (data: { message: string }) => {
 });
 
 socket.on('displayMessage', (data: { text: string }) => {
-    if (data.text) showToast('', data.text, 'info', 2600);
+    if (data.text && !quietTable()) showToast('', data.text, 'info', 2600);
 });
 
 socket.on('receiveReaction', (data: { name: string; emoji: string }) => {
@@ -402,6 +434,17 @@ export const actions = {
         if (!die || die.status === 'permanentlyLocked' || die.status === 'stolen') return;
         playSound('click');
         socket.emit('toggleDie', dieId);
+
+        // Show the result straight away rather than waiting for the server.
+        pendingTaps.set(dieId, { status: die.status === 'active' ? 'lockedThisTurn' : 'active', at: performance.now() });
+        const shown = withPendingTaps(serverTurn);
+        if (shown) recordLockOrder(shown);
+        update({ turn: shown });
+        // If the server never confirms, drop the tap and show the server's board again.
+        setTimeout(() => {
+            if (pendingTaps.size === 0) return;
+            update({ turn: withPendingTaps(serverTurn) });
+        }, PENDING_MS + 50);
     },
     chooseKeepsake(id: string) {
         playSound('click');

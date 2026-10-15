@@ -12,11 +12,16 @@ const RECORD_EVERY = 2; // frames are recorded at 60 per second
 const MAX_SECONDS = 4.5;
 const FLOATS_PER_DIE = 7; // x, y, z, qx, qy, qz, qw
 
+// Something a die hit during the throw, for the sound: when (frame, 60 per second),
+// how hard (impact speed) and what (another die, the felt, or the wooden rail).
+export interface Impact { frame: number; strength: number; kind: 'die' | 'felt' | 'wall' }
+
 export interface RollTrack {
     dieIds: number[];
     frames: number;
     data: Float32Array; // frame-major: [frame][die][7]
     offsets: THREE.Quaternion[]; // per die, applied after the body rotation
+    impacts: Impact[];
 }
 
 export function trackDuration(track: RollTrack) {
@@ -105,24 +110,26 @@ function buildWorld() {
     const h = 6, t = 0.5;
     const cx = (TRAY.minX + TRAY.maxX) / 2, cz = (TRAY.minZ + TRAY.maxZ) / 2;
     const w = TRAY.maxX - TRAY.minX, dpt = TRAY.maxZ - TRAY.minZ;
-    const walls: [number, number, number, number][] = [
+    const wallBoxes: [number, number, number, number][] = [
         [cx, TRAY.minZ - t / 2, w / 2 + t, t / 2],
         [cx, TRAY.maxZ + t / 2, w / 2 + t, t / 2],
         [TRAY.minX - t / 2, cz, t / 2, dpt / 2 + t],
         [TRAY.maxX + t / 2, cz, t / 2, dpt / 2 + t]
     ];
-    walls.forEach(([x, z, hx, hz]) => {
+    const walls: CANNON.Body[] = [];
+    wallBoxes.forEach(([x, z, hx, hz]) => {
         const wall = new CANNON.Body({ mass: 0, material: tableMaterial, shape: new CANNON.Box(new CANNON.Vec3(hx, h, hz)) });
         wall.position.set(x, h, z);
         world.addBody(wall);
+        walls.push(wall);
     });
 
-    return { world, diceMaterial };
+    return { world, diceMaterial, floor, walls };
 }
 
 // direction: 1 throws left to right across the tray's long side, -1 right to left.
 function simulateOnce(count: number, direction: 1 | -1) {
-    const { world, diceMaterial } = buildWorld();
+    const { world, diceMaterial, floor, walls } = buildWorld();
     const bodies: CANNON.Body[] = [];
 
     for (let i = 0; i < count; i++) {
@@ -142,9 +149,9 @@ function simulateOnce(count: number, direction: 1 | -1) {
         const startX = direction > 0 ? TRAY.minX + 0.7 : TRAY.maxX - 0.7;
         const cz = (TRAY.minZ + TRAY.maxZ) / 2;
         body.position.set(
-            startX + direction * col * 1.0 + rand(-0.1, 0.1),
+            startX + direction * col * 1.3 + rand(-0.1, 0.1),
             rand(0.85, 1.1),
-            cz + (row - (rows - 1) / 2) * 1.05 + rand(-0.15, 0.15)
+            cz + (row - (rows - 1) / 2) * 1.3 + rand(-0.1, 0.1)
         );
         body.quaternion.setFromEuler(rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2));
         const speed = rand(10, 13);
@@ -163,7 +170,21 @@ function simulateOnce(count: number, direction: 1 | -1) {
     const maxSteps = Math.round(MAX_SECONDS / STEP);
     let stillSteps = 0;
     let nudges = 0;
-    for (let step = 0; step <= maxSteps; step++) {
+    // Each new contact is an impact (cannon-es reports a collision once, when it starts).
+    // A die-on-die hit is reported to both dice; keep one.
+    const impacts: Impact[] = [];
+    let step = 0;
+    bodies.forEach(body => body.addEventListener('collide', (e: { body: CANNON.Body; contact: CANNON.ContactEquation }) => {
+        const other = e.body;
+        const kind: Impact['kind'] = other === floor ? 'felt' : walls.includes(other) ? 'wall' : 'die';
+        if (kind === 'die' && body.id > other.id) return;
+        const strength = Math.abs(e.contact.getImpactVelocityAlongNormal());
+        // Skip touches in the first few frames: that is the dice leaving the hand together.
+        const frame = Math.floor(step / RECORD_EVERY);
+        if (strength > 1.2 && frame >= 4) impacts.push({ frame, strength, kind });
+    }));
+
+    for (step = 0; step <= maxSteps; step++) {
         if (step % RECORD_EVERY === 0) {
             bodies.forEach(b => recorded.push(b.position.x, b.position.y, b.position.z, b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w));
         }
@@ -183,7 +204,7 @@ function simulateOnce(count: number, direction: 1 | -1) {
         world.step(STEP);
     }
 
-    return { recorded, bodies, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
+    return { recorded, bodies, impacts, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
 }
 
 // Flat on the felt: one face pointing straight up and not resting on another die.
@@ -217,5 +238,5 @@ export function simulateRoll(dieIds: number[], targetValues: number[], seed?: nu
         return new THREE.Quaternion().setFromUnitVectors(faceNormal(target), faceNormal(landed));
     });
 
-    return { dieIds, frames: result.frames, data: Float32Array.from(result.recorded), offsets };
+    return { dieIds, frames: result.frames, data: Float32Array.from(result.recorded), offsets, impacts: result.impacts };
 }

@@ -79,3 +79,4 @@ npm test
 | `PORT` | Port to listen on (default 3000) |
 | `GAME_TIME_SCALE` | Multiplies all server delays, e.g. `0.01` in tests |
 | `LEADERBOARD_READONLY` | Set to anything to stop writing `leaderboard.json` (local testing) |
+| `TAVERN_START_ENCOUNTER` | Start Tavern Crawl runs at a later opponent, for testing (1 = Klarg … 4 = Jaguar) |

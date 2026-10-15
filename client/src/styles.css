@@ -79,8 +79,9 @@ header {
 }
 .player .portrait { width: 36px; height: 36px; border-radius: 50%; background-color: #1d120a; background-repeat: no-repeat; flex: none; }
 .player .name { font-size: 0.95rem; font-weight: 700; max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.player .hearts { color: #e53935; font-size: 0.8rem; letter-spacing: 1px; }
-.player .hearts span { color: #4a3a30; }
+/* Lost hearts are dark: applies to player chips and the opponent's nameplate alike. */
+.hearts { color: #e53935; font-size: 0.8rem; letter-spacing: 1px; }
+.hearts span { color: #4a3a30; }
 .player .score { font-size: 1.15rem; font-weight: 700; color: var(--gold-bright); margin-left: 4px; min-width: 1.6em; text-align: right; }
 .player.current { border-color: var(--gold-bright); transform: translateY(-2px); box-shadow: 0 0 14px rgba(255, 213, 79, 0.35); }
 .player.out { opacity: 0.45; }

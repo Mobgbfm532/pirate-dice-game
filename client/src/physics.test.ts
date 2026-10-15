@@ -29,6 +29,15 @@ describe('simulateRoll', () => {
     });
 });
 
+describe('impact sounds', () => {
+    it('a throw records its knocks: dice hit the felt, and each other or the rail', () => {
+        const track = simulateRoll([0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], 777);
+        expect(track.impacts.length).toBeGreaterThan(5);
+        expect(track.impacts.some(i => i.kind === 'felt')).toBe(true);
+        expect(track.impacts.every(i => i.frame >= 0 && i.frame <= track.frames && i.strength > 0)).toBe(true);
+    });
+});
+
 describe('seeded throws', () => {
     it('the same seed gives the identical tumble on every screen', () => {
         const a = simulateRoll([0, 2, 5], [6, 1, 4], 12345);

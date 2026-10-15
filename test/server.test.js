@@ -238,3 +238,25 @@ test('a bot waits for you instead of playing to an empty room', async () => {
     const over = await waitFor(g2, 'gameOver', () => true, 20000);
     assert.match(over.message, /wins the table/);
 });
+
+test('the last die goes into its slot by itself once it lands', async () => {
+    const h = await join('Hal', 'LASTDIE');
+    const i = await join('Ivy', 'LASTDIE');
+    const state = await waitFor(i, 'gameStateUpdate', s => s.playerOrder.length === 2);
+    const current = state.currentTurnId === h.id ? h : i;
+
+    current.emit('rollDice');
+    const first = await waitFor(current, 'diceRolled');
+    await sleep(first.animationMs * 0.01 + 20);
+    first.turn.dice.slice(0, 5).forEach(d => current.emit('toggleDie', d.id)); // keep five
+    await sleep(50);
+    current.emit('rollDice'); // roll the last one
+
+    const finished = await waitFor(current, 'turnState', d => d.event && d.event.type === 'finalized', 3000);
+    assert.equal(finished.turn.dice.filter(d => d.status === 'active').length, 0, 'nothing left to tap');
+    assert.equal(finished.turn.finalized, true, 'ready for End Turn');
+    const stillTheirTurn = server.rooms.LASTDIE.roundPlayers[server.rooms.LASTDIE.currentTurnIndex];
+    assert.equal(stillTheirTurn, current.id, 'the player still ends the turn themselves');
+    h.disconnect();
+    i.disconnect();
+});

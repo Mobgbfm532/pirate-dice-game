@@ -302,6 +302,18 @@ function performRoll(roomCode) {
             io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
         }, delay(animationMs));
     }
+
+    // The last die has nothing to choose: once it lands it goes into its slot by itself.
+    // The player still presses End Turn.
+    let stillActive = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (stillActive.length === 1) {
+        let lastDieId = stillActive[0].id;
+        setTimeout(() => {
+            if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+            let result = Rules.toggleDie(room.turn, lastDieId);
+            if (result) emitTurn(roomCode, result.finalizedNow ? { type: 'finalized', outcome: room.turn.outcome } : { type: 'toggle' });
+        }, delay(animationMs));
+    }
     return animationMs;
 }
 
@@ -536,9 +548,12 @@ function getHumanPlayerId(room) {
     return room.playerOrder.find(id => id !== BOT_ID && room.players[id]);
 }
 
+// For testing a particular opponent: TAVERN_START_ENCOUNTER=1 starts runs at Klarg, etc.
+const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(4, parseInt(process.env.TAVERN_START_ENCOUNTER, 10) || 0));
+
 function createTavernRun() {
     return {
-        encounterIndex: 0,
+        encounterIndex: TAVERN_START_ENCOUNTER,
         keepsakes: [],
         pendingKeepsakeChoices: null,
         abilityUsed: {},

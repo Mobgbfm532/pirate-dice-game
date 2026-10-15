@@ -25,6 +25,9 @@ export function Dice() {
     const meshes = useRef<(THREE.Mesh | null)[]>([]);
     const rings = useRef<(THREE.Mesh | null)[]>([]);
     const ringGeometry = useMemo(() => new THREE.RingGeometry(0.56, 0.68, 40), []);
+    // An invisible sphere just beyond each die's corners, so taps needn't be exact. A sphere
+    // (unlike a box) is the same size whichever way the die has landed.
+    const hitGeometry = useMemo(() => new THREE.SphereGeometry(DIE_SIZE * 0.76, 16, 12), []);
 
     const turn = snap.turn;
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && !turn.finalized;
@@ -84,7 +87,9 @@ export function Dice() {
         });
     });
 
-    const onTap = (id: number) => (e: ThreeEvent<MouseEvent>) => {
+    // Taps count on touch-down: a "click" is cancelled if the finger moves even slightly,
+    // which made tapping dice on phones unreliable.
+    const onTap = (id: number) => (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         actions.toggleDie(id);
     };
@@ -105,10 +110,16 @@ export function Dice() {
                         position={START_POSITIONS[id]}
                         castShadow
                         receiveShadow
-                        onClick={onTap(id)}
-                        onPointerOver={() => { if (tappable(id)) document.body.style.cursor = 'pointer'; }}
-                        onPointerOut={() => { document.body.style.cursor = ''; }}
-                    />
+                    >
+                        <mesh
+                            geometry={hitGeometry}
+                            onPointerDown={onTap(id)}
+                            onPointerOver={() => { if (tappable(id)) document.body.style.cursor = 'pointer'; }}
+                            onPointerOut={() => { document.body.style.cursor = ''; }}
+                        >
+                            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                        </mesh>
+                    </mesh>
                     <mesh ref={el => { rings.current[id] = el; }} geometry={ringGeometry} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
                         <meshBasicMaterial color="#ffd54f" transparent opacity={0.85} />
                     </mesh>
