@@ -5,12 +5,13 @@ import { Dice } from './Dice';
 import { table } from './game';
 import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slotPosition } from './layout';
 import { artTexture, paintedTexture } from './textures';
-import { layoutBackdrop } from './Backdrop';
+import { layoutBackdrop, setRailAnchor } from './Backdrop';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
 const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
 const nearPoint = new THREE.Vector3(0, 0, NEAR_EDGE_Z);
 const projected = new THREE.Vector3();
+const railEnd = new THREE.Vector3(TRAY.maxX + 0.45, 0, SLOT_ROW_Z);
 
 // Frames the table on any screen shape. It solves for the camera distance and aim so the
 // table's far edge sits a set way down the screen (the tavern backdrop fills the space
@@ -23,8 +24,16 @@ function CameraRig() {
 
     useFrame((_, delta) => {
         const cam = camera as THREE.PerspectiveCamera;
-        const aspect = size.width / size.height;
-        const portrait = aspect < 0.9;
+        const portrait = size.width / size.height < 0.9;
+        // Wide screens keep a column on the right free for the Roll button, so it can sit
+        // right beside the table. The camera renders as if the screen were that much wider
+        // and shows its right-hand part, which shifts the table left without distorting it.
+        const reserve = portrait ? 0 : Math.min(250, size.width * 0.24);
+        cam.aspect = (size.width + reserve) / size.height;
+        if (reserve > 0) cam.setViewOffset(size.width + reserve, size.height, reserve, 0, size.width, size.height);
+        else cam.clearViewOffset();
+        cam.updateProjectionMatrix();
+        const aspect = (size.width - reserve) / size.height; // the part the table must fit in
         const direction = new THREE.Vector3(0, 1, portrait ? 0.22 : 0.5).normalize();
         // On phones the controls sit under the table, so the table must end above them
         // (their real height, measured by the HUD); on wide screens they're in the corners.
@@ -72,6 +81,10 @@ function CameraRig() {
         place(distance * (1 - drift.current * 0.12));
 
         layoutBackdrop(screenY(farPoint) * size.height, size.width);
+        projected.copy(railEnd).project(cam);
+        const railX = (projected.x + 1) / 2 * size.width, railY = (1 - projected.y) / 2 * size.height;
+        projected.copy(farPoint).project(cam);
+        setRailAnchor(railX, railY, (projected.x + 1) / 2 * size.width);
 
         // Fog only darkens the far end of the table, whatever the camera distance.
         if (scene.fog instanceof THREE.Fog) {

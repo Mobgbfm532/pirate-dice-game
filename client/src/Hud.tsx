@@ -101,6 +101,33 @@ function scoreText(p: GameState['players'][string]) {
     return !p.connected ? 'Offline' : p.lives <= 0 ? 'Out' : p.score === null ? '–' : p.busted ? 'Dust' : String(p.score);
 }
 
+// Scores of players who have finished this round and didn't dust.
+function finishedScores(state: GameState, exceptId?: string) {
+    return state.roundPlayers
+        .filter(id => id !== exceptId && state.players[id] && state.players[id].score !== null && !state.players[id].busted)
+        .map(id => state.players[id].score as number);
+}
+
+// How a round score looks: dust in red; the lowest finished score (the one currently set to
+// lose a life, once someone has beaten it) in amber; not yet played, dimmed.
+function scoreClass(state: GameState, id: string) {
+    const p = state.players[id];
+    if (!p || p.score === null) return 'waiting';
+    if (p.busted) return 'dust';
+    const scores = finishedScores(state);
+    return scores.length > 1 && p.score === Math.min(...scores) ? 'lowest' : 'scored';
+}
+
+// What the player rolling now has to do. The lowest score of the round loses a life (and
+// dust always does), so the score to beat is the lowest among those who've finished.
+function scoreToBeat(state: GameState, rollerId: string): { label: string; target: number | null } {
+    const finished = state.roundPlayers.filter(id => id !== rollerId && state.players[id] && state.players[id].score !== null);
+    if (finished.length === 0) return { label: 'First to roll: set the score', target: null };
+    const scores = finishedScores(state, rollerId);
+    if (scores.length === 0) return { label: 'Everyone else dusted: just find a 2 and a 4', target: null };
+    return { label: 'Score to beat', target: Math.min(...scores) };
+}
+
 function Hearts({ lives, starting }: { lives: number; starting: number }) {
     const n = Math.max(0, lives);
     return <div className="hearts" aria-label={`${n} lives`}>{'♥'.repeat(n)}<span>{'♥'.repeat(Math.max(0, starting - n))}</span></div>;
@@ -122,7 +149,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                             <div className="name">{p.name}</div>
                             <Hearts lives={p.lives} starting={state.startingLives} />
                         </div>
-                        <div className="score">{scoreText(p)}</div>
+                        <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
                     </div>
                 );
             })}
@@ -140,7 +167,7 @@ function OpponentPlate({ state }: { state: GameState }) {
             {state.tavernRun && <span className="encounter">{state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
             <span className="name">{opponentName() ?? bot.name}</span>
             <Hearts lives={bot.lives} starting={starting} />
-            <span className="score">{scoreText(bot)}</span>
+            <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
         </div>
     );
 }
@@ -150,7 +177,15 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     const turn = snap.turn;
     if (!turn) return <div className="controls" />;
     const hiddenLocked = turn.dice.some(d => d.hidden && d.status !== 'active');
-    const scoreText = turn.finalized && turn.outcome?.busted ? 'X' : hiddenLocked ? '?' : String(Rules.scoreDice(turn.dice).score);
+    const scoring = Rules.scoreDice(turn.dice);
+    const scoreText = turn.finalized && turn.outcome?.busted ? 'X' : hiddenLocked ? '?' : String(scoring.score);
+    const state = snap.state;
+    const goal = state && !snap.waiting ? scoreToBeat(state, turn.playerId) : null;
+    const roller = state?.players[turn.playerId];
+    // Green once the dice already beat it (with the 2 and 4 in hand), amber on a tie.
+    const standing = goal?.target != null && !hiddenLocked && scoring.has2 && scoring.has4
+        ? (scoring.score > goal.target ? 'ahead' : scoring.score === goal.target ? 'level' : '')
+        : '';
 
     let label = 'Roll Dice';
     let disabled = !turn.canRoll;
@@ -161,9 +196,15 @@ function TurnControls({ snap }: { snap: Snapshot }) {
 
     return (
         <div className="controls">
+            {goal && (
+                <div className="goal">
+                    <span className="label">{goal.target != null && !snap.isMyTurn && roller ? `${roller.name} must beat` : goal.label}</span>
+                    {goal.target != null && <span className="target">{goal.target}</span>}
+                </div>
+            )}
             <div className="turn-score">
                 <span className="label">Turn score</span>
-                <span className={`value ${turn.finalized && turn.outcome?.busted ? 'dust' : ''}`}>{scoreText}</span>
+                <span className={`value ${turn.finalized && turn.outcome?.busted ? 'dust' : standing}`}>{scoreText}</span>
             </div>
             <button
                 className={`roll ${turn.finalized ? 'end' : ''}`}

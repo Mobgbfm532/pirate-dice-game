@@ -5,10 +5,12 @@ import { TableScene } from './TableScene';
 import { Hud } from './Hud';
 import { Backdrop } from './Backdrop';
 import { actions, store, table } from './game';
+import { simulateRoll } from './physics';
+import { renderImpacts } from './sounds';
 import './styles.css';
 
 // Development only (left out of production builds): lets test scripts drive the game.
-if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, store, table };
+if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, store, table, simulateRoll, renderImpacts };
 
 function App() {
     return (

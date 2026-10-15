@@ -34,6 +34,19 @@ export function layoutBackdrop(horizon: number, width: number) {
     css.setProperty('--bust-h', `${Math.round(bustHeight)}px`);
 }
 
+// Where the table is on screen: the right-hand end of the slot rail (so wide screens can put
+// the Roll button right beside it) and the table's centre line (where the opponent sits).
+let lastAnchor = '';
+export function setRailAnchor(x: number, y: number, tableCenterX: number) {
+    const key = `${Math.round(x)},${Math.round(y)},${Math.round(tableCenterX)}`;
+    if (key === lastAnchor) return;
+    lastAnchor = key;
+    const css = document.documentElement.style;
+    css.setProperty('--rail-right', `${Math.round(x)}px`);
+    css.setProperty('--rail-y', `${Math.round(y)}px`);
+    css.setProperty('--table-x', `${Math.round(tableCenterX)}px`);
+}
+
 // The bot opponent at this table, if any: The Molar in solo games, the current
 // encounter in a Tavern Crawl.
 export function opponentName(): string | null {

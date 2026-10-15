@@ -28,21 +28,35 @@ export type SoundName = keyof typeof sfx;
 
 // ---- Dice impacts, synthesized ----
 // Every knock in a roll comes from the physics (see physics.ts Impact), so the sound lines
-// up with what you see and every player hears the same throw. Each impact is a short burst
-// of filtered noise plus a tone: a bright clack for die on die, a soft thud on the felt,
-// a hollow knock on the wooden rail. Louder impacts are louder and a little brighter.
+// up with what you see and every player hears the same throw. Each impact has two layers:
+// a short burst of filtered noise (the surface texture) and a "body" tone that drops in
+// pitch, which is what gives a hit its thunk and weight. A die-on-die clack, a heavy thud
+// on the felt, a hollow knock on the wooden rail. Harder impacts are louder and brighter.
 
 let audioContext: AudioContext | null = null;
 let noise: AudioBuffer | null = null;
+let impactBus: AudioNode | null = null;
 
 function audio() {
     try {
         if (!audioContext) audioContext = new AudioContext();
         if (audioContext.state === 'suspended') void audioContext.resume();
         if (!noise) {
-            noise = audioContext.createBuffer(1, audioContext.sampleRate * 0.3, audioContext.sampleRate);
+            noise = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
             const data = noise.getChannelData(0);
             for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        }
+        if (!impactBus) {
+            // A gentle compressor glues many simultaneous knocks together instead of clipping.
+            const glue = audioContext.createDynamicsCompressor();
+            glue.threshold.value = -18;
+            glue.ratio.value = 4;
+            glue.attack.value = 0.003;
+            glue.release.value = 0.12;
+            const level = audioContext.createGain();
+            level.gain.value = 0.85;
+            glue.connect(level).connect(audioContext.destination);
+            impactBus = glue;
         }
         return audioContext;
     } catch {
@@ -50,57 +64,91 @@ function audio() {
     }
 }
 
-const VOICES = {
-    die: { filter: 'bandpass' as BiquadFilterType, freq: 3300, q: 2.2, decay: 0.045, level: 0.55, tone: 2100, toneLevel: 0.12, toneDecay: 0.03 },
-    felt: { filter: 'lowpass' as BiquadFilterType, freq: 520, q: 0.8, decay: 0.07, level: 0.75, tone: 150, toneLevel: 0.35, toneDecay: 0.06 },
-    wall: { filter: 'bandpass' as BiquadFilterType, freq: 950, q: 3.5, decay: 0.07, level: 0.7, tone: 430, toneLevel: 0.3, toneDecay: 0.06 }
+interface Voice {
+    filter: BiquadFilterType; freq: number; q: number; noiseDecay: number; noiseLevel: number;
+    bodyFrom: number; bodyTo: number; bodyDecay: number; bodyLevel: number;
+}
+
+const VOICES: Record<'die' | 'felt' | 'wall', Voice> = {
+    // Bone on bone: a woody clack, warmer and lower than a plastic click.
+    die: { filter: 'bandpass', freq: 1700, q: 1.3, noiseDecay: 0.035, noiseLevel: 0.5, bodyFrom: 620, bodyTo: 330, bodyDecay: 0.06, bodyLevel: 0.3 },
+    // Landing on felt over a heavy table: mostly low thump.
+    felt: { filter: 'lowpass', freq: 420, q: 0.7, noiseDecay: 0.09, noiseLevel: 0.6, bodyFrom: 150, bodyTo: 62, bodyDecay: 0.16, bodyLevel: 0.85 },
+    // Hitting the walnut rail: a hollow wooden knock.
+    wall: { filter: 'bandpass', freq: 700, q: 2, noiseDecay: 0.07, noiseLevel: 0.55, bodyFrom: 280, bodyTo: 140, bodyDecay: 0.13, bodyLevel: 0.6 }
 };
 
-function knock(ctx: AudioContext, when: number, kind: keyof typeof VOICES, loudness: number) {
+function knock(ctx: BaseAudioContext, bus: AudioNode, when: number, kind: keyof typeof VOICES, loudness: number) {
     const v = VOICES[kind];
-    const vary = 0.85 + Math.random() * 0.3;
+    const vary = 0.88 + Math.random() * 0.24;
     const out = ctx.createGain();
-    out.connect(ctx.destination);
+    out.connect(bus);
 
+    // Surface texture.
     const burst = ctx.createBufferSource();
     burst.buffer = noise;
     burst.playbackRate.value = vary;
     const filter = ctx.createBiquadFilter();
     filter.type = v.filter;
-    filter.frequency.value = v.freq * vary * (0.85 + loudness * 0.3);
+    filter.frequency.value = v.freq * vary * (0.8 + loudness * 0.4);
     filter.Q.value = v.q;
     const burstGain = ctx.createGain();
-    burstGain.gain.setValueAtTime(v.level * loudness, when);
-    burstGain.gain.exponentialRampToValueAtTime(0.0001, when + v.decay);
+    burstGain.gain.setValueAtTime(v.noiseLevel * loudness, when);
+    burstGain.gain.exponentialRampToValueAtTime(0.0001, when + v.noiseDecay);
     burst.connect(filter).connect(burstGain).connect(out);
-    burst.start(when, Math.random() * 0.2, v.decay + 0.02);
+    burst.start(when, Math.random() * 0.25, v.noiseDecay + 0.02);
 
-    const tone = ctx.createOscillator();
-    tone.frequency.value = v.tone * vary;
-    const toneGain = ctx.createGain();
-    toneGain.gain.setValueAtTime(v.toneLevel * loudness, when);
-    toneGain.gain.exponentialRampToValueAtTime(0.0001, when + v.toneDecay);
-    tone.connect(toneGain).connect(out);
-    tone.start(when);
-    tone.stop(when + v.toneDecay + 0.02);
+    // Body: a tone that falls in pitch, so the hit has weight.
+    const body = ctx.createOscillator();
+    body.type = 'sine';
+    body.frequency.setValueAtTime(v.bodyFrom * vary, when);
+    body.frequency.exponentialRampToValueAtTime(v.bodyTo * vary, when + v.bodyDecay);
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, when);
+    bodyGain.gain.exponentialRampToValueAtTime(v.bodyLevel * loudness, when + 0.004);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, when + v.bodyDecay);
+    body.connect(bodyGain).connect(out);
+    body.start(when);
+    body.stop(when + v.bodyDecay + 0.02);
 }
 
+type Impacts = { frame: number; strength: number; kind: keyof typeof VOICES }[];
+
 // Schedules a whole throw's impacts. speed < 1 for slow-motion suspense rolls.
-export function playDiceImpacts(impacts: { frame: number; strength: number; kind: keyof typeof VOICES }[], speed = 1) {
+export function playDiceImpacts(impacts: Impacts, speed = 1) {
     if (muted) return;
     const ctx = audio();
-    if (!ctx) return;
-    const start = ctx.currentTime + 0.02;
+    if (!ctx || !impactBus) return;
+    scheduleImpacts(ctx, impactBus, ctx.currentTime + 0.02, impacts, speed);
+}
+
+function scheduleImpacts(ctx: BaseAudioContext, bus: AudioNode, start: number, impacts: Impacts, speed: number) {
     const lastByKind: Record<string, number> = {};
     for (const impact of impacts) {
-        const loudness = Math.min(1, impact.strength / 9);
-        if (loudness < 0.06) continue;
+        // Square-root curve: soft knocks are still heard, hard ones don't dominate.
+        const loudness = Math.min(1, Math.sqrt(impact.strength / 10));
+        if (loudness < 0.2) continue;
         const when = start + impact.frame / 60 / speed;
         // Many dice landing in the same instant blur into one knock rather than a buzz.
-        if (when - (lastByKind[impact.kind] ?? -1) < 0.012) continue;
+        if (when - (lastByKind[impact.kind] ?? -1) < 0.015) continue;
         lastByKind[impact.kind] = when;
-        knock(ctx, when, impact.kind, loudness);
+        knock(ctx, bus, when, impact.kind, loudness);
     }
+}
+
+// Development only: renders a throw offline to raw samples, for listening to the sound
+// outside the game (see main.tsx's test hook).
+export async function renderImpacts(impacts: Impacts, seconds: number, sampleRate = 44100) {
+    const ctx = new OfflineAudioContext(1, Math.ceil(seconds * sampleRate), sampleRate);
+    const live = audio(); // reuse the noise buffer
+    if (!live || !noise) throw new Error('audio unavailable');
+    const glue = ctx.createDynamicsCompressor();
+    glue.threshold.value = -18; glue.ratio.value = 4; glue.attack.value = 0.003; glue.release.value = 0.12;
+    const level = ctx.createGain();
+    level.gain.value = 0.85;
+    glue.connect(level).connect(ctx.destination);
+    scheduleImpacts(ctx, glue, 0.05, impacts, 1);
+    return (await ctx.startRendering()).getChannelData(0);
 }
 
 let muted = false;
