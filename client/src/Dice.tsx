@@ -1,11 +1,11 @@
-import { useMemo, useRef, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { actions, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
 import { readFrame } from './physics';
-import { DIE_SIZE, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
+import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
 import { createDiceMaterials } from './textures';
 
 const DICE_IDS = [0, 1, 2, 3, 4, 5];
@@ -17,6 +17,67 @@ const START_POSITIONS = DICE_IDS.map(waitingPosition);
 // Scratch objects reused every frame to avoid garbage.
 const targetPos = new THREE.Vector3();
 const targetQuat = new THREE.Quaternion();
+
+const STEAL_MS = 1400;
+
+// Rokr's Constellation Blur: a little constellation hangs over each blurred die, its stars
+// twinkling and joined by faint lines. Positions are around the die's top (die units).
+const STAR_POINTS: [number, number][] = [[-0.42, -0.3], [-0.12, 0.38], [0.2, -0.05], [0.46, 0.34], [0.3, -0.44]];
+const STAR_LINKS = [0, 1, 1, 2, 2, 3, 2, 4];
+
+function starTexture() {
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext('2d')!;
+    const glow = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    glow.addColorStop(0, 'rgba(255,255,255,1)');
+    glow.addColorStop(0.18, 'rgba(210,225,255,0.95)');
+    glow.addColorStop(0.45, 'rgba(140,170,255,0.35)');
+    glow.addColorStop(1, 'rgba(120,150,255,0)');
+    g.fillStyle = glow;
+    g.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+}
+
+function Constellation({ index, meshes }: { index: number; meshes: MutableRefObject<(THREE.Mesh | null)[]> }) {
+    const group = useRef<THREE.Group>(null);
+    const sprites = useRef<(THREE.Sprite | null)[]>([]);
+    const map = useMemo(starTexture, []);
+    const lines = useMemo(() => {
+        const points = STAR_LINKS.map(i => new THREE.Vector3(STAR_POINTS[i][0], 0, STAR_POINTS[i][1]));
+        return new THREE.BufferGeometry().setFromPoints(points);
+    }, []);
+    useFrame(() => {
+        const g = group.current;
+        const mesh = meshes.current[index];
+        const die = store.get().turn?.dice.find(d => d.id === index);
+        const show = !!g && !!mesh && mesh.visible && !!die?.hidden;
+        if (!g) return;
+        g.visible = show;
+        if (!show || !mesh) return;
+        g.position.set(mesh.position.x, mesh.position.y + DIE_SIZE * 0.75, mesh.position.z);
+        const t = performance.now() / 1000;
+        sprites.current.forEach((s, i) => {
+            if (!s) return;
+            const twinkle = 0.55 + 0.45 * Math.sin(t * (2.2 + i * 0.7) + index * 1.3 + i);
+            s.scale.setScalar(0.34 + twinkle * 0.26);
+            (s.material as THREE.SpriteMaterial).opacity = 0.5 + twinkle * 0.5;
+        });
+    });
+    return (
+        <group ref={group} visible={false}>
+            <lineSegments geometry={lines}>
+                <lineBasicMaterial color="#c4d4ff" transparent opacity={0.7} depthWrite={false} />
+            </lineSegments>
+            {STAR_POINTS.map(([x, z], i) => (
+                <sprite key={i} ref={el => { sprites.current[i] = el; }} position={[x, 0, z]}>
+                    <spriteMaterial map={map} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+                </sprite>
+            ))}
+        </group>
+    );
+}
 
 export function Dice() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
@@ -57,11 +118,23 @@ export function Dice() {
                 showHidden = roll.hidden.has(die.id);
             } else {
                 if (die.status === 'stolen') {
-                    // Klarg's hand lifts the die off the table.
+                    // Klarg reaches over: the die is plucked up off the felt, hangs there a
+                    // moment, then is swept back across the table to his side and gone.
                     const rest = table.rest.get(die.id);
-                    const t = Math.min(1, (now - (table.stolenAt.get(die.id) ?? now)) / 700);
-                    if (rest) targetPos.copy(rest.position).add(new THREE.Vector3(0, t * 3, -t * 2));
-                    mesh.scale.setScalar(1 - t);
+                    const t = Math.min(1, (now - (table.stolenAt.get(die.id) ?? now)) / STEAL_MS);
+                    const lift = Math.min(1, t / 0.3);
+                    const sweep = Math.max(0, (t - 0.45) / 0.55);
+                    const eased = sweep * sweep;
+                    if (rest) {
+                        targetPos.set(
+                            rest.position.x * (1 - eased),
+                            rest.position.y + lift * 1.6 + eased * 1.2,
+                            rest.position.z + (TABLE_FAR_EDGE_Z - 1.5 - rest.position.z) * eased
+                        );
+                        mesh.position.copy(targetPos);
+                    }
+                    mesh.rotateY(delta * (2 + sweep * 10));
+                    mesh.scale.setScalar(1 - eased * 0.7);
                     mesh.visible = t < 1;
                     targetQuat.copy(mesh.quaternion);
                 } else if (isLocked(die)) {
@@ -123,6 +196,7 @@ export function Dice() {
                     <mesh ref={el => { rings.current[id] = el; }} geometry={ringGeometry} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
                         <meshBasicMaterial color="#ffd54f" transparent opacity={0.85} />
                     </mesh>
+                    <Constellation index={id} meshes={meshes} />
                 </group>
             ))}
         </group>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, store, BOT_ID, type GameState, type Snapshot } from './game';
+import { actions, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary } from './game';
 import { Rules } from './rules';
 import { isMuted, playSound, setMuted } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
@@ -253,27 +253,200 @@ function YourTurnBanner({ at }: { at: number }) {
     return visible ? <div key={at} className="your-turn" aria-live="assertive">Your turn!</div> : null;
 }
 
+// A picture for each keepsake card.
+const KEEPSAKE_ICONS: Record<string, string> = {
+    bentCopper: '🛡️',
+    blessedTankard: '🕶️',
+    luckySeat: '🃏',
+    velvetCushion: '🪶',
+    steadyHand: '✋'
+};
+
+// After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then
+// take it (two steps, so a stray tap on a phone doesn't decide the run).
+function KeepsakeCards({ defeated, nextEnemy, transitionMessage, choices }: { defeated: string; nextEnemy: string; transitionMessage: string | null; choices: Keepsake[] }) {
+    const [picked, setPicked] = useState<string | null>(null);
+    const chosen = choices.find(c => c.id === picked);
+    return (
+        <div className="modal-backdrop">
+            <div className="keepsake-offer">
+                <h2>{transitionMessage ?? `${defeated} leaves the table.`}</h2>
+                <p className="next-up">
+                    <span className="mini-portrait" style={avatarStyle(portraitFor(nextEnemy))} />
+                    <span>Next: <strong>{nextEnemy}</strong>. Choose a keepsake.</span>
+                </p>
+                <div className="keepsake-cards">
+                    {choices.map((c, i) => (
+                        <button
+                            key={c.id}
+                            className={`keepsake-card ${picked === c.id ? 'picked' : ''} ${picked && picked !== c.id ? 'passed' : ''}`}
+                            style={{ animationDelay: `${i * 0.12}s` }}
+                            onClick={() => { setPicked(c.id); playSound('click'); }}
+                            aria-pressed={picked === c.id}
+                        >
+                            <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[c.id] ?? '✦'}</span>
+                            <strong>{c.name}</strong>
+                            <span className="text">{c.text}</span>
+                        </button>
+                    ))}
+                </div>
+                <button className="primary take" disabled={!chosen} onClick={() => chosen && actions.chooseKeepsake(chosen.id)}>
+                    {chosen ? `Take ${chosen.name}` : 'Tap a card'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// Counts up to a number, for the gold total.
+function useCountUp(target: number, ms = 1200) {
+    const [value, setValue] = useState(0);
+    useEffect(() => {
+        let frame = 0;
+        const start = performance.now();
+        const tick = () => {
+            const t = Math.min(1, (performance.now() - start) / ms);
+            setValue(Math.round(target * (1 - Math.pow(1 - t, 3))));
+            if (t < 1) frame = requestAnimationFrame(tick);
+        };
+        frame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frame);
+    }, [target, ms]);
+    return value;
+}
+
+// The end of a Tavern Crawl: how far you got, the gold, and the leaderboard.
+function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard'] }) {
+    const gold = useCountUp(summary.gold);
+    const b = summary.breakdown;
+    const rows: [string, number][] = [
+        ['Progress', b.progress],
+        ['Lives spared', b.lives],
+        ['Keepsake restraint', b.restraint],
+        ['Perfect 24s', b.perfect]
+    ];
+    // Your best on the board (the board keeps each name's best run).
+    const mine = leaderboard.findIndex(e => e.name === summary.name);
+    const board = leaderboard.slice(0, 8);
+    return (
+        <div className="modal-backdrop">
+            <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
+                <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
+                <p className="subtitle">
+                    {summary.won ? 'You beat the whole House Table.' : `${summary.fellTo} ended your run.`}
+                </p>
+                <ol className="crawl-path" aria-label="Opponents">
+                    {summary.encounters.map((name, i) => {
+                        const state = i < summary.defeated ? 'beaten' : name === summary.fellTo ? 'fell' : 'unmet';
+                        return (
+                            <li key={name} className={state} title={name} aria-label={`${name}: ${state === 'beaten' ? 'beaten' : state === 'fell' ? 'lost to' : 'not reached'}`}>
+                                <span className="mini-portrait" style={avatarStyle(portraitFor(name))} />
+                                <span className="mark" aria-hidden="true">{state === 'beaten' ? '✓' : state === 'fell' ? '✗' : ''}</span>
+                            </li>
+                        );
+                    })}
+                </ol>
+                <div className="gold">
+                    <span className="coin" aria-hidden="true">🪙</span>
+                    <span className="amount">{gold}</span>
+                    <span className="unit">gold</span>
+                </div>
+                <dl className="gold-rows">
+                    {rows.map(([label, value]) => (
+                        <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                    ))}
+                </dl>
+                {board.length > 0 && (
+                    <div className="leaderboard">
+                        <h2>Leaderboard</h2>
+                        <ol>
+                            {board.map((e, i) => (
+                                <li key={e.name} className={i === mine ? 'me' : ''}>
+                                    <span className="rank">{i + 1}</span>
+                                    <span className="who">{e.name}</span>
+                                    <span className="gold-amount">{e.gold}</span>
+                                </li>
+                            ))}
+                        </ol>
+                        {mine >= board.length && <p className="fine">Your best: #{mine + 1} with {leaderboard[mine].gold} gold</p>}
+                    </div>
+                )}
+                <div className="row">
+                    <button className="primary" onClick={actions.playAgain}>New run</button>
+                    <button className="secondary" onClick={actions.leave}>Leave</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const INTRO_MS = 5000;
+
+// Shows something for `ms` after `at` (a performance.now() time), then hides it.
+function useMoment(at: number, ms: number) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        if (!at) return;
+        setVisible(true);
+        const timer = setTimeout(() => setVisible(false), Math.max(0, ms - (performance.now() - at)));
+        return () => clearTimeout(timer);
+    }, [at, ms]);
+    const hide = useCallback(() => setVisible(false), []);
+    return [visible, hide] as const;
+}
+
+// A Tavern Crawl opponent sits down: a name card on the table edge under their bust.
+// Tap to dismiss.
+function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: boolean) => void }) {
+    const [visible, dismiss] = useMoment(snap.introAt, INTRO_MS);
+    useEffect(() => onDone(visible), [visible, onDone]);
+    // The first throw clears it away, so it never sits over the dice.
+    useEffect(() => { if (snap.rolling) dismiss(); }, [snap.rolling, dismiss]);
+    const run = snap.state?.tavernRun;
+    if (!visible || !run) return null;
+    const enemy = run.enemy;
+    const ability = enemy.ability ? Rules.ABILITY_NAMES[enemy.ability as keyof typeof Rules.ABILITY_NAMES] : null;
+    return (
+        <button key={snap.introAt} className="encounter-intro" onClick={dismiss}>
+            <span className="encounter">Opponent {run.encounterNumber} of {run.totalEncounters}</span>
+            <span className="name">{enemy.name}</span>
+            <Hearts lives={enemy.lives} starting={enemy.lives} />
+            {ability && <span className="ability">{ability}</span>}
+            <span className="intro">{enemy.intro}</span>
+        </button>
+    );
+}
+
+// An opponent's signature move. Klarg's steal and Rokr's stars happen on the 3D table; here
+// the move's name, plus The Hangman's card and Jaguar's -3.
+function AbilityMomentView({ snap }: { snap: Snapshot }) {
+    const moment = snap.ability;
+    const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3200 : 2600);
+    if (!visible || !moment) return null;
+    const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
+    return (
+        <div key={moment.at} className={`ability-moment ${kind}`} aria-live="polite">
+            <div className="ability-banner">
+                <span className="who">{moment.name}</span>
+                <span className="what">{moment.ability}</span>
+                {moment.ability === 'Smooth Talk' && <span className="minus">−3</span>}
+            </div>
+            {moment.ability === 'The Ace of Spades' && (
+                <div className="ace-card" aria-hidden="true">
+                    <span className="corner">A<br />♠</span>
+                    <span className="pip">♠</span>
+                    <span className="corner bottom">A<br />♠</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function Modals({ snap }: { snap: Snapshot }) {
     const modal = snap.modal;
     if (!modal) return null;
-    if (modal.type === 'keepsakes') {
-        return (
-            <div className="modal-backdrop">
-                <div className="panel">
-                    <h2>{modal.transitionMessage ?? `${modal.defeated} leaves the table.`}</h2>
-                    <p>Next opponent: <strong>{modal.nextEnemy}</strong>. Choose a keepsake first.</p>
-                    <div className="choices">
-                        {modal.choices.map(c => (
-                            <button key={c.id} className="choice" onClick={() => actions.chooseKeepsake(c.id)}>
-                                <strong>{c.name}</strong>
-                                <span>{c.text}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    if (modal.type === 'keepsakes') return <KeepsakeCards key={modal.nextEnemy} {...modal} />;
+    if (modal.type === 'tavernOver') return <TavernOver summary={modal.summary} leaderboard={snap.leaderboard} />;
     return (
         <div className="modal-backdrop">
             <div className="panel">
@@ -308,6 +481,7 @@ function useFooterInset() {
 export function Hud() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
     const [muted, setMutedState] = useState(isMuted());
+    const [introShowing, setIntroShowing] = useState(false);
     const footerRef = useFooterInset();
 
     if (!snap.joined) return <JoinScreen />;
@@ -326,7 +500,9 @@ export function Hud() {
                 <span className={`turn-line ${snap.isMyTurn ? 'mine' : ''}`}>{state ? turnLine(snap, state) : 'Connecting…'}</span>
                 <button className="mute" onClick={() => { setMuted(!muted); setMutedState(!muted); }} aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🎵'}</button>
             </header>
-            {state && botAcross && <OpponentPlate state={state} />}
+            {state && botAcross && !introShowing && <OpponentPlate state={state} />}
+            <EncounterIntro snap={snap} onDone={setIntroShowing} />
+            <AbilityMomentView snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}
             <YourTurnBanner at={snap.yourTurnAt} />
 

@@ -28,7 +28,24 @@ export interface TavernRun {
     enemy: { id: string; name: string; intro: string; ability: string | null; lives: number };
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
+    runComplete?: boolean;
 }
+
+// The end of a Tavern Crawl run, won or lost (sent with gameOver).
+export interface TavernSummary {
+    won: boolean;
+    name: string;
+    defeated: number;
+    encounters: string[];
+    fellTo: string | null;
+    gold: number;
+    breakdown: { progress: number; lives: number; restraint: number; perfect: number };
+    stats: { encountersDefeated: number; livesLost: number; keepsakesActivated: number; perfect24s: number };
+    keepsakes: string[];
+}
+
+// An opponent's signature move, shown as its own moment rather than a pop-up.
+export interface AbilityMoment { name: string; ability: string; text: string; at: number }
 
 export interface GameState {
     players: Record<string, Player>;
@@ -46,7 +63,8 @@ export interface Toast { id: number; title: string; text: string; tone: 'info' |
 
 export type Modal =
     | { type: 'keepsakes'; defeated: string; nextEnemy: string; transitionMessage: string | null; choices: Keepsake[] }
-    | { type: 'gameOver'; message: string };
+    | { type: 'gameOver'; message: string }
+    | { type: 'tavernOver'; summary: TavernSummary };
 
 export interface Snapshot {
     joined: boolean;
@@ -64,6 +82,8 @@ export interface Snapshot {
     roomCode: string;
     waiting: boolean; // a classic table with nobody to play yet
     yourTurnAt: number; // when play last came round to you (for the banner)
+    introAt: number; // when the current Tavern Crawl opponent was introduced
+    ability: AbilityMoment | null;
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -95,7 +115,9 @@ let snapshot: Snapshot = {
     leaderboard: [],
     roomCode: '',
     waiting: false,
-    yourTurnAt: 0
+    yourTurnAt: 0,
+    introAt: 0,
+    ability: null
 };
 
 const listeners = new Set<() => void>();
@@ -321,7 +343,21 @@ socket.on('gameStateUpdate', (state: GameState) => {
     const nowYourTurn = snapshot.waiting && !waiting && isMyTurn;
     update({ state, isMyTurn, waiting });
     if (nowYourTurn) announceYourTurn();
+    introduceOpponent(state);
 });
+
+// Each Tavern Crawl opponent gets an entrance (name card, bust sliding in) when they sit
+// down. Remembered for this tab, so a refresh or reconnect doesn't replay it.
+function introduceOpponent(state: GameState) {
+    const run = state.tavernRun;
+    if (state.mode !== 'tavern-crawl' || !run || run.pendingKeepsakeChoices || run.runComplete) return;
+    const key = `${snapshot.roomCode}#${run.encounterNumber}`;
+    try {
+        if (sessionStorage.getItem('tavernIntro') === key) return;
+        sessionStorage.setItem('tavernIntro', key);
+    } catch { /* storage unavailable: introduce anyway */ }
+    update({ introAt: performance.now() });
+}
 
 // Invite link for a classic table: opens the 3D table with the code filled in.
 export function inviteLink(code: string) {
@@ -332,10 +368,14 @@ socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
     update({ leaderboard: Array.isArray(entries) ? entries : [] });
 });
 
+// Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk']);
+
 socket.on('signatureMove', (data: { name: string; ability: string; text: string }) => {
     const sound = ABILITY_SOUNDS[data.ability];
     if (sound) playSound(sound);
-    showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
+    if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
+    else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
 });
 
 socket.on('keepsakeActivated', (data: { name: string; text: string }) => {
@@ -360,15 +400,26 @@ socket.on('offerKeepsakes', (data: Omit<Extract<Modal, { type: 'keepsakes' }>, '
     update({ modal: { type: 'keepsakes', ...data } });
 });
 
-socket.on('gameOver', (data: { message: string }) => {
-    update({ modal: { type: 'gameOver', message: data.message } });
+socket.on('gameOver', (data: { message: string; tavern?: TavernSummary }) => {
+    if (data.tavern) {
+        playSound(data.tavern.won ? 'winner' : 'aww');
+        update({ modal: { type: 'tavernOver', summary: data.tavern } });
+    } else {
+        update({ modal: { type: 'gameOver', message: data.message } });
+    }
 });
 
 socket.on('triggerNewGameSplash', () => {
     // Whoever pressed Play again, the new game has started for everyone at the table.
-    if (snapshot.modal?.type === 'gameOver') update({ modal: null });
+    if (snapshot.modal?.type === 'gameOver' || snapshot.modal?.type === 'tavernOver') update({ modal: null });
     playSound('swoosh');
-    showToast('', 'A new game begins!', 'signature', 2000);
+    if (snapshot.state?.mode === 'tavern-crawl') {
+        // A fresh run: The Molar is introduced again.
+        try { sessionStorage.removeItem('tavernIntro'); } catch { /* storage unavailable */ }
+        introduceOpponent(snapshot.state);
+    } else {
+        showToast('', 'A new game begins!', 'signature', 2000);
+    }
 });
 
 // ---- Player actions ----
@@ -462,6 +513,13 @@ export const actions = {
     react(emoji: string) {
         socket.emit('sendReaction', emoji);
     }
+};
+
+// Development only (see main.tsx): play an opponent's signature moment or entrance on
+// demand, to check how it looks without waiting for it to happen in a game.
+export const preview = {
+    ability(name: string, ability: string) { update({ ability: { name, ability, text: '', at: performance.now() } }); },
+    intro() { update({ introAt: performance.now() }); }
 };
 
 resetTrayForNewTurn();

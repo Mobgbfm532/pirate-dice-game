@@ -354,15 +354,17 @@ footer {
     transform: translateX(-50%);
     filter: brightness(0.82) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6));
     transition: filter 0.4s, transform 0.4s;
-    animation: opponent-in 0.6s ease-out;
+    animation: opponent-in 1.1s cubic-bezier(0.2, 0.8, 0.25, 1);
 }
 .backdrop .opponent.active {
     filter: brightness(1.02) drop-shadow(0 0 22px rgba(255, 158, 64, 0.45));
     transform: translateX(-50%) scale(1.03);
 }
+/* A new opponent rises from behind the table and settles into the seat. */
 @keyframes opponent-in {
-    from { opacity: 0; transform: translateX(-50%) translateY(12%); }
-    to { opacity: 1; transform: translateX(-50%); }
+    0% { opacity: 0; transform: translateX(-50%) translateY(45%) scale(0.92); filter: brightness(0.3); }
+    55% { opacity: 1; transform: translateX(-50%) translateY(-3%) scale(1.02); }
+    100% { opacity: 1; transform: translateX(-50%); }
 }
 
 .opponent-plate {
@@ -497,3 +499,224 @@ footer {
     .reactions button { width: 34px; height: 34px; font-size: 1rem; }
     .hint { min-height: 1em; font-size: 0.8rem; }
 }
+
+/* ---- Tavern Crawl: an opponent's entrance ---- */
+
+/* The name card sits on the table's far edge, under the bust, in place of the nameplate. */
+.encounter-intro {
+    position: fixed;
+    left: var(--table-x, 50%);
+    top: calc(var(--horizon, 30%) - 26px);
+    transform: translateX(-50%);
+    width: min(88vw, 360px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 16px 12px;
+    color: var(--ink);
+    text-align: center;
+    background:
+        radial-gradient(ellipse at center, transparent 55%, rgba(110, 70, 25, 0.25)),
+        url('/art/parchment.webp') center / cover,
+        #f1e2c2;
+    border: 2px solid #8d6e3f;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(224, 180, 76, 0.4);
+    pointer-events: auto;
+    z-index: 3;
+    animation: intro-card 5s ease-out forwards;
+}
+.encounter-intro .encounter { font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: #6d4c2a; }
+.encounter-intro .name { font-size: clamp(1.7rem, 8vw, 2.3rem); font-weight: 700; color: var(--red); line-height: 1.1; }
+.encounter-intro .hearts { font-size: 0.95rem; }
+.encounter-intro .ability {
+    margin-top: 2px;
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: #3e2723;
+    color: var(--gold-bright);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.encounter-intro .intro { margin-top: 4px; font-size: 0.85rem; line-height: 1.3; color: #3b2a1a; }
+@keyframes intro-card {
+    0% { opacity: 0; transform: translateX(-50%) translateY(18px) scale(0.92); }
+    12% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    88% { opacity: 1; transform: translateX(-50%); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+
+/* ---- Tavern Crawl: signature moves ---- */
+
+.ability-moment { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
+.hud:has(.ability-moment) .opponent-plate { visibility: hidden; }
+/* The move's name on the table's far edge, in place of the nameplate (clear of the
+   opponent's face above and the dice and slot rail below). */
+.ability-banner {
+    position: absolute;
+    left: var(--table-x, 50%);
+    top: var(--horizon, 30%);
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 16px;
+    white-space: nowrap;
+    background: linear-gradient(#4a1010, #2a0808);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 22px rgba(255, 138, 101, 0.35);
+    animation: banner-in 2.6s ease-out forwards;
+}
+.ability-banner .who { font-size: 0.9rem; color: var(--parchment-dim); }
+.ability-banner .what { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ffab91; }
+.ability-banner .minus { font-size: clamp(1.4rem, 6.5vw, 2rem); font-weight: 700; color: #e57373; animation: minus-drop 2.6s ease-out forwards; }
+.constellation-blur .ability-banner { background: linear-gradient(#141a3a, #070a1f); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(130, 170, 255, 0.45); }
+.constellation-blur .ability-banner .what { color: #b3c7ff; }
+.the-ace-of-spades .ability-banner { animation-duration: 3.2s; }
+@keyframes banner-in {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+    10% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+    18% { transform: translate(-50%, -50%) scale(1); }
+    85% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+@keyframes minus-drop {
+    0%, 20% { transform: translateY(-16px); opacity: 0; }
+    32% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+/* The Hangman's last card: an Ace of Spades turned over on the far half of the felt. */
+.ace-card {
+    position: absolute;
+    left: var(--table-x, 50%);
+    top: calc(var(--horizon, 30%) + 30px);
+    width: clamp(86px, 24vw, 120px);
+    aspect-ratio: 5 / 7;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #fffdf6, #efe4cc);
+    border: 2px solid #d8c8a2;
+    border-radius: 9px;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+    color: #1a1a1a;
+    font-family: Georgia, serif;
+    animation: ace-flip 3.2s ease-out forwards;
+}
+.ace-card .pip { font-size: clamp(3rem, 13vw, 4.4rem); line-height: 1; }
+.ace-card .corner { position: absolute; top: 6px; left: 8px; font-size: 0.95rem; font-weight: 700; line-height: 1; text-align: center; }
+.ace-card .corner.bottom { top: auto; left: auto; bottom: 6px; right: 8px; transform: rotate(180deg); }
+@keyframes ace-flip {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-40px) rotateY(180deg) rotateZ(-14deg) scale(0.6); }
+    22% { opacity: 1; transform: translateX(-50%) translateY(0) rotateY(0) rotateZ(-4deg) scale(1.08); }
+    30% { transform: translateX(-50%) rotateZ(-4deg) scale(1); }
+    85% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) rotateZ(-4deg) scale(1); }
+}
+
+/* ---- Tavern Crawl: keepsakes dealt as cards ---- */
+
+.keepsake-offer {
+    width: min(100%, 520px);
+    max-height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0 8px;
+    text-align: center;
+}
+.keepsake-offer h2 { margin: 0; font-size: clamp(1.3rem, 5.5vw, 1.7rem); color: var(--gold-bright); text-shadow: 0 2px 8px #000; }
+.next-up { margin: 0; display: flex; align-items: center; gap: 8px; color: var(--parchment); }
+.mini-portrait {
+    display: inline-block;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background-color: #1d120a;
+    background-repeat: no-repeat;
+    flex: none;
+}
+.keepsake-cards { display: flex; gap: 10px; justify-content: center; width: 100%; padding-top: 12px; }
+.keepsake-card {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 160px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    color: var(--ink);
+    background:
+        radial-gradient(ellipse at center, transparent 55%, rgba(110, 70, 25, 0.25)),
+        url('/art/parchment.webp') center / cover,
+        #f1e2c2;
+    border: 2px solid #8d6e3f;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), inset 0 0 0 3px rgba(141, 110, 63, 0.25);
+    animation: deal 0.45s ease-out both;
+    transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s, filter 0.18s;
+}
+.keepsake-card .icon { font-size: clamp(1.8rem, 8vw, 2.4rem); line-height: 1.2; }
+.keepsake-card strong { font-size: clamp(0.95rem, 4vw, 1.1rem); color: var(--red); line-height: 1.15; }
+.keepsake-card .text { font-size: clamp(0.72rem, 3.2vw, 0.85rem); line-height: 1.3; color: #3b2a1a; }
+.keepsake-card.picked {
+    transform: translateY(-12px) scale(1.04);
+    border-color: var(--gold);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.6), 0 0 0 3px var(--gold-bright), 0 0 26px rgba(255, 213, 79, 0.5);
+}
+.keepsake-card.passed { opacity: 0.6; filter: grayscale(0.4); }
+.keepsake-offer .take { min-width: 220px; }
+.keepsake-offer .take:disabled { filter: grayscale(0.7) brightness(0.75); }
+@keyframes deal {
+    from { opacity: 0; transform: translateY(40px) rotate(-6deg) scale(0.85); }
+    to { opacity: 1; transform: none; }
+}
+
+/* ---- Tavern Crawl: the end of a run ---- */
+
+.run-over { gap: 10px; }
+.run-over.won h1 { color: #b8860b; text-shadow: 0 2px 0 rgba(255, 213, 79, 0.5); }
+.crawl-path { list-style: none; margin: 4px 0; padding: 0; display: flex; justify-content: center; gap: 8px; }
+.crawl-path li { position: relative; }
+.crawl-path .mini-portrait { width: 44px; height: 44px; }
+.crawl-path .unmet .mini-portrait { filter: grayscale(1); opacity: 0.55; border-color: #b39461; }
+.crawl-path .fell .mini-portrait { border-color: var(--red); }
+.crawl-path .mark {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 20px;
+    color: #fff;
+}
+.crawl-path .mark:empty { display: none; }
+.crawl-path .beaten .mark { background: var(--green); }
+.crawl-path .fell .mark { background: var(--red); }
+.run-over .gold { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.run-over .gold .coin { font-size: 1.6rem; }
+.run-over .gold .amount { font-size: 2.6rem; font-weight: 700; color: #8a5a00; }
+.run-over .gold .unit { font-size: 1.1rem; color: #6d4c2a; }
+.gold-rows { margin: 0; display: grid; gap: 2px; font-size: 0.95rem; }
+.gold-rows div { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(109, 76, 42, 0.35); padding: 1px 4px; }
+.gold-rows dt { color: #6d4c2a; }
+.gold-rows dd { margin: 0; font-weight: 700; }
+.leaderboard h2 { font-size: 1.1rem; margin-bottom: 4px; }
+.leaderboard ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 0.95rem; }
+.leaderboard li { display: flex; gap: 8px; padding: 2px 8px; border-radius: 6px; }
+.leaderboard li.me { background: rgba(224, 180, 76, 0.35); font-weight: 700; }
+.leaderboard .rank { width: 1.4em; color: #6d4c2a; text-align: right; }
+.leaderboard .who { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard .gold-amount { color: #8a5a00; font-weight: 700; }

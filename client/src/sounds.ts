@@ -151,7 +151,14 @@ export async function renderImpacts(impacts: Impacts, seconds: number, sampleRat
     return (await ctx.startRendering()).getChannelData(0);
 }
 
-let muted = false;
+// Remembered on this device, so a muted phone stays quiet next time.
+function readMuted() {
+    try { return localStorage.getItem('tavernMuted') === '1'; } catch { return false; }
+}
+
+let muted = readMuted();
+music.muted = muted;
+ambience.muted = muted;
 
 export function playSound(name: SoundName, playbackRate = 1) {
     if (muted) return;
@@ -179,6 +186,7 @@ export function setMuted(value: boolean) {
     muted = value;
     music.muted = value;
     ambience.muted = value;
+    try { localStorage.setItem('tavernMuted', value ? '1' : '0'); } catch { /* storage unavailable */ }
     if (!value) startMusic();
 }
 

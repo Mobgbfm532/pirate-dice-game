@@ -593,6 +593,7 @@ function getTavernScoreSummary(room, completedRun = false) {
 
     return {
         totalGold,
+        breakdown: { progress: progressGold, lives: lifeBonus, restraint: restraintBonus, perfect: perfectBonus },
         lines: [
             `Gold earned: ${totalGold}`,
             `Progress: ${progressGold}`,
@@ -600,6 +601,22 @@ function getTavernScoreSummary(room, completedRun = false) {
             `Keepsake restraint bonus: ${restraintBonus}`,
             `Perfect 24 bonus: ${perfectBonus}`
         ]
+    };
+}
+
+// What the 3D client's end-of-run screen shows: how far the run got and the gold earned.
+function getTavernOverSummary(room, humanName, scoreSummary, won) {
+    let index = Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1);
+    return {
+        won,
+        name: humanName,
+        defeated: room.tavernRun.stats.encountersDefeated,
+        encounters: TAVERN_ENCOUNTERS.map(e => e.name),
+        fellTo: won ? null : TAVERN_ENCOUNTERS[index].name,
+        gold: scoreSummary.totalGold,
+        breakdown: scoreSummary.breakdown,
+        stats: room.tavernRun.stats,
+        keepsakes: room.tavernRun.keepsakes.map(k => k.name)
     };
 }
 
@@ -833,7 +850,7 @@ function evaluateTavernRound(roomCode) {
         room.tavernRun.runComplete = true;
         io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
         emitState(roomCode);
-        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?` });
+        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
         return;
     }
 
@@ -846,7 +863,7 @@ function evaluateTavernRound(roomCode) {
             room.tavernRun.runComplete = true;
             io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
             emitState(roomCode);
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}` });
+            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
         }
 

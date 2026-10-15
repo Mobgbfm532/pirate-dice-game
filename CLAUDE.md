@@ -93,11 +93,15 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 - **Paths:** the session scratchpad path is too long for PowerShell/Git file arguments. Pipe
   content or use short paths (e.g. a temp file inside `.git/`). Git lives at
   `C:\Program Files\Git` (PowerShell may lack it on PATH; the Bash tool has it).
-- **Dev test hook:** in dev builds `window.__game = { actions, store, table, simulateRoll,
-  renderImpacts }` drives games from scripts. It is excluded from production builds (verify
+- **Dev test hook:** in dev builds `window.__game = { actions, preview, store, table, simulateRoll,
+  renderImpacts }` drives games from scripts (`preview.ability(name, move)` / `preview.intro()`
+  replay a Tavern Crawl moment on demand). It is excluded from production builds (verify
   with a grep of `dist`).
-- **Browser pane quirks:** a hidden pane pauses animation (rAF), so long live tests need the
-  pane visible; the first screenshot after a reload often shows the table undrawn. Take another.
+- **Silent browser tests:** the user asked for no sound when testing. Set
+  `localStorage.tavernMuted = "1"` before joining (mute is remembered per device) and stub
+  `HTMLMediaElement.prototype.play`.
+- **Browser pane quirks:** a hidden pane pauses animation (rAF and CSS animations; screenshots go
+  stale), so visual checks need the pane visible; the first screenshot after a reload often shows the table undrawn. Take another.
   After changing the emulated viewport, reload (the canvas keeps its old size otherwise).
 - **React Three Fiber:** never pass freshly created objects (e.g. `new Vector3`) as props on
   every render; R3F re-applies them and snaps meshes (this caused locked dice to jitter).
@@ -138,10 +142,12 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    service. Fix anything Render-specific (build memory, websockets) as it appears.
 2. **Tune by ear and feel on real phones:** dice sound weight/volume, roll length (~2.2s),
    tap targets, camera framing on other phone sizes.
-3. **Tavern Crawl polish:** an intro moment per opponent (bust slides in, name card), keepsake
-   choice as cards, visible abilities (Klarg's hand taking the die, Rokr's constellation
-   effect, Hangman's Ace of Spades, Jaguar's Smooth Talk), a proper run-over/victory screen
-   with gold breakdown and the leaderboard.
+3. **Tavern Crawl polish (first pass done, Oct 2026):** opponent entrance (bust rises, name
+   card), keepsakes dealt as cards (tap, then Take), signature moves on the table (Klarg's die
+   swept to his side, Rokr's constellations over blurred dice, the Hangman's Ace card,
+   Jaguar's -3), and a run-over/victory screen (opponents beaten, gold breakdown, leaderboard).
+   Next: the user's feedback on real phones; optional art (`docs/art-direction.md` "Wanted").
+   Klarg's steal motion was not seen in a screenshot yet.
 4. **The big moments:** perfect 24 (confetti, camera swoop, sound) and the devil/three-6s
    effect, done the user's way (ask first).
 5. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.

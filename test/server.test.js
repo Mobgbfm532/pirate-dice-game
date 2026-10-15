@@ -163,6 +163,14 @@ test('a Tavern Crawl run plays through to the end', async () => {
     autoPlay(hero, offer => hero.emit('chooseKeepsake', offer.choices[0].id));
     const over = await waitFor(hero, 'gameOver', () => true, 60000);
     assert.match(over.message, /Gold earned: \d+/);
+    // The 3D client's end-of-run screen reads this summary.
+    const t = over.tavern;
+    assert.equal(t.name, 'Hero');
+    assert.equal(t.encounters.length, 5);
+    assert.equal(t.won, t.defeated === 5);
+    assert.equal(t.fellTo, t.won ? null : t.encounters[t.defeated]);
+    const { progress, lives, restraint, perfect } = t.breakdown;
+    assert.equal(progress + lives + restraint + perfect, t.gold);
 });
 
 // Times in the server are scaled by GAME_TIME_SCALE (0.01): the 30s turn grace is 0.3s
