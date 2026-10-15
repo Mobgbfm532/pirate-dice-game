@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 const Rules = require('./shared/rules');
 
 const BOT_ID = 'BOT_MOLAR';
@@ -1101,7 +1102,13 @@ io.on('connection', (socket) => {
 function start(port = process.env.PORT || 3000) {
     return new Promise(resolve => {
         http.listen(port, () => {
-            console.log(`Server is running on port ${http.address().port}`);
+            let actualPort = http.address().port;
+            console.log(`Server is running on port ${actualPort}`);
+            // The PC's address on the local network changes from time to time, so print
+            // the links to open on a phone connected to the same Wi-Fi.
+            Object.values(os.networkInterfaces()).flat()
+                .filter(net => net && net.family === 'IPv4' && !net.internal && !net.address.startsWith('169.254.'))
+                .forEach(net => console.log(`On your Wi-Fi: http://${net.address}:${actualPort}/next/`));
             resolve(http);
         });
     });
