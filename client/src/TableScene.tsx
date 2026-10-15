@@ -12,6 +12,7 @@ const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
 const nearPoint = new THREE.Vector3(0, 0, NEAR_EDGE_Z);
 const projected = new THREE.Vector3();
 const railEnd = new THREE.Vector3(TRAY.maxX + 0.45, 0, SLOT_ROW_Z);
+const leanAim = new THREE.Vector3();
 
 // Frames the table on any screen shape. It solves for the camera distance and aim so the
 // table's far edge sits a set way down the screen (the tavern backdrop fills the space
@@ -63,22 +64,54 @@ function CameraRig() {
             cam.position.set(0, 10, 8);
         }
         let distance = THREE.MathUtils.clamp(cam.position.distanceTo(lookAt.current) || minDistance, minDistance, minDistance * 4);
+        // Moves the aim along the table so the given point lands at screen height `target`.
+        const shiftAim = (aim: THREE.Vector3, point: THREE.Vector3, target: number, span: number) => {
+            aim.z = THREE.MathUtils.clamp(
+                aim.z + (screenY(point) - target) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span),
+                TABLE_FAR_EDGE_Z, NEAR_EDGE_Z + 3
+            );
+        };
         for (let i = 0; i < 6; i++) {
             place(distance);
             const far = screenY(farPoint), near = screenY(nearPoint);
             const span = near - far;
             if (!(span > 0.01)) break;
-            distance = THREE.MathUtils.clamp(distance * (span / (bottom - top)), minDistance, minDistance * 4);
-            lookAt.current.z = THREE.MathUtils.clamp(
-                lookAt.current.z + ((far + near) / 2 - (top + bottom) / 2) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span),
-                TABLE_FAR_EDGE_Z, NEAR_EDGE_Z + 3
-            );
+            const wanted = distance * (span / (bottom - top));
+            distance = THREE.MathUtils.clamp(wanted, minDistance, minDistance * 4);
+            if (wanted >= minDistance) {
+                // It fits: centre the table in its space.
+                lookAt.current.z = THREE.MathUtils.clamp(
+                    lookAt.current.z + ((far + near) / 2 - (top + bottom) / 2) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span),
+                    TABLE_FAR_EDGE_Z, NEAR_EDGE_Z + 3
+                );
+            } else {
+                // Narrow phones: the table can't shrink any further (the dice must stay big
+                // enough to tap), so it's taller than its space. Never let the slot rail slide
+                // under the controls: pin it just above them and let the tavern give way.
+                shiftAim(lookAt.current, nearPoint, bottom, span);
+            }
         }
 
-        // Lean in slowly while dice are in the air during a suspense roll.
+        // Lean in slowly while dice are in the air during a suspense roll, keeping the slot
+        // rail where it is (zooming about the middle would push it under the controls).
         const suspense = table.roll && table.roll.speed < 1 ? 1 : 0;
         drift.current += (suspense - drift.current) * Math.min(1, delta * 2);
-        place(distance * (1 - drift.current * 0.12));
+        if (drift.current > 0.001) {
+            const nearY = screenY(nearPoint), span = nearY - screenY(farPoint);
+            const aim = leanAim.copy(lookAt.current);
+            const leaned = distance * (1 - drift.current * 0.12);
+            for (let i = 0; i < 3 && span > 0.01; i++) {
+                cam.position.copy(direction).multiplyScalar(leaned).add(aim);
+                cam.lookAt(aim);
+                cam.updateMatrixWorld();
+                shiftAim(aim, nearPoint, nearY, span);
+            }
+            cam.position.copy(direction).multiplyScalar(leaned).add(aim);
+            cam.lookAt(aim);
+            cam.updateMatrixWorld();
+        } else {
+            place(distance);
+        }
 
         layoutBackdrop(screenY(farPoint) * size.height, size.width);
         projected.copy(railEnd).project(cam);

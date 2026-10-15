@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
 import { actions, store, BOT_ID, type GameState, type Snapshot } from './game';
 import { Rules } from './rules';
@@ -288,19 +288,21 @@ function Modals({ snap }: { snap: Snapshot }) {
 }
 
 // Reports how much of the bottom of the screen the controls cover, for the camera.
+// A callback ref, because the footer only appears after joining (the HUD shows the start
+// screen first), so a mount-time effect would never see it.
 function useFooterInset() {
-    const ref = useRef<HTMLElement>(null);
-    useEffect(() => {
-        const el = ref.current;
+    const cleanup = useRef<(() => void) | null>(null);
+    return useCallback((el: HTMLElement | null) => {
+        cleanup.current?.();
+        cleanup.current = null;
         if (!el) return;
         const measure = () => { screenInsets.bottom = Math.max(0, window.innerHeight - el.getBoundingClientRect().top); };
         const observer = new ResizeObserver(measure);
         observer.observe(el);
         window.addEventListener('resize', measure);
         measure();
-        return () => { observer.disconnect(); window.removeEventListener('resize', measure); screenInsets.bottom = 0; };
+        cleanup.current = () => { observer.disconnect(); window.removeEventListener('resize', measure); screenInsets.bottom = 0; };
     }, []);
-    return ref;
 }
 
 export function Hud() {

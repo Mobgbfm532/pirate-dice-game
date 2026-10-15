@@ -95,6 +95,10 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   After changing the emulated viewport, reload (the canvas keeps its old size otherwise).
 - **React Three Fiber:** never pass freshly created objects (e.g. `new Vector3`) as props on
   every render; R3F re-applies them and snaps meshes (this caused locked dice to jitter).
+- **Nothing may cover the dice or the slot rail.** On phones the camera fits the table above
+  the footer using its measured height (`screenInsets.bottom`); on narrow screens, where the
+  table can't shrink further, it pins the rail above the controls and the tavern gives way.
+  Check at ~360x640 and ~384x800 after any HUD or camera change.
 - **Camera solve** carries state across frames: guard against non-finite values and ignore
   implausible layout measurements (first frame), or the table vanishes for good.
 - **AI art** usually arrives with a painted checkerboard instead of transparency; the art
@@ -110,20 +114,20 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 - **Phase 2 (in progress, branch `phase-2-3d-prototype`):** the 3D table at `/next`: physics
   dice, all painted art, tavern backdrop and opponent busts, Tavern Crawl, multiplayer with
   invites and reconnection, phone layout, score to beat, synthesized dice sound. Pushed up to
-  `8ae57ce`; **later commits are local only** (push when the user agrees).
+  `9ad1af5`; **later commits are local only** (push when the user agrees).
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
-- **Render:** the existing live service sits in "My project". A test service
-  **`pirate-dice-next`** (branch `phase-2-3d-prototype`, build `npm install && npm run build`,
-  start `npm start`) was created but never deployed because of a Render outage (builds/deploys
-  paused). Five duplicate services were created by mistake during that outage; the user was
-  asked to delete them (`pirate-dice-next-3D`, `-3D-MOB`, `mY-pirate-dice-next-3D-MOB`,
-  `pirate-dice-game-slow-3D`, `pirate-dice-next-mobgb`).
+- **Render:** the existing live service sits in "My project". The test service
+  **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
+  `npm install && npm run build`, start `npm start`) is live at
+  https://pirate-dice-next.onrender.com/next (first deployed 15 Oct 2026). The duplicate
+  services from the earlier outage are deleted.
 - Free Render: instances sleep after ~15 min idle; `leaderboard.json` resets on each deploy.
 
 ## Next steps (in order)
 
-1. **Ship what exists.** Push the branch; when Render is healthy, deploy `pirate-dice-next`
-   and have the user play two phones over mobile data. Then: set the live service's build
+1. **Ship what exists.** `pirate-dice-next` is deployed; the user is testing on phones (first
+   finding: the slot rail was under the player chips, fixed). Next: two phones over mobile
+   data. Then: set the live service's build
    command to `npm install && npm run build`, user merges the PR to `main`, delete the test
    service. Fix anything Render-specific (build memory, websockets) as it appears.
 2. **Tune by ear and feel on real phones:** dice sound weight/volume, roll length (~2.2s),
