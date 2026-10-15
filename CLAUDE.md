@@ -72,6 +72,12 @@ npm --prefix client test       # client tests (vitest)
 npm --prefix client run art    # regenerate processed art from art/
 ```
 
+**Deploying to the Render test service:** use the `render-deploy` subagent
+(`.claude/agents/render-deploy.md`, local to this PC because `.claude/` is gitignored), and only
+after the user says yes to pushing. It tests, pushes `phase-2-3d-prototype`, watches the
+deploy in Claude in Chrome, reads the logs if it fails and smoke-tests `/next`. It never
+touches `main` or the live service.
+
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Klarg … 4 = Jaguar, for testing), `GAME_SERVER` (dev proxy target).
 
