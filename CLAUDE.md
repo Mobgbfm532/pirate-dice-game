@@ -13,7 +13,8 @@ A 24 restores a life. Last player with lives wins.
 
 Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN` = Tavern
 Crawl (five opponents in a row: The Molar, Klarg, Rokr, The Hangman, Jaguar Cantona, each
-with an ability; keepsakes between fights; gold and a global leaderboard).
+with an ability; Thom's Thonics shop between fights; gold and a global leaderboard). See
+"Tavern Crawl now" below.
 
 ## The person
 
@@ -23,29 +24,35 @@ with an ability; keepsakes between fights; gold and a global leaderboard).
   (dice colours: red 1, green 6; Tavern Crawl has no commentary pop-ups).
 - Not planned for now: new Devil/Vaelin avatars; the devil (three 6s) effect is to be redone
   "another way" later; ask before designing it.
+- Wants **no sound** when Claude tests in a browser. Sets the game's numbers themself (e.g.
+  Thonic prices) and the names ("Fizzy Thomic" is a deliberate pun).
 - Pushing feature branches has been approved before; **merging to `main` deploys the live
   game: the user does that via a GitHub PR.** Ask before any push.
 
 ## Architecture
 
 The **server is authoritative**: it rolls (crypto RNG), validates every action, scores from
-the dice, runs the bots and the Tavern Crawl. Browsers only send `rollDice`, `toggleDie(id)`,
-`endTurn` and render what comes back. Two clients share one server:
+the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`rollDice`,
+`toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `leaveShop`,
+`drinkThonic(slot, dieId?)`) and render what comes back. Two clients share one server:
 
 | Path | What |
 |---|---|
-| `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl, bots, reconnection grace, leaderboard. Exports `start`, `rooms` for tests. |
-| `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), bot strategy. |
+| `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, `GOLD`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
+| `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
+| `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from Klarg on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
 | `client/` | The 3D client (Vite + React + React Three Fiber + cannon-es), built to `client/dist`, served at **`/next`**. |
-| `test/` | `node --test`: rules unit tests and end-to-end server tests with socket.io-client. |
+| `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks. |
 | `art/` | Untouched AI originals. `client/scripts/process-art.mjs` (`npm --prefix client run art`) makes game files in `client/public/{art,textures}`. |
 | `docs/art-direction.md` | Style, palette, asset list + status, prompt pack. |
 
 Key socket events (server → client): `gameStateUpdate` (players, order, lives, mode, tavern
-run), `turnState {turn, event}` (event `toggle`/`finalized`), `diceRolled {turn,
-preRollCallout, suspense, devil, animationMs, throwSeed}`, `roundResult`, `signatureMove`,
-`keepsakeActivated`, `offerKeepsakes`, `gameOver`, `triggerNewGameSplash`.
+run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finalized`),
+`diceRolled {turn, preRollCallout, suspense, devil, animationMs, throwSeed, rerolled?}`,
+`roundResult`, `signatureMove`, `offerShop`, `thonicUsed`, `keepsakeActivated`, `gameOver`
+(with a `tavern` summary at the end of a run), `triggerNewGameSplash`. (`offerKeepsakes` /
+`chooseKeepsake` remain for keepsakes from events, step 3.)
 
 ### 3D client (`client/src`)
 - `game.ts`: socket + store (`store.get/subscribe`), ordered task queue (rolls animate before
@@ -55,12 +62,16 @@ preRollCallout, suspense, devil, animationMs, throwSeed}`, `roundResult`, `signa
   When dice stop, faces are relabelled (`offsets`) so the server's values are on top. Seeded
   by the server's `throwSeed`, so every screen sees the identical tumble. Records `impacts`.
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
-  tone, through a compressor). Other SFX/music are the classic mp3s from `public/`.
+  tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
+  the classic mp3s from `public/`. Mute is remembered (`localStorage.tavernMuted`).
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls; landscape uses
   `setViewOffset` to leave a right column for the Roll button), lights, tray, brass plates.
-- `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down.
+- `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
+  Klarg's steal motion, Rokr's constellations.
 - `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), chips, opponent nameplate, score to
-  beat, controls, modals. `Backdrop.tsx`: tavern image + opponent bust behind the table.
+  beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
+  and Thonic shelf (`drinkable()`), Thom's full-screen shop scene (`ThomShop`), the run-over
+  screen. `Backdrop.tsx`: tavern image + opponent bust behind the table.
 
 ## Commands
 
@@ -103,8 +114,9 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   content or use short paths (e.g. a temp file inside `.git/`). Git lives at
   `C:\Program Files\Git` (PowerShell may lack it on PATH; the Bash tool has it).
 - **Dev test hook:** in dev builds `window.__game = { actions, preview, store, table, simulateRoll,
-  renderImpacts }` drives games from scripts (`preview.ability(name, move)` / `preview.intro()`
-  replay a Tavern Crawl moment on demand). It is excluded from production builds (verify
+  renderImpacts, renderCorkPop }` drives games from scripts (`preview.ability(name, move)` /
+  `preview.intro()` replay a Tavern Crawl moment on demand; the render functions produce
+  sound samples offline, e.g. to save a WAV in the gitignored `previews/` for the user). It is excluded from production builds (verify
   with a grep of `dist`).
 - **Silent browser tests:** the user asked for no sound when testing. Set
   `localStorage.tavernMuted = "1"` before joining (mute is remembered per device) and stub
@@ -129,68 +141,85 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (October 2026)
+## Status (16 October 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
-- **Phase 2 (in progress, branch `phase-2-3d-prototype`):** the 3D table at `/next`: physics
-  dice, all painted art, tavern backdrop and opponent busts, Tavern Crawl, multiplayer with
-  invites and reconnection, phone layout, score to beat, synthesized dice sound. Pushed up to
-  `9ad1af5`; **later commits are local only** (push when the user agrees).
+- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed; latest `0b69aa8`):** the
+  3D table at `/next`: physics dice, all painted art, tavern backdrop and opponent busts,
+  multiplayer with invites and reconnection, phone layout, score to beat, synthesized dice
+  sound, and the reworked Tavern Crawl (below). 63 server/rules/strategy tests + 10 client tests.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
-  `npm install && npm run build`, start `npm start`) is live at
-  https://pirate-dice-next.onrender.com/next (first deployed 15 Oct 2026). The duplicate
-  services from the earlier outage are deleted.
-- Free Render: instances sleep after ~15 min idle; `leaderboard.json` resets on each deploy.
+  `npm install && npm run build`, start `npm start`) is at
+  https://pirate-dice-next.onrender.com/next and has every pushed commit. Free tier: it sleeps
+  after ~15 min idle (first visit then takes up to ~50 s); `leaderboard.json` resets on each
+  deploy.
+
+## Tavern Crawl now
+
+Design doc (shared with the user, kept current):
+https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
+
+- **Fights:** five opponents in order (`PLACES.tavern`, built as data so later places with
+  tougher opponents are new entries). Hearts reset to 3 each fight. **Turns alternate**
+  (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
+  name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
+  Rokr's constellations, the Hangman's Ace card, Jaguar's -3); no commentary pop-ups.
+- **Opponents' play:** the Molar plays simply (`planBotLocks`), as a teacher. From Klarg on
+  they play their best (`shared/strategy.js`): the keep with the best chance of beating the
+  player's score (ties count half), of a valid hand if the player dusted, or, going first, of
+  leaving a score a sensible player fails to beat; the Hangman counts on his Ace at one life.
+  Tables (~0.1 s each) are warmed after the server starts. Much stronger at high scores (to
+  beat 20: 53% vs 35% before).
+- **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
+  left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and
+  goes on the leaderboard. The run-over screen shows the breakdown.
+- **Thom's Thonics:** after each win, a full-screen scene (`.thom-scene`; Thom's bust from
+  `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
+  shows 3 Thonics (Healing + 2 random, `pickThomStock`). A shelf holds up to 3, carried
+  between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
+  handler; the client's `drinkable()` mirrors it), with a cork pop:
+
+  | Thonic | Price | When | Effect |
+  |---|---|---|---|
+  | Healing | 120 | before rolling, once a heart is lost | +1 heart |
+  | Last Gasp | 250 | works by itself | a round that would take your last heart leaves you on 1 |
+  | Fizzy Thomic | 80 | after a roll showing 1s | those 1s roll again (`rerollOnes`, `diceRolled.rerolled`) |
+  | Second Thoughts | 180 | after keeping a die | a kept die goes back, free roll (`putBackDie`, `turn.freeRoll`, client `putBackSlot`) |
+  | Steady | 150 | any time in the turn | dust counts as 0 at End Turn (`turn.steady`) |
+  | Clear-Eye | 100 | before rolling, vs an ability | opponent's ability off this round (`clearEyeRound`) |
+
+- **Keepsakes:** no longer after every win; the code remains (`TAVERN_KEEPSAKES`, cards UI) for
+  step 3's events and Jaguar's drop. The classic page at `/` walks straight past Thom.
+- **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
+  single last die (Second Thoughts can reopen the hand). Klarg's steal motion has not been
+  seen on screen yet (the preview doesn't move dice).
 
 ## Next steps (in order)
 
-1. **Ship what exists.** `pirate-dice-next` is deployed; the user is testing on phones (first
-   finding: the slot rail was under the player chips, fixed). Next: two phones over mobile
-   data. Then: set the live service's build
-   command to `npm install && npm run build`, user merges the PR to `main`, delete the test
-   service. Fix anything Render-specific (build memory, websockets) as it appears.
-2. **Tune by ear and feel on real phones:** dice sound weight/volume, roll length (~2.2s),
-   tap targets, camera framing on other phone sizes.
-3. **Tavern Crawl rework: Thom's Thonics and events** (design doc: https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094).
-   **Step 1 done (Oct 2026):** no keepsake after each win; gold goes into a purse during the run
-   (wins, hearts left, perfect 24s; `GOLD` in server.js) and the purse is the final score;
-   Thom's cart opens after each win (`tavernRun.shop`, `buyThonic` / `leaveShop`); a shelf of up
-   to 3 Thonics (`THONICS`, `drinkThonic` on your turn before rolling; Healing +1 heart, Last
-   Gasp keeps you on 1 by itself); `PLACES` holds the tavern's opponents and stock. The classic
-   page skips the shop. **Step 2 done (Oct 2026):** six Thonics (prices: Healing 120, Last Gasp
-   250, Fizzy Thomic 80, Second Thoughts 180, Steady 150, Clear-Eye 100); the cart shows 3 per
-   visit (Healing + 2 random, `pickThomStock`). Each drinks at its own moment (see the
-   `drinkThonic` handler; the client's `drinkable()` mirrors it): Fizzy rerolls active 1s
-   (`Rules.rerollOnes`, `diceRolled.rerolled`), Second Thoughts puts a kept die back with a free
-   roll (`Rules.putBackDie`, `turn.freeRoll`; client `putBackSlot` pick mode), Steady makes dust
-   0 at End Turn (`turn.steady`), Clear-Eye blocks the opponent's ability for the round
-   (`tavernRun.clearEyeRound` in `canUseTavernAbility`). Drinking plays a synthesized cork pop
-   (`playCorkPop`; dev `__game.renderCorkPop`). Thom says "What ya havin'?". Next: step 3 (events behind two doors: Thom, Shrine to the Lady, Dice Den, Hooded
-   Stranger, Pickpocket; keepsakes from events + Jaguar's drop), step 4 (balance prices).
-   Thom's shop is a full-screen scene (`.thom-scene`): his bust (`art/bust-thom.jpg`, cut out by
-   `cutOutFlat` for flat-magenta art) rises in above a walnut counter; no tavern or table.
-4. **Tavern Crawl polish (first pass done, Oct 2026):** opponent entrance (bust rises, name
-   card), keepsakes dealt as cards (tap, then Take), signature moves on the table (Klarg's die
-   swept to his side, Rokr's constellations over blurred dice, the Hangman's Ace card,
-   Jaguar's -3), and a run-over/victory screen (opponents beaten, gold breakdown, leaderboard).
-   Next: the user's feedback on real phones; optional art (`docs/art-direction.md` "Wanted").
-   Klarg's steal motion was not seen in a screenshot yet. Signature moves wait in the client's
-   task queue until the dice stop (Reach Around 0.5s after). **Turns alternate** in a Tavern
-   Crawl fight (player first in odd rounds, opponent in even). **Opponents from Klarg on play
-   their best** (`shared/strategy.js`): an exact solution over all dice outcomes picks the keep
-   with the best chance of beating the player's score (ties count half), of a valid hand if the
-   player dusted, or, going first, of leaving a score a sensible player fails to beat; the
-   Hangman counts on his Ace at one life. Tables (~0.1 s each) are warmed after the server starts.
-   The Molar (solo games and the first fight) keeps the simple `planBotLocks` play, as a teacher.
-   Much stronger at high scores (to beat 20: 53% vs 35% before), so step 4 balancing matters.
-5. **The big moments:** perfect 24 (confetti, camera swoop, sound) and the devil/three-6s
-   effect, done the user's way (ask first).
-6. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
-7. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+1. **User plays the test site on the phone** (a full Tavern Crawl, then two phones over mobile
+   data). Collect feedback; fix what comes up. Needs the user.
+2. **Tavern Crawl step 3: events between fights.** After each win, choose one of two doors:
+   Thom's cart, the Shrine to the Lady (a free Healing Thonic or some gold), the Dice Den
+   (bet gold on one roll), the Hooded Stranger (a keepsake for a heart), the Pickpocket (lose
+   gold unless you pay to chase him). Keepsakes come back as rare rewards from events, and
+   Jaguar drops one at the end (carried into the next place once there is one).
+3. **Step 4: balance.** Simulate many runs with the real opponents (`shared/strategy.js`) and a
+   sensible player buying Thonics, to set prices and gold amounts; then tune by feel with the
+   user. The stronger opponents make this matter.
+4. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+   command to `npm install && npm run build`; the user merges (that deploys the live game);
+   then delete the test service. Fix anything Render-specific as it appears.
+5. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
+   (more important now that gold is the score).
+6. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
    classic page reachable for a while), update the PWA manifest/service worker, retire the old
    client code in `public/index.html`.
-8. **Later / nice to have:** smaller bundle (lazy-load three.js), compressed audio (the 9.5 MB
-   ambience track), spectator mode, emoji reactions floating over the table, more opponents.
+7. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
+   perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
+8. **Later / nice to have:** optional art (`docs/art-direction.md` "Wanted": Klarg's hand,
+   keepsake pictures, Ace card), new places with tougher opponents (the roguelite), smaller
+   bundle (lazy-load three.js), compressed audio (the 9.5 MB ambience track), spectator mode,
+   emoji reactions floating over the table.
