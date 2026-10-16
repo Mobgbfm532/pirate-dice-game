@@ -325,6 +325,20 @@ footer {
     .player .name { max-width: 5em; font-size: 0.85rem; }
     .side-players { gap: 5px; }
     .side-players .player { padding: 4px 8px 4px 4px; gap: 6px; }
+    /* All six avatars on one row. */
+    .avatars { gap: 4px; }
+    .avatar { width: 42px; height: 42px; }
+}
+
+/* A phone on its side: the start screen is short, so it tightens up to fit without scrolling. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .panel.join { gap: 7px; padding: 12px 18px; }
+    .panel.join h1 { font-size: 1.7rem; }
+    .panel.join .subtitle { display: none; }
+    .panel.join .avatar { width: 42px; height: 42px; }
+    .panel.join input { padding: 8px 12px; }
+    .panel.join .primary, .panel.join .secondary { padding: 8px 14px; font-size: 1rem; }
+    .panel.join .fine { font-size: 0.75rem; }
 }
 
 /* ---- The tavern behind the table (under the transparent 3D canvas) ---- */
@@ -772,8 +786,8 @@ footer {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 44px; /* a comfortable thumb target */
+    height: 44px;
     padding: 0;
     border-radius: 10px;
     background: var(--panel);

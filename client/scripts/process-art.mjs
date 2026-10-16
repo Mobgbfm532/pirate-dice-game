@@ -186,7 +186,7 @@ async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [
 // checkerboard. Flood-fill from the border through anything close to the border's colour,
 // then take the background's tint out of the edge pixels (wispy hair over magenta would
 // otherwise keep a pink fringe).
-function floodFlat(img, tolerance) {
+function floodFlat(img, { tolerance, minRed, minBlue, pocket }) {
     const { data, width, height } = img;
     const border = [];
     for (let x = 0; x < width; x++) border.push(x, (height - 1) * width + x);
@@ -197,7 +197,7 @@ function floodFlat(img, tolerance) {
     // brown cloth in shadow can come close in plain distance, but their blue sits below green.
     const near = p => {
         const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
-        return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && r - g > 45 && b - g > 15;
+        return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && r - g > minRed && b - g > minBlue;
     };
     const mask = new Uint8Array(width * height);
     const stack = [];
@@ -212,7 +212,7 @@ function floodFlat(img, tolerance) {
         if (p < width * (height - 1)) visit(p + width);
     }
     // Pockets of background caught between hair strands: magenta-ish pixels close to the edge.
-    const pocket = 14, pockets = [];
+    const pockets = [];
     for (let p = 0; p < mask.length; p++) {
         if (mask[p] || !near(p)) continue;
         const x = p % width, y = (p - x) / width;
@@ -225,8 +225,12 @@ function floodFlat(img, tolerance) {
     return { mask, bg };
 }
 
-// Pulls magenta out of pixels next to the background: red and blue down towards green.
-function despill(img, mask, radius = 6) {
+// Takes the background's colour back out of pixels near it. Magenta = green plus extra red
+// and blue in the background's own proportions, so the blue excess (which skin, hair and
+// cloth don't have) measures how much background is mixed in, and the matching share of
+// red comes off with it. (Taking equal amounts off left reddish tips on stray hairs.)
+function despill(img, mask, bg, radius) {
+    const redPerBlue = (bg[0] - bg[1]) / Math.max(1, bg[2] - bg[1]);
     const { data, width, height } = img;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         const p = y * width + x;
@@ -238,16 +242,23 @@ function despill(img, mask, radius = 6) {
         }
         if (!edge) continue;
         const i = p * 4, g = data[i + 1];
-        const spill = Math.min(data[i], data[i + 2]) - g;
-        if (spill > 0) { data[i] -= spill; data[i + 2] -= spill; }
+        const spill = data[i + 2] - g;
+        if (spill > 0) { data[i] = Math.max(g, data[i] - spill * redPerBlue); data[i + 2] = g; }
     }
 }
 
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80 } = {}) {
+// Options (all optional):
+//   tolerance  how close (RGB distance) a pixel must be to the background to be cleared (80)
+//   minRed, minBlue  how far red / blue must sit above green for a pixel to count as
+//              background (45, 15); raise them if shaded skin or cloth gets holes
+//   pocket     clears background caught between hair strands up to this many px from the
+//              edge (14)
+//   despillRadius  how far in from the edge the background tint is taken out (6)
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6 } = {}) {
     const img = await readRgba(file);
-    const { mask, bg } = floodFlat(img, tolerance);
+    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket });
     keepMainShape(img, mask);
-    despill(img, mask);
+    despill(img, mask, bg, despillRadius);
     applyMask(img, mask);
     await writePreview(name, img);
     const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());

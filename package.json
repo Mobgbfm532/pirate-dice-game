@@ -8,7 +8,8 @@
     "build": "npm --prefix client ci --include=dev && npm --prefix client run build:deploy",
     "test": "node --test \"test/*.test.js\"",
     "build:client": "npm --prefix client install && npm --prefix client run build",
-    "dev:client": "npm --prefix client run dev"
+    "dev:client": "npm --prefix client run dev",
+    "dev:test-server": "node test/dev-server.js"
   },
   "keywords": [],
   "author": "",

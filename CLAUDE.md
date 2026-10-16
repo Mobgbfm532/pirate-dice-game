@@ -72,11 +72,20 @@ npm --prefix client test       # client tests (vitest)
 npm --prefix client run art    # regenerate processed art from art/
 ```
 
-**Deploying to the Render test service:** use the `render-deploy` subagent
-(`.claude/agents/render-deploy.md`, local to this PC because `.claude/` is gitignored), and only
-after the user says yes to pushing. It tests, pushes `phase-2-3d-prototype`, watches the
-deploy in Claude in Chrome, reads the logs if it fails and smoke-tests `/next`. It never
-touches `main` or the live service.
+**Subagents** (`.claude/agents/`, local to this PC because `.claude/` is gitignored; a session
+started before a file was added won't see it by name, so run a general-purpose agent told to
+read and follow the file):
+- `phone-check`: after any HUD, camera, overlay or full-screen-scene change. Checks 384x780,
+  360x640 and 844x390, muted; reports what covers the dice/rail or runs off screen.
+- `art-import`: when the user sends a painting. Saves the original, cuts out the background
+  (`cutOut` / `cutOutFlat`), checks edges on dark and light, registers it, reports previews.
+- `render-deploy`: deploying to the Render test service, only after the user says yes to
+  pushing. It tests, pushes `phase-2-3d-prototype`, watches the deploy in Claude in Chrome,
+  reads the logs if it fails and smoke-tests `/next`. It never touches `main` or the live service.
+
+`npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
+set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
+`/shelf?ids=healing,lastGasp`, `/purse?n=150`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Klarg … 4 = Jaguar, for testing), `GAME_SERVER` (dev proxy target).
