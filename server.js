@@ -452,12 +452,26 @@ function runBotRoll(roomCode) {
     if (animationMs) botLater(roomCode, key, animationMs + 1000, () => runBotDecision(roomCode));
 }
 
+// What a Tavern Crawl opponent must beat to win the round: the player's finished score, or
+// null if they dusted. undefined while the player hasn't finished (or outside a Tavern Crawl),
+// so the bot plays on as usual. The opponents know your keepsakes: with Velvet Cushion still
+// unused, winning by exactly 1 would only be a tie.
+function getTavernScoreToBeat(room) {
+    if (room.mode !== 'tavern-crawl') return undefined;
+    let humanId = getHumanPlayerId(room);
+    let human = humanId && room.players[humanId];
+    if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
+    if (human.busted) return hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand ? 0 : null;
+    let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
+    return human.score + (cushion ? 1 : 0);
+}
+
 function runBotDecision(roomCode) {
     let room = rooms[roomCode];
     let turn = room.turn;
     let key = turn.key;
     let enemyId = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id : 'molar';
-    let toLock = Rules.planBotLocks(turn, enemyId);
+    let toLock = Rules.planBotLocks(turn, enemyId, getTavernScoreToBeat(room));
 
     toLock.forEach((dieId, index) => botLater(roomCode, key, index * 400, () => performToggle(roomCode, dieId)));
 

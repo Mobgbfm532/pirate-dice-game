@@ -121,7 +121,7 @@ export function Dice() {
                     // Klarg reaches over: the die is plucked up off the felt, hangs there a
                     // moment, then is swept back across the table to his side and gone.
                     const rest = table.rest.get(die.id);
-                    const t = Math.min(1, (now - (table.stolenAt.get(die.id) ?? now)) / STEAL_MS);
+                    const t = Math.min(1, Math.max(0, now - (table.stolenAt.get(die.id) ?? now)) / STEAL_MS);
                     const lift = Math.min(1, t / 0.3);
                     const sweep = Math.max(0, (t - 0.45) / 0.55);
                     const eased = sweep * sweep;

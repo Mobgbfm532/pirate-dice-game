@@ -88,6 +88,9 @@ export interface Snapshot {
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
 
+// How long Klarg waits after the dice stop before reaching over.
+const STEAL_PAUSE_MS = 500;
+
 // Read every frame by the 3D table, so it lives outside React state.
 export const table = {
     roll: null as null | { track: RollTrack; startedAt: number; speed: number; hidden: Set<number> },
@@ -285,7 +288,8 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
                 const pose = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
                 readFrame(track, track.frames - 1, i, pose.position, pose.quaternion);
                 table.rest.set(d.id, pose);
-                if (d.status === 'stolen') table.stolenAt.set(d.id, performance.now());
+                // Klarg waits until every die has stopped, then reaches over a moment later.
+                if (d.status === 'stolen') table.stolenAt.set(d.id, performance.now() + STEAL_PAUSE_MS);
             });
             table.roll = null;
             if (data.devil) { table.devilAt = performance.now(); playSound('devil'); }
@@ -371,11 +375,20 @@ socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
 const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk']);
 
+// The server sends a move while the dice may still be tumbling on screen, so it waits its
+// turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
+// so the name and sound land just as Klarg's hand lifts the die.
 socket.on('signatureMove', (data: { name: string; ability: string; text: string }) => {
-    const sound = ABILITY_SOUNDS[data.ability];
-    if (sound) playSound(sound);
-    if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
-    else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
+    enqueue(done => {
+        const steal = data.ability === 'Reach Around' ? Math.max(0, ...table.stolenAt.values()) - performance.now() : 0;
+        setTimeout(() => {
+            const sound = ABILITY_SOUNDS[data.ability];
+            if (sound) playSound(sound);
+            if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
+            else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
+            done();
+        }, Math.max(0, steal));
+    });
 });
 
 socket.on('keepsakeActivated', (data: { name: string; text: string }) => {

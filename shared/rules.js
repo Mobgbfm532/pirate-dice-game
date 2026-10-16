@@ -266,7 +266,19 @@
         return toLock;
     }
 
-    function planBotLocks(turn, enemyId) {
+    // Would keeping every die on the table right now win the round? `toBeat` is the score the
+    // bot must beat: a number, or null when the other player dusted (any 2-and-4 hand wins).
+    // Extra dice only add points, so keeping them all is the best this roll can do.
+    function keepingAllWins(turn, toBeat) {
+        const kept = turn.dice.map(d => (isActive(d) ? { ...d, status: STATUS.LOCKED } : d));
+        const { has2, has4, score } = scoreDice(kept);
+        return has2 && has4 && (toBeat === null || score > toBeat);
+    }
+
+    // `toBeat` is optional (undefined = the bot doesn't know yet, e.g. it rolls first).
+    // Once the bot already has a winning hand it stops rolling and keeps the lot.
+    function planBotLocks(turn, enemyId, toBeat) {
+        if (toBeat !== undefined && keepingAllWins(turn, toBeat)) return turn.dice.filter(isActive).map(d => d.id);
         const { has2, has4, score } = scoreDice(turn.dice);
         return chooseBotDiceToLock(turn.dice.filter(isActive), has2, has4, score, enemyId);
     }
@@ -274,6 +286,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, viewTurn, chooseBotDiceToLock, planBotLocks
+        stealHighestActiveDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

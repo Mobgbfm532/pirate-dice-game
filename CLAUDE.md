@@ -147,7 +147,10 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    swept to his side, Rokr's constellations over blurred dice, the Hangman's Ace card,
    Jaguar's -3), and a run-over/victory screen (opponents beaten, gold breakdown, leaderboard).
    Next: the user's feedback on real phones; optional art (`docs/art-direction.md` "Wanted").
-   Klarg's steal motion was not seen in a screenshot yet.
+   Klarg's steal motion was not seen in a screenshot yet. Signature moves wait in the client's
+   task queue until the dice stop (Reach Around 0.5s after). Tavern Crawl opponents stop
+   rolling once keeping every die already beats the player (`planBotLocks` with `toBeat`; they
+   allow for an unused Velvet Cushion or Steady Hand Wrap).
 4. **The big moments:** perfect 24 (confetti, camera swoop, sound) and the devil/three-6s
    effect, done the user's way (ask first).
 5. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.

@@ -195,6 +195,26 @@ test('bot always locks at least one die', () => {
     assert.equal(Rules.chooseBotDiceToLock(active, false, false, 0).length, 1);
 });
 
+test('a bot that already beats the score stops rolling and keeps every die', () => {
+    // Rolled 2, 4, 6, 6, 5, 1: keeping all of it scores 18.
+    const turn = Rules.createTurn('BOT');
+    Rules.rollTurn(turn, { rollFace: faces(2, 4, 6, 6, 5, 1) });
+    assert.equal(Rules.planBotLocks(turn, 'klarg', 17).length, 6, 'beats 17: keep the lot');
+    assert.equal(Rules.planBotLocks(turn, 'klarg', null).length, 6, 'the player dusted: any 2 and 4 wins');
+    assert.ok(Rules.planBotLocks(turn, 'klarg', 18).length < 6, 'a tie is not a win: keep playing');
+    assert.ok(Rules.planBotLocks(turn, 'klarg').length < 6, 'no score to beat yet: keep playing');
+    Rules.planBotLocks(turn, 'klarg', 17).forEach(id => Rules.toggleDie(turn, id));
+    assert.equal(turn.finalized, true);
+    assert.deepEqual(turn.outcome, { busted: false, score: 18, suspense: SUSPENSE.NONE, rollCount: 1 });
+});
+
+test('a bot without its 2 and 4 keeps playing whatever the score', () => {
+    const turn = Rules.createTurn('BOT');
+    Rules.rollTurn(turn, { rollFace: faces(6, 6, 6, 6, 5, 2) });
+    assert.equal(Rules.keepingAllWins(turn, 0), false);
+    assert.ok(Rules.planBotLocks(turn, 'jaguar', 0).length < 6);
+});
+
 test('bot plays complete turns without getting stuck', () => {
     let seed = 42;
     const rng = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return (seed % 6) + 1; };
