@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const { io: connect } = require('socket.io-client');
 const Rules = require('../shared/rules');
 const server = require('../server');
+const Strategy = require('../shared/strategy');
 
 let url;
 const clients = [];
@@ -716,4 +717,49 @@ test('Thonics wait while dice are still tumbling', async () => {
     hero.emit('drinkThonic', 0);
     await sleep(40);
     assert.deepEqual(shelfOf(room), ['steady']);
+});
+
+// ---- Turn order and the opponents' play ----
+
+test('in a Tavern Crawl the first turn alternates: player, opponent, player', async () => {
+    const { hero, room } = await tavernTable('Alternator');
+    room.players.BOT_MOLAR.lives = 9; // a long fight, whoever wins the rounds
+    room.players[hero.id].lives = 9;
+    const firsts = [room.roundPlayers[0] === hero.id ? 'player' : 'opponent'];
+    hero.on('gameStateUpdate', s => {
+        const round = s.tavernRun && s.tavernRun.encounterRound;
+        if (round && firsts.length < round && s.roundPlayers.length === 2) firsts[round - 1] = s.roundPlayers[0] === hero.id ? 'player' : 'opponent';
+    });
+    // Listen for the next round before playing this one (its first announcement can arrive in
+    // the same burst as the round result).
+    let myTurn = Promise.resolve();
+    for (let round = 1; round <= 3; round++) {
+        await myTurn;
+        const done = waitFor(hero, 'roundResult', () => true, 5000);
+        myTurn = nextState(hero, s => s.currentTurnId === hero.id && s.tavernRun.encounterRound === round + 1, 8000);
+        await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
+        await done;
+    }
+    myTurn.catch(() => {});
+    assert.deepEqual(firsts.slice(0, 3), ['player', 'opponent', 'player']);
+});
+
+test('from Klarg on, opponents keep what the best-play brain chooses', async () => {
+    // The Hangman (no Ace: he has lives to spare). The player scores 22; he then rolls
+    // 2, 4, 6, 6, 4, 5. Keeping everything makes 21 and loses; the brain keeps the two 6s.
+    const hero = await tavernAgainst(3, 'BestPlay');
+    const room = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hero.id])];
+    room.tavernRun.abilityRound = 99;
+    let keptIds = null;
+    hero.on('diceRolled', d => {
+        if (d.turn.playerId !== 'BOT_MOLAR') return;
+        if (d.turn.rollCount === 1) room.turn.dice.forEach((die, i) => { die.value = [2, 4, 6, 6, 4, 5][i]; });
+        if (d.turn.rollCount === 2 && keptIds === null) keptIds = d.turn.dice.filter(x => x.status === 'permanentlyLocked').map(x => x.id);
+    });
+    const result = waitFor(hero, 'roundResult', () => true, 5000);
+    await playHand(hero, room, [2, 4, 6, 6, 5, 5]); // 22
+    await result;
+    const best = Strategy.bestKeeps([2, 4, 6, 6, 4, 5].map((value, id) => ({ id, value, status: 'active' })), 22);
+    assert.deepEqual(keptIds, best, 'the server kept what the brain chose');
+    assert.ok(best.length < 6, 'not everything (21 would lose)');
 });

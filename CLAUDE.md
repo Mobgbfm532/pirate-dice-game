@@ -178,9 +178,14 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    Jaguar's -3), and a run-over/victory screen (opponents beaten, gold breakdown, leaderboard).
    Next: the user's feedback on real phones; optional art (`docs/art-direction.md` "Wanted").
    Klarg's steal motion was not seen in a screenshot yet. Signature moves wait in the client's
-   task queue until the dice stop (Reach Around 0.5s after). Tavern Crawl opponents stop
-   rolling once keeping every die already beats the player (`planBotLocks` with `toBeat`; they
-   allow for an unused Velvet Cushion or Steady Hand Wrap).
+   task queue until the dice stop (Reach Around 0.5s after). **Turns alternate** in a Tavern
+   Crawl fight (player first in odd rounds, opponent in even). **Opponents from Klarg on play
+   their best** (`shared/strategy.js`): an exact solution over all dice outcomes picks the keep
+   with the best chance of beating the player's score (ties count half), of a valid hand if the
+   player dusted, or, going first, of leaving a score a sensible player fails to beat; the
+   Hangman counts on his Ace at one life. Tables (~0.1 s each) are warmed after the server starts.
+   The Molar (solo games and the first fight) keeps the simple `planBotLocks` play, as a teacher.
+   Much stronger at high scores (to beat 20: 53% vs 35% before), so step 4 balancing matters.
 5. **The big moments:** perfect 24 (confetti, camera swoop, sound) and the devil/three-6s
    effect, done the user's way (ask first).
 6. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.

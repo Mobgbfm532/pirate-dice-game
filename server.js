@@ -7,6 +7,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
 const Rules = require('./shared/rules');
+const Strategy = require('./shared/strategy');
 
 const BOT_ID = 'BOT_MOLAR';
 
@@ -520,8 +521,14 @@ function runBotDecision(roomCode) {
     let room = rooms[roomCode];
     let turn = room.turn;
     let key = turn.key;
-    let enemyId = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id : 'molar';
-    let toLock = Rules.planBotLocks(turn, enemyId, getTavernScoreToBeat(room));
+    let encounter = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] : null;
+    let enemyId = encounter ? encounter.id : 'molar';
+    let toBeat = getTavernScoreToBeat(room);
+    // The Molar (solo games, and the first Tavern Crawl fight) plays simply, as a teacher.
+    // From Klarg on, opponents play their best: Strategy works out the keep with the best
+    // chance of winning the round (the Hangman counts on his Ace when he can play it).
+    let aceAt16 = !!encounter && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24');
+    let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16 });
 
     // Lock the dice one after another, and only then decide what next. (Separate timers for
     // each lock and the check could fire out of order on a busy server, and a check that ran
@@ -981,7 +988,8 @@ function evaluateTavernRound(roomCode) {
     room.roundNumber++;
     room.tavernRun.encounterRound++;
     room.isTieBreaker = tiedPlayers.length > 1;
-    room.roundPlayers = [humanId, enemyId];
+    // Turns alternate: the player goes first in a fight's odd rounds, the opponent in even ones.
+    room.roundPlayers = room.tavernRun.encounterRound % 2 === 1 ? [humanId, enemyId] : [enemyId, humanId];
     room.currentTurnIndex = 0;
     emitState(roomCode);
 }
@@ -1314,6 +1322,7 @@ function start(port = process.env.PORT || 3000) {
             Object.values(os.networkInterfaces()).flat()
                 .filter(net => net && net.family === 'IPv4' && !net.internal && !net.address.startsWith('169.254.'))
                 .forEach(net => console.log(`On your Wi-Fi: http://${net.address}:${actualPort}/next/`));
+            Strategy.warmUp(); // the opponents' best-play tables, quietly in the background
             resolve(http);
         });
     });
