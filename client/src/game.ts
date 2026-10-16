@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { calloutText, isLocked, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, trackDuration, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
-import { playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
+import { playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -36,6 +36,7 @@ export interface TavernRun {
     shelf: Thonic[];
     shelfSize: number;
     shop: { stock: Thonic[] } | null; // Thom's cart is open
+    clearEye?: boolean; // a Clear-Eye Thonic blocks the opponent's ability this round
 }
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
@@ -95,6 +96,7 @@ export interface Snapshot {
     introAt: number; // when the current Tavern Crawl opponent was introduced
     ability: AbilityMoment | null;
     shopArrival: ShopArrival | null;
+    putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -132,7 +134,8 @@ let snapshot: Snapshot = {
     yourTurnAt: 0,
     introAt: 0,
     ability: null,
-    shopArrival: null
+    shopArrival: null,
+    putBackSlot: null
 };
 
 const listeners = new Set<() => void>();
@@ -243,6 +246,7 @@ function applyTurn(serverView: TurnView | null) {
     const turn = withPendingTaps(serverView);
     const isNewTurn = !turn || !snapshot.turn || snapshot.turn.key !== turn.key;
     if (isNewTurn) resetTrayForNewTurn();
+    if (isNewTurn && snapshot.putBackSlot !== null) update({ putBackSlot: null });
     if (turn) recordLockOrder(turn);
     const isMyTurn = computeIsMyTurn(snapshot.state, turn);
     update({
@@ -274,7 +278,7 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
     });
 });
 
-socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number }) => {
+socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[] }) => {
     enqueue(done => {
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
@@ -282,7 +286,8 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         // The dice this roll threw: the ones that were active just before it. (A die Klarg
         // stole earlier in the turn stays out of play; one he takes now was thrown first.)
         const before = snapshot.turn && snapshot.turn.key === turn.key ? snapshot.turn : null;
-        const thrownIds = new Set((before ? before.dice : turn.dice.filter(d => d.status !== 'stolen'))
+        // (A Fizzy Thomic throws only the dice it names.)
+        const thrownIds = data.rerolled ? new Set(data.rerolled) : new Set((before ? before.dice : turn.dice.filter(d => d.status !== 'stolen'))
             .filter(d => d.status === 'active').map(d => d.id));
         const rolled = turn.dice.filter(d => thrownIds.has(d.id));
         const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed);
@@ -412,7 +417,7 @@ socket.on('offerShop', (data: ShopArrival) => {
 // A Thonic was drunk, or worked by itself (Last Gasp): shown like an opponent's move.
 socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
     enqueue(done => {
-        playSound(data.id === 'healing' ? 'yay' : 'ohwell');
+        playCorkPop(data.id === 'fizzy');
         update({ ability: { name: "Thom's Thonics", ability: data.name, text: data.text, extra: data.id === 'healing' ? '+1 ♥' : undefined, at: performance.now() } });
         done();
     });
@@ -477,6 +482,12 @@ function getSessionToken() {
     }
 }
 
+// Which dice a Second Thoughts Thonic can put back: those kept on an earlier roll, or any kept
+// die once the hand is finished (the server applies the same rule).
+export function canPutBack(turn: TurnView, status: string) {
+    return turn.hasRolled && (status === 'permanentlyLocked' || (turn.finalized && status === 'lockedThisTurn'));
+}
+
 export const actions = {
     join(name: string, avatar: string, tableCode: string, lives = 3) {
         let roomCode = tableCode.trim().toUpperCase();
@@ -519,7 +530,15 @@ export const actions = {
         }
     },
     toggleDie(dieId: number) {
-        const { turn, isMyTurn, rolling } = snapshot;
+        const { turn, isMyTurn, rolling, putBackSlot } = snapshot;
+        if (turn && isMyTurn && !rolling && putBackSlot !== null) {
+            const kept = turn.dice.find(d => d.id === dieId);
+            if (kept && canPutBack(turn, kept.status)) {
+                update({ putBackSlot: null });
+                socket.emit('drinkThonic', putBackSlot, dieId);
+            }
+            return;
+        }
         if (!turn || !isMyTurn || rolling || !turn.hasRolled || turn.finalized) return;
         const die = turn.dice.find(d => d.id === dieId);
         if (!die || die.status === 'permanentlyLocked' || die.status === 'stolen') return;
@@ -546,8 +565,15 @@ export const actions = {
         socket.emit('leaveShop');
         update({ shopArrival: null });
     },
-    drinkThonic(slot: number) {
-        socket.emit('drinkThonic', slot);
+    drinkThonic(slot: number, dieId?: number) {
+        socket.emit('drinkThonic', slot, dieId);
+    },
+    // Second Thoughts: after drinking is confirmed, the next tap on a kept die names it.
+    startPutBack(slot: number) {
+        update({ putBackSlot: slot });
+    },
+    cancelPutBack() {
+        if (snapshot.putBackSlot !== null) update({ putBackSlot: null });
     },
     chooseKeepsake(id: string) {
         playSound('click');

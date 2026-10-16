@@ -160,8 +160,15 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    Thom's cart opens after each win (`tavernRun.shop`, `buyThonic` / `leaveShop`); a shelf of up
    to 3 Thonics (`THONICS`, `drinkThonic` on your turn before rolling; Healing +1 heart, Last
    Gasp keeps you on 1 by itself); `PLACES` holds the tavern's opponents and stock. The classic
-   page skips the shop. Next: step 2 (Fizzy Thomic, Second Thoughts, Steady, Clear-Eye
-   Thonics), step 3 (events behind two doors: Thom, Shrine to the Lady, Dice Den, Hooded
+   page skips the shop. **Step 2 done (Oct 2026):** six Thonics (prices: Healing 120, Last Gasp
+   250, Fizzy Thomic 80, Second Thoughts 180, Steady 150, Clear-Eye 100); the cart shows 3 per
+   visit (Healing + 2 random, `pickThomStock`). Each drinks at its own moment (see the
+   `drinkThonic` handler; the client's `drinkable()` mirrors it): Fizzy rerolls active 1s
+   (`Rules.rerollOnes`, `diceRolled.rerolled`), Second Thoughts puts a kept die back with a free
+   roll (`Rules.putBackDie`, `turn.freeRoll`; client `putBackSlot` pick mode), Steady makes dust
+   0 at End Turn (`turn.steady`), Clear-Eye blocks the opponent's ability for the round
+   (`tavernRun.clearEyeRound` in `canUseTavernAbility`). Drinking plays a synthesized cork pop
+   (`playCorkPop`; dev `__game.renderCorkPop`). Thom says "What ya havin'?". Next: step 3 (events behind two doors: Thom, Shrine to the Lady, Dice Den, Hooded
    Stranger, Pickpocket; keepsakes from events + Jaguar's drop), step 4 (balance prices).
    Thom's shop is a full-screen scene (`.thom-scene`): his bust (`art/bust-thom.jpg`, cut out by
    `cutOutFlat` for flat-magenta art) rises in above a walnut counter; no tavern or table.

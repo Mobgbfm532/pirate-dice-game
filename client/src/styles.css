@@ -774,6 +774,10 @@ footer {
 }
 .bottle.healing { --liquid: #e53935; }
 .bottle.lastGasp { --liquid: #90caf9; }
+.bottle.fizzy { --liquid: #9ccc65; }
+.bottle.secondThoughts { --liquid: #9575cd; }
+.bottle.steady { --liquid: #ffb300; }
+.bottle.clearEye { --liquid: #4dd0e1; }
 .bottle.empty { opacity: 0.3; }
 .bottle.empty .liquid { background: none; box-shadow: none; border-style: dashed; }
 .bottle.empty::before { border-style: dashed; background: none; }
@@ -798,9 +802,11 @@ footer {
 .shelf-slot:disabled .bottle:not(.empty) { filter: saturate(0.6); }
 .shelf-slot.usable { border-color: var(--gold-bright); box-shadow: 0 0 10px rgba(255, 213, 79, 0.45); animation: usable-pulse 1.6s ease-in-out infinite; }
 .shelf-slot.armed { background: #1b3d1f; border-color: #aed581; animation: none; }
+/* Below the bottle, so it never reaches up into the slot rail. */
 .drink-label {
     position: absolute;
-    bottom: calc(100% + 4px);
+    z-index: 1;
+    top: calc(100% + 4px);
     left: 50%;
     transform: translateX(-50%);
     padding: 2px 8px;
@@ -814,11 +820,11 @@ footer {
 @keyframes usable-pulse { 50% { box-shadow: 0 0 16px rgba(255, 213, 79, 0.75); } }
 
 /* A Thonic's moment: the same banner as an opponent's move, in green. */
-.healing-thonic .ability-banner, .last-gasp-thonic .ability-banner {
+.thonic .ability-banner {
     background: linear-gradient(#1f4a22, #0f2a12);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 22px rgba(174, 213, 129, 0.4);
 }
-.healing-thonic .ability-banner .what, .last-gasp-thonic .ability-banner .what { color: #c5e1a5; }
+.thonic .ability-banner .what { color: #c5e1a5; }
 .ability-banner .plus { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ef9a9a; animation: minus-drop 2.6s ease-out forwards; }
 
 /* Thom's cart between fights: a scene of its own over everything (no tavern, no table).
@@ -886,6 +892,27 @@ footer {
     animation: bottle-glow 2.4s 1.1s ease-in-out infinite both;
 }
 @keyframes bottle-glow { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+
+/* Thom's line, in a speech bubble by his head once he has risen into view. Placed in the
+   screen's corner of his area (he is wider than a phone), so it is never cut off. */
+.thom-speech {
+    position: absolute;
+    right: 12px;
+    top: max(14px, calc(env(safe-area-inset-top) + 8px));
+    max-width: calc(100% - 24px);
+    z-index: 1;
+    padding: 7px 14px;
+    border-radius: 16px 16px 16px 4px;
+    background: #fffaf0;
+    color: var(--ink);
+    font-size: clamp(1rem, 4.5vw, 1.3rem);
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+    transform-origin: 0% 100%;
+    animation: speech-pop 0.35s 1.15s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes speech-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
 
 /* The counter: dark walnut with a brass edge, holding the sign, purse and Thonics. */
 .thom-counter {
@@ -974,6 +1001,12 @@ footer {
         box-shadow: -14px 0 34px rgba(0, 0, 0, 0.65);
         animation-name: counter-in-side;
     }
-    .thom-sign { margin-top: 0; }
+    .thom-sign { margin-top: 0; padding: 4px 18px 5px; }
+    /* A phone on its side is short: tighter, so the counter fits without scrolling. */
+    .thom-counter { gap: 5px; padding-top: 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .thom-sign h2 { font-size: 1.45rem; }
+    .thonic-card { padding: 8px 8px 8px; gap: 3px; }
+    .thonic-card .bottle { transform: scale(1.2); margin: 2px 0 4px; }
+    .thonic-card .buy { padding: 6px; }
 }
 @keyframes counter-in-side { from { transform: translateX(100%); } to { transform: none; } }

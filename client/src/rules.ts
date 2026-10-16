@@ -33,6 +33,7 @@ export interface TurnView {
     finalized: boolean;
     outcome: TurnOutcome | null;
     canRoll: boolean;
+    steady?: boolean; // a Steady Thonic was drunk: dust this turn counts as 0
 }
 
 interface GameRulesApi {

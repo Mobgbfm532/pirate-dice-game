@@ -86,7 +86,8 @@
     function canRoll(turn) {
         if (turn.finalized) return false;
         if (!turn.dice.some(isActive)) return false;
-        return !turn.hasRolled || turn.locksThisRoll > 0;
+        // freeRoll: a die put back by Second Thoughts may be rolled without keeping another.
+        return !turn.hasRolled || turn.locksThisRoll > 0 || !!turn.freeRoll;
     }
 
     const CLEARED_ON_NEXT_ROLL = [CALLOUT.EARLY_ROSS, CALLOUT.DIDNT_BITE, CALLOUT.PHEW, CALLOUT.DOOR_OPEN];
@@ -156,6 +157,7 @@
         turn.dice.forEach(d => { if (isActive(d)) d.value = rollFace(); });
         turn.hasRolled = true;
         turn.locksThisRoll = 0;
+        turn.freeRoll = false;
 
         if (onRolled) onRolled(turn);
 
@@ -201,6 +203,37 @@
         }
     }
 
+    // Fizzy Thomic: every active die showing a 1 is rolled again, once. Returns their ids, or
+    // null if there were none (then nothing changes).
+    function rerollOnes(turn, rollFace = defaultRollFace) {
+        if (!turn.hasRolled || turn.finalized) return null;
+        const ones = turn.dice.filter(d => isActive(d) && d.value === 1);
+        if (ones.length === 0) return null;
+        ones.forEach(d => { d.value = rollFace(); });
+        settleTurn(turn);
+        return ones.map(d => d.id);
+    }
+
+    // Second Thoughts Thonic: a die kept on an earlier roll goes back into play, and the player
+    // may roll without keeping another. A finished hand opens up again. Returns true if done.
+    function putBackDie(turn, dieId) {
+        if (!turn.hasRolled) return false;
+        const die = turn.dice.find(d => d.id === dieId);
+        // A die kept on an earlier roll; or, once the hand is finished (nothing left to tap), any
+        // kept die, including those kept this roll.
+        const keptThisRoll = die && die.status === STATUS.LOCKED_THIS_ROLL && turn.finalized;
+        if (!die || (die.status !== STATUS.LOCKED && !keptThisRoll)) return false;
+        if (keptThisRoll) turn.locksThisRoll--;
+        die.status = STATUS.ACTIVE;
+        if (turn.finalized) {
+            turn.finalized = false;
+            turn.outcome = null;
+            turn.callout = null;
+        }
+        turn.freeRoll = true;
+        return true;
+    }
+
     // Klarg's Reach Around: removes the highest active die from play. Needs 2+ active dice.
     function stealHighestActiveDie(turn) {
         const active = turn.dice.filter(isActive);
@@ -227,7 +260,8 @@
             callout: turn.callout,
             finalized: turn.finalized,
             outcome: turn.outcome,
-            canRoll: canRoll(turn)
+            canRoll: canRoll(turn),
+            steady: !!turn.steady
         };
     }
 
@@ -286,6 +320,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

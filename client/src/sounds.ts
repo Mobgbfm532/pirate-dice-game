@@ -151,6 +151,80 @@ export async function renderImpacts(impacts: Impacts, seconds: number, sampleRat
     return (await ctx.startRendering()).getChannelData(0);
 }
 
+// ---- A cork pulled from a bottle (every Thonic drunk) ----
+// A short squeak as the cork twists free, then the pop: a hollow tone that drops fast as the
+// air rushes in, over a click of bright noise. The Fizzy Thomic adds a fizz afterwards.
+function scheduleCorkPop(ctx: BaseAudioContext, out: AudioNode, when: number, fizz: boolean) {
+    const squeak = ctx.createOscillator();
+    squeak.type = 'triangle';
+    squeak.frequency.setValueAtTime(1300, when);
+    squeak.frequency.linearRampToValueAtTime(1700, when + 0.07);
+    const squeakGain = ctx.createGain();
+    squeakGain.gain.setValueAtTime(0.0001, when);
+    squeakGain.gain.exponentialRampToValueAtTime(0.06, when + 0.02);
+    squeakGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.08);
+    squeak.connect(squeakGain).connect(out);
+    squeak.start(when);
+    squeak.stop(when + 0.1);
+
+    const pop = when + 0.1;
+    const body = ctx.createOscillator();
+    body.type = 'sine';
+    body.frequency.setValueAtTime(720, pop);
+    body.frequency.exponentialRampToValueAtTime(190, pop + 0.07);
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, pop);
+    bodyGain.gain.exponentialRampToValueAtTime(0.75, pop + 0.004);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, pop + 0.11);
+    body.connect(bodyGain).connect(out);
+    body.start(pop);
+    body.stop(pop + 0.13);
+
+    if (!noise) return;
+    const click = ctx.createBufferSource();
+    click.buffer = noise;
+    const clickTone = ctx.createBiquadFilter();
+    clickTone.type = 'bandpass';
+    clickTone.frequency.value = 2400;
+    clickTone.Q.value = 0.9;
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.5, pop);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, pop + 0.025);
+    click.connect(clickTone).connect(clickGain).connect(out);
+    click.start(pop);
+    click.stop(pop + 0.04);
+
+    if (!fizz) return;
+    const hiss = ctx.createBufferSource();
+    hiss.buffer = noise;
+    hiss.loop = true;
+    const hissTone = ctx.createBiquadFilter();
+    hissTone.type = 'highpass';
+    hissTone.frequency.value = 5000;
+    const hissGain = ctx.createGain();
+    hissGain.gain.setValueAtTime(0.0001, pop + 0.05);
+    hissGain.gain.exponentialRampToValueAtTime(0.12, pop + 0.15);
+    hissGain.gain.exponentialRampToValueAtTime(0.0001, pop + 0.9);
+    hiss.connect(hissTone).connect(hissGain).connect(out);
+    hiss.start(pop + 0.05);
+    hiss.stop(pop + 0.95);
+}
+
+export function playCorkPop(fizz = false) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    scheduleCorkPop(ctx, ctx.destination, ctx.currentTime + 0.02, fizz);
+}
+
+// Development only: renders the cork pop offline to raw samples, for listening outside the game.
+export async function renderCorkPop(fizz = false, sampleRate = 22050) {
+    const ctx = new OfflineAudioContext(1, Math.ceil(1.2 * sampleRate), sampleRate);
+    audio(); // makes the shared noise buffer
+    scheduleCorkPop(ctx, ctx.destination, 0.02, fizz);
+    return (await ctx.startRendering()).getChannelData(0);
+}
+
 // Remembered on this device, so a muted phone stays quiet next time.
 function readMuted() {
     try { return localStorage.getItem('tavernMuted') === '1'; } catch { return false; }

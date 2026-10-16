@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { isMuted, playSound, setMuted } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
@@ -178,7 +178,9 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     if (!turn) return <div className="controls" />;
     const hiddenLocked = turn.dice.some(d => d.hidden && d.status !== 'active');
     const scoring = Rules.scoreDice(turn.dice);
-    const scoreText = turn.finalized && turn.outcome?.busted ? 'X' : hiddenLocked ? '?' : String(scoring.score);
+    // A Steady Thonic turns dust into a 0.
+    const dust = turn.finalized && !!turn.outcome?.busted && !turn.steady;
+    const scoreText = dust ? 'X' : turn.finalized && turn.outcome?.busted ? '0' : hiddenLocked ? '?' : String(scoring.score);
     const state = snap.state;
     const goal = state && !snap.waiting ? scoreToBeat(state, turn.playerId) : null;
     const roller = state?.players[turn.playerId];
@@ -192,7 +194,8 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     if (snap.rolling) { label = 'Rolling…'; disabled = true; }
     else if (turn.finalized) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
 
-    const hint = snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 ? 'Tap dice to keep them, then roll again' : '';
+    const hint = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
+        : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again' : '';
 
     return (
         <div className="controls">
@@ -204,7 +207,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
             )}
             <div className="turn-score">
                 <span className="label">Turn score</span>
-                <span className={`value ${turn.finalized && turn.outcome?.busted ? 'dust' : standing}`}>{scoreText}</span>
+                <span className={`value ${dust ? 'dust' : standing}`}>{scoreText}</span>
             </div>
             <button
                 className={`roll ${turn.finalized ? 'end' : ''}`}
@@ -236,8 +239,26 @@ function Bottle({ thonic }: { thonic: Thonic | null }) {
     return <span className={`bottle ${thonic ? thonic.id : 'empty'}`} aria-hidden="true"><span className="liquid" /></span>;
 }
 
-// The Thonics you carry. A drinkable one lights up on your turn before you roll (Healing
-// only once you've lost a heart): tap to pick it up, tap again to drink.
+// When a Thonic can be drunk, always on your own turn (the server checks the same):
+// Healing and Clear-Eye before you roll; Fizzy after a roll that shows 1s; Second Thoughts
+// after a roll, once you've kept a die; Steady any time, once a turn.
+function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
+    const turn = snap.turn;
+    const me = snap.myId ? state.players[snap.myId] : null;
+    const run = state.tavernRun;
+    if (!t.drink || !me || !run || !turn || !snap.isMyTurn || snap.rolling || snap.endingTurn) return false;
+    switch (t.id) {
+        case 'healing': return !turn.hasRolled && me.lives < state.startingLives;
+        case 'clearEye': return !turn.hasRolled && !!run.enemy.ability && !run.clearEye;
+        case 'fizzy': return turn.hasRolled && !turn.finalized && turn.dice.some(d => d.status === 'active' && !d.hidden && d.value === 1);
+        case 'secondThoughts': return turn.dice.some(d => canPutBack(turn, d.status));
+        case 'steady': return !turn.steady;
+        default: return false;
+    }
+}
+
+// The Thonics you carry. One lights up when it can be drunk: tap to pick it up, tap again to
+// drink. Second Thoughts then asks you to tap the kept die to put back.
 function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const [armed, setArmed] = useState<number | null>(null);
@@ -246,29 +267,31 @@ function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
         const timer = setTimeout(() => setArmed(null), 2500);
         return () => clearTimeout(timer);
     }, [armed]);
-    const me = snap.myId ? state.players[snap.myId] : null;
-    const ready = !!me && snap.isMyTurn && !!snap.turn && !snap.turn.hasRolled && !snap.rolling;
-    const canDrink = (t: Thonic) => ready && t.drink && (t.id !== 'healing' || me!.lives < state.startingLives);
     const slots = Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null);
     return (
         <span className="shelf" aria-label="Thonics">
             {slots.map((t, i) => {
-                const usable = !!t && canDrink(t);
+                const choosing = snap.putBackSlot === i;
+                const usable = !!t && (choosing || drinkable(t, snap, state));
                 return (
                     <button
                         key={i}
-                        className={`shelf-slot ${usable ? 'usable' : ''} ${armed === i ? 'armed' : ''}`}
+                        className={`shelf-slot ${usable ? 'usable' : ''} ${armed === i || choosing ? 'armed' : ''}`}
                         disabled={!usable}
                         title={t ? `${t.name}: ${t.text}` : 'Empty'}
-                        aria-label={t ? (armed === i ? `Drink ${t.name}` : t.name) : 'Empty shelf slot'}
+                        aria-label={t ? (choosing ? `Cancel ${t.name}` : armed === i ? `Drink ${t.name}` : t.name) : 'Empty shelf slot'}
                         onClick={() => {
                             if (!t || !usable) return;
-                            if (armed === i) { setArmed(null); actions.drinkThonic(i); }
-                            else { setArmed(i); playSound('click'); }
+                            if (choosing) { actions.cancelPutBack(); return; }
+                            if (armed !== i) { setArmed(i); playSound('click'); return; }
+                            setArmed(null);
+                            if (t.id === 'secondThoughts') actions.startPutBack(i);
+                            else actions.drinkThonic(i);
                         }}
                     >
                         <Bottle thonic={t} />
-                        {armed === i && <span className="drink-label">Drink?</span>}
+                        {armed === i && !choosing && <span className="drink-label">Drink?</span>}
+                        {choosing && <span className="drink-label">Pick a die</span>}
                     </button>
                 );
             })}
@@ -472,7 +495,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     if (!visible || !moment) return null;
     const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
     return (
-        <div key={moment.at} className={`ability-moment ${kind}`} aria-live="polite">
+        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''}`} aria-live="polite">
             <div className="ability-banner">
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
@@ -508,9 +531,10 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
         setTimeout(actions.leaveShop, LEAVE_MS);
     };
     return (
-        <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Thom's Thonics">
+        <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Thom's Thonics. Thom: What ya havin'?">
             <div className="thom-stage" aria-hidden="true">
                 <div className="thom-lantern" />
+                <div className="thom-speech">What ya havin'?</div>
                 <div className="thom-figure">
                     <img className="thom-bust" src={`${import.meta.env.BASE_URL}art/thom.webp`} alt="" />
                     <div className="thom-bottle-glow" />

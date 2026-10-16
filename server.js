@@ -159,18 +159,23 @@ const TAVERN_KEEPSAKES = [
 ];
 
 // Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
-// SHELF_SIZE) until drunk. `drink` = tapped by the player on their turn before rolling;
-// the others work by themselves.
+// SHELF_SIZE) until drunk. `drink` = tapped by the player on their own turn (when exactly
+// depends on the Thonic: see the drinkThonic handler); Last Gasp works by itself.
 const THONICS = {
-    healing: { id: 'healing', name: 'Healing Thonic', text: '+1 heart, up to your maximum. Drink it on your turn, before you roll.', price: 60, drink: true },
-    lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: if a round would take your last heart, you stay on 1.', price: 150, drink: false }
+    healing: { id: 'healing', name: 'Healing Thonic', text: '+1 heart, up to your maximum. Drink it before you roll.', price: 120, drink: true },
+    lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: a round that would take your last heart leaves you on 1.', price: 250, drink: false },
+    fizzy: { id: 'fizzy', name: 'Fizzy Thomic', text: 'After a roll: your 1s roll again, once.', price: 80, drink: true },
+    secondThoughts: { id: 'secondThoughts', name: 'Second Thoughts Thonic', text: 'Put back a die you kept, then roll it again.', price: 180, drink: true },
+    steady: { id: 'steady', name: 'Steady Thonic', text: 'This turn, dust counts as a score of 0.', price: 150, drink: true },
+    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Before you roll: the opponent's ability can't touch this round.", price: 100, drink: true }
 };
 const SHELF_SIZE = 3;
+const SHOP_SIZE = 3; // Thonics on Thom's cart per visit: Healing, plus two others at random
 
 // A place in the run: its opponents in order and what Thom sells there. Only the tavern
 // for now; later places (new environments, tougher opponents) are new entries.
 const PLACES = {
-    tavern: { name: 'The Tavern', encounters: TAVERN_ENCOUNTERS, thomStock: ['healing', 'lastGasp'] }
+    tavern: { name: 'The Tavern', encounters: TAVERN_ENCOUNTERS, thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'] }
 };
 
 // Gold during a run: it goes into the purse as it is won, and the purse is the final score.
@@ -180,6 +185,16 @@ const GOLD = {
     perfect24: 75,      // each perfect 24 you roll
     consolation: 25     // losing the run: 25 x the place of the opponent you fell to
 };
+
+// What Thom has on his cart this visit: always Healing, plus others picked at random.
+function pickThomStock(place) {
+    let others = place.thomStock.filter(id => id !== 'healing');
+    for (let i = others.length - 1; i > 0; i--) {
+        let j = crypto.randomInt(0, i + 1);
+        [others[i], others[j]] = [others[j], others[i]];
+    }
+    return ['healing', ...others.slice(0, SHOP_SIZE - 1)];
+}
 
 const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink });
 
@@ -214,6 +229,7 @@ function getTavernRunState(room) {
         shelfSize: SHELF_SIZE,
         shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView) } : null,
         abilityUsed: room.tavernRun.abilityUsed,
+        clearEye: room.tavernRun.clearEyeRound === room.roundNumber,
         abilityRound: room.tavernRun.abilityRound,
         encounterRound: room.tavernRun.encounterRound,
         encounterKeepsakeUses: room.tavernRun.encounterKeepsakeUses,
@@ -365,6 +381,7 @@ function performEndTurn(roomCode) {
 
     let currentId = room.roundPlayers[room.currentTurnIndex];
     let { score, busted } = room.turn.outcome;
+    if (room.turn.steady && busted) { busted = false; score = 0; } // Steady Thonic
     room.players[currentId].score = score;
     room.players[currentId].busted = busted;
 
@@ -569,6 +586,7 @@ function markAbilityUsed(room, abilityId) {
 }
 
 function canUseTavernAbility(room, encounter, abilityId) {
+    if (room.tavernRun.clearEyeRound === room.roundNumber) return false; // Clear-Eye Thonic
     let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
     return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < Rules.getAbilityMaxUses(abilityId);
 }
@@ -949,7 +967,7 @@ function evaluateTavernRound(roomCode) {
         }
 
         // Between fights: Thom's cart. (Keepsakes now come from events, in a later step.)
-        room.tavernRun.shop = { stock: PLACES.tavern.thomStock.slice() };
+        room.tavernRun.shop = { stock: pickThomStock(PLACES.tavern) };
         room.roundPlayers = [];
         emitState(roomCode);
         io.to(roomCode).emit('offerShop', {
@@ -1197,24 +1215,63 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
-    // Drinking: on your own turn, before you roll.
-    socket.on('drinkThonic', (slot) => {
+    // Drinking, always on your own turn. When exactly, and what it does, depends on the
+    // Thonic; anything not allowed right now changes nothing and the Thonic stays on the shelf.
+    //   healing         before you roll, once you've lost a heart: +1 heart
+    //   clearEye        before you roll, against an opponent with an ability: none this round
+    //   fizzy           after a roll that left active 1s: those dice roll again
+    //   secondThoughts  after a roll, naming a kept die (dieId): it goes back into play
+    //   steady          any time in your turn: dust this turn counts as 0
+    socket.on('drinkThonic', (slot, dieId) => {
         let room = tavernPlayer();
         if (!room || !Number.isInteger(slot)) return;
+        let roomCode = socket.roomCode;
         let run = room.tavernRun;
         let thonicId = run.shelf[slot];
         let thonic = thonicId && THONICS[thonicId];
         if (!thonic || !thonic.drink) return;
-        if (!isTurnPlayable(socket.roomCode) || !isMyTurn() || room.turn.hasRolled) return;
+        if (!isTurnPlayable(roomCode) || !isMyTurn()) return;
+        let turn = room.turn;
+        if (Date.now() < turn.busyUntil) return;
         let player = room.players[socket.id];
+        let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+        let text, rerolled = null;
+
         if (thonicId === 'healing') {
-            if (player.lives >= room.startingLives) return;
+            if (turn.hasRolled || player.lives >= room.startingLives) return;
             player.lives += 1;
+            text = '+1 heart';
+        } else if (thonicId === 'clearEye') {
+            if (turn.hasRolled || !encounter.ability || run.clearEyeRound === room.roundNumber) return;
+            run.clearEyeRound = room.roundNumber;
+            text = `${encounter.name} can't use ${Rules.ABILITY_NAMES[encounter.ability]} this round`;
+        } else if (thonicId === 'fizzy') {
+            rerolled = Rules.rerollOnes(turn, rollFace);
+            if (!rerolled) return;
+            text = 'Your 1s roll again';
+        } else if (thonicId === 'secondThoughts') {
+            if (!Number.isInteger(dieId) || !Rules.putBackDie(turn, dieId)) return;
+            text = 'A kept die goes back in play';
+        } else if (thonicId === 'steady') {
+            if (turn.steady) return;
+            turn.steady = true;
+            text = 'Dust this turn counts as 0';
+        } else {
+            return;
         }
+
         run.shelf.splice(slot, 1);
         run.stats.thonicsDrunk++;
-        io.to(socket.roomCode).emit('thonicUsed', { id: thonicId, name: thonic.name, text: '+1 heart' });
-        emitState(socket.roomCode);
+        io.to(roomCode).emit('thonicUsed', { id: thonicId, name: thonic.name, text });
+        if (rerolled) {
+            // The rerolled dice tumble like any roll (only those dice are thrown).
+            let animationMs = 500;
+            turn.busyUntil = Date.now() + delay(animationMs);
+            io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled });
+        } else {
+            emitTurn(roomCode, { type: 'toggle' });
+        }
+        emitState(roomCode);
     });
 
     socket.on('chooseKeepsake', (keepsakeId) => {

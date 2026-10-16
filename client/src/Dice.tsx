@@ -2,7 +2,7 @@ import { useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 're
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { actions, store, table } from './game';
+import { actions, canPutBack, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
 import { readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
@@ -91,7 +91,8 @@ export function Dice() {
     const hitGeometry = useMemo(() => new THREE.SphereGeometry(DIE_SIZE * 0.76, 16, 12), []);
 
     const turn = snap.turn;
-    const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && !turn.finalized;
+    const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
+    const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);
 
     useFrame((_, delta) => {
         const now = performance.now();
@@ -154,8 +155,9 @@ export function Dice() {
 
             mesh.material = showHidden ? materials.hidden : materials.faces;
 
-            // Gold ring under dice locked this roll (they can still be put back).
-            ring.visible = die.status === 'lockedThisTurn' && mesh.visible;
+            // Gold ring under dice locked this roll (they can still be put back), and under the
+            // dice a Second Thoughts Thonic could put back while one is being chosen.
+            ring.visible = mesh.visible && (putBack && turn ? canPutBack(turn, die.status) : die.status === 'lockedThisTurn');
             ring.position.set(mesh.position.x, 0.012, mesh.position.z);
         });
     });
@@ -169,6 +171,7 @@ export function Dice() {
 
     const tappable = (id: number) => {
         const die = turn?.dice.find(d => d.id === id);
+        if (putBack) return canTouch && !!die && !!turn && canPutBack(turn, die.status);
         return canTouch && !!die && (die.status === 'active' || die.status === 'lockedThisTurn');
     };
 
