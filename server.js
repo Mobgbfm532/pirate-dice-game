@@ -158,6 +158,31 @@ const TAVERN_KEEPSAKES = [
     }
 ];
 
+// Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
+// SHELF_SIZE) until drunk. `drink` = tapped by the player on their turn before rolling;
+// the others work by themselves.
+const THONICS = {
+    healing: { id: 'healing', name: 'Healing Thonic', text: '+1 heart, up to your maximum. Drink it on your turn, before you roll.', price: 60, drink: true },
+    lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: if a round would take your last heart, you stay on 1.', price: 150, drink: false }
+};
+const SHELF_SIZE = 3;
+
+// A place in the run: its opponents in order and what Thom sells there. Only the tavern
+// for now; later places (new environments, tougher opponents) are new entries.
+const PLACES = {
+    tavern: { name: 'The Tavern', encounters: TAVERN_ENCOUNTERS, thomStock: ['healing', 'lastGasp'] }
+};
+
+// Gold during a run: it goes into the purse as it is won, and the purse is the final score.
+const GOLD = {
+    winPerPlace: 100,   // beating an opponent: 100 x their place in the run (Molar 100 ... Jaguar 500)
+    perHeartLeft: 25,   // for each heart still standing when you win a fight
+    perfect24: 75,      // each perfect 24 you roll
+    consolation: 25     // losing the run: 25 x the place of the opponent you fell to
+};
+
+const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink });
+
 function getRoomState(roomCode) {
     let room = rooms[roomCode];
     if (!room) return {};
@@ -184,6 +209,10 @@ function getTavernRunState(room) {
         enemy: encounter,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
+        purse: room.tavernRun.purse,
+        shelf: room.tavernRun.shelf.map(thonicView),
+        shelfSize: SHELF_SIZE,
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView) } : null,
         abilityUsed: room.tavernRun.abilityUsed,
         abilityRound: room.tavernRun.abilityRound,
         encounterRound: room.tavernRun.encounterRound,
@@ -211,7 +240,7 @@ function getTurnKey(room) {
 function isTurnPlayable(roomCode) {
     let room = rooms[roomCode];
     if (!room || !room.turn || room.turn.ended) return false;
-    if (room.mode === 'tavern-crawl' && room.tavernRun.pendingKeepsakeChoices) return false;
+    if (room.mode === 'tavern-crawl' && (room.tavernRun.pendingKeepsakeChoices || room.tavernRun.shop)) return false;
     return isBotRoom(roomCode) || room.playerOrder.length >= 2;
 }
 
@@ -357,6 +386,8 @@ function performEndTurn(roomCode) {
 
         if (currentId !== BOT_ID && room.players[currentId].score === 24 && room.tavernRun.stats) {
             room.tavernRun.stats.perfect24s++;
+            room.tavernRun.stats.perfectGold += GOLD.perfect24;
+            room.tavernRun.purse += GOLD.perfect24;
         }
     }
 
@@ -571,6 +602,9 @@ function createTavernRun() {
         encounterIndex: TAVERN_START_ENCOUNTER,
         keepsakes: [],
         pendingKeepsakeChoices: null,
+        purse: 0,
+        shelf: [],
+        shop: null,
         abilityUsed: {},
         abilityRound: 1,
         encounterRound: 1,
@@ -579,7 +613,12 @@ function createTavernRun() {
             encountersDefeated: 0,
             livesLost: 0,
             keepsakesActivated: 0,
-            perfect24s: 0
+            perfect24s: 0,
+            winGold: 0,
+            heartGold: 0,
+            perfectGold: 0,
+            spent: 0,
+            thonicsDrunk: 0
         },
         started: false,
         runComplete: false
@@ -591,31 +630,36 @@ function getRandomAbilityRound(encounter) {
     return Math.floor(Math.random() * 3) + 1;
 }
 
+// The final score is the purse (what was won, less what was spent at Thom's), plus a
+// consolation for how far a lost run got.
 function getTavernScoreSummary(room, completedRun = false) {
     let stats = room.tavernRun.stats;
-    let progressGold = 0;
-    for (let i = 0; i < stats.encountersDefeated; i++) {
-        progressGold += (i + 1) * 100;
-    }
-    if (!completedRun && stats.encountersDefeated < TAVERN_ENCOUNTERS.length) {
-        progressGold += (stats.encountersDefeated + 1) * 25;
-    }
-    let lifeBonus = Math.max(0, (stats.encountersDefeated * 3 - stats.livesLost) * 25);
-    let restraintBonus = Math.max(0, 150 - stats.keepsakesActivated * 25);
-    let perfectBonus = stats.perfect24s * 75;
-    let totalGold = progressGold + lifeBonus + restraintBonus + perfectBonus;
+    let consolation = !completedRun && stats.encountersDefeated < TAVERN_ENCOUNTERS.length
+        ? (stats.encountersDefeated + 1) * GOLD.consolation : 0;
+    let progressGold = stats.winGold + consolation;
+    let totalGold = Math.max(0, room.tavernRun.purse + consolation);
 
     return {
         totalGold,
-        breakdown: { progress: progressGold, lives: lifeBonus, restraint: restraintBonus, perfect: perfectBonus },
+        breakdown: { progress: progressGold, hearts: stats.heartGold, perfect: stats.perfectGold, spent: stats.spent },
         lines: [
             `Gold earned: ${totalGold}`,
             `Progress: ${progressGold}`,
-            `Lives spared bonus: ${lifeBonus}`,
-            `Keepsake restraint bonus: ${restraintBonus}`,
-            `Perfect 24 bonus: ${perfectBonus}`
+            `Hearts spared: ${stats.heartGold}`,
+            `Perfect 24s: ${stats.perfectGold}`,
+            `Spent at Thom's: ${stats.spent}`
         ]
     };
+}
+
+// Takes a Thonic off the shelf if the player has one. Returns it, or null.
+function useThonic(room, thonicId) {
+    let shelf = room.tavernRun.shelf;
+    let index = shelf.indexOf(thonicId);
+    if (index < 0) return null;
+    shelf.splice(index, 1);
+    room.tavernRun.stats.thonicsDrunk++;
+    return THONICS[thonicId];
 }
 
 // What the 3D client's end-of-run screen shows: how far the run got and the gold earned.
@@ -844,6 +888,11 @@ function evaluateTavernRound(roomCode) {
             return;
         }
 
+        if (loser.id === humanId && player.lives <= 1 && useThonic(room, 'lastGasp')) {
+            io.to(roomCode).emit('thonicUsed', { id: 'lastGasp', name: THONICS.lastGasp.name, text: 'You cling on with one heart.' });
+            return;
+        }
+
         player.lives -= 1;
         lifeLosersThisRound.push(loser.id);
         if (loser.id === humanId && room.tavernRun.stats) room.tavernRun.stats.livesLost++;
@@ -869,7 +918,13 @@ function evaluateTavernRound(roomCode) {
     }
 
     if (enemy.lives <= 0) {
-        if (room.tavernRun.stats) room.tavernRun.stats.encountersDefeated++;
+        let stats = room.tavernRun.stats;
+        let winGold = (room.tavernRun.encounterIndex + 1) * GOLD.winPerPlace;
+        let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
+        stats.encountersDefeated++;
+        stats.winGold += winGold;
+        stats.heartGold += heartGold;
+        room.tavernRun.purse += winGold + heartGold;
         room.tavernRun.encounterIndex++;
         if (room.tavernRun.encounterIndex >= TAVERN_ENCOUNTERS.length) {
             let scoreSummary = getTavernScoreSummary(room, true);
@@ -881,14 +936,14 @@ function evaluateTavernRound(roomCode) {
             return;
         }
 
-        room.tavernRun.pendingKeepsakeChoices = pickKeepsakeChoices(room);
+        // Between fights: Thom's cart. (Keepsakes now come from events, in a later step.)
+        room.tavernRun.shop = { stock: PLACES.tavern.thomStock.slice() };
         room.roundPlayers = [];
         emitState(roomCode);
-        io.to(roomCode).emit('offerKeepsakes', {
+        io.to(roomCode).emit('offerShop', {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
-            transitionMessage: enemy.id === 'molar' ? 'After defeating the Molar, you are invited to the high roller table...' : null,
-            choices: room.tavernRun.pendingKeepsakeChoices
+            gold: { win: winGold, hearts: heartGold }
         });
         return;
     }
@@ -1028,6 +1083,8 @@ io.on('connection', (socket) => {
     socket.on('playAgain', () => {
         let room = rooms[socket.roomCode];
         if (room && room.roundPlayers.length === 0) {
+            // A Tavern Crawl restarts only once the run is over (not while Thom's cart is open).
+            if (room.mode === 'tavern-crawl' && !room.tavernRun.runComplete) return;
             room.turnEpoch++;
             if (room.mode === 'tavern-crawl') {
                 room.playerOrder.forEach(id => {
@@ -1100,6 +1157,54 @@ io.on('connection', (socket) => {
     socket.on('toggleDie', (dieId) => { if (isMyTurn() && Number.isInteger(dieId)) performToggle(socket.roomCode, dieId); });
     socket.on('endTurn', () => { if (isMyTurn()) performEndTurn(socket.roomCode); });
 
+    // Thom's cart: the run's one player buys while it is open.
+    const tavernPlayer = () => {
+        let room = rooms[socket.roomCode];
+        if (!room || room.mode !== 'tavern-crawl' || !room.players[socket.id] || socket.id === BOT_ID) return null;
+        return room;
+    };
+
+    socket.on('buyThonic', (thonicId) => {
+        let room = tavernPlayer();
+        if (!room || !room.tavernRun.shop) return;
+        let run = room.tavernRun;
+        if (typeof thonicId !== 'string' || !run.shop.stock.includes(thonicId) || !THONICS[thonicId]) return;
+        let price = THONICS[thonicId].price;
+        if (run.purse < price || run.shelf.length >= SHELF_SIZE) return;
+        run.purse -= price;
+        run.stats.spent += price;
+        run.shelf.push(thonicId);
+        emitState(socket.roomCode);
+    });
+
+    socket.on('leaveShop', () => {
+        let room = tavernPlayer();
+        if (!room || !room.tavernRun.shop) return;
+        room.tavernRun.shop = null;
+        resetTavernEncounter(socket.roomCode, true);
+        emitState(socket.roomCode);
+    });
+
+    // Drinking: on your own turn, before you roll.
+    socket.on('drinkThonic', (slot) => {
+        let room = tavernPlayer();
+        if (!room || !Number.isInteger(slot)) return;
+        let run = room.tavernRun;
+        let thonicId = run.shelf[slot];
+        let thonic = thonicId && THONICS[thonicId];
+        if (!thonic || !thonic.drink) return;
+        if (!isTurnPlayable(socket.roomCode) || !isMyTurn() || room.turn.hasRolled) return;
+        let player = room.players[socket.id];
+        if (thonicId === 'healing') {
+            if (player.lives >= room.startingLives) return;
+            player.lives += 1;
+        }
+        run.shelf.splice(slot, 1);
+        run.stats.thonicsDrunk++;
+        io.to(socket.roomCode).emit('thonicUsed', { id: thonicId, name: thonic.name, text: '+1 heart' });
+        emitState(socket.roomCode);
+    });
+
     socket.on('chooseKeepsake', (keepsakeId) => {
         let room = rooms[socket.roomCode];
         if (!room || room.mode !== 'tavern-crawl' || !room.tavernRun.pendingKeepsakeChoices) return;
@@ -1147,4 +1252,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms };
+module.exports = { start, http, io, rooms, emitState };

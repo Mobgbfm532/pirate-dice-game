@@ -1244,6 +1244,9 @@
             renderLeaderboard();
         });
 
+        // Thom's cart is only open at the 3D table (/next); here the run walks straight on.
+        socket.on('offerShop', () => socket.emit('leaveShop'));
+
         socket.on('offerKeepsakes', (data) => {
             playSound(sfxWinner);
             document.getElementById('game-page').style.visibility = 'hidden';

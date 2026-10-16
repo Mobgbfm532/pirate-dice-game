@@ -22,6 +22,9 @@ export interface Player {
 
 export interface Keepsake { id: string; name: string; text: string }
 
+// One of Thom's Thonics. `drink`: tapped by the player (the others work by themselves).
+export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean }
+
 export interface TavernRun {
     encounterNumber: number;
     totalEncounters: number;
@@ -29,6 +32,10 @@ export interface TavernRun {
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
     runComplete?: boolean;
+    purse: number;
+    shelf: Thonic[];
+    shelfSize: number;
+    shop: { stock: Thonic[] } | null; // Thom's cart is open
 }
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
@@ -39,13 +46,16 @@ export interface TavernSummary {
     encounters: string[];
     fellTo: string | null;
     gold: number;
-    breakdown: { progress: number; lives: number; restraint: number; perfect: number };
+    breakdown: { progress: number; hearts: number; perfect: number; spent: number };
     stats: { encountersDefeated: number; livesLost: number; keepsakesActivated: number; perfect24s: number };
     keepsakes: string[];
 }
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
-export interface AbilityMoment { name: string; ability: string; text: string; at: number }
+export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string }
+
+// What the last fight paid out, shown when Thom's cart opens.
+export interface ShopArrival { defeated: string; nextEnemy: string; gold: { win: number; hearts: number } }
 
 export interface GameState {
     players: Record<string, Player>;
@@ -84,6 +94,7 @@ export interface Snapshot {
     yourTurnAt: number; // when play last came round to you (for the banner)
     introAt: number; // when the current Tavern Crawl opponent was introduced
     ability: AbilityMoment | null;
+    shopArrival: ShopArrival | null;
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -120,7 +131,8 @@ let snapshot: Snapshot = {
     waiting: false,
     yourTurnAt: 0,
     introAt: 0,
-    ability: null
+    ability: null,
+    shopArrival: null
 };
 
 const listeners = new Set<() => void>();
@@ -354,7 +366,7 @@ socket.on('gameStateUpdate', (state: GameState) => {
 // down. Remembered for this tab, so a refresh or reconnect doesn't replay it.
 function introduceOpponent(state: GameState) {
     const run = state.tavernRun;
-    if (state.mode !== 'tavern-crawl' || !run || run.pendingKeepsakeChoices || run.runComplete) return;
+    if (state.mode !== 'tavern-crawl' || !run || run.pendingKeepsakeChoices || run.shop || run.runComplete) return;
     const key = `${snapshot.roomCode}#${run.encounterNumber}`;
     try {
         if (sessionStorage.getItem('tavernIntro') === key) return;
@@ -388,6 +400,21 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string 
             else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
             done();
         }, Math.max(0, steal));
+    });
+});
+
+// Thom's cart opens after a win (what's for sale is in the state's tavernRun.shop).
+socket.on('offerShop', (data: ShopArrival) => {
+    playSound('winner');
+    update({ shopArrival: data });
+});
+
+// A Thonic was drunk, or worked by itself (Last Gasp): shown like an opponent's move.
+socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
+    enqueue(done => {
+        playSound(data.id === 'healing' ? 'yay' : 'ohwell');
+        update({ ability: { name: "Thom's Thonics", ability: data.name, text: data.text, extra: data.id === 'healing' ? '+1 ♥' : undefined, at: performance.now() } });
+        done();
     });
 });
 
@@ -509,6 +536,18 @@ export const actions = {
             if (pendingTaps.size === 0) return;
             update({ turn: withPendingTaps(serverTurn) });
         }, PENDING_MS + 50);
+    },
+    buyThonic(id: string) {
+        playSound('click');
+        socket.emit('buyThonic', id);
+    },
+    leaveShop() {
+        playSound('swoosh');
+        socket.emit('leaveShop');
+        update({ shopArrival: null });
+    },
+    drinkThonic(slot: number) {
+        socket.emit('drinkThonic', slot);
     },
     chooseKeepsake(id: string) {
         playSound('click');

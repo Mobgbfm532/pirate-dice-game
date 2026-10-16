@@ -109,6 +109,9 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | Rokr | Elderly star-reader with constellations on her robe | serene, knowing | a glowing star chart |
 | The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | a revolver and an ace of spades |
 | Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
+| Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
+
+Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's Thonics" itself.
 
 ## Status
 
@@ -125,6 +128,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
 | Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |
+| Thom bust (Thom's Thonics shop) | Wanted | Save as `art/bust-thom.jpg`; the shop shows a placeholder until then |
 | Ace of Spades card | Wanted, optional | The Hangman's card face; drawn in CSS for now |
 
 ## Processing art

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary } from './game';
+import { actions, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { isMuted, playSound, setMuted } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
@@ -219,13 +219,60 @@ function TurnControls({ snap }: { snap: Snapshot }) {
 }
 
 // Keepsakes won so far in a Tavern Crawl (the encounter number is on the nameplate).
-function TavernStrip({ state }: { state: GameState }) {
+function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun;
-    if (!run || run.keepsakes.length === 0) return null;
+    if (!run) return null;
     return (
         <div className="tavern-strip">
+            <span className="purse" aria-label={`${run.purse} gold`}><span aria-hidden="true">🪙</span> {run.purse}</span>
+            <Shelf snap={snap} state={state} />
             {run.keepsakes.map(k => <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
         </div>
+    );
+}
+
+// A small painted bottle; the colour says which Thonic it is.
+function Bottle({ thonic }: { thonic: Thonic | null }) {
+    return <span className={`bottle ${thonic ? thonic.id : 'empty'}`} aria-hidden="true"><span className="liquid" /></span>;
+}
+
+// The Thonics you carry. A drinkable one lights up on your turn before you roll (Healing
+// only once you've lost a heart): tap to pick it up, tap again to drink.
+function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const run = state.tavernRun!;
+    const [armed, setArmed] = useState<number | null>(null);
+    useEffect(() => {
+        if (armed === null) return;
+        const timer = setTimeout(() => setArmed(null), 2500);
+        return () => clearTimeout(timer);
+    }, [armed]);
+    const me = snap.myId ? state.players[snap.myId] : null;
+    const ready = !!me && snap.isMyTurn && !!snap.turn && !snap.turn.hasRolled && !snap.rolling;
+    const canDrink = (t: Thonic) => ready && t.drink && (t.id !== 'healing' || me!.lives < state.startingLives);
+    const slots = Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null);
+    return (
+        <span className="shelf" aria-label="Thonics">
+            {slots.map((t, i) => {
+                const usable = !!t && canDrink(t);
+                return (
+                    <button
+                        key={i}
+                        className={`shelf-slot ${usable ? 'usable' : ''} ${armed === i ? 'armed' : ''}`}
+                        disabled={!usable}
+                        title={t ? `${t.name}: ${t.text}` : 'Empty'}
+                        aria-label={t ? (armed === i ? `Drink ${t.name}` : t.name) : 'Empty shelf slot'}
+                        onClick={() => {
+                            if (!t || !usable) return;
+                            if (armed === i) { setArmed(null); actions.drinkThonic(i); }
+                            else { setArmed(i); playSound('click'); }
+                        }}
+                    >
+                        <Bottle thonic={t} />
+                        {armed === i && <span className="drink-label">Drink?</span>}
+                    </button>
+                );
+            })}
+        </span>
     );
 }
 
@@ -319,11 +366,11 @@ function useCountUp(target: number, ms = 1200) {
 function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard'] }) {
     const gold = useCountUp(summary.gold);
     const b = summary.breakdown;
-    const rows: [string, number][] = [
-        ['Progress', b.progress],
-        ['Lives spared', b.lives],
-        ['Keepsake restraint', b.restraint],
-        ['Perfect 24s', b.perfect]
+    const rows: [string, string][] = [
+        ['How far you got', String(b.progress)],
+        ['Hearts spared', String(b.hearts)],
+        ['Perfect 24s', String(b.perfect)],
+        ["Spent at Thom's", b.spent ? `−${b.spent}` : '0']
     ];
     // Your best on the board (the board keeps each name's best run).
     const mine = leaderboard.findIndex(e => e.name === summary.name);
@@ -430,6 +477,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
                 {moment.ability === 'Smooth Talk' && <span className="minus">−3</span>}
+                {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
             {moment.ability === 'The Ace of Spades' && (
                 <div className="ace-card" aria-hidden="true">
@@ -442,8 +490,62 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     );
 }
 
+// Thom's Thonics: between fights. Buy what the purse allows (up to a full shelf), then on
+// to the next opponent. Thom's own portrait arrives with the user's art (art/bust-thom).
+function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const run = state.tavernRun!;
+    const shop = run.shop!;
+    const arrival = snap.shopArrival;
+    const shelfFull = run.shelf.length >= run.shelfSize;
+    return (
+        <div className="modal-backdrop">
+            <div className="thom-shop">
+                <div className="thom-sign">
+                    <span className="thom-portrait" aria-hidden="true">🧪</span>
+                    <div>
+                        <h2>Thom's Thonics</h2>
+                        <p className="thom-tag">Potions for 2, 4, 24 players</p>
+                    </div>
+                </div>
+                {arrival && (
+                    <p className="winnings">
+                        {arrival.defeated} is beaten: <strong>+{arrival.gold.win}</strong> gold
+                        {arrival.gold.hearts > 0 && <>, <strong>+{arrival.gold.hearts}</strong> for hearts left</>}
+                    </p>
+                )}
+                <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
+                <div className="thonic-cards">
+                    {shop.stock.map((t, i) => {
+                        const short = run.purse < t.price;
+                        return (
+                            <div key={t.id} className="thonic-card" style={{ animationDelay: `${i * 0.12}s` }}>
+                                <Bottle thonic={t} />
+                                <strong>{t.name}</strong>
+                                <span className="text">{t.text}</span>
+                                <button className="buy" disabled={short || shelfFull} onClick={() => actions.buyThonic(t.id)}>
+                                    {shelfFull ? 'Shelf full' : short ? `${t.price} gold` : `Buy · ${t.price}`}
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className="shop-shelf" aria-label="Your shelf">
+                    <span>Your shelf</span>
+                    {Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
+                        <span key={i} className="shelf-slot" title={t ? t.name : 'Empty'}><Bottle thonic={t} /></span>
+                    ))}
+                </div>
+                <button className="primary onward" onClick={actions.leaveShop}>
+                    On to {arrival?.nextEnemy ?? run.enemy.name}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function Modals({ snap }: { snap: Snapshot }) {
     const modal = snap.modal;
+    if (snap.state?.tavernRun?.shop && !modal) return <ThomShop snap={snap} state={snap.state} />;
     if (!modal) return null;
     if (modal.type === 'keepsakes') return <KeepsakeCards key={modal.nextEnemy} {...modal} />;
     if (modal.type === 'tavernOver') return <TavernOver summary={modal.summary} leaderboard={snap.leaderboard} />;
@@ -520,7 +622,7 @@ export function Hud() {
             </div>
 
             <footer ref={footerRef}>
-                {state && <TavernStrip state={state} />}
+                {state && <TavernStrip snap={snap} state={state} />}
                 {state && <Players snap={snap} state={state} ids={chips} className="side-players" />}
                 <TurnControls snap={snap} />
                 {state && state.mode !== 'tavern-crawl' && (

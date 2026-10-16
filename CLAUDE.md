@@ -142,7 +142,17 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    service. Fix anything Render-specific (build memory, websockets) as it appears.
 2. **Tune by ear and feel on real phones:** dice sound weight/volume, roll length (~2.2s),
    tap targets, camera framing on other phone sizes.
-3. **Tavern Crawl polish (first pass done, Oct 2026):** opponent entrance (bust rises, name
+3. **Tavern Crawl rework: Thom's Thonics and events** (design doc: https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094).
+   **Step 1 done (Oct 2026):** no keepsake after each win; gold goes into a purse during the run
+   (wins, hearts left, perfect 24s; `GOLD` in server.js) and the purse is the final score;
+   Thom's cart opens after each win (`tavernRun.shop`, `buyThonic` / `leaveShop`); a shelf of up
+   to 3 Thonics (`THONICS`, `drinkThonic` on your turn before rolling; Healing +1 heart, Last
+   Gasp keeps you on 1 by itself); `PLACES` holds the tavern's opponents and stock. The classic
+   page skips the shop. Next: step 2 (Fizzy Thomic, Second Thoughts, Steady, Clear-Eye
+   Thonics), step 3 (events behind two doors: Thom, Shrine to the Lady, Dice Den, Hooded
+   Stranger, Pickpocket; keepsakes from events + Jaguar's drop), step 4 (balance prices).
+   Thom's bust is the user's to paint (prompt in `docs/art-direction.md`).
+4. **Tavern Crawl polish (first pass done, Oct 2026):** opponent entrance (bust rises, name
    card), keepsakes dealt as cards (tap, then Take), signature moves on the table (Klarg's die
    swept to his side, Rokr's constellations over blurred dice, the Hangman's Ace card,
    Jaguar's -3), and a run-over/victory screen (opponents beaten, gold breakdown, leaderboard).
@@ -151,11 +161,11 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    task queue until the dice stop (Reach Around 0.5s after). Tavern Crawl opponents stop
    rolling once keeping every die already beats the player (`planBotLocks` with `toBeat`; they
    allow for an unused Velvet Cushion or Steady Hand Wrap).
-4. **The big moments:** perfect 24 (confetti, camera swoop, sound) and the devil/three-6s
+5. **The big moments:** perfect 24 (confetti, camera swoop, sound) and the devil/three-6s
    effect, done the user's way (ask first).
-5. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
-6. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+6. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
+7. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
    classic page reachable for a while), update the PWA manifest/service worker, retire the old
    client code in `public/index.html`.
-7. **Later / nice to have:** smaller bundle (lazy-load three.js), compressed audio (the 9.5 MB
+8. **Later / nice to have:** smaller bundle (lazy-load three.js), compressed audio (the 9.5 MB
    ambience track), spectator mode, emoji reactions floating over the table, more opponents.
