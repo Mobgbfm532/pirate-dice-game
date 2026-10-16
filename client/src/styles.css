@@ -807,56 +807,117 @@ footer {
 .healing-thonic .ability-banner .what, .last-gasp-thonic .ability-banner .what { color: #c5e1a5; }
 .ability-banner .plus { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ef9a9a; animation: minus-drop 2.6s ease-out forwards; }
 
-/* Thom's cart between fights. */
-.thom-shop {
-    width: min(100%, 520px);
-    max-height: 100%;
-    overflow-y: auto;
+/* Thom's cart between fights: a scene of its own over everything (no tavern, no table).
+   Phones: Thom above, his counter below. Wide screens: Thom on the left, the counter right.
+   Order on arrival: the dark lifts, Thom rises, the sign and counter follow, then the
+   Thonics are dealt (Hud.tsx sets their delays). Leaving fades the whole scene out. */
+.thom-scene {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow: hidden;
+    pointer-events: auto;
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 22%, rgba(255, 170, 80, 0.32), transparent 70%),
+        radial-gradient(ellipse at 50% 30%, #4a2a12 0%, #24130a 50%, #0b0603 100%);
+    animation: scene-in 0.5s ease-out both;
+}
+.thom-scene.leaving { animation: scene-out 0.45s ease-in forwards; }
+@keyframes scene-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scene-out { to { opacity: 0; } }
+
+/* Thom: big enough that his face fills the space, the rest of him behind the counter. */
+.thom-stage { position: relative; min-height: 0; overflow: hidden; }
+.thom-figure {
+    position: absolute;
+    left: 50%;
+    top: max(12px, env(safe-area-inset-top));
+    height: min(160%, 760px);
+    transform: translateX(-50%);
+    animation: thom-rise 0.9s 0.2s cubic-bezier(0.2, 0.8, 0.25, 1) both, thom-breathe 4.5s 1.2s ease-in-out infinite;
+    transform-origin: 50% 100%;
+}
+.thom-bust { display: block; height: 100%; filter: drop-shadow(0 0 24px rgba(0, 0, 0, 0.7)); }
+@keyframes thom-rise {
+    from { opacity: 0; transform: translateX(-50%) translateY(30%) scale(0.94); filter: brightness(0.2); }
+    to { opacity: 1; transform: translateX(-50%); }
+}
+@keyframes thom-breathe { 50% { transform: translateX(-50%) scale(1.012); } }
+/* A lantern's glow behind him, flickering a little. */
+.thom-lantern {
+    position: absolute;
+    left: 50%;
+    top: 4%;
+    width: min(90vw, 520px);
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 190, 110, 0.35), transparent 65%);
+    animation: lantern 3.2s ease-in-out infinite;
+}
+@keyframes lantern { 30% { opacity: 0.8; } 55% { opacity: 1; } 70% { opacity: 0.88; } }
+/* His green bottle glows (it sits about a fifth across and a third down the picture). */
+.thom-bottle-glow {
+    position: absolute;
+    left: 20%;
+    top: 41%;
+    width: 34%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(140, 255, 90, 0.45), transparent 70%);
+    mix-blend-mode: screen;
+    animation: bottle-glow 2.4s 1.1s ease-in-out infinite both;
+}
+@keyframes bottle-glow { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+
+/* The counter: dark walnut with a brass edge, holding the sign, purse and Thonics. */
+.thom-counter {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 4px 0 8px;
+    gap: 8px;
+    padding: 0 16px max(14px, env(safe-area-inset-bottom));
+    background:
+        linear-gradient(rgba(20, 10, 4, 0.55), rgba(20, 10, 4, 0.85)),
+        url('/textures/rail-walnut.webp') center / 420px auto,
+        #3b2414;
+    border-top: 3px solid var(--gold);
+    box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.65);
     text-align: center;
+    animation: counter-up 0.6s 0.45s cubic-bezier(0.2, 0.8, 0.25, 1) both;
 }
+@keyframes counter-up { from { transform: translateY(100%); } to { transform: none; } }
 .thom-sign {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 18px 8px 8px;
-    border-radius: 14px;
-    background: linear-gradient(#5d4037, #3e2723);
+    margin-top: -26px;
+    padding: 6px 22px 7px;
+    border-radius: 12px;
+    background: linear-gradient(#6d4c2a, #3e2723);
     border: 2px solid var(--gold);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
-    text-align: left;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    animation: sign-drop 0.5s 0.75s cubic-bezier(0.3, 1.4, 0.5, 1) both;
 }
-.thom-portrait {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.9rem;
-    background: radial-gradient(circle at 50% 40%, #6d4c2a, #2a1a0e);
-    border: 2px solid var(--gold);
-    flex: none;
-}
-.thom-sign h2 { margin: 0; font-size: clamp(1.5rem, 6.5vw, 1.9rem); color: var(--gold-bright); line-height: 1.1; }
+@keyframes sign-drop { from { opacity: 0; transform: translateY(-30px) rotate(-3deg); } to { opacity: 1; transform: none; } }
+.thom-sign h2 { margin: 0; font-size: clamp(1.5rem, 6.5vw, 2rem); color: var(--gold-bright); line-height: 1.1; text-shadow: 0 2px 6px #000; }
 .thom-tag { margin: 0; font-size: 0.85rem; color: var(--parchment-dim); }
-.winnings, .purse-line { margin: 0; color: var(--parchment); text-shadow: 0 1px 4px #000; }
+.winnings, .purse-line { margin: 0; color: var(--parchment); text-shadow: 0 1px 4px #000; animation: fade-up 0.4s 0.9s both; }
+.winnings { font-size: 0.9rem; }
 .winnings strong, .purse-line strong { color: var(--gold-bright); }
-.purse-line { font-size: 1.1rem; }
-.thonic-cards { display: flex; gap: 10px; justify-content: center; width: 100%; padding-top: 4px; }
+.purse-line { font-size: 1.05rem; }
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.thonic-cards { display: flex; gap: 10px; justify-content: center; width: min(100%, 460px); }
 .thonic-card {
     flex: 1 1 0;
     min-width: 0;
-    max-width: 200px;
+    max-width: 210px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 14px 10px 10px;
+    gap: 5px;
+    padding: 12px 10px 10px;
     color: var(--ink);
     background:
         radial-gradient(ellipse at center, transparent 55%, rgba(110, 70, 25, 0.25)),
@@ -867,9 +928,9 @@ footer {
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
     animation: deal 0.45s ease-out both;
 }
-.thonic-card .bottle { transform: scale(1.5); margin: 6px 0 8px; }
+.thonic-card .bottle { transform: scale(1.4); margin: 4px 0 6px; }
 .thonic-card strong { font-size: clamp(0.95rem, 4vw, 1.1rem); color: var(--red); line-height: 1.15; }
-.thonic-card .text { flex: 1; font-size: clamp(0.75rem, 3.3vw, 0.85rem); line-height: 1.3; color: #3b2a1a; }
+.thonic-card .text { flex: 1; font-size: clamp(0.72rem, 3.2vw, 0.85rem); line-height: 1.3; color: #3b2a1a; }
 .thonic-card .buy {
     width: 100%;
     padding: 8px 6px;
@@ -881,5 +942,24 @@ footer {
     background: linear-gradient(#388e3c, #1b5e20);
 }
 .thonic-card .buy:disabled { background: #b8a888; color: #5a4a35; border-color: #8d7a5a; }
-.shop-shelf { display: flex; align-items: center; gap: 6px; color: var(--parchment-dim); font-size: 0.9rem; }
-.thom-shop .onward { min-width: 240px; }
+.shop-footer { display: flex; align-items: center; gap: 12px; width: min(100%, 460px); animation: fade-up 0.4s 1.3s both; }
+.shop-shelf { display: flex; gap: 5px; flex: none; }
+.thom-scene .onward { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Wide screens: Thom on the left, the counter as a column on the right. */
+@media (orientation: landscape) {
+    .thom-scene { grid-template-rows: 1fr; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); }
+    .thom-figure { top: auto; bottom: -6%; height: min(108%, 900px); }
+    .thom-lantern { top: 10%; }
+    .thom-counter {
+        justify-content: center;
+        overflow-y: auto;
+        padding: 16px 24px max(12px, env(safe-area-inset-bottom));
+        border-top: none;
+        border-left: 3px solid var(--gold);
+        box-shadow: -14px 0 34px rgba(0, 0, 0, 0.65);
+        animation-name: counter-in-side;
+    }
+    .thom-sign { margin-top: 0; }
+}
+@keyframes counter-in-side { from { transform: translateX(100%); } to { transform: none; } }

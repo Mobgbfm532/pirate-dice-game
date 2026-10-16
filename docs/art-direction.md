@@ -128,7 +128,7 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
 | Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |
-| Thom bust (Thom's Thonics shop) | Wanted | Save as `art/bust-thom.jpg`; the shop shows a placeholder until then |
+| Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
 | Ace of Spades card | Wanted, optional | The Hangman's card face; drawn in CSS for now |
 
 ## Processing art

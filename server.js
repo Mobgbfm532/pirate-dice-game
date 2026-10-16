@@ -481,6 +481,8 @@ function runBotRoll(roomCode) {
     let key = room.turn.key;
     let animationMs = performRoll(roomCode);
     if (animationMs) botLater(roomCode, key, animationMs + 1000, () => runBotDecision(roomCode));
+    // A refused roll (dice still busy) must never leave the bot stuck: think again shortly.
+    else if (!room.turn.finalized) botLater(roomCode, key, 1000, () => runBotDecision(roomCode));
 }
 
 // What a Tavern Crawl opponent must beat to win the round: the player's finished score, or
@@ -504,9 +506,18 @@ function runBotDecision(roomCode) {
     let enemyId = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id : 'molar';
     let toLock = Rules.planBotLocks(turn, enemyId, getTavernScoreToBeat(room));
 
-    toLock.forEach((dieId, index) => botLater(roomCode, key, index * 400, () => performToggle(roomCode, dieId)));
-
-    botLater(roomCode, key, toLock.length * 400 + 800, () => {
+    // Lock the dice one after another, and only then decide what next. (Separate timers for
+    // each lock and the check could fire out of order on a busy server, and a check that ran
+    // before the locks found nothing to roll and stopped the bot for good.)
+    let lockFrom = i => {
+        if (i < toLock.length) {
+            performToggle(roomCode, toLock[i]);
+            botLater(roomCode, key, 400, () => lockFrom(i + 1));
+        } else {
+            botLater(roomCode, key, 800, afterLocking);
+        }
+    };
+    let afterLocking = () => {
         if (!turn.finalized) {
             runBotRoll(roomCode);
             return;
@@ -517,7 +528,8 @@ function runBotDecision(roomCode) {
         else if (score >= 22) sendBotReaction(roomCode, 'shield');
         else if (score <= 17) sendBotReaction(roomCode, 'skull');
         botLater(roomCode, key, 1500, () => performEndTurn(roomCode));
-    });
+    };
+    lockFrom(0);
 }
 
 // ---- Tavern Crawl ----

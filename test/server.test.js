@@ -269,6 +269,27 @@ test('the last die goes into its slot by itself once it lands', async () => {
     i.disconnect();
 });
 
+test('bots finish their turns even when the server is too busy to keep its timers in order', async () => {
+    // The server runs in this process: hog its event loop in bursts so timers pile up and
+    // fire late together (the bot used to stall when its "what next?" check ran first).
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const hog = setInterval(() => { const end = Date.now() + 5 + rnd() * 35; while (Date.now() < end) { /* busy */ } }, 3);
+    try {
+        const games = [1, 2, 3, 4, 5, 6].map(async n => {
+            const solo = await join(`Busy${n}`, `COMP-BUSY${n}`);
+            const over = waitFor(solo, 'gameOver', () => true, 60000);
+            autoPlay(solo);
+            solo.emit('rollDice'); // in case the first turn was announced before autoPlay listened
+            return over;
+        });
+        const results = await Promise.all(games);
+        results.forEach(over => assert.match(over.message, /wins the table/));
+    } finally {
+        clearInterval(hog);
+    }
+});
+
 // ---- Thom's Thonics ----
 
 let tavernTables = 0;
@@ -498,7 +519,7 @@ test('full runs that shop at Thom\'s keep the books straight', async () => {
         // If a run ever stalls, say where it stood.
         const t = (await over.catch(err => {
             const r = room, turn = r.turn;
-            throw new Error(`${err.message}: opponent ${r.tavernRun.encounterIndex}, lives ${JSON.stringify(r.roundPlayers.map(id => r.players[id].lives))}, turn ${turn && JSON.stringify({ player: turn.playerId === hero.id ? 'hero' : turn.playerId, rolled: turn.hasRolled, finalized: turn.finalized, ended: turn.ended, dice: turn.dice.map(d => d.status + ':' + d.value) })}, shop ${!!r.tavernRun.shop}, shelf ${r.tavernRun.shelf}`);
+            throw new Error(`${err.message}: opponent ${r.tavernRun.encounterIndex}, lives ${JSON.stringify(r.roundPlayers.map(id => r.players[id].lives))}, turn ${turn && JSON.stringify({ player: turn.playerId === hero.id ? 'hero' : turn.playerId, rolled: turn.hasRolled, finalized: turn.finalized, ended: turn.ended, dice: turn.dice.map(d => d.status + ':' + d.value) })}, shop ${!!r.tavernRun.shop}, shelf ${r.tavernRun.shelf}, paused ${r.botPaused}, index ${r.currentTurnIndex}, round ${r.roundNumber}/${r.tavernRun.encounterRound}, scores ${JSON.stringify(r.roundPlayers.map(id => [r.players[id].score, r.players[id].busted, r.players[id].connected]))}, key ${turn && turn.key}, epoch ${r.turnEpoch}`);
         })).tavern;
         const { progress, hearts, perfect, spent } = t.breakdown;
         assert.equal(progress + hearts + perfect - spent, t.gold, 'score = earned - spent');

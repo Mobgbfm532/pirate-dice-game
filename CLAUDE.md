@@ -109,6 +109,9 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   the footer using its measured height (`screenInsets.bottom`); on narrow screens, where the
   table can't shrink further, it pins the rail above the controls and the tavern gives way.
   Check at ~360x640 and ~384x800 after any HUD or camera change.
+- **Timers in order:** never rely on two `setTimeout`s with different delays firing in order;
+  on a busy event loop they can come out swapped (this stalled the bot). Chain steps instead
+  (`runBotDecision` locks one die, then schedules the next). The "too busy" test hogs the loop.
 - **Camera solve** carries state across frames: guard against non-finite values and ignore
   implausible layout measurements (first frame), or the table vanishes for good.
 - **AI art** usually arrives with a painted checkerboard instead of transparency; the art
@@ -151,7 +154,8 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
    page skips the shop. Next: step 2 (Fizzy Thomic, Second Thoughts, Steady, Clear-Eye
    Thonics), step 3 (events behind two doors: Thom, Shrine to the Lady, Dice Den, Hooded
    Stranger, Pickpocket; keepsakes from events + Jaguar's drop), step 4 (balance prices).
-   Thom's bust is the user's to paint (prompt in `docs/art-direction.md`).
+   Thom's shop is a full-screen scene (`.thom-scene`): his bust (`art/bust-thom.jpg`, cut out by
+   `cutOutFlat` for flat-magenta art) rises in above a walnut counter; no tavern or table.
 4. **Tavern Crawl polish (first pass done, Oct 2026):** opponent entrance (bust rises, name
    card), keepsakes dealt as cards (tap, then Take), signature moves on the table (Klarg's die
    swept to his side, Rokr's constellations over blurred dice, the Hangman's Ace card,

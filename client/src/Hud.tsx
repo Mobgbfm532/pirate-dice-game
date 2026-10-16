@@ -490,22 +490,36 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     );
 }
 
-// Thom's Thonics: between fights. Buy what the purse allows (up to a full shelf), then on
-// to the next opponent. Thom's own portrait arrives with the user's art (art/bust-thom).
+// Thom's Thonics: between fights, a scene of its own. The tavern and the table give way to
+// Thom's lantern-lit cart: he rises into view, his sign and counter follow, and the Thonics
+// are dealt onto the counter. Buy what the purse allows (up to a full shelf), then on to the
+// next opponent; the scene fades out first.
+const LEAVE_MS = 450;
+
 function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const shop = run.shop!;
     const arrival = snap.shopArrival;
     const shelfFull = run.shelf.length >= run.shelfSize;
+    const [leaving, setLeaving] = useState(false);
+    const leave = () => {
+        if (leaving) return;
+        setLeaving(true);
+        setTimeout(actions.leaveShop, LEAVE_MS);
+    };
     return (
-        <div className="modal-backdrop">
-            <div className="thom-shop">
+        <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Thom's Thonics">
+            <div className="thom-stage" aria-hidden="true">
+                <div className="thom-lantern" />
+                <div className="thom-figure">
+                    <img className="thom-bust" src={`${import.meta.env.BASE_URL}art/thom.webp`} alt="" />
+                    <div className="thom-bottle-glow" />
+                </div>
+            </div>
+            <div className="thom-counter">
                 <div className="thom-sign">
-                    <span className="thom-portrait" aria-hidden="true">🧪</span>
-                    <div>
-                        <h2>Thom's Thonics</h2>
-                        <p className="thom-tag">Potions for 2, 4, 24 players</p>
-                    </div>
+                    <h2>Thom's Thonics</h2>
+                    <p className="thom-tag">Potions for 2, 4, 24 players</p>
                 </div>
                 {arrival && (
                     <p className="winnings">
@@ -518,7 +532,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                     {shop.stock.map((t, i) => {
                         const short = run.purse < t.price;
                         return (
-                            <div key={t.id} className="thonic-card" style={{ animationDelay: `${i * 0.12}s` }}>
+                            <div key={t.id} className="thonic-card" style={{ animationDelay: `${0.9 + i * 0.15}s` }}>
                                 <Bottle thonic={t} />
                                 <strong>{t.name}</strong>
                                 <span className="text">{t.text}</span>
@@ -529,15 +543,16 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                         );
                     })}
                 </div>
-                <div className="shop-shelf" aria-label="Your shelf">
-                    <span>Your shelf</span>
-                    {Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
-                        <span key={i} className="shelf-slot" title={t ? t.name : 'Empty'}><Bottle thonic={t} /></span>
-                    ))}
+                <div className="shop-footer">
+                    <div className="shop-shelf" aria-label="Your shelf">
+                        {Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
+                            <span key={i} className="shelf-slot" title={t ? t.name : 'Empty'}><Bottle thonic={t} /></span>
+                        ))}
+                    </div>
+                    <button className="primary onward" onClick={leave} disabled={leaving}>
+                        On to {arrival?.nextEnemy ?? run.enemy.name}
+                    </button>
                 </div>
-                <button className="primary onward" onClick={actions.leaveShop}>
-                    On to {arrival?.nextEnemy ?? run.enemy.name}
-                </button>
             </div>
         </div>
     );

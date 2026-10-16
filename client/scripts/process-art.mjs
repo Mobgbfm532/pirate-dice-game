@@ -182,6 +182,80 @@ async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [
     console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  checker tones ${tones.lo}/${tones.hi}, ${removed}% removed`);
 }
 
+// Newer art comes on a flat solid background (the prompts ask for magenta) instead of a
+// checkerboard. Flood-fill from the border through anything close to the border's colour,
+// then take the background's tint out of the edge pixels (wispy hair over magenta would
+// otherwise keep a pink fringe).
+function floodFlat(img, tolerance) {
+    const { data, width, height } = img;
+    const border = [];
+    for (let x = 0; x < width; x++) border.push(x, (height - 1) * width + x);
+    for (let y = 0; y < height; y++) border.push(y * width, y * width + width - 1);
+    const median = c => border.map(p => data[p * 4 + c]).sort((a, b) => a - b)[border.length >> 1];
+    const bg = [median(0), median(1), median(2)];
+    // Close to the background AND magenta-ish (red and blue both above green): skin and
+    // brown cloth in shadow can come close in plain distance, but their blue sits below green.
+    const near = p => {
+        const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+        return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && r - g > 45 && b - g > 15;
+    };
+    const mask = new Uint8Array(width * height);
+    const stack = [];
+    const visit = p => { if (!mask[p] && near(p)) { mask[p] = 1; stack.push(p); } };
+    border.forEach(visit);
+    while (stack.length) {
+        const p = stack.pop();
+        const x = p % width;
+        if (x > 0) visit(p - 1);
+        if (x < width - 1) visit(p + 1);
+        if (p >= width) visit(p - width);
+        if (p < width * (height - 1)) visit(p + width);
+    }
+    // Pockets of background caught between hair strands: magenta-ish pixels close to the edge.
+    const pocket = 14, pockets = [];
+    for (let p = 0; p < mask.length; p++) {
+        if (mask[p] || !near(p)) continue;
+        const x = p % width, y = (p - x) / width;
+        search: for (let dy = -pocket; dy <= pocket; dy++) for (let dx = -pocket; dx <= pocket; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < width && ny < height && mask[ny * width + nx] === 1) { pockets.push(p); break search; }
+        }
+    }
+    pockets.forEach(p => { mask[p] = 1; });
+    return { mask, bg };
+}
+
+// Pulls magenta out of pixels next to the background: red and blue down towards green.
+function despill(img, mask, radius = 6) {
+    const { data, width, height } = img;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const p = y * width + x;
+        if (mask[p]) continue;
+        let edge = false;
+        for (let dy = -radius; dy <= radius && !edge; dy++) for (let dx = -radius; dx <= radius; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < width && ny < height && mask[ny * width + nx]) { edge = true; break; }
+        }
+        if (!edge) continue;
+        const i = p * 4, g = data[i + 1];
+        const spill = Math.min(data[i], data[i + 2]) - g;
+        if (spill > 0) { data[i] -= spill; data[i + 2] -= spill; }
+    }
+}
+
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80 } = {}) {
+    const img = await readRgba(file);
+    const { mask, bg } = floodFlat(img, tolerance);
+    keepMainShape(img, mask);
+    despill(img, mask);
+    applyMask(img, mask);
+    await writePreview(name, img);
+    const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());
+    const info = await sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, `${name}.webp`));
+    const removed = Math.round((100 * mask.reduce((s, v) => s + v, 0)) / mask.length);
+    console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  background rgb(${bg.join(',')}), ${removed}% removed`);
+}
+
 // The plates image holds three plaques side by side: "2", "4" and a blank one.
 async function slotPlates() {
     const img = await readRgba('slot-plates.jpg');
@@ -240,3 +314,4 @@ await cutOut('bust-klarg.jpg', 'klarg', { fireBox: [1005, 230, 1191, 896], patch
 await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
 await cutOut('bust-jaguar.jpg', 'jaguar');
+await cutOutFlat('bust-thom.jpg', 'thom');
