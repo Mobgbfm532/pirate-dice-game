@@ -145,17 +145,38 @@ test('rolling three or more 6s triggers the devil', () => {
     assert.equal(Rules.rollTurn(turn, { rollFace: faces(6, 6, 6, 1, 1, 1) }).devil, true);
 });
 
-test('Klarg steals the highest active die; stolen dice do not score or reroll', () => {
+test('Klarg steals a 2 or 4 the player still needs; stolen dice do not score or reroll', () => {
     const turn = Rules.createTurn('p1');
     Rules.rollTurn(turn, {
-        rollFace: faces(2, 4, 6, 5, 1, 1),
+        rollFace: faces(6, 4, 2, 5, 1, 1),
         onRolled: t => Rules.stealHighestActiveDie(t)
     });
-    assert.equal(turn.dice[2].status, STATUS.STOLEN);
-    assert.equal(Rules.toggleDie(turn, 2), null);
-    lockValues(turn, 2, 4, 5, 1, 1);
+    assert.equal(turn.dice[1].status, STATUS.STOLEN, 'the first of the 2 and 4 he finds');
+    assert.equal(Rules.toggleDie(turn, 1), null);
+    lockValues(turn, 6, 2, 5, 1, 1);
     assert.equal(turn.finalized, true);
-    assert.equal(turn.outcome.score, 7);
+    assert.equal(turn.outcome.busted, true, 'no 4 left: dust');
+});
+
+test('Klarg takes the highest die when no needed 2 or 4 is showing', () => {
+    const none = Rules.createTurn('p1');
+    Rules.rollTurn(none, { rollFace: faces(3, 6, 5, 1, 1, 1), onRolled: t => Rules.stealHighestActiveDie(t) });
+    assert.equal(none.dice[1].status, STATUS.STOLEN, 'the 6');
+
+    // The 2 and 4 already kept: a spare 2 or 4 on the felt isn't what he wants; the 6 is.
+    const kept = Rules.createTurn('p1');
+    Rules.rollTurn(kept, { rollFace: faces(2, 4, 1, 1, 1, 1) });
+    Rules.toggleDie(kept, 0);
+    Rules.toggleDie(kept, 1);
+    Rules.rollTurn(kept, { rollFace: faces(4, 6, 2, 3), onRolled: t => Rules.stealHighestActiveDie(t) });
+    assert.equal(kept.dice.find(d => d.status === STATUS.STOLEN).value, 6);
+
+    // Only the 4 still needed: he takes the 4, not the higher 5.
+    const half = Rules.createTurn('p1');
+    Rules.rollTurn(half, { rollFace: faces(2, 1, 1, 1, 1, 1) });
+    Rules.toggleDie(half, 0);
+    Rules.rollTurn(half, { rollFace: faces(5, 4, 2, 1, 1), onRolled: t => Rules.stealHighestActiveDie(t) });
+    assert.equal(half.dice.find(d => d.status === STATUS.STOLEN).value, 4);
 });
 
 test('Rokr blur hides values until the next roll, and finishing reveals them', () => {

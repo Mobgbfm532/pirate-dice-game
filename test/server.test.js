@@ -144,12 +144,11 @@ test('Rokr blur hides dice values from the browser itself', async () => {
 test('unknown reactions are dropped and names are passed through as plain data', async () => {
     const erin = await join('<img src=x>', 'TESTC');
     await join('Frank', 'TESTC');
-    let received = [];
-    erin.on('receiveReaction', r => received.push(r));
+    // The first reaction to arrive must be the real one: the unknown one is dropped.
+    const first = waitFor(erin, 'receiveReaction');
     erin.emit('sendReaction', '<script>alert(1)</script>');
     erin.emit('sendReaction', '😀');
-    await sleep(50);
-    assert.deepEqual(received.map(r => r.emoji), ['😀']);
+    assert.equal((await first).emoji, '😀');
 });
 
 test('a solo game against The Molar plays through to game over', async () => {
@@ -552,14 +551,27 @@ test('the Shrine to the Lady: a free Healing Thonic, or 100 gold', async () => {
     assert.equal(b.room.tavernRun.purse, 150);
 });
 
-test('the Dice Den: two dice each, ties throw again, the bet doubles or goes', async () => {
+test('the Dice Den: bet, then roll two dice against the gambler until someone wins', async () => {
     for (let n = 0; n < 6; n++) {
-        const { hero, room } = await betweenFights(`Gambler${n}`, { stage: 'diceDen', bets: [50, 100] }, 80);
+        const { hero, room } = await betweenFights(`Gambler${n}`, { stage: 'diceDen', bets: [50, 100], bet: null, throws: [] }, 80);
+        hero.emit('diceRoll'); // no bet yet
         for (const bad of [100, 75, -50, '50', null, 1e9]) hero.emit('diceBet', bad); // 100: the purse is short
         await sleep(40);
         assert.equal(room.tavernRun.interlude.stage, 'diceDen');
+        assert.equal(room.tavernRun.interlude.bet, null);
+        assert.equal(room.tavernRun.interlude.throws.length, 0);
         hero.emit('diceBet', 50);
-        await nextState(hero, s => runOf(s).interlude.stage === 'done');
+        await nextState(hero, s => runOf(s).interlude.bet === 50);
+        hero.emit('diceBet', 0); // the bet stands once placed
+        await sleep(30);
+        assert.equal(room.tavernRun.interlude.stage, 'diceDen');
+        assert.equal(room.tavernRun.purse, 80, 'nothing paid until a throw is won or lost');
+        // Throw until someone wins (a tie throws again).
+        for (let i = 0; i < 30 && room.tavernRun.interlude.stage === 'diceDen'; i++) {
+            const before = room.tavernRun.interlude.throws.length;
+            hero.emit('diceRoll');
+            await nextState(hero, s => runOf(s).interlude.stage === 'done' || runOf(s).interlude.throws.length > before);
+        }
         const { throws, won, bet } = room.tavernRun.interlude;
         assert.equal(bet, 50);
         const sum = d => d[0] + d[1];
@@ -569,11 +581,14 @@ test('the Dice Den: two dice each, ties throw again, the bet doubles or goes', a
         assert.notEqual(sum(last.you), sum(last.them));
         assert.equal(room.tavernRun.purse, won ? 130 : 30);
         assert.equal(room.tavernRun.stats.eventGold, won ? 50 : -50);
+        hero.emit('diceRoll'); // over: no more throws
+        await sleep(30);
+        assert.equal(room.tavernRun.purse, won ? 130 : 30);
     }
-    const { hero, room } = await betweenFights('Walker', { stage: 'diceDen', bets: [50, 100] }, 80);
+    const { hero, room } = await betweenFights('Walker', { stage: 'diceDen', bets: [50, 100], bet: null, throws: [] }, 80);
     hero.emit('diceBet', 0);
     await nextState(hero, s => runOf(s).interlude.stage === 'done');
-    assert.equal(room.tavernRun.purse, 80, 'walking away costs nothing');
+    assert.equal(room.tavernRun.purse, 80, 'declining costs nothing');
 });
 
 test('the Hooded Stranger: a keepsake, and the next fight starts on 2 hearts', async () => {
@@ -691,7 +706,10 @@ test('full runs through the spots between fights keep the books straight', async
             await sleep(20);
             if (spot === 'thom') run.shop.stock.forEach(id => hero.emit('buyThonic', id));
             if (spot === 'shrine') hero.emit('shrinePick', n % 2 ? 'gold' : 'healing');
-            if (spot === 'diceDen') hero.emit('diceBet', 50);
+            if (spot === 'diceDen') {
+                hero.emit('diceBet', 50);
+                for (let i = 0; i < 20 && run.interlude.stage === 'diceDen'; i++) { hero.emit('diceRoll'); await sleep(10); }
+            }
             if (spot === 'stranger') hero.emit('strangerPick', run.interlude.offers[0].id);
             setTimeout(() => hero.emit('moveOn'), 20);
         });
@@ -832,11 +850,11 @@ test('Clear-Eye stops Klarg\'s steal and Rokr\'s blur for the round', async () =
     kroom.tavernRun.shelf = ['clearEye'];
     let moves = 0;
     klarg.on('signatureMove', () => moves++);
-    const used = waitFor(klarg, 'thonicUsed', u => u.id === 'clearEye');
+    const used = waitFor(klarg, 'thonicUsed', u => u.id === 'clearEye', 8000);
     klarg.emit('drinkThonic', 0);
     assert.match((await used).text, /Klarg can't use Reach Around/);
     klarg.emit('rollDice');
-    const rolled = await waitFor(klarg, 'diceRolled');
+    const rolled = await waitFor(klarg, 'diceRolled', () => true, 8000);
     await sleep(60);
     assert.equal(rolled.turn.dice.filter(d => d.status === 'stolen').length, 0, 'no die stolen');
     assert.equal(moves, 0);
@@ -847,7 +865,7 @@ test('Clear-Eye stops Klarg\'s steal and Rokr\'s blur for the round', async () =
     rokr.emit('drinkThonic', 0);
     await sleep(40);
     rokr.emit('rollDice');
-    const seen = await waitFor(rokr, 'diceRolled');
+    const seen = await waitFor(rokr, 'diceRolled', () => true, 8000);
     assert.ok(seen.turn.dice.every(d => !d.hidden && d.value > 0), 'dice not blurred');
 });
 

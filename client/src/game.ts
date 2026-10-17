@@ -49,7 +49,7 @@ export type Interlude =
     | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }
     | { stage: 'choose'; spots: Spot[]; note?: PickpocketNote }
     | { stage: 'shrine'; gold: number }
-    | { stage: 'diceDen'; bets: number[] }
+    | { stage: 'diceDen'; bets: number[]; bet: number | null; throws: DiceThrow[] }
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
     | { stage: 'done'; spot: 'shrine'; gift: 'healing' | 'gold'; gold?: number }
     | { stage: 'done'; spot: 'diceDen'; bet: number; throws?: DiceThrow[]; won?: boolean }
@@ -311,7 +311,12 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         const durationMs = (trackDuration(track) / speed) * 1000;
 
         table.roll = { track, startedAt: performance.now(), speed, hidden: new Set(rolled.filter(d => d.hidden).map(d => d.id)) };
-        update({ rolling: true });
+        // Rokr's blur lifts the moment the next roll starts (not when it lands): the dice already
+        // kept show their faces at once, and the stars over the thrown ones go.
+        const unblurred = before && before.blurActive && !turn.blurActive
+            ? { ...before, blurActive: false, dice: before.dice.map(d => thrownIds.has(d.id) ? { ...d, hidden: false } : turn.dice.find(n => n.id === d.id) ?? d) }
+            : null;
+        update(unblurred ? { rolling: true, turn: unblurred } : { rolling: true });
         setCallout(turn, data.preRollCallout, null);
         playDiceImpacts(track.impacts, speed);
 
@@ -601,6 +606,9 @@ export const actions = {
     diceBet(bet: number) {
         playSound('click');
         socket.emit('diceBet', bet);
+    },
+    diceRoll() {
+        socket.emit('diceRoll');
     },
     strangerPick(id: string | null) {
         playSound('click');

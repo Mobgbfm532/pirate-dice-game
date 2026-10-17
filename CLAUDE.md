@@ -35,7 +35,7 @@ The **server is authoritative**: it rolls (crypto RNG), validates every action, 
 the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`rollDice`,
 `toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `drinkThonic(slot, dieId?)`
 and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `strangerPick`,
-`moveOn` (`leaveShop` is its older name)) and render what comes back. Two clients share one server:
+`diceRoll`, `moveOn` (`leaveShop` is its older name)) and render what comes back. Two clients share one server:
 
 | Path | What |
 |---|---|
@@ -70,7 +70,8 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   `setViewOffset` to leave a right column for the Roll button), lights, tray, brass plates.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations.
-- `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), chips, opponent nameplate, score to
+- `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), turn banner (not in Tavern Crawl, where
+  the nameplates show whose turn it is), chips, opponent nameplate, score to
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
   and Thonic shelf (`drinkable()`), Thom's full-screen shop scene (`ThomShop`), the run-over
   screen. `Backdrop.tsx`: tavern image + opponent bust behind the table.
@@ -169,7 +170,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   tougher opponents are new entries). Hearts reset to 3 each fight. **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
-  Rokr's constellations, the Hangman's Ace card, Jaguar's -3); no commentary pop-ups.
+  Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
+  2 or 4 the player still needs, else the highest die. **The Ace of Spades is the Hangman's
+  revolver** (not a card): his move is a muzzle flash and a bullet hole by a "24".
 - **Opponents' play:** the Molar plays simply (`planBotLocks`), as a teacher. From Klarg on
   they play their best (`shared/strategy.js`): the keep with the best chance of beating the
   player's score (ties count half), of a valid hand if the player dusted, or, going first, of
@@ -199,11 +202,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
   fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 100 gold),
-  the Dice Den (bet 50/100; two dice each, higher total doubles it, ties throw again), the
+  the Dice Den (bet 50/100, then the player taps to roll two dice and the gambler rolls two;
+  higher total doubles the bet, a tie rolls again), the
   Hooded Stranger (one of two keepsakes; the next fight starts on 2 hearts; offered only while
   keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: roll one die, a 4+
   catches him (`pickpocketCatch`), else he takes a quarter of the purse. The choice screen
-  is headed "Make your choice". "Walk straight on" skips both spots. Gold won or lost here is
+  is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
+  skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
+  Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
+  rises in their own light with a speech bubble and reacts to what happens, sign + counter;
+  the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with
+  the real dice sound (`simulateRoll` impacts). Gold won or lost here is
   `stats.eventGold` ("Between fights" on the run-over screen). Numbers are first guesses.
   Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
   sailors. Game text calls the pickpocket "the thief" (no assumed gender).
@@ -235,6 +244,6 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 7. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
    perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
 8. **Later / nice to have:** optional art (`docs/art-direction.md` "Wanted": Klarg's hand,
-   keepsake pictures, Ace card), new places with tougher opponents (the roguelite), smaller
+   keepsake pictures, the Hangman's revolver), new places with tougher opponents (the roguelite), smaller
    bundle (lazy-load three.js), compressed audio (the 9.5 MB ambience track), spectator mode,
    emoji reactions floating over the table.

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
-import { areSoundsOff, isMusicOff, playSound, setMusicOff, setSoundsOff } from './sounds';
+import { areSoundsOff, isMusicOff, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
+import { simulateRoll } from './physics';
 import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
 import { acrossTheTable, opponentName } from './Backdrop';
 
@@ -517,7 +518,7 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
 }
 
 // An opponent's signature move. Klarg's steal and Rokr's stars happen on the 3D table; here
-// the move's name, plus The Hangman's card and Jaguar's -3.
+// the move's name, plus the shot from The Hangman's revolver and Jaguar's -3.
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
     const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3200 : 2600);
@@ -532,11 +533,10 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
             {moment.ability === 'The Ace of Spades' && (
-                <div className="ace-card" aria-hidden="true">
-                    <span className="corner">A<br />♠</span>
-                    <span className="pip">♠</span>
-                    <span className="corner bottom">A<br />♠</span>
-                </div>
+                <>
+                    <div className="gun-flash" aria-hidden="true" />
+                    <div className="bullet-24" aria-hidden="true"><span className="hole" /><span className="score">24</span></div>
+                </>
             )}
         </div>
     );
@@ -603,7 +603,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                         ))}
                     </div>
                     <button className="primary onward" onClick={leave} disabled={leaving}>
-                        On to {arrival?.nextEnemy ?? run.enemy.name}
+                        Challenge {arrival?.nextEnemy ?? run.enemy.name}
                     </button>
                 </div>
             </div>
@@ -619,8 +619,6 @@ const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     stranger: { name: 'The Hooded Stranger', line: '"I have something for you… for a price."', offer: 'A keepsake, for a heart' }
 };
 
-const DIE_FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-
 // Who (or what) is at the spot, in a lit round frame.
 function SpotPicture({ spot }: { spot: Spot | 'pickpocket' }) {
     return (
@@ -630,6 +628,9 @@ function SpotPicture({ spot }: { spot: Spot | 'pickpocket' }) {
     );
 }
 
+// The choice between fights is a screen of its own; each spot (and the pickpocket) is a
+// scene like Thom's: the character rises in their own light with a line in a speech bubble,
+// their sign and counter slide in, and the counter holds what you can do there.
 function Interlude({ state }: { state: GameState }) {
     const run = state.tavernRun!;
     const interlude = run.interlude!;
@@ -641,35 +642,16 @@ function Interlude({ state }: { state: GameState }) {
         setLeaving(true);
         setTimeout(actions.moveOn, LEAVE_MS);
     };
+    if (interlude.stage !== 'choose') {
+        const spot = interlude.stage === 'done' ? interlude.spot : interlude.stage;
+        return <SpotScene key={spot} spot={spot} state={state} next={next} leaving={leaving} onMoveOn={moveOn} />;
+    }
+    const note = interlude.note;
     return (
         <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
-                {won && (
-                    <p className="winnings">
-                        {won.defeated} is beaten: <strong>+{won.gold.win}</strong> gold
-                        {won.gold.hearts > 0 && <>, <strong>+{won.gold.hearts}</strong> for hearts left</>}
-                    </p>
-                )}
-                <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
-                <InterludeStage key={interlude.stage} state={state} next={next} onMoveOn={moveOn} />
-            </div>
-        </div>
-    );
-}
-
-function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: string; onMoveOn: () => void }) {
-    const run = state.tavernRun!;
-    const interlude = run.interlude!;
-    const [picked, setPicked] = useState<string | null>(null);
-    const shelfFull = run.shelf.length >= run.shelfSize;
-
-    if (interlude.stage === 'pickpocket') return <Pickpocket run={run} />;
-
-    if (interlude.stage === 'choose') {
-        const note = interlude.note;
-        return (
-            <>
+                <Winnings state={state} />
                 {note && (
                     <p className={`event-note ${note.caught ? 'good' : ''}`}>
                         {note.caught ? 'You caught the pickpocket: your gold is safe.' : `The pickpocket got away with ${note.lost} gold.`}
@@ -686,53 +668,148 @@ function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: str
                         </button>
                     ))}
                 </div>
-                <button className="link-button" onClick={onMoveOn}>Walk straight on to {next}</button>
-            </>
-        );
+                <button className="link-button" onClick={moveOn}>Or challenge {next} right away</button>
+            </div>
+        </div>
+    );
+}
+
+function Winnings({ state }: { state: GameState }) {
+    const run = state.tavernRun!;
+    const won = run.lastWin;
+    return (
+        <>
+            {won && (
+                <p className="winnings">
+                    {won.defeated} is beaten: <strong>+{won.gold.win}</strong> gold
+                    {won.gold.hearts > 0 && <>, <strong>+{won.gold.hearts}</strong> for hearts left</>}
+                </p>
+            )}
+            <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
+        </>
+    );
+}
+
+type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket';
+
+// Each scene's sign, and what its character says as things happen.
+const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
+    pickpocket: { name: 'Stop, thief!', tag: 'A hand in your purse' },
+    shrine: { name: 'Shrine to the Lady', tag: 'Goddess of sailors' },
+    diceDen: { name: 'The Dice Den', tag: 'Two dice each. Highest wins.' },
+    stranger: { name: 'The Hooded Stranger', tag: 'Keepsakes, for a price' }
+};
+
+function sceneLine(interlude: Interlude, revealed: boolean): string | null {
+    switch (interlude.stage) {
+        case 'pickpocket':
+            if (interlude.roll === undefined || !revealed) return 'Finders keepers!';
+            return interlude.caught ? 'Alright, alright! Have it back!' : 'Too slow!';
+        case 'diceDen':
+            if (!interlude.bet) return 'Fancy a quick throw, friend?';
+            if (interlude.throws.length && revealed) return 'A tie! Again!';
+            return 'Your throw. Make it count.';
+        case 'stranger': return 'I have something for you… for a price.';
+        case 'shrine': return null;
+        case 'done':
+            if (interlude.spot === 'diceDen') {
+                if (!interlude.bet) return 'Suit yourself.';
+                if (!revealed) return 'Your throw. Make it count.';
+                return interlude.won ? "Beginner's luck…" : 'The house thanks you!';
+            }
+            if (interlude.spot === 'stranger') return interlude.keepsake ? 'A fine choice. Mind your heart.' : 'Another time, then.';
+            return null;
+        default: return null;
     }
+}
+
+function SpotScene({ spot, state, next, leaving, onMoveOn }: { spot: SceneSpot; state: GameState; next: string; leaving: boolean; onMoveOn: () => void }) {
+    const run = state.tavernRun!;
+    const interlude = run.interlude!;
+    // Dice rolled here tumble first; the character answers once they land.
+    const [revealed, setRevealed] = useState(true);
+    const line = sceneLine(interlude, revealed);
+    // The first line waits for the character to arrive; their answers come at once.
+    const firstLine = useRef(line);
+    const mood = interlude.stage === 'pickpocket' && interlude.roll !== undefined && revealed ? (interlude.caught ? 'caught' : 'escaped')
+        : interlude.stage === 'done' && interlude.spot === 'diceDen' && interlude.bet && revealed ? (interlude.won ? 'lost' : 'won')
+            : '';
+    const portrait = SPOT_PORTRAITS[spot];
+    return (
+        <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
+            <div className="thom-stage" aria-hidden="true"
+                style={spot === 'shrine' ? { backgroundImage: `url("${portrait.src}")` } : undefined}>
+                <div className="thom-lantern" />
+                {spot === 'stranger' && <div className="spot-mist" />}
+                {spot === 'shrine' && <div className="shrine-candles" />}
+                {line && <div key={line} className={`thom-speech ${line !== firstLine.current ? 'quick' : ''}`}>{line}</div>}
+                {spot !== 'shrine' && (
+                    <div className="thom-figure">
+                        <img className="thom-bust" src={portrait.src} alt="" />
+                    </div>
+                )}
+            </div>
+            <div className="thom-counter">
+                <div className="thom-sign">
+                    <h2>{SCENES[spot].name}</h2>
+                    <p className="thom-tag">{SCENES[spot].tag}</p>
+                </div>
+                <Winnings state={state} />
+                <SceneCounter state={state} next={next} onMoveOn={onMoveOn} setRevealed={setRevealed} />
+            </div>
+        </div>
+    );
+}
+
+// What you can do at the spot, on its counter.
+function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState; next: string; onMoveOn: () => void; setRevealed: (v: boolean) => void }) {
+    const run = state.tavernRun!;
+    const interlude = run.interlude!;
+    const [picked, setPicked] = useState<string | null>(null);
+    const shelfFull = run.shelf.length >= run.shelfSize;
+    const challenge = <button className="primary onward" onClick={onMoveOn}>Challenge {next}</button>;
+
+    if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} setRevealed={setRevealed} />;
 
     if (interlude.stage === 'shrine') {
         return (
-            <div className="event-card">
-                <SpotPicture spot="shrine" />
-                <h2>Shrine to the Lady</h2>
-                <p>You light a candle. The Lady offers one gift.</p>
+            <>
+                <p className="scene-text">You light a candle. The Lady offers one gift.</p>
                 <div className="event-choices">
                     <button className="primary" disabled={shelfFull} onClick={() => actions.shrinePick('healing')}>
                         {shelfFull ? 'Shelf full: no Healing Thonic' : 'A Healing Thonic'}
                     </button>
                     <button className="primary" onClick={() => actions.shrinePick('gold')}>{interlude.gold} gold</button>
                 </div>
-            </div>
+            </>
         );
     }
 
     if (interlude.stage === 'diceDen') {
-        return (
-            <div className="event-card">
-                <SpotPicture spot="diceDen" />
-                <h2>The Dice Den</h2>
-                <p>Two dice each against a stranger. Higher total doubles your bet; a tie throws again.</p>
-                <div className="event-choices">
-                    {interlude.bets.map(bet => (
-                        <button key={bet} className="primary" disabled={run.purse < bet} onClick={() => actions.diceBet(bet)}>Bet {bet}</button>
-                    ))}
-                    <button className="secondary" onClick={() => actions.diceBet(0)}>Walk away</button>
-                </div>
-            </div>
-        );
+        if (!interlude.bet) {
+            return (
+                <>
+                    <p className="scene-text">Bet against the gambler: two dice each, the higher total doubles your bet.</p>
+                    <div className="event-choices">
+                        {interlude.bets.map(bet => (
+                            <button key={bet} className="primary" disabled={run.purse < bet} onClick={() => actions.diceBet(bet)}>Bet {bet}</button>
+                        ))}
+                        <button className="secondary" onClick={() => actions.diceBet(0)}>No thanks</button>
+                    </div>
+                </>
+            );
+        }
+        return <DiceDenTable bet={interlude.bet} throws={interlude.throws} setRevealed={setRevealed} next={null} />;
     }
 
     if (interlude.stage === 'stranger') {
         const chosen = interlude.offers.find(k => k.id === picked);
         return (
-            <div className="event-card wide">
-                <SpotPicture spot="stranger" />
-                <h2>The Hooded Stranger</h2>
-                <p>Take one, and you start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</p>
+            <>
+                <p className="scene-text">Take one, and you start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</p>
                 <div className="keepsake-cards">
-                    {interlude.offers.map(k => (
-                        <button key={k.id} className={`keepsake-card ${picked === k.id ? 'picked' : picked ? 'passed' : ''}`} onClick={() => setPicked(k.id)}>
+                    {interlude.offers.map((k, i) => (
+                        <button key={k.id} className={`keepsake-card ${picked === k.id ? 'picked' : picked ? 'passed' : ''}`} style={{ animationDelay: `${0.9 + i * 0.15}s` }} onClick={() => setPicked(k.id)}>
                             <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[k.id] ?? '✦'}</span>
                             <strong>{k.name}</strong>
                             <span className="text">{k.text}</span>
@@ -743,50 +820,84 @@ function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: str
                     <button className="primary" disabled={!chosen} onClick={() => chosen && actions.strangerPick(chosen.id)}>
                         {chosen ? `Take ${chosen.name}` : 'Tap a keepsake'}
                     </button>
-                    <button className="secondary" onClick={() => actions.strangerPick(null)}>Walk away</button>
+                    <button className="secondary" onClick={() => actions.strangerPick(null)}>No thanks</button>
                 </div>
-            </div>
+            </>
         );
     }
 
-    // What happened at the spot.
+    if (interlude.stage !== 'done') return null;
+    if (interlude.spot === 'diceDen' && interlude.bet && interlude.throws) {
+        return <DiceDenTable bet={interlude.bet} throws={interlude.throws} won={interlude.won} setRevealed={setRevealed} next={challenge} />;
+    }
     return (
-        <div className="event-card">
-            <SpotPicture spot={interlude.spot} />
-            <h2>{SPOTS[interlude.spot].name}</h2>
-            <EventOutcome state={state} />
-            <div className="event-choices">
-                <button className="primary onward" onClick={onMoveOn}>On to {next}</button>
-            </div>
-        </div>
+        <>
+            <p className="outcome">
+                {interlude.spot === 'shrine'
+                    ? (interlude.gift === 'healing' ? 'A Healing Thonic is on your shelf.' : <>The Lady's blessing: <strong>+{interlude.gold}</strong> gold.</>)
+                    : interlude.spot === 'stranger'
+                        ? (interlude.keepsake ? <><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</> : 'You leave the Stranger to the shadows.')
+                        : 'You leave the dice to others.'}
+            </p>
+            <div className="event-choices">{challenge}</div>
+        </>
     );
 }
 
-// A hand in your purse: roll one die to catch the thief. The die tumbles, then the result shows.
-const TUMBLE_MS = 900;
+// A die as on the table: ivory with black pips, a red 1 and green 6. While `rolling`, it
+// tumbles through faces.
+const PIPS: Record<number, number[]> = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
-function Pickpocket({ run }: { run: NonNullable<GameState['tavernRun']> }) {
-    const interlude = run.interlude as Extract<Interlude, { stage: 'pickpocket' }>;
-    const rolled = interlude.roll !== undefined;
-    const [revealed, setRevealed] = useState(false);
+function Die({ value, rolling, delay = 0 }: { value: number | null; rolling?: boolean; delay?: number }) {
+    const [face, setFace] = useState(value ?? 0);
     useEffect(() => {
+        if (!rolling) { setFace(value ?? 0); return; }
+        const timer = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 90);
+        return () => clearInterval(timer);
+    }, [rolling, value]);
+    const shown = rolling ? face : value ?? 0;
+    return (
+        <span className={`die2d face-${shown} ${rolling ? 'rolling' : ''}`} style={{ animationDelay: `${delay}ms` }} aria-label={shown ? String(shown) : 'not rolled'}>
+            {Array.from({ length: 9 }, (_, i) => <span key={i} className={PIPS[shown]?.includes(i) ? 'pip' : ''} />)}
+        </span>
+    );
+}
+
+// The sound of real dice: the same physics the table uses, thrown off screen.
+function clatter(values: number[]) {
+    const track = simulateRoll(values.map((_, i) => i), values);
+    playDiceImpacts(track.impacts);
+}
+
+const DIE_ROLL_MS = 850;
+
+// The pickpocket: one die to catch the thief.
+function PickpocketRoll({ interlude, setRevealed }: { interlude: Extract<Interlude, { stage: 'pickpocket' }>; setRevealed: (v: boolean) => void }) {
+    const rolled = interlude.roll !== undefined;
+    const [rolling, setRolling] = useState(false);
+    useLayoutEffect(() => {
         if (!rolled) return;
+        setRolling(true);
+        setRevealed(false);
+        clatter([interlude.roll!]);
         const timer = setTimeout(() => {
+            setRolling(false);
             setRevealed(true);
             playSound(interlude.caught ? 'yay' : 'aww');
-        }, TUMBLE_MS);
+        }, DIE_ROLL_MS);
         return () => clearTimeout(timer);
-    }, [rolled, interlude.caught]);
+    }, [rolled, interlude.roll, interlude.caught, setRevealed]);
     const catchFaces = Array.from({ length: 7 - interlude.catchOn }, (_, i) => interlude.catchOn + i).join(', ').replace(/, (\d)$/, ' or $1');
+    const done = rolled && !rolling;
     return (
-        <div className="event-card">
-            {rolled
-                ? <span className={`pickpocket-die ${revealed ? (interlude.caught ? 'good' : 'bad') : 'tumbling'}`} aria-hidden="true">{DIE_FACES[interlude.roll!]}</span>
-                : <SpotPicture spot="pickpocket" />}
-            <h2>Hey! A hand in your purse!</h2>
-            {!rolled && <p>A pickpocket is making off with <strong>{interlude.steal}</strong> gold. Roll a {catchFaces} to catch the thief.</p>}
-            {rolled && !revealed && <p className="outcome">Rolling…</p>}
-            {revealed && (
+        <>
+            {!rolled && <p className="scene-text">The thief is making off with <strong>{interlude.steal}</strong> gold. Roll a {catchFaces} to catch them.</p>}
+            {rolled && (
+                <div className={`dice-row single ${done ? (interlude.caught ? 'good' : 'bad') : ''}`}>
+                    <Die value={interlude.roll!} rolling={rolling} />
+                </div>
+            )}
+            {done && (
                 <p className={`outcome ${interlude.caught ? 'good' : 'bad'}`}>
                     {interlude.caught
                         ? <>You rolled a {interlude.roll}: <strong>caught the thief!</strong> Your gold is safe.</>
@@ -795,47 +906,67 @@ function Pickpocket({ run }: { run: NonNullable<GameState['tavernRun']> }) {
             )}
             <div className="event-choices">
                 {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch the thief</button>}
-                {revealed && <button className="primary" onClick={() => actions.pickpocket('on')}>Carry on</button>}
+                {done && <button className="primary" onClick={() => actions.pickpocket('on')}>Carry on</button>}
             </div>
-        </div>
+        </>
     );
 }
 
-function EventOutcome({ state }: { state: GameState }) {
-    const interlude = state.tavernRun!.interlude!;
-    const won = interlude.stage === 'done' && interlude.spot === 'diceDen' ? interlude.won : undefined;
-    useEffect(() => {
-        if (won !== undefined) playSound(won ? 'yay' : 'aww');
-    }, [won]);
-    if (interlude.stage !== 'done') return null;
-    if (interlude.spot === 'shrine') {
-        return <p className="outcome">{interlude.gift === 'healing' ? 'A Healing Thonic is on your shelf.' : <>The Lady's blessing: <strong>+{interlude.gold}</strong> gold.</>}</p>;
-    }
-    if (interlude.spot === 'stranger') {
-        return interlude.keepsake
-            ? <p className="outcome"><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</p>
-            : <p className="outcome">You leave the Stranger to the shadows.</p>;
-    }
-    if (!interlude.bet || !interlude.throws) return <p className="outcome">You leave the dice to others.</p>;
+// The Dice Den: you roll your two dice, then the gambler rolls theirs; a tie rolls again.
+// Each new throw plays out in turn (yours, then the gambler's), then the result.
+function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; throws: DiceThrow[]; won?: boolean; setRevealed: (v: boolean) => void; next: JSX.Element | null }) {
+    const last = throws.at(-1) ?? null;
+    const [phase, setPhase] = useState<'ready' | 'you' | 'them' | 'shown'>(last ? 'you' : 'ready');
+    const [asked, setAsked] = useState(false);
+    useLayoutEffect(() => {
+        if (!last) return;
+        setAsked(false);
+        setPhase('you');
+        setRevealed(false);
+        clatter(last.you);
+        const t1 = setTimeout(() => { setPhase('them'); clatter(last.them); }, DIE_ROLL_MS + 250);
+        const t2 = setTimeout(() => {
+            setPhase('shown');
+            setRevealed(true);
+            if (won !== undefined) playSound(won ? 'yay' : 'aww');
+        }, 2 * DIE_ROLL_MS + 450);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
+    }, [throws.length, last, won, setRevealed]);
     const sum = (d: [number, number]) => d[0] + d[1];
+    const youShown = last && phase !== 'you';
+    const themShown = last && phase === 'shown';
+    const tie = phase === 'shown' && won === undefined;
     return (
         <>
-            <ol className="dice-throws">
-                {interlude.throws.map((t, i) => (
-                    <li key={i} style={{ animationDelay: `${i * 0.6}s` }}>
-                        <span className="who">You</span>
-                        <span className="faces">{DIE_FACES[t.you[0]]}{DIE_FACES[t.you[1]]}</span>
-                        <span className="total">{sum(t.you)}</span>
-                        <span className="vs">–</span>
-                        <span className="total">{sum(t.them)}</span>
-                        <span className="faces">{DIE_FACES[t.them[0]]}{DIE_FACES[t.them[1]]}</span>
-                        <span className="who">Stranger</span>
-                    </li>
-                ))}
-            </ol>
-            <p className={`outcome ${interlude.won ? 'good' : 'bad'}`} style={{ animationDelay: `${interlude.throws.length * 0.6}s` }}>
-                {interlude.won ? <>You win <strong>+{interlude.bet}</strong> gold!</> : <>You lose your {interlude.bet} gold.</>}
-            </p>
+            <p className="scene-text">Your bet: <strong>{bet}</strong> gold</p>
+            <div className="dice-den">
+                <div className={`dice-row ${themShown && won === true ? 'good' : ''}`}>
+                    <span className="who">You</span>
+                    <Die value={last ? last.you[0] : null} rolling={phase === 'you'} />
+                    <Die value={last ? last.you[1] : null} rolling={phase === 'you'} delay={60} />
+                    <span className="total">{youShown ? sum(last.you) : ''}</span>
+                </div>
+                <div className={`dice-row ${themShown && won === false ? 'good' : ''}`}>
+                    <span className="who">Gambler</span>
+                    <Die value={last && phase !== 'you' ? last.them[0] : null} rolling={phase === 'them'} />
+                    <Die value={last && phase !== 'you' ? last.them[1] : null} rolling={phase === 'them'} delay={60} />
+                    <span className="total">{themShown ? sum(last.them) : ''}</span>
+                </div>
+            </div>
+            {tie && <p className="outcome">A tie! Roll again.</p>}
+            {phase === 'shown' && won !== undefined && (
+                <p className={`outcome ${won ? 'good' : 'bad'}`}>
+                    {won ? <>You win <strong>+{bet}</strong> gold!</> : <>The gambler takes your {bet} gold.</>}
+                </p>
+            )}
+            <div className="event-choices">
+                {(phase === 'ready' || tie) && (
+                    <button className="primary" disabled={asked} onClick={() => { setAsked(true); actions.diceRoll(); }}>
+                        {tie ? 'Roll again' : 'Roll the dice'}
+                    </button>
+                )}
+                {phase === 'shown' && won !== undefined && next}
+            </div>
         </>
     );
 }
@@ -898,7 +1029,8 @@ export function Hud() {
             <header>
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
                 <span className="room">{snap.roomLabel}</span>
-                <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>
+                {/* Tavern Crawl: the opponent's nameplate and your chip show whose turn it is. */}
+                {state?.mode !== 'tavern-crawl' && <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>}
                 <div className="sound-toggles">
                     <button className={`mute ${musicOff ? 'off' : ''}`} onClick={() => { setMusicOff(!musicOff); setMusicOffState(!musicOff); }}
                         aria-label={musicOff ? 'Music on' : 'Music off'} aria-pressed={!musicOff} title={musicOff ? 'Music is off' : 'Music is on'}>🎵</button>

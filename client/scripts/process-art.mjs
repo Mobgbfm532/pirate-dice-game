@@ -295,10 +295,10 @@ async function slotPlates() {
     }
 }
 
-// A spot between fights painted as a scene (no cut-out): shown in a round frame, so a
-// square at a modest size is all it needs.
+// A spot between fights painted as a scene (no cut-out): it fills its scene's stage and
+// its round frame, so it keeps its full size.
 async function spotScene(file, name) {
-    const info = await sharp(path.join(ART, file)).resize(512, 512, { fit: 'cover' }).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
+    const info = await sharp(path.join(ART, file)).resize(1024, 1024, { fit: 'cover', withoutEnlargement: true }).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
     console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
 }
 

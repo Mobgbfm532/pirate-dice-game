@@ -759,34 +759,71 @@ footer {
     100% { transform: translateY(0); opacity: 1; }
 }
 
-/* The Hangman's last card: an Ace of Spades turned over on the far half of the felt. */
-.ace-card {
+/* The Hangman fires The Ace of Spades, his revolver: a muzzle flash across the screen, then
+   a smoking "24" punched into the far half of the felt like a bullet hole. */
+.gun-flash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--table-x, 50%) calc(var(--horizon, 30%) - 40px), rgba(255, 244, 214, 0.95), rgba(255, 170, 60, 0.55) 18%, rgba(255, 120, 30, 0) 55%);
+    animation: gun-flash 0.5s ease-out forwards;
+}
+@keyframes gun-flash {
+    0% { opacity: 0; }
+    8% { opacity: 1; }
+    100% { opacity: 0; }
+}
+.bullet-24 {
     position: absolute;
     left: var(--table-x, 50%);
-    top: calc(var(--horizon, 30%) + 30px);
-    width: clamp(86px, 24vw, 120px);
-    aspect-ratio: 5 / 7;
+    top: calc(var(--horizon, 30%) + 40px);
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: linear-gradient(160deg, #fffdf6, #efe4cc);
-    border: 2px solid #d8c8a2;
-    border-radius: 9px;
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
-    color: #1a1a1a;
-    font-family: Georgia, serif;
-    animation: ace-flip 3.2s ease-out forwards;
+    gap: 10px;
+    animation: bullet-in 3.2s ease-out forwards;
 }
-.ace-card .pip { font-size: clamp(3rem, 13vw, 4.4rem); line-height: 1; }
-.ace-card .corner { position: absolute; top: 6px; left: 8px; font-size: 0.95rem; font-weight: 700; line-height: 1; text-align: center; }
-.ace-card .corner.bottom { top: auto; left: auto; bottom: 6px; right: 8px; transform: rotate(180deg); }
-@keyframes ace-flip {
-    0% { opacity: 0; transform: translateX(-50%) translateY(-40px) rotateY(180deg) rotateZ(-14deg) scale(0.6); }
-    22% { opacity: 1; transform: translateX(-50%) translateY(0) rotateY(0) rotateZ(-4deg) scale(1.08); }
-    30% { transform: translateX(-50%) rotateZ(-4deg) scale(1); }
+/* A small, sharp hole punched in the felt, splintered round the edge, smoke rising off it. */
+.bullet-24 .hole {
+    position: relative;
+    width: clamp(30px, 9vw, 40px);
+    aspect-ratio: 1;
+    flex: none;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, #000 0 34%, #1a0f07 40%, rgba(70, 40, 18, 0.9) 48%, rgba(70, 40, 18, 0) 66%),
+        repeating-conic-gradient(rgba(40, 22, 8, 0.85) 0 7deg, transparent 7deg 34deg);
+    -webkit-mask: radial-gradient(circle, #000 55%, transparent 72%);
+    mask: radial-gradient(circle, #000 55%, transparent 72%);
+}
+.bullet-24::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -40px;
+    width: clamp(30px, 9vw, 40px);
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(225, 215, 205, 0.5), rgba(225, 215, 205, 0) 70%);
+    filter: blur(5px);
+    animation: smoke-rise 3s ease-out forwards;
+}
+.bullet-24 .score {
+    font-size: clamp(2.4rem, 10vw, 3.4rem);
+    font-weight: 700;
+    color: #ffd54f;
+    text-shadow: 0 0 14px rgba(255, 140, 40, 0.9), 0 2px 6px #000;
+}
+@keyframes bullet-in {
+    0%, 4% { opacity: 0; transform: translateX(-50%) scale(1.6); }
+    12% { opacity: 1; transform: translateX(-50%) scale(0.92); }
+    20% { transform: translateX(-50%) scale(1); }
     85% { opacity: 1; }
-    100% { opacity: 0; transform: translateX(-50%) rotateZ(-4deg) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) scale(1); }
+}
+@keyframes smoke-rise {
+    0%, 10% { opacity: 0; transform: translateY(20px) scale(0.6); }
+    30% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-30px) scale(1.6); }
 }
 
 /* ---- Tavern Crawl: keepsakes dealt as cards ---- */
@@ -1255,24 +1292,6 @@ footer {
 .spot-pic.stranger { background: radial-gradient(circle at 50% 40%, rgba(150, 140, 200, 0.4), rgba(20, 16, 30, 0.95) 70%); }
 .spot-pic.pickpocket { background: radial-gradient(circle at 50% 40%, rgba(255, 120, 90, 0.4), rgba(50, 14, 8, 0.95) 70%); }
 
-/* One spot, once you're there: its picture, what it offers, the choices. */
-.event-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 18px 16px 16px;
-    background: linear-gradient(rgba(70, 44, 20, 0.94), rgba(30, 18, 8, 0.96));
-    border: 1px solid var(--panel-border);
-    border-radius: 18px;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 236, 179, 0.12);
-    animation: fade-up 0.4s both;
-}
-.event-card h2 { margin: 2px 0 0; font-size: clamp(1.35rem, 6vw, 1.7rem); color: var(--gold-bright); line-height: 1.1; }
-.event-card p { margin: 0; color: var(--parchment); line-height: 1.35; }
-.event-card p strong { color: var(--gold-bright); }
-.event-card .keepsake-cards { padding-top: 4px; }
 .event-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; margin-top: 4px; }
 .event-choices button { flex: 1 1 140px; }
 .event-choices .secondary { white-space: normal; }
@@ -1288,55 +1307,157 @@ footer {
     animation: fade-up 0.4s 0.6s both;
 }
 
-/* The Dice Den: each throw appears in turn, then the result. */
-.dice-throws { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.dice-throws li {
-    display: grid;
-    grid-template-columns: 4.5em auto 1.6em auto 1.6em auto 4.5em;
-    align-items: center;
-    gap: 6px;
-    animation: fade-up 0.35s both;
-}
-.dice-throws .who { font-size: 0.85rem; color: var(--parchment-dim); }
-.dice-throws li .who:first-child { text-align: right; }
-.dice-throws li .who:last-child { text-align: left; }
-.dice-throws .faces { font-size: 2rem; line-height: 1; color: #fff3d6; letter-spacing: 2px; }
-.dice-throws .total { font-size: 1.2rem; font-weight: 700; color: var(--gold-bright); }
-.dice-throws .vs { color: var(--parchment-dim); }
 .outcome { font-size: 1.05rem; animation: fade-up 0.4s both; }
 .outcome.good strong { color: #9ccc65; }
 .outcome.bad { color: #ef9a9a; }
 
 @media (max-width: 380px) {
     .spot-card { padding: 12px 8px; }
-    .dice-throws .faces { font-size: 1.7rem; }
-    .dice-throws li { grid-template-columns: 3.6em auto 1.4em auto 1.4em auto 3.6em; gap: 4px; }
 }
 /* A phone on its side is short: the pictures shrink so everything fits. */
 @media (orientation: landscape) and (max-height: 500px) {
     .spot-pic { width: 56px; height: 56px; font-size: 1.8rem; }
     .interlude-body { gap: 6px; }
-    .event-card { padding: 12px 14px; gap: 6px; }
 }
 
-/* The pickpocket: one die tumbles, then lands green (caught him) or red (he got away). */
-.pickpocket-die {
-    display: grid;
-    place-items: center;
-    width: clamp(72px, 22vw, 96px);
-    height: clamp(72px, 22vw, 96px);
-    font-size: clamp(4.2rem, 19vw, 5.6rem);
-    line-height: 1;
-    color: #fff3d6;
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
-}
-.pickpocket-die.tumbling { animation: die-tumble 0.9s cubic-bezier(0.2, 0.7, 0.3, 1); }
-.pickpocket-die.good { color: #c5e1a5; text-shadow: 0 0 18px rgba(156, 204, 101, 0.7); }
-.pickpocket-die.bad { color: #ef9a9a; text-shadow: 0 0 18px rgba(229, 115, 115, 0.6); }
-@keyframes die-tumble {
-    0% { transform: translateY(-40px) rotate(-200deg) scale(0.6); opacity: 0; }
-    60% { transform: translateY(6px) rotate(20deg) scale(1.05); opacity: 1; }
-    80% { transform: translateY(-4px) rotate(-6deg); }
-    100% { transform: none; }
-}
 .event-note.good { color: #c5e1a5; }
+
+/* ---- The spots between fights as scenes (they reuse Thom's scene: stage + counter) ----
+   Each has its own light and its own entrance; the character answers what happens. */
+.spot-scene .thom-figure { animation-name: thom-rise, thom-breathe; }
+.spot-scene .thom-lantern { background: radial-gradient(circle, var(--glow, rgba(255, 190, 110, 0.35)), transparent 65%); }
+.spot-scene .thom-speech { white-space: normal; max-width: min(calc(100% - 24px), 340px); }
+.spot-scene .thom-speech.quick { animation-delay: 0.05s; }
+.scene-text { margin: 0; max-width: 460px; color: var(--parchment); line-height: 1.35; text-shadow: 0 1px 4px #000; animation: fade-up 0.4s 1s both; }
+.scene-text strong { color: var(--gold-bright); }
+.spot-scene .event-choices { width: min(100%, 460px); animation: fade-up 0.4s 1.15s both; }
+.spot-scene .outcome { margin: 0; }
+.spot-scene .keepsake-cards { width: min(100%, 460px); padding-top: 2px; }
+.spot-scene .keepsake-card { min-height: 0; animation: deal 0.45s ease-out both; }
+
+/* The Hooded Stranger: moonlight, a mist drifting along the bottom, and he takes shape out
+   of the dark rather than rising. */
+.spot-scene.stranger {
+    --glow: rgba(150, 140, 220, 0.4);
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 22%, rgba(130, 120, 210, 0.28), transparent 70%),
+        radial-gradient(ellipse at 50% 30%, #241c38 0%, #120d1e 50%, #05040a 100%);
+}
+.spot-scene.stranger .thom-figure { animation: stranger-appear 1.6s 0.2s ease-out both, thom-breathe 5.5s 1.8s ease-in-out infinite; }
+@keyframes stranger-appear {
+    from { opacity: 0; transform: translateX(-50%) scale(1.04); filter: blur(10px) brightness(0.2); }
+    to { opacity: 1; transform: translateX(-50%); filter: none; }
+}
+.spot-mist {
+    position: absolute;
+    left: -20%;
+    right: -20%;
+    bottom: -10%;
+    height: 45%;
+    z-index: 1;
+    background: radial-gradient(ellipse 40% 50% at 30% 60%, rgba(170, 160, 220, 0.28), transparent 70%),
+        radial-gradient(ellipse 45% 55% at 75% 70%, rgba(150, 140, 210, 0.24), transparent 70%);
+    filter: blur(8px);
+    animation: mist-drift 9s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+@keyframes mist-drift { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+
+/* The Dice Den: warm gold lamplight. The gambler bounces when he wins and slumps when he
+   loses. */
+.spot-scene.diceDen { --glow: rgba(255, 200, 90, 0.42); }
+.spot-scene.diceDen.won .thom-figure { animation: gambler-cheer 0.7s ease-out both; }
+.spot-scene.diceDen.lost .thom-figure { animation: gambler-slump 0.8s ease-out both; }
+@keyframes gambler-cheer {
+    0%, 100% { transform: translateX(-50%); }
+    35% { transform: translateX(-50%) translateY(-5%) rotate(-2deg); }
+    65% { transform: translateX(-50%) translateY(-2%) rotate(1deg); }
+}
+@keyframes gambler-slump { to { transform: translateX(-50%) translateY(6%); filter: brightness(0.7) saturate(0.8); } }
+
+/* The pickpocket: dashes in from the side; caught, they shake; away, they're gone. */
+.spot-scene.pickpocket {
+    --glow: rgba(255, 120, 80, 0.38);
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 22%, rgba(255, 110, 70, 0.25), transparent 70%),
+        radial-gradient(ellipse at 50% 30%, #3e1a10 0%, #1e0c07 50%, #0a0402 100%);
+}
+.spot-scene.pickpocket .thom-figure { animation: thief-dash 0.6s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.1) both, thom-breathe 3s 0.8s ease-in-out infinite; }
+@keyframes thief-dash {
+    from { opacity: 0; transform: translateX(80%) rotate(6deg); }
+    to { opacity: 1; transform: translateX(-50%); }
+}
+.spot-scene.pickpocket.caught .thom-figure { animation: thief-caught 0.5s ease-out both; }
+@keyframes thief-caught {
+    0%, 100% { transform: translateX(-50%); }
+    20% { transform: translateX(-54%) rotate(-2deg); }
+    40% { transform: translateX(-46%) rotate(2deg); }
+    60% { transform: translateX(-53%) rotate(-1deg); }
+    80% { transform: translateX(-48%); }
+}
+.spot-scene.pickpocket.escaped .thom-figure { animation: thief-escape 0.7s ease-in both; }
+@keyframes thief-escape { to { opacity: 0; transform: translateX(-180%) rotate(-8deg); } }
+
+/* The Shrine to the Lady: the painting is the scene, its candles flickering. */
+.spot-scene.shrine { --glow: rgba(255, 200, 120, 0.25); }
+.spot-scene.shrine .thom-stage {
+    background-size: cover;
+    background-position: center 30%;
+    animation: shrine-in 1.2s 0.1s ease-out both;
+}
+@keyframes shrine-in { from { opacity: 0; filter: brightness(0.2); } to { opacity: 1; filter: none; } }
+.shrine-candles {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 30% at 50% 80%, rgba(255, 190, 90, 0.35), transparent 70%),
+        linear-gradient(transparent 60%, rgba(10, 5, 2, 0.6));
+    mix-blend-mode: screen;
+    animation: lantern 2.6s ease-in-out infinite;
+}
+
+/* Dice for the Dice Den and the pickpocket: like the table's dice, ivory with black pips,
+   a red 1 and green 6. They tumble while rolling. */
+.dice-den { display: flex; flex-direction: column; gap: 8px; animation: fade-up 0.4s 1s both; }
+.dice-row {
+    display: grid;
+    grid-template-columns: 4.6em auto auto 2em;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid transparent;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.dice-row .who { text-align: right; color: var(--parchment-dim); font-size: 0.95rem; }
+.dice-row .total { font-size: 1.5rem; font-weight: 700; color: var(--gold-bright); text-align: left; }
+.dice-row.good { border-color: #9ccc65; box-shadow: 0 0 14px rgba(156, 204, 101, 0.45); }
+.dice-row.single { display: flex; justify-content: center; background: none; padding: 4px; }
+.dice-row.single .die2d { width: 64px; height: 64px; padding: 8px; }
+.dice-row.single.good .die2d { box-shadow: 0 0 18px rgba(156, 204, 101, 0.8), inset 0 -3px 0 rgba(0, 0, 0, 0.15); }
+.dice-row.single.bad .die2d { box-shadow: 0 0 18px rgba(229, 115, 115, 0.8), inset 0 -3px 0 rgba(0, 0, 0, 0.15); }
+.die2d {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 46px;
+    height: 46px;
+    padding: 6px;
+    gap: 2px;
+    border-radius: 9px;
+    background: radial-gradient(circle at 35% 30%, #fffdf3, #e9dcc0);
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.die2d.face-0 { background: radial-gradient(circle at 35% 30%, #d8ccb0, #b8a888); opacity: 0.45; }
+.die2d > span { border-radius: 50%; }
+.die2d > .pip { background: #1b1410; }
+.die2d.face-1 > .pip { background: #c62828; transform: scale(1.25); }
+.die2d.face-6 > .pip { background: #2e7d32; }
+.die2d.rolling { animation: die-tumble2d 0.28s linear infinite; }
+@keyframes die-tumble2d {
+    0% { transform: translateY(0) rotate(0); }
+    25% { transform: translateY(-6px) rotate(90deg); }
+    50% { transform: translateY(0) rotate(180deg); }
+    75% { transform: translateY(-4px) rotate(270deg); }
+    100% { transform: translateY(0) rotate(360deg); }
+}

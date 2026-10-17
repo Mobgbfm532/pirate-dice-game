@@ -234,11 +234,14 @@
         return true;
     }
 
-    // Klarg's Reach Around: removes the highest active die from play. Needs 2+ active dice.
+    // Klarg's Reach Around: takes an active die out of play. He goes for a 2 or a 4 the player
+    // still needs (neither kept yet); failing that, the highest die. Needs 2+ active dice.
     function stealHighestActiveDie(turn) {
         const active = turn.dice.filter(isActive);
         if (active.length <= 1) return null;
-        const stolen = active.slice().sort((a, b) => b.value - a.value)[0];
+        const kept = turn.dice.filter(d => d.status === STATUS.LOCKED || d.status === STATUS.LOCKED_THIS_ROLL);
+        const needed = [2, 4].filter(v => !kept.some(d => d.value === v));
+        const stolen = active.find(d => needed.includes(d.value)) || active.slice().sort((a, b) => b.value - a.value)[0];
         stolen.status = STATUS.STOLEN;
         return stolen;
     }

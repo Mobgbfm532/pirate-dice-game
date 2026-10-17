@@ -119,7 +119,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🤠',
         lives: 3,
         ability: 'deadeye24',
-        intro: 'The Hangman keeps one round in the chamber. At one life, The Ace of Spades can turn a score of 16 or higher into a perfect 24.'
+        intro: 'The Hangman keeps one round in the chamber of The Ace of Spades, his revolver. At one life, one shot can turn a score of 16 or higher into a perfect 24.'
     },
     {
         id: 'jaguar',
@@ -412,8 +412,8 @@ function performEndTurn(roomCode) {
         if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === BOT_ID && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24) {
             room.players[currentId].score = 24;
             markAbilityUsed(room, 'deadeye24');
-            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman plays his last card. Perfect 24.' });
-            io.to(roomCode).emit('displayMessage', { text: 'The Hangman plays The Ace of Spades.', color: "#ffd54f" });
+            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
+            io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
 
         if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== BOT_ID && !busted && score > 0) {
@@ -547,7 +547,7 @@ function runBotDecision(roomCode) {
     let toBeat = getTavernScoreToBeat(room);
     // The Molar (solo games, and the first Tavern Crawl fight) plays simply, as a teacher.
     // From Klarg on, opponents play their best: Strategy works out the keep with the best
-    // chance of winning the round (the Hangman counts on his Ace when he can play it).
+    // chance of winning the round (the Hangman counts on his revolver, The Ace of Spades, when he can fire it).
     let aceAt16 = !!encounter && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24');
     let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16 });
 
@@ -800,7 +800,8 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 //                                        else he gets away with `steal`; then carry on
 //   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
 //   shrine      { gold }                 a free Healing Thonic or that much gold
-//   diceDen     { bets }                 bet one of them (or walk away); two dice each
+//   diceDen     { bets, bet?, throws }   bet one of them (or decline), then the player rolls
+//                                        two dice and the gambler two; a tie rolls again
 //   stranger    { offers, hearts }       take a keepsake (next fight on `hearts`) or walk away
 //   done        { spot, ... }            what happened, until the player moves on
 // The choice after the pickpocket carries `note`: how that went, for the client.
@@ -844,15 +845,11 @@ function changePurse(run, amount) {
     return applied;
 }
 
-// The Dice Den: two dice each, again on a tie. Every throw, and whether the player won.
-function playDiceDen() {
-    let throws = [];
-    for (;;) {
-        let you = [rollFace(), rollFace()], them = [rollFace(), rollFace()];
-        throws.push({ you, them });
-        let a = you[0] + you[1], b = them[0] + them[1];
-        if (a !== b) return { throws, won: a > b };
-    }
+// The Dice Den: one throw of two dice each. `won` is null on a tie (they throw again).
+function throwDiceDen() {
+    let you = [rollFace(), rollFace()], them = [rollFace(), rollFace()];
+    let a = you[0] + you[1], b = them[0] + them[1];
+    return { you, them, won: a === b ? null : a > b };
 }
 
 // From Thom's cart or any point between fights, on to the next fight. Walk on without
@@ -1362,7 +1359,7 @@ io.on('connection', (socket) => {
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine', gold: INTERLUDE.shrineGold };
         } else if (spot === 'diceDen') {
-            run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets };
+            run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
         } else if (spot === 'stranger') {
             let offers = shuffled(unownedKeepsakes(room)).slice(0, INTERLUDE.strangerOffers);
             run.interlude = { stage: 'stranger', offers, hearts: INTERLUDE.strangerHearts };
@@ -1387,17 +1384,31 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // The Dice Den: name the bet (0 declines), then 'diceRoll' throws until someone wins.
     socket.on('diceBet', (bet) => {
         let room = interludeAt('diceDen');
-        if (!room) return;
+        if (!room || room.tavernRun.interlude.bet) return;
         let run = room.tavernRun;
         if (bet === 0) {
             run.interlude = { stage: 'done', spot: 'diceDen', bet: 0 };
         } else {
             if (!INTERLUDE.diceDenBets.includes(bet) || run.purse < bet) return;
-            let { throws, won } = playDiceDen();
-            changePurse(run, won ? bet : -bet);
-            run.interlude = { stage: 'done', spot: 'diceDen', bet, throws, won };
+            run.interlude.bet = bet;
+        }
+        emitState(socket.roomCode);
+    });
+
+    socket.on('diceRoll', () => {
+        let room = interludeAt('diceDen');
+        let interlude = room && room.tavernRun.interlude;
+        if (!interlude || !interlude.bet) return;
+        let { you, them, won } = throwDiceDen();
+        let throws = [...interlude.throws, { you, them }];
+        if (won === null) {
+            interlude.throws = throws;
+        } else {
+            changePurse(room.tavernRun, won ? interlude.bet : -interlude.bet);
+            room.tavernRun.interlude = { stage: 'done', spot: 'diceDen', bet: interlude.bet, throws, won };
         }
         emitState(socket.roomCode);
     });

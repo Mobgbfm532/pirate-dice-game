@@ -107,7 +107,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | The Molar | Big friendly orc tavern keeper with one huge gold tooth | wide toothy grin | a dice cup |
 | Klarg | Hulking bugbear paladin in dented armour | sly smirk | one stolen die held up |
 | Rokr | Elderly star-reader with constellations on her robe | serene, knowing | a glowing star chart |
-| The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | a revolver and an ace of spades |
+| The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | his revolver, The Ace of Spades |
 | Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
 | Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
 
@@ -129,7 +129,7 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
 | Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |
 | Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
-| Ace of Spades card | Wanted, optional | The Hangman's card face; drawn in CSS for now |
+| The Ace of Spades (the Hangman's revolver) | Wanted, optional | His named revolver, for the moment he fires it; a CSS muzzle flash and bullet hole for now |
 | Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
 
 ## Processing art
