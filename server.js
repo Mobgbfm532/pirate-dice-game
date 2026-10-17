@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const os = require('os');
 const Rules = require('./shared/rules');
 const Strategy = require('./shared/strategy');
+const BALANCE = require('./shared/balance');
 
 const BOT_ID = 'BOT_MOLAR';
 
@@ -93,7 +94,7 @@ const TAVERN_ENCOUNTERS = [
         id: 'molar',
         name: 'The Molar',
         avatar: '🦷',
-        lives: 2,
+        lives: BALANCE.opponentLives.molar,
         ability: null,
         intro: 'The Molar slides into the seat and teaches you the house game: find a 2, find a 4, then chase 24.'
     },
@@ -101,7 +102,7 @@ const TAVERN_ENCOUNTERS = [
         id: 'klarg',
         name: 'Klarg',
         avatar: '🐻',
-        lives: 3,
+        lives: BALANCE.opponentLives.klarg,
         ability: 'reachAround',
         intro: 'Klarg, bugbear paladin and sworn enemy of Kram, may steal one active die with Reach Around.'
     },
@@ -109,7 +110,7 @@ const TAVERN_ENCOUNTERS = [
         id: 'rokr',
         name: 'Rokr',
         avatar: '✨',
-        lives: 3,
+        lives: BALANCE.opponentLives.rokr,
         ability: 'constellationBlur',
         intro: 'Rokr reads the dice in the stars. Once per match, constellations can blur your active dice.'
     },
@@ -117,7 +118,7 @@ const TAVERN_ENCOUNTERS = [
         id: 'hangman',
         name: 'The Hangman',
         avatar: '🤠',
-        lives: 3,
+        lives: BALANCE.opponentLives.hangman,
         ability: 'deadeye24',
         intro: 'The Hangman keeps one round in the chamber of The Ace of Spades, his revolver. At one life, one shot can turn a score of 16 or higher into a perfect 24.'
     },
@@ -125,7 +126,7 @@ const TAVERN_ENCOUNTERS = [
         id: 'jaguar',
         name: 'Jaguar Cantona',
         avatar: '😎',
-        lives: 4,
+        lives: BALANCE.opponentLives.jaguar,
         ability: 'smoothTalk',
         intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Once per match, Smooth Talk worsens your finished score.'
     }
@@ -163,15 +164,15 @@ const TAVERN_KEEPSAKES = [
 // SHELF_SIZE) until drunk. `drink` = tapped by the player on their own turn (when exactly
 // depends on the Thonic: see the drinkThonic handler); Last Gasp works by itself.
 const THONICS = {
-    healing: { id: 'healing', name: 'Healing Thonic', text: '+1 heart, up to your maximum. Drink it before you roll.', price: 120, drink: true },
-    lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: a round that would take your last heart leaves you on 1.', price: 250, drink: false },
-    fizzy: { id: 'fizzy', name: 'Fizzy Thomic', text: 'After a roll: your 1s roll again, once.', price: 80, drink: true },
-    secondThoughts: { id: 'secondThoughts', name: 'Second Thoughts Thonic', text: 'Put back a die you kept, then roll it again.', price: 180, drink: true },
-    steady: { id: 'steady', name: 'Steady Thonic', text: 'This turn, dust counts as a score of 0.', price: 150, drink: true },
-    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Before you roll: the opponent's ability can't touch this round.", price: 100, drink: true }
+    healing: { id: 'healing', name: 'Healing Thonic', text: '+1 heart, up to your maximum. Drink it before you roll.', price: BALANCE.thonicPrices.healing, drink: true },
+    lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: a round that would take your last heart leaves you on 1.', price: BALANCE.thonicPrices.lastGasp, drink: false },
+    fizzy: { id: 'fizzy', name: 'Fizzy Thomic', text: 'After a roll: your 1s roll again, once.', price: BALANCE.thonicPrices.fizzy, drink: true },
+    secondThoughts: { id: 'secondThoughts', name: 'Second Thoughts Thonic', text: 'Put back a die you kept, then roll it again.', price: BALANCE.thonicPrices.secondThoughts, drink: true },
+    steady: { id: 'steady', name: 'Steady Thonic', text: 'This turn, dust counts as a score of 0.', price: BALANCE.thonicPrices.steady, drink: true },
+    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Before you roll: the opponent's ability can't touch this round.", price: BALANCE.thonicPrices.clearEye, drink: true }
 };
-const SHELF_SIZE = 3;
-const SHOP_SIZE = 3; // Thonics on Thom's cart per visit: Healing, plus two others at random
+const SHELF_SIZE = BALANCE.shelfSize;
+const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
 
 // A place in the run: its opponents in order and what Thom sells there. Only the tavern
 // for now; later places (new environments, tougher opponents) are new entries.
@@ -185,25 +186,11 @@ const PLACES = {
     }
 };
 
-// Between fights: two spots in the room catch your eye and you choose one. Now and then a
-// pickpocket brushes past on the way, before you choose. First guesses, tuned in step 4.
-const INTERLUDE = {
-    pickpocketChance: 25,   // percent of walks across the room
-    pickpocketShare: 0.25,  // of the purse, if he gets away
-    pickpocketCatch: 4,     // roll this or higher on one die to catch him
-    shrineGold: 100,        // the Shrine to the Lady: this much gold, or a free Healing Thonic
-    diceDenBets: [50, 100], // the Dice Den: two dice each against a stranger, higher total doubles the bet
-    strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
-    strangerHearts: 2       // ...and you start the next fight on this many hearts if you take one
-};
-
-// Gold during a run: it goes into the purse as it is won, and the purse is the final score.
-const GOLD = {
-    winPerPlace: 100,   // beating an opponent: 100 x their place in the run (Molar 100 ... Jaguar 500)
-    perHeartLeft: 25,   // for each heart still standing when you win a fight
-    perfect24: 75,      // each perfect 24 you roll
-    consolation: 25     // losing the run: 25 x the place of the opponent you fell to
-};
+// Between fights: two spots in the room catch your eye and you choose one; now and then a
+// pickpocket strikes first. Gold during a run goes into the purse as it is won, and the purse
+// is the final score. The numbers live in shared/balance.js.
+const INTERLUDE = BALANCE.interlude;
+const GOLD = BALANCE.gold;
 
 // What Thom has on his cart this visit: always Healing, plus others picked at random.
 function pickThomStock(place) {
@@ -779,7 +766,7 @@ function pickKeepsakeChoices(room) {
 function resetTavernEncounter(roomCode, keepHumanLives = true) {
     let room = rooms[roomCode];
     if (!room || room.mode !== 'tavern-crawl') return;
-    room.startingLives = 3;
+    room.startingLives = BALANCE.playerHearts;
 
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     let humanId = getHumanPlayerId(room);

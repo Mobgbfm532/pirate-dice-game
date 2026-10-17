@@ -48,6 +48,8 @@ and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `stran
 | `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks. |
 | `art/` | Untouched AI originals. `client/scripts/process-art.mjs` (`npm --prefix client run art`) makes game files in `client/public/{art,textures}`. |
 | `docs/art-direction.md` | Style, palette, asset list + status, prompt pack. |
+| `shared/balance.js` | The Tavern Crawl's numbers: hearts, opponents' lives, gold, Thonic prices, events. |
+| `balance/` | Balance simulator (`sim.js`), its check against the server, experiments, findings (`README.md`). |
 
 Key socket events (server → client): `gameStateUpdate` (players, order, lives, mode, tavern
 run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finalized`),
@@ -245,7 +247,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    lost round all work on screen.)
 2. **Classic page at `/`:** skipping Thom and the events there is fine until the switch-over
    (the user's answer, 18 Oct).
-3. **Step 4: balance.** Every number is a first guess: Thonic prices (`THONICS`), gold
+3. **Step 4: balance (in progress, 18 Oct).** Findings and the plan are in
+   `balance/README.md` (simulator `balance/sim.js`, checked against the real server; numbers
+   now in `shared/balance.js`). Nothing applied yet. Every number is a first guess: Thonic prices (`THONICS`), gold
    (`GOLD`), and the events (`INTERLUDE`: Shrine gold, Dice Den bets, the pickpocket's chance,
    cut and catch roll, the Stranger's heart price). Simulate many runs with the real opponents
    (`shared/strategy.js`) and a sensible player using Thonics and events; then tune by feel
