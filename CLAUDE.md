@@ -232,20 +232,19 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   sailors. Game text calls the pickpocket "the thief" (no assumed gender).
 - **Keepsakes:** only from the Hooded Stranger now. Jaguar's drop waits for a second place.
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
-  at `/` walks straight on (its `leaveShop`), so it never sees the spots.
+  at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
+  with that until the switch-over.
 - **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
-  single last die (Second Thoughts can reopen the hand). Klarg's steal motion has not been
-  seen on screen yet (the preview doesn't move dice).
+  single last die (Second Thoughts can reopen the hand).
 
 ## Next steps (in order)
 
-1. **User plays the test site on the phone:** one full Tavern Crawl to the end, then two
-   phones over mobile data. Collect feedback; fix what comes up. Needs the user. Not yet seen
-   on screen, so watch for them: Rokr's blur lifting as the next roll starts, a Dice Den tie
-   ("A tie! Roll again."), Klarg's steal motion (and his new 2-or-4 target), an opponent
-   conceding a lost round.
-2. **Open question for the user:** the classic page at `/` skips Thom and the events entirely
-   (it sends `leaveShop`). Fine until the switch-over (step 6)?
+1. **User plays the test site on the phone:** a full Tavern Crawl to the end, then two phones
+   over mobile data. Collect feedback; fix what comes up. (18 Oct: the user confirmed Rokr's
+   blur lifting on the next roll, a Dice Den tie, Klarg's steal and an opponent conceding a
+   lost round all work on screen.)
+2. **Classic page at `/`:** skipping Thom and the events there is fine until the switch-over
+   (the user's answer, 18 Oct).
 3. **Step 4: balance.** Every number is a first guess: Thonic prices (`THONICS`), gold
    (`GOLD`), and the events (`INTERLUDE`: Shrine gold, Dice Den bets, the pickpocket's chance,
    cut and catch roll, the Stranger's heart price). Simulate many runs with the real opponents
