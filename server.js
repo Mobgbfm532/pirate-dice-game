@@ -189,8 +189,8 @@ const PLACES = {
 // pickpocket brushes past on the way, before you choose. First guesses, tuned in step 4.
 const INTERLUDE = {
     pickpocketChance: 25,   // percent of walks across the room
-    pickpocketShare: 0.25,  // of the purse, if you let him go
-    pickpocketPayoff: 40,   // to make him drop it
+    pickpocketShare: 0.25,  // of the purse, if he gets away
+    pickpocketCatch: 4,     // roll this or higher on one die to catch him
     shrineGold: 100,        // the Shrine to the Lady: this much gold, or a free Healing Thonic
     diceDenBets: [50, 100], // the Dice Den: two dice each against a stranger, higher total doubles the bet
     strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
@@ -796,13 +796,14 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 
 // ---- Between fights ----
 // After a win the run pauses in `tavernRun.interlude` until the player moves on:
-//   pickpocket  { steal, payoff }        pay him off, or let him go with `steal`
+//   pickpocket  { steal, roll? }         roll one die: pickpocketCatch or more catches him,
+//                                        else he gets away with `steal`; then carry on
 //   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
 //   shrine      { gold }                 a free Healing Thonic or that much gold
 //   diceDen     { bets }                 bet one of them (or walk away); two dice each
 //   stranger    { offers, hearts }       take a keepsake (next fight on `hearts`) or walk away
 //   done        { spot, ... }            what happened, until the player moves on
-// The stages after the pickpocket carry `note`: what he did, if he came, for the client.
+// The choice after the pickpocket carries `note`: how that went, for the client.
 
 function shuffled(list) {
     let out = list.slice();
@@ -829,7 +830,7 @@ function startInterlude(room, won) {
     run.lastWin = won;
     let steal = Math.floor(run.purse * INTERLUDE.pickpocketShare);
     if (steal > 0 && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
-        run.interlude = { stage: 'pickpocket', steal, payoff: INTERLUDE.pickpocketPayoff };
+        run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
     } else {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
     }
@@ -854,12 +855,12 @@ function playDiceDen() {
     }
 }
 
-// From Thom's cart or any point between fights, on to the next fight. A pickpocket left
-// alone keeps what he took.
+// From Thom's cart or any point between fights, on to the next fight. Walk on without
+// rolling for the pickpocket and he gets away.
 function moveOnToNextFight(roomCode) {
     let room = rooms[roomCode];
     let run = room.tavernRun;
-    if (run.interlude && run.interlude.stage === 'pickpocket') changePurse(run, -run.interlude.steal);
+    if (run.interlude && run.interlude.stage === 'pickpocket' && !run.interlude.roll) changePurse(run, -run.interlude.steal);
     run.interlude = null;
     run.shop = null;
     resetTavernEncounter(roomCode, true);
@@ -1333,13 +1334,21 @@ io.on('connection', (socket) => {
         return interlude && interlude.stage === stage ? room : null;
     };
 
-    socket.on('pickpocket', (choice) => {
+    // 'roll' once, to try to catch him; then 'on' to the two spots.
+    socket.on('pickpocket', (action) => {
         let room = interludeAt('pickpocket');
-        if (!room || (choice !== 'pay' && choice !== 'let')) return;
-        let run = room.tavernRun, { steal, payoff } = run.interlude;
-        if (choice === 'pay' && run.purse < payoff) return;
-        let lost = -changePurse(run, choice === 'pay' ? -payoff : -steal);
-        run.interlude = { stage: 'choose', spots: pickSpots(room), note: { pickpocket: choice, lost } };
+        if (!room) return;
+        let run = room.tavernRun, interlude = run.interlude;
+        if (action === 'roll' && !interlude.roll) {
+            interlude.roll = rollFace();
+            interlude.caught = interlude.roll >= INTERLUDE.pickpocketCatch;
+            interlude.lost = interlude.caught ? 0 : -changePurse(run, -interlude.steal);
+        } else if (action === 'on' && interlude.roll) {
+            let { roll, caught, lost } = interlude;
+            run.interlude = { stage: 'choose', spots: pickSpots(room), note: { roll, caught, lost } };
+        } else {
+            return;
+        }
         emitState(socket.roomCode);
     });
 

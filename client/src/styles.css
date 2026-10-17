@@ -1317,3 +1317,25 @@ footer {
     .interlude-body { gap: 6px; }
     .event-card { padding: 12px 14px; gap: 6px; }
 }
+
+/* The pickpocket: one die tumbles, then lands green (caught him) or red (he got away). */
+.pickpocket-die {
+    display: grid;
+    place-items: center;
+    width: clamp(72px, 22vw, 96px);
+    height: clamp(72px, 22vw, 96px);
+    font-size: clamp(4.2rem, 19vw, 5.6rem);
+    line-height: 1;
+    color: #fff3d6;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+}
+.pickpocket-die.tumbling { animation: die-tumble 0.9s cubic-bezier(0.2, 0.7, 0.3, 1); }
+.pickpocket-die.good { color: #c5e1a5; text-shadow: 0 0 18px rgba(156, 204, 101, 0.7); }
+.pickpocket-die.bad { color: #ef9a9a; text-shadow: 0 0 18px rgba(229, 115, 115, 0.6); }
+@keyframes die-tumble {
+    0% { transform: translateY(-40px) rotate(-200deg) scale(0.6); opacity: 0; }
+    60% { transform: translateY(6px) rotate(20deg) scale(1.05); opacity: 1; }
+    80% { transform: translateY(-4px) rotate(-6deg); }
+    100% { transform: none; }
+}
+.event-note.good { color: #c5e1a5; }

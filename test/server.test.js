@@ -483,10 +483,12 @@ test('beating an opponent pays for the win and the hearts left, then two spots c
     let interlude = room.tavernRun.interlude;
     if (interlude.stage === 'pickpocket') {
         assert.equal(interlude.steal, 37, 'a quarter of the purse');
-        hero.emit('pickpocket', 'pay');
+        hero.emit('pickpocket', 'roll');
+        await nextState(hero, s => runOf(s).interlude.roll);
+        hero.emit('pickpocket', 'on');
         await nextState(hero, s => runOf(s).interlude.stage === 'choose');
-        assert.equal(room.tavernRun.purse, 110);
         interlude = room.tavernRun.interlude;
+        assert.equal(room.tavernRun.purse, interlude.note.caught ? 150 : 113);
     }
     assert.equal(interlude.stage, 'choose');
     assert.equal(interlude.spots.length, 2);
@@ -601,29 +603,43 @@ test('the Hooded Stranger: a keepsake, and the next fight starts on 2 hearts', a
     assert.equal(b.room.tavernRun.keepsakes.length, 0);
 });
 
-test('the Pickpocket: pay him off, let him go, or walk on and he keeps it', async () => {
-    const pay = await betweenFights('Payer', { stage: 'pickpocket', steal: 50, payoff: 40 }, 200);
-    pay.hero.emit('chooseSpot', 'thom'); // not until he's dealt with
-    await sleep(40);
-    assert.equal(pay.room.tavernRun.interlude.stage, 'pickpocket');
-    pay.hero.emit('pickpocket', 'pay');
-    const after = await nextState(pay.hero, s => runOf(s).interlude.stage === 'choose');
-    assert.equal(pay.room.tavernRun.purse, 160);
-    assert.deepEqual(runOf(after).interlude.note, { pickpocket: 'pay', lost: 40 });
+test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away', async () => {
+    const seen = new Set();
+    for (let n = 0; n < 12; n++) {
+        const { hero, room } = await betweenFights(`Chaser${n}`, { stage: 'pickpocket', steal: 50, catchOn: 4 }, 200);
+        hero.emit('chooseSpot', 'thom'); // not until he's dealt with
+        hero.emit('pickpocket', 'on'); // not before the roll
+        await sleep(30);
+        assert.equal(room.tavernRun.interlude.stage, 'pickpocket');
+        assert.equal(room.tavernRun.interlude.roll, undefined);
+        hero.emit('pickpocket', 'roll');
+        await nextState(hero, s => runOf(s).interlude.roll);
+        const { roll, caught, lost } = room.tavernRun.interlude;
+        seen.add(caught);
+        assert.ok(roll >= 1 && roll <= 6);
+        assert.equal(caught, roll >= 4);
+        assert.equal(lost, caught ? 0 : 50);
+        assert.equal(room.tavernRun.purse, caught ? 200 : 150);
+        hero.emit('pickpocket', 'roll'); // once only
+        await sleep(30);
+        assert.equal(room.tavernRun.interlude.roll, roll);
+        assert.equal(room.tavernRun.purse, caught ? 200 : 150);
+        hero.emit('pickpocket', 'on');
+        const after = await nextState(hero, s => runOf(s).interlude.stage === 'choose');
+        assert.deepEqual(runOf(after).interlude.note, { roll, caught, lost });
+        assert.equal(room.tavernRun.stats.eventGold, 0 - lost);
+    }
+    assert.equal(seen.size, 2, 'in 12 tries he was both caught and got away');
 
-    const poor = await betweenFights('Poor', { stage: 'pickpocket', steal: 7, payoff: 40 }, 30);
-    poor.hero.emit('pickpocket', 'pay'); // can't afford it
-    await sleep(40);
-    assert.equal(poor.room.tavernRun.purse, 30);
-    poor.hero.emit('pickpocket', 'let');
-    await nextState(poor.hero, s => runOf(s).interlude.stage === 'choose');
-    assert.equal(poor.room.tavernRun.purse, 23);
-    assert.equal(poor.room.tavernRun.stats.eventGold, -7);
-
-    const walk = await betweenFights('Walker2', { stage: 'pickpocket', steal: 50, payoff: 40 }, 200);
+    // Walk on without rolling and he gets away; walk on after rolling and nothing more is lost.
+    const walk = await betweenFights('Walker2', { stage: 'pickpocket', steal: 50, catchOn: 4 }, 200);
     walk.hero.emit('leaveShop'); // the classic page walks straight on
     await nextState(walk.hero, s => !runOf(s).interlude);
     assert.equal(walk.room.tavernRun.purse, 150);
+    const rolled = await betweenFights('Walker3', { stage: 'pickpocket', steal: 50, catchOn: 4, roll: 2, caught: false, lost: 50 }, 150);
+    rolled.hero.emit('moveOn');
+    await nextState(rolled.hero, s => !runOf(s).interlude);
+    assert.equal(rolled.room.tavernRun.purse, 150);
 });
 
 test('the Stranger stops appearing once every keepsake is yours', async () => {
@@ -638,8 +654,8 @@ test('the Stranger stops appearing once every keepsake is yours', async () => {
     }
     assert.equal(new Set(room.tavernRun.keepsakes.map(k => k.id)).size, 5, 'all five, none twice');
     for (let i = 0; i < 20; i++) {
-        room.tavernRun.interlude = { stage: 'pickpocket', steal: 0, payoff: 40 };
-        hero.emit('pickpocket', 'let');
+        room.tavernRun.interlude = { stage: 'pickpocket', steal: 0, catchOn: 4, roll: 6, caught: true, lost: 0 };
+        hero.emit('pickpocket', 'on');
         await nextState(hero, s => runOf(s).interlude.stage === 'choose');
         assert.ok(!room.tavernRun.interlude.spots.includes('stranger'));
     }
@@ -665,9 +681,9 @@ test('full runs through the spots between fights keep the books straight', async
             // try to buy everything (the server refuses what the purse can't cover).
             const run = room.tavernRun;
             if (run.interlude.stage === 'pickpocket') {
-                hero.emit('pickpocket', n % 2 ? 'let' : 'pay');
+                hero.emit('pickpocket', 'roll');
                 await sleep(20);
-                if (run.interlude.stage === 'pickpocket') hero.emit('pickpocket', 'let'); // couldn't pay
+                hero.emit('pickpocket', 'on');
                 await sleep(20);
             }
             const spot = run.interlude.spots[0];

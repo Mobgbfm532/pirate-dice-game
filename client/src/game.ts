@@ -44,9 +44,9 @@ export interface TavernRun {
 // Between fights: a pickpocket maybe, then two spots catch your eye; you go to one.
 export type Spot = 'thom' | 'shrine' | 'diceDen' | 'stranger';
 export interface DiceThrow { you: [number, number]; them: [number, number] }
-export type PickpocketNote = { pickpocket: 'pay' | 'let'; lost: number };
+export type PickpocketNote = { roll: number; caught: boolean; lost: number };
 export type Interlude =
-    | { stage: 'pickpocket'; steal: number; payoff: number }
+    | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }
     | { stage: 'choose'; spots: Spot[]; note?: PickpocketNote }
     | { stage: 'shrine'; gold: number }
     | { stage: 'diceDen'; bets: number[] }
@@ -590,9 +590,9 @@ export const actions = {
         playSound('click');
         socket.emit('chooseSpot', spot);
     },
-    pickpocket(choice: 'pay' | 'let') {
+    pickpocket(action: 'roll' | 'on') {
         playSound('click');
-        socket.emit('pickpocket', choice);
+        socket.emit('pickpocket', action);
     },
     shrinePick(gift: 'healing' | 'gold') {
         playSound('click');

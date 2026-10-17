@@ -201,8 +201,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 100 gold),
   the Dice Den (bet 50/100; two dice each, higher total doubles it, ties throw again), the
   Hooded Stranger (one of two keepsakes; the next fight starts on 2 hearts; offered only while
-  keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: pay 40 or lose a
-  quarter of the purse. "Walk straight on" skips both spots. Gold won or lost here is
+  keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: roll one die, a 4+
+  catches him (`pickpocketCatch`), else he takes a quarter of the purse. The choice screen
+  is headed "Make your choice". "Walk straight on" skips both spots. Gold won or lost here is
   `stats.eventGold` ("Between fights" on the run-over screen). Numbers are first guesses.
   The spots' pictures are emoji placeholders until there is painted art.
 - **Keepsakes:** only from the Hooded Stranger now. Jaguar's drop waits for a second place.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { areSoundsOff, isMusicOff, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
@@ -661,32 +661,18 @@ function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: str
     const [picked, setPicked] = useState<string | null>(null);
     const shelfFull = run.shelf.length >= run.shelfSize;
 
-    if (interlude.stage === 'pickpocket') {
-        return (
-            <div className="event-card">
-                <SpotPicture spot="pickpocket" />
-                <h2>Hey! A hand in your purse!</h2>
-                <p>On your way across the room, a pickpocket lifts <strong>{interlude.steal}</strong> gold.</p>
-                <div className="event-choices">
-                    <button className="primary" disabled={run.purse < interlude.payoff} onClick={() => actions.pickpocket('pay')}>
-                        Pay him {interlude.payoff} to drop it
-                    </button>
-                    <button className="secondary" onClick={() => actions.pickpocket('let')}>Let him go (−{interlude.steal})</button>
-                </div>
-            </div>
-        );
-    }
+    if (interlude.stage === 'pickpocket') return <Pickpocket run={run} />;
 
     if (interlude.stage === 'choose') {
         const note = interlude.note;
         return (
             <>
                 {note && (
-                    <p className="event-note">
-                        {note.pickpocket === 'pay' ? `You paid the pickpocket ${note.lost} to drop it.` : `The pickpocket got away with ${note.lost} gold.`}
+                    <p className={`event-note ${note.caught ? 'good' : ''}`}>
+                        {note.caught ? 'You caught the pickpocket: your gold is safe.' : `The pickpocket got away with ${note.lost} gold.`}
                     </p>
                 )}
-                <h2 className="interlude-title">Two spots catch your eye</h2>
+                <h2 className="interlude-title">Make your choice</h2>
                 <div className="spot-cards">
                     {interlude.spots.map((spot, i) => (
                         <button key={spot} className="spot-card" style={{ animationDelay: `${0.25 + i * 0.15}s` }} onClick={() => actions.chooseSpot(spot)}>
@@ -768,6 +754,45 @@ function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: str
             <EventOutcome state={state} />
             <div className="event-choices">
                 <button className="primary onward" onClick={onMoveOn}>On to {next}</button>
+            </div>
+        </div>
+    );
+}
+
+// A hand in your purse: roll one die to catch him. The die tumbles, then the result shows.
+const TUMBLE_MS = 900;
+
+function Pickpocket({ run }: { run: NonNullable<GameState['tavernRun']> }) {
+    const interlude = run.interlude as Extract<Interlude, { stage: 'pickpocket' }>;
+    const rolled = interlude.roll !== undefined;
+    const [revealed, setRevealed] = useState(false);
+    useEffect(() => {
+        if (!rolled) return;
+        const timer = setTimeout(() => {
+            setRevealed(true);
+            playSound(interlude.caught ? 'yay' : 'aww');
+        }, TUMBLE_MS);
+        return () => clearTimeout(timer);
+    }, [rolled, interlude.caught]);
+    const catchFaces = Array.from({ length: 7 - interlude.catchOn }, (_, i) => interlude.catchOn + i).join(', ').replace(/, (\d)$/, ' or $1');
+    return (
+        <div className="event-card">
+            {rolled
+                ? <span className={`pickpocket-die ${revealed ? (interlude.caught ? 'good' : 'bad') : 'tumbling'}`} aria-hidden="true">{DIE_FACES[interlude.roll!]}</span>
+                : <SpotPicture spot="pickpocket" />}
+            <h2>Hey! A hand in your purse!</h2>
+            {!rolled && <p>A pickpocket is making off with <strong>{interlude.steal}</strong> gold. Roll a {catchFaces} to catch him.</p>}
+            {rolled && !revealed && <p className="outcome">Rolling…</p>}
+            {revealed && (
+                <p className={`outcome ${interlude.caught ? 'good' : 'bad'}`}>
+                    {interlude.caught
+                        ? <>You rolled a {interlude.roll}: <strong>caught him!</strong> Your gold is safe.</>
+                        : <>You rolled a {interlude.roll}: he slips away with {interlude.lost} gold.</>}
+                </p>
+            )}
+            <div className="event-choices">
+                {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch him</button>}
+                {revealed && <button className="primary" onClick={() => actions.pickpocket('on')}>Carry on</button>}
             </div>
         </div>
     );

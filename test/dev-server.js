@@ -38,7 +38,7 @@ const COMMANDS = {
         const stage = q.get('stage');
         run.lastWin = run.lastWin || { defeated: 'The Molar', nextEnemy: 'Klarg', gold: { win: 100, hearts: 75 } };
         if (q.get('purse')) run.purse = Number(q.get('purse'));
-        if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), payoff: 40 };
+        if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), catchOn: 4 };
         else if (stage === 'shrine') run.interlude = { stage, gold: 100 };
         else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100] };
         else if (stage === 'stranger') run.interlude = { stage, hearts: 2, offers: [{ id: 'bentCopper', name: 'Shield', text: 'Once per encounter, the first life you would lose is ignored.' }, { id: 'velvetCushion', name: 'Velvet Cushion', text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.' }] };
