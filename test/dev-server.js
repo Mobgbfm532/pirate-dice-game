@@ -8,6 +8,8 @@
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
+//   curl "http://localhost:3003/between?spots=thom,stranger"   between fights, two spots
+//        (&pickpocket=1 to be robbed first; &stage=shrine|diceDen|stranger to go straight there)
 //
 // Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
 process.env.LEADERBOARD_READONLY = '1';
@@ -29,7 +31,21 @@ const COMMANDS = {
     },
     '/lives': (r, q) => { const p = human(r); if (p) p.lives = Number(q.get('n')); },
     '/shelf': (r, q) => { r.tavernRun.shelf = (q.get('ids') || '').split(',').filter(Boolean); },
-    '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); }
+    '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
+    '/between': (r, q) => {
+        const run = r.tavernRun;
+        const spots = (q.get('spots') || 'thom,diceDen').split(',');
+        const stage = q.get('stage');
+        run.lastWin = run.lastWin || { defeated: 'The Molar', nextEnemy: 'Klarg', gold: { win: 100, hearts: 75 } };
+        if (q.get('purse')) run.purse = Number(q.get('purse'));
+        if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), payoff: 40 };
+        else if (stage === 'shrine') run.interlude = { stage, gold: 100 };
+        else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100] };
+        else if (stage === 'stranger') run.interlude = { stage, hearts: 2, offers: [{ id: 'bentCopper', name: 'Shield', text: 'Once per encounter, the first life you would lose is ignored.' }, { id: 'velvetCushion', name: 'Velvet Cushion', text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.' }] };
+        else run.interlude = { stage: 'choose', spots };
+        run.shop = null;
+        r.roundPlayers = [];
+    }
 };
 
 http.createServer((req, res) => {

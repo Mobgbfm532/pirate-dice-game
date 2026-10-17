@@ -36,8 +36,24 @@ export interface TavernRun {
     shelf: Thonic[];
     shelfSize: number;
     shop: { stock: Thonic[] } | null; // Thom's cart is open
+    interlude: Interlude | null; // between fights (see server.js startInterlude)
+    lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic blocks the opponent's ability this round
 }
+
+// Between fights: a pickpocket maybe, then two spots catch your eye; you go to one.
+export type Spot = 'thom' | 'shrine' | 'diceDen' | 'stranger';
+export interface DiceThrow { you: [number, number]; them: [number, number] }
+export type PickpocketNote = { pickpocket: 'pay' | 'let'; lost: number };
+export type Interlude =
+    | { stage: 'pickpocket'; steal: number; payoff: number }
+    | { stage: 'choose'; spots: Spot[]; note?: PickpocketNote }
+    | { stage: 'shrine'; gold: number }
+    | { stage: 'diceDen'; bets: number[] }
+    | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
+    | { stage: 'done'; spot: 'shrine'; gift: 'healing' | 'gold'; gold?: number }
+    | { stage: 'done'; spot: 'diceDen'; bet: number; throws?: DiceThrow[]; won?: boolean }
+    | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number };
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
 export interface TavernSummary {
@@ -47,7 +63,7 @@ export interface TavernSummary {
     encounters: string[];
     fellTo: string | null;
     gold: number;
-    breakdown: { progress: number; hearts: number; perfect: number; spent: number };
+    breakdown: { progress: number; hearts: number; perfect: number; events?: number; spent: number };
     stats: { encountersDefeated: number; livesLost: number; keepsakesActivated: number; perfect24s: number };
     keepsakes: string[];
 }
@@ -371,7 +387,7 @@ socket.on('gameStateUpdate', (state: GameState) => {
 // down. Remembered for this tab, so a refresh or reconnect doesn't replay it.
 function introduceOpponent(state: GameState) {
     const run = state.tavernRun;
-    if (state.mode !== 'tavern-crawl' || !run || run.pendingKeepsakeChoices || run.shop || run.runComplete) return;
+    if (state.mode !== 'tavern-crawl' || !run || run.pendingKeepsakeChoices || run.shop || run.interlude || run.runComplete) return;
     const key = `${snapshot.roomCode}#${run.encounterNumber}`;
     try {
         if (sessionStorage.getItem('tavernIntro') === key) return;
@@ -408,7 +424,8 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string 
     });
 });
 
-// Thom's cart opens after a win (what's for sale is in the state's tavernRun.shop).
+// A fight is won: the run pauses between fights (tavernRun.interlude, then maybe Thom's
+// cart in tavernRun.shop).
 socket.on('offerShop', (data: ShopArrival) => {
     playSound('winner');
     update({ shopArrival: data });
@@ -561,9 +578,33 @@ export const actions = {
         socket.emit('buyThonic', id);
     },
     leaveShop() {
+        actions.moveOn();
+    },
+    // Between fights: on to the next opponent, from Thom's cart or any spot.
+    moveOn() {
         playSound('swoosh');
-        socket.emit('leaveShop');
+        socket.emit('moveOn');
         update({ shopArrival: null });
+    },
+    chooseSpot(spot: Spot) {
+        playSound('click');
+        socket.emit('chooseSpot', spot);
+    },
+    pickpocket(choice: 'pay' | 'let') {
+        playSound('click');
+        socket.emit('pickpocket', choice);
+    },
+    shrinePick(gift: 'healing' | 'gold') {
+        playSound('click');
+        socket.emit('shrinePick', gift);
+    },
+    diceBet(bet: number) {
+        playSound('click');
+        socket.emit('diceBet', bet);
+    },
+    strangerPick(id: string | null) {
+        playSound('click');
+        socket.emit('strangerPick', id);
     },
     drinkThonic(slot: number, dieId?: number) {
         socket.emit('drinkThonic', slot, dieId);

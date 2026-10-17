@@ -33,8 +33,9 @@ with an ability; Thom's Thonics shop between fights; gold and a global leaderboa
 
 The **server is authoritative**: it rolls (crypto RNG), validates every action, scores from
 the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`rollDice`,
-`toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `leaveShop`,
-`drinkThonic(slot, dieId?)`) and render what comes back. Two clients share one server:
+`toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `drinkThonic(slot, dieId?)`
+and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `strangerPick`,
+`moveOn` (`leaveShop` is its older name)) and render what comes back. Two clients share one server:
 
 | Path | What |
 |---|---|
@@ -50,7 +51,7 @@ the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`roll
 Key socket events (server → client): `gameStateUpdate` (players, order, lives, mode, tavern
 run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finalized`),
 `diceRolled {turn, preRollCallout, suspense, devil, animationMs, throwSeed, rerolled?}`,
-`roundResult`, `signatureMove`, `offerShop`, `thonicUsed`, `keepsakeActivated`, `gameOver`
+`roundResult`, `signatureMove`, `offerShop` (a fight is won; the name is historical), `thonicUsed`, `keepsakeActivated`, `gameOver`
 (with a `tavern` summary at the end of a run), `triggerNewGameSplash`. (`offerKeepsakes` /
 `chooseKeepsake` remain for keepsakes from events, step 3.)
 
@@ -97,7 +98,8 @@ read and follow the file):
 
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
-`/shelf?ids=healing,lastGasp`, `/purse?n=150`.
+`/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/between?spots=thom,stranger` (add `&pickpocket=1`,
+or `&stage=shrine|diceDen|stranger`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Klarg … 4 = Jaguar, for testing), `GAME_SERVER` (dev proxy target).
@@ -192,8 +194,20 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   | Steady | 150 | any time in the turn | dust counts as 0 at End Turn (`turn.steady`) |
   | Clear-Eye | 100 | before rolling, vs an ability | opponent's ability off this round (`clearEyeRound`) |
 
-- **Keepsakes:** no longer after every win; the code remains (`TAVERN_KEEPSAKES`, cards UI) for
-  step 3's events and Jaguar's drop. The classic page at `/` walks straight past Thom.
+- **Between fights** (step 3, `INTERLUDE` in `server.js`, `tavernRun.interlude`; client
+  `Interlude` in Hud): in a full-screen tavern scene, **two spots catch your eye** and you go
+  to one (the user chose this over doors: it's a room you can look around, and it becomes "a
+  fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
+  Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 100 gold),
+  the Dice Den (bet 50/100; two dice each, higher total doubles it, ties throw again), the
+  Hooded Stranger (one of two keepsakes; the next fight starts on 2 hearts; offered only while
+  keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: pay 40 or lose a
+  quarter of the purse. "Walk straight on" skips both spots. Gold won or lost here is
+  `stats.eventGold` ("Between fights" on the run-over screen). Numbers are first guesses.
+  The spots' pictures are emoji placeholders until there is painted art.
+- **Keepsakes:** only from the Hooded Stranger now. Jaguar's drop waits for a second place.
+  The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
+  at `/` walks straight on (its `leaveShop`), so it never sees the spots.
 - **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
   single last die (Second Thoughts can reopen the hand). Klarg's steal motion has not been
   seen on screen yet (the preview doesn't move dice).
@@ -202,11 +216,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 1. **User plays the test site on the phone** (a full Tavern Crawl, then two phones over mobile
    data). Collect feedback; fix what comes up. Needs the user.
-2. **Tavern Crawl step 3: events between fights.** After each win, choose one of two doors:
-   Thom's cart, the Shrine to the Lady (a free Healing Thonic or some gold), the Dice Den
-   (bet gold on one roll), the Hooded Stranger (a keepsake for a heart), the Pickpocket (lose
-   gold unless you pay to chase him). Keepsakes come back as rare rewards from events, and
-   Jaguar drops one at the end (carried into the next place once there is one).
+2. **Tavern Crawl step 3: events between fights.** Built (see "Between fights" above); needs
+   the user to play it, and painted art for the Shrine, Dice Den, Stranger and Pickpocket.
+   Jaguar's keepsake drop waits until there is a second place to carry it into.
 3. **Step 4: balance.** Simulate many runs with the real opponents (`shared/strategy.js`) and a
    sensible player buying Thonics, to set prices and gold amounts; then tune by feel with the
    user. The stronger opponents make this matter.

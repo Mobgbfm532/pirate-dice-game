@@ -1167,3 +1167,153 @@ footer {
     .thonic-card .buy { padding: 6px; }
 }
 @keyframes counter-in-side { from { transform: translateX(100%); } to { transform: none; } }
+
+/* ---- Between fights: two spots in the tavern catch your eye ----
+   A scene of its own over everything: the tavern, darkened, with the spots lit up in front.
+   (The spots' pictures are placeholders until there is painted art.) */
+.interlude-scene {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    pointer-events: auto;
+    background-color: #0b0603;
+    background-size: cover;
+    background-position: center;
+    animation: scene-in 0.5s ease-out both;
+}
+.interlude-scene::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 45%, rgba(20, 10, 4, 0.55), rgba(8, 4, 2, 0.92));
+    pointer-events: none;
+}
+.interlude-scene.leaving { animation: scene-out 0.45s ease-in forwards; }
+.interlude-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: min(100%, 520px);
+    margin: auto 0;
+    text-align: center;
+}
+.interlude-title {
+    margin: 6px 0 2px;
+    font-size: clamp(1.5rem, 6.5vw, 2rem);
+    color: var(--gold-bright);
+    text-shadow: 0 2px 8px #000;
+    animation: fade-up 0.4s 0.1s both;
+}
+.event-note { margin: 0; font-size: 0.9rem; color: #ffab91; text-shadow: 0 1px 4px #000; }
+
+/* The two spots: big tappable cards side by side, each with its picture in a lit medallion. */
+.spot-cards { display: flex; gap: 12px; width: 100%; }
+.spot-card {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 14px 10px 14px;
+    color: var(--parchment);
+    background: linear-gradient(rgba(70, 44, 20, 0.92), rgba(30, 18, 8, 0.94));
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 236, 179, 0.12);
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    animation: deal 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.spot-card:hover, .spot-card:focus-visible { border-color: var(--gold-bright); box-shadow: 0 8px 26px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 213, 79, 0.35); }
+.spot-card:active { transform: scale(0.97); }
+.spot-card strong { font-size: clamp(1rem, 4.4vw, 1.2rem); color: var(--gold-bright); line-height: 1.15; }
+.spot-card .line { font-size: clamp(0.78rem, 3.4vw, 0.9rem); font-style: italic; color: var(--parchment); line-height: 1.3; }
+.spot-card .offer { margin-top: auto; padding-top: 4px; font-size: clamp(0.75rem, 3.2vw, 0.85rem); color: var(--parchment-dim); line-height: 1.3; }
+
+.spot-pic {
+    display: grid;
+    place-items: center;
+    width: clamp(72px, 22vw, 96px);
+    height: clamp(72px, 22vw, 96px);
+    flex: none;
+    border-radius: 50%;
+    overflow: hidden;
+    font-size: clamp(2.2rem, 10vw, 2.9rem);
+    background: radial-gradient(circle at 50% 40%, rgba(255, 190, 100, 0.45), rgba(60, 30, 10, 0.9) 70%);
+    box-shadow: 0 0 0 2px var(--panel-border), 0 0 22px rgba(255, 170, 80, 0.3);
+}
+.spot-pic.thom img { width: 150%; margin-top: 8%; }
+.spot-pic.stranger { background: radial-gradient(circle at 50% 40%, rgba(150, 140, 200, 0.4), rgba(20, 16, 30, 0.95) 70%); }
+.spot-pic.pickpocket { background: radial-gradient(circle at 50% 40%, rgba(255, 120, 90, 0.4), rgba(50, 14, 8, 0.95) 70%); }
+
+/* One spot, once you're there: its picture, what it offers, the choices. */
+.event-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 18px 16px 16px;
+    background: linear-gradient(rgba(70, 44, 20, 0.94), rgba(30, 18, 8, 0.96));
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 236, 179, 0.12);
+    animation: fade-up 0.4s both;
+}
+.event-card h2 { margin: 2px 0 0; font-size: clamp(1.35rem, 6vw, 1.7rem); color: var(--gold-bright); line-height: 1.1; }
+.event-card p { margin: 0; color: var(--parchment); line-height: 1.35; }
+.event-card p strong { color: var(--gold-bright); }
+.event-card .keepsake-cards { padding-top: 4px; }
+.event-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; margin-top: 4px; }
+.event-choices button { flex: 1 1 140px; }
+.event-choices .secondary { white-space: normal; }
+.link-button {
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    color: var(--parchment-dim);
+    font-size: 0.9rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-shadow: 0 1px 4px #000;
+    animation: fade-up 0.4s 0.6s both;
+}
+
+/* The Dice Den: each throw appears in turn, then the result. */
+.dice-throws { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.dice-throws li {
+    display: grid;
+    grid-template-columns: 4.5em auto 1.6em auto 1.6em auto 4.5em;
+    align-items: center;
+    gap: 6px;
+    animation: fade-up 0.35s both;
+}
+.dice-throws .who { font-size: 0.85rem; color: var(--parchment-dim); }
+.dice-throws li .who:first-child { text-align: right; }
+.dice-throws li .who:last-child { text-align: left; }
+.dice-throws .faces { font-size: 2rem; line-height: 1; color: #fff3d6; letter-spacing: 2px; }
+.dice-throws .total { font-size: 1.2rem; font-weight: 700; color: var(--gold-bright); }
+.dice-throws .vs { color: var(--parchment-dim); }
+.outcome { font-size: 1.05rem; animation: fade-up 0.4s both; }
+.outcome.good strong { color: #9ccc65; }
+.outcome.bad { color: #ef9a9a; }
+
+@media (max-width: 380px) {
+    .spot-card { padding: 12px 8px; }
+    .dice-throws .faces { font-size: 1.7rem; }
+    .dice-throws li { grid-template-columns: 3.6em auto 1.4em auto 1.4em auto 3.6em; gap: 4px; }
+}
+/* A phone on its side is short: the pictures shrink so everything fits. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .spot-pic { width: 56px; height: 56px; font-size: 1.8rem; }
+    .interlude-body { gap: 6px; }
+    .event-card { padding: 12px 14px; gap: 6px; }
+}

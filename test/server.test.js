@@ -466,27 +466,183 @@ test('a perfect 24 pays 75 gold into the purse straight away', async () => {
     assert.equal(room.tavernRun.stats.perfect24s, 1);
 });
 
-test('beating an opponent pays for the win and the hearts left, then Thom\'s cart opens', async () => {
+test('beating an opponent pays for the win and the hearts left, then two spots catch your eye', async () => {
     const { hero, room } = await tavernTable('Winner');
     room.players.BOT_MOLAR.lives = 1;
     room.players[hero.id].lives = 2;
     opponentAlwaysDusts(hero, room);
-    const shop = waitFor(hero, 'offerShop', () => true, 5000);
+    const won = waitFor(hero, 'offerShop', () => true, 5000);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]); // 20, no perfect-24 gold
-    const offer = await shop;
+    const offer = await won;
     assert.deepEqual(offer.gold, { win: 100, hearts: 50 });
     assert.equal(offer.nextEnemy, 'Klarg');
     assert.equal(room.tavernRun.purse, 150);
+    assert.deepEqual(room.tavernRun.lastWin, offer);
+    assert.equal(room.tavernRun.shop, null, 'no cart until you go to Thom');
+    assert.equal(room.tavernRun.pendingKeepsakeChoices, null, 'no keepsake after a win any more');
+    let interlude = room.tavernRun.interlude;
+    if (interlude.stage === 'pickpocket') {
+        assert.equal(interlude.steal, 37, 'a quarter of the purse');
+        hero.emit('pickpocket', 'pay');
+        await nextState(hero, s => runOf(s).interlude.stage === 'choose');
+        assert.equal(room.tavernRun.purse, 110);
+        interlude = room.tavernRun.interlude;
+    }
+    assert.equal(interlude.stage, 'choose');
+    assert.equal(interlude.spots.length, 2);
+    assert.equal(new Set(interlude.spots).size, 2, 'two different spots');
+    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen', 'stranger'].includes(id)));
+
+    hero.emit('rollDice'); // no fighting between fights
+    await sleep(60);
+    assert.equal(room.turn ? room.turn.hasRolled : false, false);
+});
+
+// Puts the run between fights at the given stage, with the given purse.
+async function betweenFights(name, interlude, purse = 200) {
+    const t = await tavernTable(name);
+    t.room.tavernRun.interlude = interlude;
+    t.room.tavernRun.purse = purse;
+    t.room.roundPlayers = [];
+    return t;
+}
+
+test('going to Thom opens his cart: Healing and two others', async () => {
+    const { hero, room } = await betweenFights('ToThom', { stage: 'choose', spots: ['shrine', 'thom'] });
+    hero.emit('chooseSpot', 'diceDen'); // not one of the two
+    await sleep(50);
+    assert.equal(room.tavernRun.interlude.stage, 'choose');
+    hero.emit('chooseSpot', 'thom');
+    await nextState(hero, s => runOf(s).shop);
+    assert.equal(room.tavernRun.interlude, null);
     const stock = room.tavernRun.shop.stock;
     assert.equal(stock.length, 3, 'three Thonics on the cart');
     assert.equal(stock[0], 'healing', 'Healing is always there');
     assert.equal(new Set(stock).size, 3, 'no Thonic twice');
     stock.forEach(id => assert.ok(['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'].includes(id)));
-    assert.equal(room.tavernRun.pendingKeepsakeChoices, null, 'no keepsake after a win any more');
 
     hero.emit('rollDice'); // no fighting while the cart is open
     await sleep(60);
     assert.equal(room.turn ? room.turn.hasRolled : false, false);
+});
+
+test('the Shrine to the Lady: a free Healing Thonic, or 100 gold', async () => {
+    const a = await betweenFights('Pilgrim', { stage: 'choose', spots: ['shrine', 'diceDen'] }, 50);
+    a.hero.emit('chooseSpot', 'shrine');
+    await nextState(a.hero, s => runOf(s).interlude.stage === 'shrine');
+    a.hero.emit('shrinePick', 'healing');
+    await nextState(a.hero, s => runOf(s).interlude.stage === 'done');
+    assert.deepEqual(a.room.tavernRun.shelf, ['healing']);
+    assert.equal(a.room.tavernRun.purse, 50, 'free');
+
+    const b = await betweenFights('Pilgrim2', { stage: 'shrine', gold: 100 }, 50);
+    b.room.tavernRun.shelf = ['fizzy', 'steady', 'clearEye'];
+    b.hero.emit('shrinePick', 'healing'); // no room on the shelf
+    b.hero.emit('shrinePick', 'everything');
+    await sleep(50);
+    assert.equal(b.room.tavernRun.interlude.stage, 'shrine');
+    b.hero.emit('shrinePick', 'gold');
+    await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
+    assert.equal(b.room.tavernRun.purse, 150);
+    assert.equal(b.room.tavernRun.stats.eventGold, 100);
+    b.hero.emit('shrinePick', 'gold'); // only once
+    await sleep(50);
+    assert.equal(b.room.tavernRun.purse, 150);
+});
+
+test('the Dice Den: two dice each, ties throw again, the bet doubles or goes', async () => {
+    for (let n = 0; n < 6; n++) {
+        const { hero, room } = await betweenFights(`Gambler${n}`, { stage: 'diceDen', bets: [50, 100] }, 80);
+        for (const bad of [100, 75, -50, '50', null, 1e9]) hero.emit('diceBet', bad); // 100: the purse is short
+        await sleep(40);
+        assert.equal(room.tavernRun.interlude.stage, 'diceDen');
+        hero.emit('diceBet', 50);
+        await nextState(hero, s => runOf(s).interlude.stage === 'done');
+        const { throws, won, bet } = room.tavernRun.interlude;
+        assert.equal(bet, 50);
+        const sum = d => d[0] + d[1];
+        throws.slice(0, -1).forEach(t => assert.equal(sum(t.you), sum(t.them), 'earlier throws were ties'));
+        const last = throws.at(-1);
+        assert.equal(won, sum(last.you) > sum(last.them));
+        assert.notEqual(sum(last.you), sum(last.them));
+        assert.equal(room.tavernRun.purse, won ? 130 : 30);
+        assert.equal(room.tavernRun.stats.eventGold, won ? 50 : -50);
+    }
+    const { hero, room } = await betweenFights('Walker', { stage: 'diceDen', bets: [50, 100] }, 80);
+    hero.emit('diceBet', 0);
+    await nextState(hero, s => runOf(s).interlude.stage === 'done');
+    assert.equal(room.tavernRun.purse, 80, 'walking away costs nothing');
+});
+
+test('the Hooded Stranger: a keepsake, and the next fight starts on 2 hearts', async () => {
+    const { hero, room } = await betweenFights('Hooded', { stage: 'choose', spots: ['stranger', 'thom'] });
+    hero.emit('chooseSpot', 'stranger');
+    const shown = await nextState(hero, s => runOf(s).interlude.stage === 'stranger');
+    const offers = runOf(shown).interlude.offers;
+    assert.equal(offers.length, 2);
+    hero.emit('strangerPick', 'notAKeepsake');
+    await sleep(40);
+    assert.equal(room.tavernRun.keepsakes.length, 0);
+    hero.emit('strangerPick', offers[1].id);
+    await nextState(hero, s => runOf(s).interlude.stage === 'done');
+    assert.deepEqual(room.tavernRun.keepsakes.map(k => k.id), [offers[1].id]);
+    hero.emit('moveOn');
+    const fight = await nextState(hero, s => !runOf(s).interlude);
+    assert.equal(fight.players[hero.id].lives, 2, 'this fight on 2 hearts');
+    assert.equal(room.tavernRun.nextFightHearts, null, 'only this one');
+
+    // Walking away costs nothing.
+    const b = await betweenFights('Hooded2', { stage: 'stranger', offers, hearts: 2 });
+    b.hero.emit('strangerPick', null);
+    await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
+    b.hero.emit('moveOn');
+    const fight2 = await nextState(b.hero, s => !runOf(s).interlude);
+    assert.equal(fight2.players[b.hero.id].lives, 3);
+    assert.equal(b.room.tavernRun.keepsakes.length, 0);
+});
+
+test('the Pickpocket: pay him off, let him go, or walk on and he keeps it', async () => {
+    const pay = await betweenFights('Payer', { stage: 'pickpocket', steal: 50, payoff: 40 }, 200);
+    pay.hero.emit('chooseSpot', 'thom'); // not until he's dealt with
+    await sleep(40);
+    assert.equal(pay.room.tavernRun.interlude.stage, 'pickpocket');
+    pay.hero.emit('pickpocket', 'pay');
+    const after = await nextState(pay.hero, s => runOf(s).interlude.stage === 'choose');
+    assert.equal(pay.room.tavernRun.purse, 160);
+    assert.deepEqual(runOf(after).interlude.note, { pickpocket: 'pay', lost: 40 });
+
+    const poor = await betweenFights('Poor', { stage: 'pickpocket', steal: 7, payoff: 40 }, 30);
+    poor.hero.emit('pickpocket', 'pay'); // can't afford it
+    await sleep(40);
+    assert.equal(poor.room.tavernRun.purse, 30);
+    poor.hero.emit('pickpocket', 'let');
+    await nextState(poor.hero, s => runOf(s).interlude.stage === 'choose');
+    assert.equal(poor.room.tavernRun.purse, 23);
+    assert.equal(poor.room.tavernRun.stats.eventGold, -7);
+
+    const walk = await betweenFights('Walker2', { stage: 'pickpocket', steal: 50, payoff: 40 }, 200);
+    walk.hero.emit('leaveShop'); // the classic page walks straight on
+    await nextState(walk.hero, s => !runOf(s).interlude);
+    assert.equal(walk.room.tavernRun.purse, 150);
+});
+
+test('the Stranger stops appearing once every keepsake is yours', async () => {
+    const { hero, room } = await betweenFights('Collector', { stage: 'choose', spots: ['stranger', 'thom'] });
+    // Take a keepsake from him five times: then they're all yours.
+    for (let i = 0; i < 5; i++) {
+        room.tavernRun.interlude = { stage: 'choose', spots: ['stranger', 'thom'] };
+        hero.emit('chooseSpot', 'stranger');
+        const shown = await nextState(hero, s => runOf(s).interlude.stage === 'stranger');
+        hero.emit('strangerPick', runOf(shown).interlude.offers[0].id);
+        await nextState(hero, s => runOf(s).interlude.stage === 'done');
+    }
+    assert.equal(new Set(room.tavernRun.keepsakes.map(k => k.id)).size, 5, 'all five, none twice');
+    for (let i = 0; i < 20; i++) {
+        room.tavernRun.interlude = { stage: 'pickpocket', steal: 0, payoff: 40 };
+        hero.emit('pickpocket', 'let');
+        await nextState(hero, s => runOf(s).interlude.stage === 'choose');
+        assert.ok(!room.tavernRun.interlude.spots.includes('stranger'));
+    }
 });
 
 test('the shelf and purse survive a reconnect', async () => {
@@ -501,13 +657,27 @@ test('the shelf and purse survive a reconnect', async () => {
     assert.equal(runOf(state).purse, 220);
 });
 
-test('full runs that shop at Thom\'s keep the books straight', async () => {
+test('full runs through the spots between fights keep the books straight', async () => {
     const runs = [1, 2, 3, 4].map(async n => {
         const { hero, room } = await tavernTable(`Shopper${n}`);
-        autoPlay(hero, () => {
-            // Try to buy everything on the cart (the server refuses what the purse can't cover).
-            room.tavernRun.shop.stock.forEach(id => hero.emit('buyThonic', id));
-            setTimeout(() => hero.emit('leaveShop'), 20);
+        autoPlay(hero, async () => {
+            // Between fights: deal with the pickpocket, then go wherever comes first. At Thom's,
+            // try to buy everything (the server refuses what the purse can't cover).
+            const run = room.tavernRun;
+            if (run.interlude.stage === 'pickpocket') {
+                hero.emit('pickpocket', n % 2 ? 'let' : 'pay');
+                await sleep(20);
+                if (run.interlude.stage === 'pickpocket') hero.emit('pickpocket', 'let'); // couldn't pay
+                await sleep(20);
+            }
+            const spot = run.interlude.spots[0];
+            hero.emit('chooseSpot', spot);
+            await sleep(20);
+            if (spot === 'thom') run.shop.stock.forEach(id => hero.emit('buyThonic', id));
+            if (spot === 'shrine') hero.emit('shrinePick', n % 2 ? 'gold' : 'healing');
+            if (spot === 'diceDen') hero.emit('diceBet', 50);
+            if (spot === 'stranger') hero.emit('strangerPick', run.interlude.offers[0].id);
+            setTimeout(() => hero.emit('moveOn'), 20);
         });
         // At the start of each turn, drink what can be drunk then: Healing once a heart is lost,
         // Clear-Eye, Steady. (Refused ones stay on the shelf.)
@@ -526,8 +696,8 @@ test('full runs that shop at Thom\'s keep the books straight', async () => {
             const r = room, turn = r.turn;
             throw new Error(`${err.message}: opponent ${r.tavernRun.encounterIndex}, lives ${JSON.stringify(r.roundPlayers.map(id => r.players[id].lives))}, turn ${turn && JSON.stringify({ player: turn.playerId === hero.id ? 'hero' : turn.playerId, rolled: turn.hasRolled, finalized: turn.finalized, ended: turn.ended, dice: turn.dice.map(d => d.status + ':' + d.value) })}, shop ${!!r.tavernRun.shop}, shelf ${r.tavernRun.shelf}, paused ${r.botPaused}, index ${r.currentTurnIndex}, round ${r.roundNumber}/${r.tavernRun.encounterRound}, scores ${JSON.stringify(r.roundPlayers.map(id => [r.players[id].score, r.players[id].busted, r.players[id].connected]))}, key ${turn && turn.key}, epoch ${r.turnEpoch}`);
         })).tavern;
-        const { progress, hearts, perfect, spent } = t.breakdown;
-        assert.equal(progress + hearts + perfect - spent, t.gold, 'score = earned - spent');
+        const { progress, hearts, perfect, events, spent } = t.breakdown;
+        assert.equal(progress + hearts + perfect + events - spent, t.gold, 'score = earned + events - spent');
         assert.equal(t.gold, Math.max(0, room.tavernRun.purse + (t.won ? 0 : (t.defeated + 1) * 25)));
         assert.ok(room.tavernRun.purse >= 0, 'the purse never goes negative');
         assert.ok(room.tavernRun.shelf.length <= 3);

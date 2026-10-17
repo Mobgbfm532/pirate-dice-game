@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { areSoundsOff, isMusicOff, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
@@ -421,6 +421,7 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
         ['How far you got', String(b.progress)],
         ['Hearts spared', String(b.hearts)],
         ['Perfect 24s', String(b.perfect)],
+        ['Between fights', b.events ? (b.events > 0 ? `+${b.events}` : `−${-b.events}`) : '0'],
         ["Spent at Thom's", b.spent ? `−${b.spent}` : '0']
     ];
     // Your best on the board (the board keeps each name's best run).
@@ -610,8 +611,210 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     );
 }
 
+// ---- Between fights: two spots in the tavern catch your eye ----
+// Placeholder pictures (emoji in a lit medallion) until there is painted art for each.
+const SPOTS: Record<Spot, { name: string; icon: string; line: string; offer: string }> = {
+    thom: { name: "Thom's Thonics", icon: '', line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
+    shrine: { name: 'Shrine to the Lady', icon: '🕯️', line: 'Candles flicker at a quiet shrine.', offer: 'A free Healing Thonic, or gold' },
+    diceDen: { name: 'The Dice Den', icon: '🎲', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
+    stranger: { name: 'The Hooded Stranger', icon: '🌒', line: '"I have something for you… for a price."', offer: 'A keepsake, for a heart' }
+};
+
+const DIE_FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+function SpotPicture({ spot }: { spot: Spot | 'pickpocket' }) {
+    if (spot === 'thom') return <span className="spot-pic thom" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}art/thom.webp`} alt="" /></span>;
+    return <span className={`spot-pic ${spot}`} aria-hidden="true">{spot === 'pickpocket' ? '👛' : SPOTS[spot].icon}</span>;
+}
+
+function Interlude({ state }: { state: GameState }) {
+    const run = state.tavernRun!;
+    const interlude = run.interlude!;
+    const won = run.lastWin;
+    const next = won?.nextEnemy ?? run.enemy.name;
+    const [leaving, setLeaving] = useState(false);
+    const moveOn = () => {
+        if (leaving) return;
+        setLeaving(true);
+        setTimeout(actions.moveOn, LEAVE_MS);
+    };
+    return (
+        <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
+            <div className="interlude-body">
+                {won && (
+                    <p className="winnings">
+                        {won.defeated} is beaten: <strong>+{won.gold.win}</strong> gold
+                        {won.gold.hearts > 0 && <>, <strong>+{won.gold.hearts}</strong> for hearts left</>}
+                    </p>
+                )}
+                <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
+                <InterludeStage key={interlude.stage} state={state} next={next} onMoveOn={moveOn} />
+            </div>
+        </div>
+    );
+}
+
+function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: string; onMoveOn: () => void }) {
+    const run = state.tavernRun!;
+    const interlude = run.interlude!;
+    const [picked, setPicked] = useState<string | null>(null);
+    const shelfFull = run.shelf.length >= run.shelfSize;
+
+    if (interlude.stage === 'pickpocket') {
+        return (
+            <div className="event-card">
+                <SpotPicture spot="pickpocket" />
+                <h2>Hey! A hand in your purse!</h2>
+                <p>On your way across the room, a pickpocket lifts <strong>{interlude.steal}</strong> gold.</p>
+                <div className="event-choices">
+                    <button className="primary" disabled={run.purse < interlude.payoff} onClick={() => actions.pickpocket('pay')}>
+                        Pay him {interlude.payoff} to drop it
+                    </button>
+                    <button className="secondary" onClick={() => actions.pickpocket('let')}>Let him go (−{interlude.steal})</button>
+                </div>
+            </div>
+        );
+    }
+
+    if (interlude.stage === 'choose') {
+        const note = interlude.note;
+        return (
+            <>
+                {note && (
+                    <p className="event-note">
+                        {note.pickpocket === 'pay' ? `You paid the pickpocket ${note.lost} to drop it.` : `The pickpocket got away with ${note.lost} gold.`}
+                    </p>
+                )}
+                <h2 className="interlude-title">Two spots catch your eye</h2>
+                <div className="spot-cards">
+                    {interlude.spots.map((spot, i) => (
+                        <button key={spot} className="spot-card" style={{ animationDelay: `${0.25 + i * 0.15}s` }} onClick={() => actions.chooseSpot(spot)}>
+                            <SpotPicture spot={spot} />
+                            <strong>{SPOTS[spot].name}</strong>
+                            <span className="line">{SPOTS[spot].line}</span>
+                            <span className="offer">{SPOTS[spot].offer}</span>
+                        </button>
+                    ))}
+                </div>
+                <button className="link-button" onClick={onMoveOn}>Walk straight on to {next}</button>
+            </>
+        );
+    }
+
+    if (interlude.stage === 'shrine') {
+        return (
+            <div className="event-card">
+                <SpotPicture spot="shrine" />
+                <h2>Shrine to the Lady</h2>
+                <p>You light a candle. The Lady offers one gift.</p>
+                <div className="event-choices">
+                    <button className="primary" disabled={shelfFull} onClick={() => actions.shrinePick('healing')}>
+                        {shelfFull ? 'Shelf full: no Healing Thonic' : 'A Healing Thonic'}
+                    </button>
+                    <button className="primary" onClick={() => actions.shrinePick('gold')}>{interlude.gold} gold</button>
+                </div>
+            </div>
+        );
+    }
+
+    if (interlude.stage === 'diceDen') {
+        return (
+            <div className="event-card">
+                <SpotPicture spot="diceDen" />
+                <h2>The Dice Den</h2>
+                <p>Two dice each against a stranger. Higher total doubles your bet; a tie throws again.</p>
+                <div className="event-choices">
+                    {interlude.bets.map(bet => (
+                        <button key={bet} className="primary" disabled={run.purse < bet} onClick={() => actions.diceBet(bet)}>Bet {bet}</button>
+                    ))}
+                    <button className="secondary" onClick={() => actions.diceBet(0)}>Walk away</button>
+                </div>
+            </div>
+        );
+    }
+
+    if (interlude.stage === 'stranger') {
+        const chosen = interlude.offers.find(k => k.id === picked);
+        return (
+            <div className="event-card wide">
+                <SpotPicture spot="stranger" />
+                <h2>The Hooded Stranger</h2>
+                <p>Take one, and you start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</p>
+                <div className="keepsake-cards">
+                    {interlude.offers.map(k => (
+                        <button key={k.id} className={`keepsake-card ${picked === k.id ? 'picked' : picked ? 'passed' : ''}`} onClick={() => setPicked(k.id)}>
+                            <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[k.id] ?? '✦'}</span>
+                            <strong>{k.name}</strong>
+                            <span className="text">{k.text}</span>
+                        </button>
+                    ))}
+                </div>
+                <div className="event-choices">
+                    <button className="primary" disabled={!chosen} onClick={() => chosen && actions.strangerPick(chosen.id)}>
+                        {chosen ? `Take ${chosen.name}` : 'Tap a keepsake'}
+                    </button>
+                    <button className="secondary" onClick={() => actions.strangerPick(null)}>Walk away</button>
+                </div>
+            </div>
+        );
+    }
+
+    // What happened at the spot.
+    return (
+        <div className="event-card">
+            <SpotPicture spot={interlude.spot} />
+            <h2>{SPOTS[interlude.spot].name}</h2>
+            <EventOutcome state={state} />
+            <div className="event-choices">
+                <button className="primary onward" onClick={onMoveOn}>On to {next}</button>
+            </div>
+        </div>
+    );
+}
+
+function EventOutcome({ state }: { state: GameState }) {
+    const interlude = state.tavernRun!.interlude!;
+    const won = interlude.stage === 'done' && interlude.spot === 'diceDen' ? interlude.won : undefined;
+    useEffect(() => {
+        if (won !== undefined) playSound(won ? 'yay' : 'aww');
+    }, [won]);
+    if (interlude.stage !== 'done') return null;
+    if (interlude.spot === 'shrine') {
+        return <p className="outcome">{interlude.gift === 'healing' ? 'A Healing Thonic is on your shelf.' : <>The Lady's blessing: <strong>+{interlude.gold}</strong> gold.</>}</p>;
+    }
+    if (interlude.spot === 'stranger') {
+        return interlude.keepsake
+            ? <p className="outcome"><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</p>
+            : <p className="outcome">You leave the Stranger to his shadows.</p>;
+    }
+    if (!interlude.bet || !interlude.throws) return <p className="outcome">You leave the dice to others.</p>;
+    const sum = (d: [number, number]) => d[0] + d[1];
+    return (
+        <>
+            <ol className="dice-throws">
+                {interlude.throws.map((t, i) => (
+                    <li key={i} style={{ animationDelay: `${i * 0.6}s` }}>
+                        <span className="who">You</span>
+                        <span className="faces">{DIE_FACES[t.you[0]]}{DIE_FACES[t.you[1]]}</span>
+                        <span className="total">{sum(t.you)}</span>
+                        <span className="vs">–</span>
+                        <span className="total">{sum(t.them)}</span>
+                        <span className="faces">{DIE_FACES[t.them[0]]}{DIE_FACES[t.them[1]]}</span>
+                        <span className="who">Stranger</span>
+                    </li>
+                ))}
+            </ol>
+            <p className={`outcome ${interlude.won ? 'good' : 'bad'}`} style={{ animationDelay: `${interlude.throws.length * 0.6}s` }}>
+                {interlude.won ? <>You win <strong>+{interlude.bet}</strong> gold!</> : <>You lose your {interlude.bet} gold.</>}
+            </p>
+        </>
+    );
+}
+
 function Modals({ snap }: { snap: Snapshot }) {
     const modal = snap.modal;
+    if (snap.state?.tavernRun?.interlude && !modal) return <Interlude state={snap.state} />;
     if (snap.state?.tavernRun?.shop && !modal) return <ThomShop snap={snap} state={snap.state} />;
     if (!modal) return null;
     if (modal.type === 'keepsakes') return <KeepsakeCards key={modal.nextEnemy} {...modal} />;

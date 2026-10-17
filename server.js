@@ -176,7 +176,25 @@ const SHOP_SIZE = 3; // Thonics on Thom's cart per visit: Healing, plus two othe
 // A place in the run: its opponents in order and what Thom sells there. Only the tavern
 // for now; later places (new environments, tougher opponents) are new entries.
 const PLACES = {
-    tavern: { name: 'The Tavern', encounters: TAVERN_ENCOUNTERS, thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'] }
+    tavern: {
+        name: 'The Tavern',
+        encounters: TAVERN_ENCOUNTERS,
+        thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
+        // Between fights two of these catch your eye, and you go to one (see INTERLUDE).
+        spots: ['thom', 'shrine', 'diceDen', 'stranger']
+    }
+};
+
+// Between fights: two spots in the room catch your eye and you choose one. Now and then a
+// pickpocket brushes past on the way, before you choose. First guesses, tuned in step 4.
+const INTERLUDE = {
+    pickpocketChance: 25,   // percent of walks across the room
+    pickpocketShare: 0.25,  // of the purse, if you let him go
+    pickpocketPayoff: 40,   // to make him drop it
+    shrineGold: 100,        // the Shrine to the Lady: this much gold, or a free Healing Thonic
+    diceDenBets: [50, 100], // the Dice Den: two dice each against a stranger, higher total doubles the bet
+    strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
+    strangerHearts: 2       // ...and you start the next fight on this many hearts if you take one
 };
 
 // Gold during a run: it goes into the purse as it is won, and the purse is the final score.
@@ -229,6 +247,9 @@ function getTavernRunState(room) {
         shelf: room.tavernRun.shelf.map(thonicView),
         shelfSize: SHELF_SIZE,
         shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView) } : null,
+        interlude: room.tavernRun.interlude,
+        lastWin: room.tavernRun.lastWin,
+        nextFightHearts: room.tavernRun.nextFightHearts,
         abilityUsed: room.tavernRun.abilityUsed,
         clearEye: room.tavernRun.clearEyeRound === room.roundNumber,
         abilityRound: room.tavernRun.abilityRound,
@@ -257,7 +278,7 @@ function getTurnKey(room) {
 function isTurnPlayable(roomCode) {
     let room = rooms[roomCode];
     if (!room || !room.turn || room.turn.ended) return false;
-    if (room.mode === 'tavern-crawl' && (room.tavernRun.pendingKeepsakeChoices || room.tavernRun.shop)) return false;
+    if (room.mode === 'tavern-crawl' && (room.tavernRun.pendingKeepsakeChoices || room.tavernRun.shop || room.tavernRun.interlude)) return false;
     return isBotRoom(roomCode) || room.playerOrder.length >= 2;
 }
 
@@ -642,6 +663,9 @@ function createTavernRun() {
         purse: 0,
         shelf: [],
         shop: null,
+        interlude: null,   // between fights: { stage, ... } (see startInterlude)
+        lastWin: null,     // the fight just won: { defeated, nextEnemy, gold: { win, hearts } }
+        nextFightHearts: null, // the Hooded Stranger's price: the next fight starts on fewer hearts
         abilityUsed: {},
         abilityRound: 1,
         encounterRound: 1,
@@ -655,6 +679,7 @@ function createTavernRun() {
             heartGold: 0,
             perfectGold: 0,
             spent: 0,
+            eventGold: 0, // won and lost between fights (Shrine, Dice Den, Pickpocket)
             thonicsDrunk: 0
         },
         started: false,
@@ -678,12 +703,13 @@ function getTavernScoreSummary(room, completedRun = false) {
 
     return {
         totalGold,
-        breakdown: { progress: progressGold, hearts: stats.heartGold, perfect: stats.perfectGold, spent: stats.spent },
+        breakdown: { progress: progressGold, hearts: stats.heartGold, perfect: stats.perfectGold, events: stats.eventGold, spent: stats.spent },
         lines: [
             `Gold earned: ${totalGold}`,
             `Progress: ${progressGold}`,
             `Hearts spared: ${stats.heartGold}`,
             `Perfect 24s: ${stats.perfectGold}`,
+            `Between fights: ${stats.eventGold}`,
             `Spent at Thom's: ${stats.spent}`
         ]
     };
@@ -744,7 +770,9 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     };
 
     if (humanId && room.players[humanId]) {
-        room.players[humanId].lives = room.startingLives;
+        // The Hooded Stranger's price: this one fight starts on fewer hearts.
+        room.players[humanId].lives = room.tavernRun.nextFightHearts || room.startingLives;
+        room.tavernRun.nextFightHearts = null;
         room.players[humanId].score = null;
         room.players[humanId].busted = false;
         room.playerOrder = [humanId, BOT_ID];
@@ -764,6 +792,78 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.abilityRound = getRandomAbilityRound(encounter);
     room.tavernRun.encounterKeepsakeUses = {};
     room.tavernRun.started = true;
+}
+
+// ---- Between fights ----
+// After a win the run pauses in `tavernRun.interlude` until the player moves on:
+//   pickpocket  { steal, payoff }        pay him off, or let him go with `steal`
+//   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
+//   shrine      { gold }                 a free Healing Thonic or that much gold
+//   diceDen     { bets }                 bet one of them (or walk away); two dice each
+//   stranger    { offers, hearts }       take a keepsake (next fight on `hearts`) or walk away
+//   done        { spot, ... }            what happened, until the player moves on
+// The stages after the pickpocket carry `note`: what he did, if he came, for the client.
+
+function shuffled(list) {
+    let out = list.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+        let j = crypto.randomInt(0, i + 1);
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+}
+
+function unownedKeepsakes(room) {
+    let owned = new Set(room.tavernRun.keepsakes.map(k => k.id));
+    return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
+}
+
+// Two different spots; the Stranger only while there are keepsakes left to offer.
+function pickSpots(room) {
+    let spots = PLACES.tavern.spots.filter(id => id !== 'stranger' || unownedKeepsakes(room).length > 0);
+    return shuffled(spots).slice(0, 2);
+}
+
+function startInterlude(room, won) {
+    let run = room.tavernRun;
+    run.lastWin = won;
+    let steal = Math.floor(run.purse * INTERLUDE.pickpocketShare);
+    if (steal > 0 && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+        run.interlude = { stage: 'pickpocket', steal, payoff: INTERLUDE.pickpocketPayoff };
+    } else {
+        run.interlude = { stage: 'choose', spots: pickSpots(room) };
+    }
+}
+
+// Gold won or lost between fights. The purse never goes below 0. Returns what changed.
+function changePurse(run, amount) {
+    let applied = Math.max(amount, -run.purse);
+    run.purse += applied;
+    run.stats.eventGold += applied;
+    return applied;
+}
+
+// The Dice Den: two dice each, again on a tie. Every throw, and whether the player won.
+function playDiceDen() {
+    let throws = [];
+    for (;;) {
+        let you = [rollFace(), rollFace()], them = [rollFace(), rollFace()];
+        throws.push({ you, them });
+        let a = you[0] + you[1], b = them[0] + them[1];
+        if (a !== b) return { throws, won: a > b };
+    }
+}
+
+// From Thom's cart or any point between fights, on to the next fight. A pickpocket left
+// alone keeps what he took.
+function moveOnToNextFight(roomCode) {
+    let room = rooms[roomCode];
+    let run = room.tavernRun;
+    if (run.interlude && run.interlude.stage === 'pickpocket') changePurse(run, -run.interlude.steal);
+    run.interlude = null;
+    run.shop = null;
+    resetTavernEncounter(roomCode, true);
+    emitState(roomCode);
 }
 
 // ---- Rounds ----
@@ -973,15 +1073,16 @@ function evaluateTavernRound(roomCode) {
             return;
         }
 
-        // Between fights: Thom's cart. (Keepsakes now come from events, in a later step.)
-        room.tavernRun.shop = { stock: pickThomStock(PLACES.tavern) };
-        room.roundPlayers = [];
-        emitState(roomCode);
-        io.to(roomCode).emit('offerShop', {
+        // Between fights: two spots in the room catch your eye (maybe a pickpocket first).
+        let won = {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
             gold: { win: winGold, hearts: heartGold }
-        });
+        };
+        startInterlude(room, won);
+        room.roundPlayers = [];
+        emitState(roomCode);
+        io.to(roomCode).emit('offerShop', won); // the fight is won (the name is historical)
         return;
     }
 
@@ -1215,11 +1316,96 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
-    socket.on('leaveShop', () => {
+    // On to the next fight, from Thom's cart or any point between fights. (`leaveShop` is
+    // the older name; the classic page and the tests still send it.)
+    const moveOn = () => {
         let room = tavernPlayer();
-        if (!room || !room.tavernRun.shop) return;
-        room.tavernRun.shop = null;
-        resetTavernEncounter(socket.roomCode, true);
+        if (!room || !(room.tavernRun.shop || room.tavernRun.interlude)) return;
+        moveOnToNextFight(socket.roomCode);
+    };
+    socket.on('leaveShop', moveOn);
+    socket.on('moveOn', moveOn);
+
+    // Between fights (see startInterlude). Each step only works at its own stage.
+    const interludeAt = stage => {
+        let room = tavernPlayer();
+        let interlude = room && room.tavernRun.interlude;
+        return interlude && interlude.stage === stage ? room : null;
+    };
+
+    socket.on('pickpocket', (choice) => {
+        let room = interludeAt('pickpocket');
+        if (!room || (choice !== 'pay' && choice !== 'let')) return;
+        let run = room.tavernRun, { steal, payoff } = run.interlude;
+        if (choice === 'pay' && run.purse < payoff) return;
+        let lost = -changePurse(run, choice === 'pay' ? -payoff : -steal);
+        run.interlude = { stage: 'choose', spots: pickSpots(room), note: { pickpocket: choice, lost } };
+        emitState(socket.roomCode);
+    });
+
+    socket.on('chooseSpot', (spot) => {
+        let room = interludeAt('choose');
+        if (!room || typeof spot !== 'string' || !room.tavernRun.interlude.spots.includes(spot)) return;
+        let run = room.tavernRun;
+        if (spot === 'thom') {
+            run.interlude = null;
+            run.shop = { stock: pickThomStock(PLACES.tavern) };
+        } else if (spot === 'shrine') {
+            run.interlude = { stage: 'shrine', gold: INTERLUDE.shrineGold };
+        } else if (spot === 'diceDen') {
+            run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets };
+        } else if (spot === 'stranger') {
+            let offers = shuffled(unownedKeepsakes(room)).slice(0, INTERLUDE.strangerOffers);
+            run.interlude = { stage: 'stranger', offers, hearts: INTERLUDE.strangerHearts };
+        }
+        emitState(socket.roomCode);
+    });
+
+    socket.on('shrinePick', (gift) => {
+        let room = interludeAt('shrine');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (gift === 'healing') {
+            if (run.shelf.length >= SHELF_SIZE) return;
+            run.shelf.push('healing');
+            run.interlude = { stage: 'done', spot: 'shrine', gift };
+        } else if (gift === 'gold') {
+            changePurse(run, INTERLUDE.shrineGold);
+            run.interlude = { stage: 'done', spot: 'shrine', gift, gold: INTERLUDE.shrineGold };
+        } else {
+            return;
+        }
+        emitState(socket.roomCode);
+    });
+
+    socket.on('diceBet', (bet) => {
+        let room = interludeAt('diceDen');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (bet === 0) {
+            run.interlude = { stage: 'done', spot: 'diceDen', bet: 0 };
+        } else {
+            if (!INTERLUDE.diceDenBets.includes(bet) || run.purse < bet) return;
+            let { throws, won } = playDiceDen();
+            changePurse(run, won ? bet : -bet);
+            run.interlude = { stage: 'done', spot: 'diceDen', bet, throws, won };
+        }
+        emitState(socket.roomCode);
+    });
+
+    socket.on('strangerPick', (keepsakeId) => {
+        let room = interludeAt('stranger');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (keepsakeId === null) {
+            run.interlude = { stage: 'done', spot: 'stranger', keepsake: null };
+        } else {
+            let keepsake = run.interlude.offers.find(k => k.id === keepsakeId);
+            if (!keepsake) return;
+            run.keepsakes.push(keepsake);
+            run.nextFightHearts = INTERLUDE.strangerHearts;
+            run.interlude = { stage: 'done', spot: 'stranger', keepsake, hearts: INTERLUDE.strangerHearts };
+        }
         emitState(socket.roomCode);
     });
 
