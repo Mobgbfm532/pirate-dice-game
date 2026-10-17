@@ -26,6 +26,16 @@ export const PORTRAITS: Record<string, Portrait> = {
     Vaelin: classic('vaelin.png')
 };
 
+// The spots between fights (and the pickpocket), shown in a round frame. The Shrine is a
+// painted scene rather than a cut-out; it's framed on the statue and candles.
+export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket', Portrait> = {
+    thom: bust('thom.webp', [52, 14], 1.5),
+    shrine: bust('shrine.webp', [50, 52], 1.5),
+    diceDen: bust('dicer.webp', [54, 28], 2.4),
+    stranger: bust('stranger.webp', [56, 34], 2.8),
+    pickpocket: bust('pickpocket.webp', [56, 27], 1.6)
+};
+
 export const AVATAR_IDS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
 
 export function portraitFor(key: string): Portrait {

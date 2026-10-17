@@ -295,6 +295,13 @@ async function slotPlates() {
     }
 }
 
+// A spot between fights painted as a scene (no cut-out): shown in a round frame, so a
+// square at a modest size is all it needs.
+async function spotScene(file, name) {
+    const info = await sharp(path.join(ART, file)).resize(512, 512, { fit: 'cover' }).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
+    console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+}
+
 async function backdrop() {
     const info = await sharp(path.join(ART, 'tavern-backdrop.jpg')).webp({ quality: 78 }).toFile(path.join(OUT, 'tavern.webp'));
     console.log(`tavern.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
@@ -326,3 +333,7 @@ await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
 await cutOut('bust-jaguar.jpg', 'jaguar');
 await cutOutFlat('bust-thom.jpg', 'thom');
+await cutOutFlat('bust-stranger.jpg', 'stranger');
+await cutOutFlat('bust-dicer.jpg', 'dicer', { pocket: 60 }); // background shows between the dice and his fingers
+await cutOutFlat('bust-pickpocket.jpg', 'pickpocket', { pocket: 40 }); // and behind the hair at the shoulder
+await spotScene('shrine.jpg', 'shrine');

@@ -205,7 +205,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   catches him (`pickpocketCatch`), else he takes a quarter of the purse. The choice screen
   is headed "Make your choice". "Walk straight on" skips both spots. Gold won or lost here is
   `stats.eventGold` ("Between fights" on the run-over screen). Numbers are first guesses.
-  The spots' pictures are emoji placeholders until there is painted art.
+  Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
+  sailors. Game text calls the pickpocket "the thief" (no assumed gender).
 - **Keepsakes:** only from the Hooded Stranger now. Jaguar's drop waits for a second place.
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
   at `/` walks straight on (its `leaveShop`), so it never sees the spots.
@@ -217,8 +218,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 1. **User plays the test site on the phone** (a full Tavern Crawl, then two phones over mobile
    data). Collect feedback; fix what comes up. Needs the user.
-2. **Tavern Crawl step 3: events between fights.** Built (see "Between fights" above); needs
-   the user to play it, and painted art for the Shrine, Dice Den, Stranger and Pickpocket.
+2. **Tavern Crawl step 3: events between fights.** Built, with art (see "Between fights"
+   above); needs the user to play it.
    Jaguar's keepsake drop waits until there is a second place to carry it into.
 3. **Step 4: balance.** Simulate many runs with the real opponents (`shared/strategy.js`) and a
    sensible player buying Thonics, to set prices and gold amounts; then tune by feel with the

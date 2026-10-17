@@ -1250,7 +1250,8 @@ footer {
     background: radial-gradient(circle at 50% 40%, rgba(255, 190, 100, 0.45), rgba(60, 30, 10, 0.9) 70%);
     box-shadow: 0 0 0 2px var(--panel-border), 0 0 22px rgba(255, 170, 80, 0.3);
 }
-.spot-pic.thom img { width: 150%; margin-top: 8%; }
+.spot-pic { position: relative; }
+.spot-pic .face { position: absolute; inset: 0; background-repeat: no-repeat; }
 .spot-pic.stranger { background: radial-gradient(circle at 50% 40%, rgba(150, 140, 200, 0.4), rgba(20, 16, 30, 0.95) 70%); }
 .spot-pic.pickpocket { background: radial-gradient(circle at 50% 40%, rgba(255, 120, 90, 0.4), rgba(50, 14, 8, 0.95) 70%); }
 

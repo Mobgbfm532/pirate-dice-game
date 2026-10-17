@@ -130,6 +130,7 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |
 | Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
 | Ace of Spades card | Wanted, optional | The Hangman's card face; drawn in CSS for now |
+| Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
 
 ## Processing art
 

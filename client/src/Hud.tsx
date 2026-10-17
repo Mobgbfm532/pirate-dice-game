@@ -3,7 +3,7 @@ import { screenInsets } from './layout';
 import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { areSoundsOff, isMusicOff, playSound, setMusicOff, setSoundsOff } from './sounds';
-import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
+import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
 import { acrossTheTable, opponentName } from './Backdrop';
 
 const REACTIONS = ['😀', '😂', '😮', '😎', '😭'];
@@ -612,19 +612,22 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
 }
 
 // ---- Between fights: two spots in the tavern catch your eye ----
-// Placeholder pictures (emoji in a lit medallion) until there is painted art for each.
-const SPOTS: Record<Spot, { name: string; icon: string; line: string; offer: string }> = {
-    thom: { name: "Thom's Thonics", icon: '', line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
-    shrine: { name: 'Shrine to the Lady', icon: '🕯️', line: 'Candles flicker at a quiet shrine.', offer: 'A free Healing Thonic, or gold' },
-    diceDen: { name: 'The Dice Den', icon: '🎲', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
-    stranger: { name: 'The Hooded Stranger', icon: '🌒', line: '"I have something for you… for a price."', offer: 'A keepsake, for a heart' }
+const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
+    thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
+    shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A free Healing Thonic, or gold' },
+    diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
+    stranger: { name: 'The Hooded Stranger', line: '"I have something for you… for a price."', offer: 'A keepsake, for a heart' }
 };
 
 const DIE_FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
+// Who (or what) is at the spot, in a lit round frame.
 function SpotPicture({ spot }: { spot: Spot | 'pickpocket' }) {
-    if (spot === 'thom') return <span className="spot-pic thom" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}art/thom.webp`} alt="" /></span>;
-    return <span className={`spot-pic ${spot}`} aria-hidden="true">{spot === 'pickpocket' ? '👛' : SPOTS[spot].icon}</span>;
+    return (
+        <span className={`spot-pic ${spot}`} aria-hidden="true">
+            <span className="face" style={avatarStyle(SPOT_PORTRAITS[spot])} />
+        </span>
+    );
 }
 
 function Interlude({ state }: { state: GameState }) {
@@ -759,7 +762,7 @@ function InterludeStage({ state, next, onMoveOn }: { state: GameState; next: str
     );
 }
 
-// A hand in your purse: roll one die to catch him. The die tumbles, then the result shows.
+// A hand in your purse: roll one die to catch the thief. The die tumbles, then the result shows.
 const TUMBLE_MS = 900;
 
 function Pickpocket({ run }: { run: NonNullable<GameState['tavernRun']> }) {
@@ -781,17 +784,17 @@ function Pickpocket({ run }: { run: NonNullable<GameState['tavernRun']> }) {
                 ? <span className={`pickpocket-die ${revealed ? (interlude.caught ? 'good' : 'bad') : 'tumbling'}`} aria-hidden="true">{DIE_FACES[interlude.roll!]}</span>
                 : <SpotPicture spot="pickpocket" />}
             <h2>Hey! A hand in your purse!</h2>
-            {!rolled && <p>A pickpocket is making off with <strong>{interlude.steal}</strong> gold. Roll a {catchFaces} to catch him.</p>}
+            {!rolled && <p>A pickpocket is making off with <strong>{interlude.steal}</strong> gold. Roll a {catchFaces} to catch the thief.</p>}
             {rolled && !revealed && <p className="outcome">Rolling…</p>}
             {revealed && (
                 <p className={`outcome ${interlude.caught ? 'good' : 'bad'}`}>
                     {interlude.caught
-                        ? <>You rolled a {interlude.roll}: <strong>caught him!</strong> Your gold is safe.</>
-                        : <>You rolled a {interlude.roll}: he slips away with {interlude.lost} gold.</>}
+                        ? <>You rolled a {interlude.roll}: <strong>caught the thief!</strong> Your gold is safe.</>
+                        : <>You rolled a {interlude.roll}: the thief slips away with {interlude.lost} gold.</>}
                 </p>
             )}
             <div className="event-choices">
-                {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch him</button>}
+                {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch the thief</button>}
                 {revealed && <button className="primary" onClick={() => actions.pickpocket('on')}>Carry on</button>}
             </div>
         </div>
@@ -811,7 +814,7 @@ function EventOutcome({ state }: { state: GameState }) {
     if (interlude.spot === 'stranger') {
         return interlude.keepsake
             ? <p className="outcome"><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</p>
-            : <p className="outcome">You leave the Stranger to his shadows.</p>;
+            : <p className="outcome">You leave the Stranger to the shadows.</p>;
     }
     if (!interlude.bet || !interlude.throws) return <p className="outcome">You leave the dice to others.</p>;
     const sum = (d: [number, number]) => d[0] + d[1];
