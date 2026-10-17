@@ -56,17 +56,14 @@ export function opponentName(): string | null {
     return state.players[BOT_ID].name;
 }
 
-// Who sits across the table: the bot opponent, or at a multiplayer table whoever is
-// rolling (unless it's you). Only characters with a painted bust can sit there.
+// Who sits across the table: only a bot opponent (The Molar, or the current Tavern Crawl
+// encounter). At a multiplayer table nobody does; the players' nameplates show whose turn it is.
+// Only characters with a painted bust can sit there.
 export function acrossTheTable(): { key: string; portrait: Portrait; isBot: boolean } | null {
-    const { state, myId, joined } = store.get();
+    const { state, joined } = store.get();
     if (!joined || !state) return null;
     const bot = opponentName();
-    if (bot) return PORTRAITS[bot]?.bust ? { key: bot, portrait: PORTRAITS[bot], isBot: true } : null;
-    const id = state.currentTurnId;
-    if (!id || id === myId || !state.players[id]) return null;
-    const avatar = state.players[id].avatar;
-    return PORTRAITS[avatar]?.bust ? { key: id, portrait: PORTRAITS[avatar], isBot: false } : null;
+    return bot && PORTRAITS[bot]?.bust ? { key: bot, portrait: PORTRAITS[bot], isBot: true } : null;
 }
 
 export function Backdrop() {
@@ -74,8 +71,8 @@ export function Backdrop() {
     const across = acrossTheTable();
     const portrait = across?.portrait ?? null;
     const name = across?.key;
-    // A bot brightens on its turn; a player across the table is always the one rolling.
-    const theirTurn = across ? (!across.isBot || snap.state?.currentTurnId === BOT_ID) : false;
+    // The bot brightens on its turn.
+    const theirTurn = !!across && snap.state?.currentTurnId === BOT_ID;
 
     return (
         <div className="backdrop" aria-hidden="true">

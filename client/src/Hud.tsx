@@ -136,8 +136,13 @@ function Hearts({ lives, starting }: { lives: number; starting: number }) {
 // Player chips: a column at the top left on wide screens, a scrolling row above the
 // controls on phones. A bot opponent has a nameplate on the table edge instead.
 function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: GameState; ids: string[]; className?: string }) {
+    // On phones the row scrolls sideways: keep whoever is rolling in view.
+    const row = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        row.current?.querySelector('.player.current')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+    }, [state.currentTurnId]);
     return (
-        <div className={`players ${className}`}>
+        <div ref={row} className={`players ${className}`}>
             {ids.map(id => {
                 const p = state.players[id];
                 if (!p) return null;
