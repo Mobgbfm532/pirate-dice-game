@@ -84,17 +84,38 @@ function JoinScreen() {
     );
 }
 
-function turnLine(snap: Snapshot, state: GameState) {
+type TurnInfo = { title: string; detail?: string; tone: 'mine' | 'theirs' | 'waiting' | 'dust'; who?: string };
+
+function turnInfo(snap: Snapshot, state: GameState): TurnInfo {
     const tavern = state.mode === 'tavern-crawl';
-    if (snap.waiting) return 'Waiting for travelers to join…';
-    if (tavern && state.tavernRun?.pendingKeepsakeChoices) return 'Choose a keepsake';
+    if (snap.waiting) return { title: 'Waiting for travelers', detail: 'to join…', tone: 'waiting' };
+    if (tavern && state.tavernRun?.pendingKeepsakeChoices) return { title: 'Choose a keepsake', tone: 'mine' };
     const me = snap.myId ? state.players[snap.myId] : null;
-    const current = state.currentTurnId ? state.players[state.currentTurnId] : null;
-    if (me && me.lives <= 0) return current ? `You're dust! ${current.name} is rolling…` : "You're dust!";
-    if (snap.isMyTurn) return 'Your turn!';
+    const id = state.currentTurnId;
+    const current = id ? state.players[id] : null;
+    if (me && me.lives <= 0) return { title: "You're dust", detail: current ? `${current.name} is rolling` : undefined, tone: 'dust', who: current ? id! : undefined };
+    if (snap.isMyTurn) return { title: 'Your turn', tone: 'mine', who: snap.myId ?? undefined };
+    if (!current) return { title: '', tone: 'theirs' };
     // The server holds their turn for a short while so a phone can reconnect.
-    if (current && !current.connected) return `Waiting for ${current.name} to reconnect…`;
-    return current ? `${current.name} is rolling…` : '';
+    if (!current.connected) return { title: current.name, detail: 'reconnecting…', tone: 'waiting', who: id! };
+    return { title: current.name, detail: 'is rolling', tone: 'theirs', who: id! };
+}
+
+// Whose turn it is, at the top: a nameplate-style banner with their picture.
+function TurnBanner({ snap, state }: { snap: Snapshot; state: GameState | null }) {
+    if (!state) return <div className="turn-banner waiting"><span className="title">Connecting…</span></div>;
+    const info = turnInfo(snap, state);
+    if (!info.title) return <div className="turn-banner empty" />;
+    const p = info.who ? state.players[info.who] : null;
+    return (
+        <div key={`${info.tone}:${info.who ?? info.title}`} className={`turn-banner ${info.tone}`} aria-live="polite">
+            {p && <span className="portrait" style={avatarStyle(playerPortrait(info.who!, p.name, p.avatar))} />}
+            <span className="text">
+                <span className="title">{info.title}</span>
+                {info.detail && <span className="detail">{info.detail}</span>}
+            </span>
+        </div>
+    );
 }
 
 function scoreText(p: GameState['players'][string]) {
@@ -215,12 +236,11 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 <span className={`value ${dust ? 'dust' : standing}`}>{scoreText}</span>
             </div>
             <button
-                className={`roll ${turn.finalized ? 'end' : ''}`}
+                className={`roll ${turn.finalized ? 'end' : ''} ${snap.isMyTurn ? '' : 'idle'}`}
                 disabled={disabled || !snap.isMyTurn}
                 onClick={actions.roll}
-                style={snap.isMyTurn ? undefined : { visibility: 'hidden' }}
                 aria-hidden={!snap.isMyTurn}
-            >{label}</button>
+            >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
             <div className="hint">{hint}</div>
         </div>
     );
@@ -643,7 +663,7 @@ export function Hud() {
             <header>
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
                 <span className="room">{snap.roomLabel}</span>
-                <span className={`turn-line ${snap.isMyTurn ? 'mine' : ''}`}>{state ? turnLine(snap, state) : 'Connecting…'}</span>
+                <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>
                 <button className="mute" onClick={() => { setMuted(!muted); setMutedState(!muted); }} aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🎵'}</button>
             </header>
             {state && botAcross && !introShowing && <OpponentPlate state={state} />}

@@ -26,22 +26,25 @@ function CameraRig() {
     useFrame((_, delta) => {
         const cam = camera as THREE.PerspectiveCamera;
         const portrait = size.width / size.height < 0.9;
-        // Wide screens keep a column on the right free for the Roll button, so it can sit
-        // right beside the table. The camera renders as if the screen were that much wider
+        // Desktops and tablets on their side keep the table centred with a dock of controls
+        // under it (as phones do; matches the CSS `min-height: 501px`).
+        const docked = !portrait && size.height > 500;
+        // Phones on their side keep a column on the right free for the Roll button, so it can
+        // sit right beside the table. The camera renders as if the screen were that much wider
         // and shows its right-hand part, which shifts the table left without distorting it.
-        const reserve = portrait ? 0 : Math.min(250, size.width * 0.24);
+        const reserve = portrait || docked ? 0 : Math.min(250, size.width * 0.24);
         cam.aspect = (size.width + reserve) / size.height;
         if (reserve > 0) cam.setViewOffset(size.width + reserve, size.height, reserve, 0, size.width, size.height);
         else cam.clearViewOffset();
         cam.updateProjectionMatrix();
         const aspect = (size.width - reserve) / size.height; // the part the table must fit in
         const direction = new THREE.Vector3(0, 1, portrait ? 0.22 : 0.5).normalize();
-        // On phones the controls sit under the table, so the table must end above them
-        // (their real height, measured by the HUD); on wide screens they're in the corners.
-        // (Ignore implausible measurements, e.g. before the page has laid out.)
+        // On phones and docked screens the controls sit under the table, so the table must end
+        // above them (their real height, measured by the HUD); phones on their side have them
+        // in the corners. (Ignore implausible measurements, e.g. before the page has laid out.)
         const measured = (screenInsets.bottom + 10) / size.height;
-        const controls = portrait && measured > 0.05 && measured < 0.6 ? measured : 0.24;
-        const bottom = portrait ? Math.min(0.8, 1 - controls) : 0.94;
+        const controls = (portrait || docked) && measured > 0.05 && measured < 0.6 ? measured : 0.24;
+        const bottom = portrait ? Math.min(0.8, 1 - controls) : docked ? Math.min(0.9, 1 - controls) : 0.94;
         // Keep a sensible amount of table if the controls are very tall: give up tavern first.
         const top = portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
 

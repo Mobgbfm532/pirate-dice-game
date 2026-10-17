@@ -44,20 +44,66 @@ button:disabled { cursor: default; }
 .hud button, .hud input, .hud .panel { pointer-events: auto; }
 
 header {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
+    min-height: 44px;
 }
-.room { font-size: 0.9rem; color: var(--parchment-dim); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.turn-line {
-    flex: 1;
-    text-align: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #ffcc80;
-    text-shadow: 0 2px 6px #000;
+/* The banner is centred on the screen, whatever sits beside it. */
+header .mute { margin-left: auto; }
+.room { font-size: 0.9rem; color: var(--parchment-dim); min-width: 0; max-width: max(0px, calc(50% - 200px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Whose turn it is: a nameplate in the middle of the header, with the roller's picture. */
+.turn-slot {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 120px);
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
 }
-.turn-line.mine { color: #aed581; }
+.turn-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    padding: 4px 18px 4px 4px;
+    background: linear-gradient(rgba(60, 36, 16, 0.92), rgba(24, 14, 6, 0.92));
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 236, 179, 0.12);
+    animation: banner-swap 0.3s ease-out;
+}
+.turn-banner.empty { visibility: hidden; }
+/* Without a picture the text sits evenly in the pill. */
+.turn-banner:not(:has(.portrait)) { padding-left: 18px; }
+.turn-banner .portrait {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex: none;
+    background-color: #1d120a;
+    background-repeat: no-repeat;
+    box-shadow: 0 0 0 2px var(--panel-border);
+}
+.turn-banner .text { display: flex; align-items: baseline; gap: 6px; min-width: 0; white-space: nowrap; }
+.turn-banner .title { font-size: 1.2rem; font-weight: 700; color: var(--parchment); overflow: hidden; text-overflow: ellipsis; }
+.turn-banner .detail { font-size: 0.95rem; color: var(--parchment-dim); }
+.turn-banner.mine {
+    border-color: var(--gold-bright);
+    background: linear-gradient(rgba(96, 66, 18, 0.95), rgba(40, 26, 8, 0.95));
+    animation: banner-swap 0.3s ease-out, turn-glow 1.6s ease-in-out infinite;
+}
+.turn-banner.mine .title { color: var(--gold-bright); }
+.turn-banner.mine .portrait { box-shadow: 0 0 0 2px var(--gold-bright); }
+.turn-banner.waiting .title, .turn-banner.waiting .detail { color: var(--parchment-dim); }
+.turn-banner.waiting .portrait { filter: grayscale(0.8) brightness(0.7); }
+.turn-banner.dust { border-color: rgba(229, 115, 115, 0.6); }
+.turn-banner.dust .title { color: #e57373; }
+@keyframes banner-swap { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 .players {
     display: flex;
@@ -233,6 +279,9 @@ footer {
 .roll.end { background: linear-gradient(#388e3c, #1b5e20); box-shadow: 0 4px 0 #0d3010, 0 6px 18px rgba(0, 0, 0, 0.5); }
 .roll:active:not(:disabled) { transform: translateY(3px); }
 .roll:disabled { filter: grayscale(0.7) brightness(0.7); }
+/* Someone else's turn: the button keeps its place (so nothing shifts) but isn't shown;
+   the desktop dock shows it as a quiet placeholder instead. */
+.roll.idle { visibility: hidden; }
 .hint { min-height: 1.2em; font-size: 0.9rem; color: var(--parchment-dim); text-shadow: 0 1px 4px #000; }
 
 .reactions { display: flex; gap: 6px; }
@@ -339,7 +388,10 @@ footer {
 .game-over { white-space: pre-line; font-size: 1.05rem; }
 
 @media (max-width: 480px) {
-    .turn-line { font-size: 1.1rem; }
+    .turn-banner { min-height: 40px; padding-right: 14px; gap: 8px; }
+    .turn-banner .portrait { width: 32px; height: 32px; }
+    .turn-banner .title { font-size: 1.05rem; }
+    .turn-banner .detail { font-size: 0.85rem; }
     .room { display: none; }
     .player .portrait { width: 30px; height: 30px; }
     .player .name { max-width: 5em; font-size: 0.85rem; }
@@ -434,8 +486,8 @@ footer {
 }
 .side-players::-webkit-scrollbar { display: none; }
 .side-players .player { flex: none; }
-/* ...and a column at the top left on wide screens, clear of the table. */
-@media (orientation: landscape) {
+/* ...and a column at the top left on phones on their side, clear of the table. */
+@media (orientation: landscape) and (max-height: 500px) {
     .side-players {
         position: fixed;
         top: 58px;
@@ -501,9 +553,9 @@ footer {
     100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
 }
 
-/* Wide screens: the table takes the full height, so the controls sit in the empty
+/* Phones on their side: the table takes the full height, so the controls sit in the empty
    corners beside the slot rail instead of underneath it. */
-@media (orientation: landscape) {
+@media (orientation: landscape) and (max-height: 500px) {
     /* Right beside the table, its Roll button level with the slot rail (never off screen).
        No transform here: it would make the fixed-position player chips inside the footer
        position themselves relative to the footer instead of the screen. */
@@ -516,7 +568,60 @@ footer {
     footer .controls { align-items: flex-start; }
     footer .hint { max-width: 190px; text-align: left; }
     .roll { min-width: 150px; padding: 10px 20px; font-size: 1.2rem; }
-    .reactions { position: fixed; left: 16px; bottom: max(14px, env(safe-area-inset-bottom)); flex-direction: column; }
+    /* Under the Roll button, out of the way of the player chips on the left. */
+    .reactions { gap: 4px; }
+    .reactions button { width: 34px; height: 34px; font-size: 1rem; }
+}
+
+/* Desktop and tablets on their side: the table sits in the middle, and everything you use
+   is gathered in one dock centred under it: players, the score, Roll, then reactions. */
+@media (orientation: landscape) and (min-height: 501px) {
+    footer {
+        align-self: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 10px 18px;
+        max-width: 100%;
+        padding: 8px 18px;
+        background: linear-gradient(rgba(44, 26, 12, 0.9), rgba(20, 12, 5, 0.92));
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 236, 179, 0.1);
+    }
+    footer > * + * { position: relative; }
+    footer .tavern-strip { margin-top: 0; }
+    .side-players { padding: 2px; }
+    footer .controls {
+        display: grid;
+        grid-template-areas: "goal roll" "score roll" "hint hint";
+        align-items: center;
+        column-gap: 16px;
+        row-gap: 0;
+    }
+    footer .goal { grid-area: goal; justify-self: start; }
+    footer .turn-score { grid-area: score; }
+    footer .turn-score .value { font-size: 1.8rem; }
+    footer .roll { grid-area: roll; min-width: 160px; padding: 10px 22px; font-size: 1.25rem; }
+    footer .roll.idle {
+        visibility: visible;
+        filter: none;
+        background: transparent;
+        border: 1px dashed var(--panel-border);
+        box-shadow: none;
+        color: var(--parchment-dim);
+        font-size: 1rem;
+        font-weight: 400;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 200px;
+    }
+    footer .hint { grid-area: hint; min-height: 1.1em; font-size: 0.8rem; text-align: center; }
+    /* A thin divider before the reactions. */
+    footer .reactions { padding-left: 18px; border-left: 1px solid var(--panel-border); }
+    footer .reactions button { width: 36px; height: 36px; font-size: 1.05rem; }
 }
 
 @keyframes toast-in {
