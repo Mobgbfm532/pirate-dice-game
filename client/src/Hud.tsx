@@ -791,8 +791,9 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
                 <>
                     <p className="scene-text">Bet against the gambler: two dice each, the higher total doubles your bet.</p>
                     <div className="event-choices">
-                        {interlude.bets.map(bet => (
-                            <button key={bet} className="primary" disabled={run.purse < bet} onClick={() => actions.diceBet(bet)}>Bet {bet}</button>
+                        {/* Only the bets the purse can cover. */}
+                        {interlude.bets.filter(bet => run.purse >= bet).map(bet => (
+                            <button key={bet} className="primary" onClick={() => actions.diceBet(bet)}>Bet {bet}</button>
                         ))}
                         <button className="secondary" onClick={() => actions.diceBet(0)}>No thanks</button>
                     </div>

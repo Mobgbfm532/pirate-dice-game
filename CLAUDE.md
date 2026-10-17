@@ -187,8 +187,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   leaving a score a sensible player fails to beat; the Hangman counts on his Ace at one life.
   Tables (~0.1 s each) are warmed after the server starts. Once the player has finished and
   the round can no longer be won or tied (`Rules.bestPossibleScore`, `tavernRoundLost`), the
-  opponent keeps everything left at once and ends the turn instead of playing it out. Much stronger at high scores (to
-  beat 20: 53% vs 35% before).
+  opponent keeps everything left at once and ends the turn instead of playing it out. They
+  play like people, though: a 2 or 4 they still need is always taken when it shows
+  (`takeNeeded` in strategy.js; pure best play kept a lone 6 and left needed 2s and 4s, which
+  looked like mistakes). That costs up to 5 points of win chance at high targets: to beat 20
+  they win 48% (pure best 53%, the old fixed habits 35%).
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
   left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and
   goes on the leaderboard. The run-over screen shows the breakdown.
@@ -212,7 +215,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
   fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 100 gold),
-  the Dice Den (bet 50/100, then the player taps to roll two dice and the gambler rolls two;
+  the Dice Den (bet 50/100, only the bets the purse covers are offered, and below 50 gold the
+  Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again), the
   Hooded Stranger (one of two keepsakes; the next fight starts on 2 hearts; offered only while
   keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: roll one die, a 4+

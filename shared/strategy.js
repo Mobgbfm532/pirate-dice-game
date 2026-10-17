@@ -57,6 +57,13 @@ function keepChoices(counts) {
 
 const LANDINGS = [null, 1, 2, 3, 4, 5, 6].map(k => (k ? landings(k) : null));
 
+// The opponents play like people: a 2 or 4 they still need is always taken when it shows
+// (one of each), and only the rest of the keep is chosen for the best chance. (Pure best play
+// often leaves a needed 2 sitting there to keep a lone 6, which looks like a mistake.)
+let takeNeeded = true;
+const takesNeeded = (h, counts, keep) =>
+    !takeNeeded || ((h & 1 || !counts[1] || keep[1] > 0) && (h & 2 || !counts[3] || keep[3] > 0));
+
 // Keeping dice (counts per face) from position (s, h): the first 2 and 4 become required,
 // everything else adds to the points.
 function afterKeeping(s, h, keep) {
@@ -82,6 +89,7 @@ function solve(finish) {
             for (const landing of LANDINGS[n]) {
                 let best = -1;
                 for (const choice of landing.keeps) {
+                    if (!takesNeeded(h, landing.counts, choice.keep)) continue;
                     const next = afterKeeping(s, h, choice.keep);
                     const v = V[at(n - choice.k, next.s, next.h)];
                     if (v > best) best = v;
@@ -168,6 +176,7 @@ function bestKeeps(dice, toBeat, options = {}) {
     active.forEach(d => { counts[d.value - 1]++; });
     let best = null;
     for (const choice of keepChoices(counts)) {
+        if (!takesNeeded(h, counts, choice.keep)) continue;
         const next = afterKeeping(s, h, choice.keep);
         const v = V[at(active.length - choice.k, next.s, next.h)];
         if (!best || v > best.v + 1e-12 || (Math.abs(v - best.v) <= 1e-12 && choice.k > best.k)) best = { v, k: choice.k, keep: choice.keep };
@@ -196,4 +205,10 @@ function warmUp(gapMs = 250) {
     if (timer.unref) timer.unref();
 }
 
-module.exports = { bestKeeps, chanceFromStart, sensiblePlayerScores, firstMoverValue, warmUp };
+// For tests and tuning: switch the "take a needed 2 or 4" habit off (pure best play) or on.
+function setTakeNeeded(on) {
+    takeNeeded = on;
+    tables.clear();
+}
+
+module.exports = { setTakeNeeded, bestKeeps, chanceFromStart, sensiblePlayerScores, firstMoverValue, warmUp };

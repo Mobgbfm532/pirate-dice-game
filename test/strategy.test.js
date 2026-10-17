@@ -32,6 +32,32 @@ test('it keeps the 5, not the 4, when the 4 can only lose', () => {
     assert.deepEqual(Strategy.bestKeeps(dice, 22), [5]);
 });
 
+test('it always takes a 2 or 4 it still needs when one shows (one of each)', () => {
+    // Pure best play keeps a lone 6 here and leaves the 2s and 4s; the opponents take them.
+    const first = [2, 2, 2, 1, 4, 4].map((v, i) => die(i, v));
+    const values = ids => ids.map(id => first[id].value).sort();
+    const keeps = values(Strategy.bestKeeps(first, 20));
+    assert.equal(keeps.filter(v => v === 2).length, 1, 'one 2');
+    assert.equal(keeps.filter(v => v === 4).length, 1, 'one 4');
+    // A 4 already kept: only the 2 is still needed.
+    const later = [kept(0, 4), kept(1, 6), die(2, 2), die(3, 3), die(4, 6), die(5, 1)];
+    assert.ok(Strategy.bestKeeps(later, 22).includes(2), 'takes the needed 2');
+    // Across many turns at many targets, a needed 2 or 4 is never left showing.
+    for (const toBeat of [undefined, null, 16, 20, 22]) {
+        for (let seed = 1; seed <= 200; seed++) {
+            playTurn(turn => {
+                const ids = Strategy.bestKeeps(turn.dice, toBeat);
+                const keptValues = turn.dice.filter(d => d.status !== 'active').map(d => d.value);
+                for (const v of [2, 4]) {
+                    if (keptValues.includes(v) || !turn.dice.some(d => d.status === 'active' && d.value === v)) continue;
+                    assert.ok(ids.some(id => turn.dice[id].value === v), `took the needed ${v} (to beat ${toBeat})`);
+                }
+                return ids;
+            }, toBeat, seed * 7919);
+        }
+    }
+});
+
 test('it stops and keeps everything once the hand already wins', () => {
     const dice = [2, 4, 6, 6, 6, 5].map((v, i) => die(i, v));
     assert.deepEqual(Strategy.bestKeeps(dice, 20).sort(), [0, 1, 2, 3, 4, 5]);

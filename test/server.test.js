@@ -169,8 +169,9 @@ test('a Tavern Crawl run plays through to the end', async () => {
     assert.equal(t.encounters.length, 5);
     assert.equal(t.won, t.defeated === 5);
     assert.equal(t.fellTo, t.won ? null : t.encounters[t.defeated]);
-    const { progress, hearts, perfect, spent } = t.breakdown;
-    assert.equal(progress + hearts + perfect - spent, t.gold);
+    // (Walking straight on lets a pickpocket keep what they took: that's in `events`.)
+    const { progress, hearts, perfect, events, spent } = t.breakdown;
+    assert.equal(progress + hearts + perfect + events - spent, t.gold);
 });
 
 // Times in the server are scaled by GAME_TIME_SCALE (0.01): the 30s turn grace is 0.3s
@@ -672,6 +673,16 @@ test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away', async (
     rolled.hero.emit('moveOn');
     await nextState(rolled.hero, s => !runOf(s).interlude);
     assert.equal(rolled.room.tavernRun.purse, 150);
+});
+
+test('the Dice Den only appears when the purse covers its smallest bet', async () => {
+    const { hero, room } = await betweenFights('Skint', { stage: 'pickpocket', steal: 0, catchOn: 4, roll: 6, caught: true, lost: 0 }, 30);
+    for (let i = 0; i < 20; i++) {
+        room.tavernRun.interlude = { stage: 'pickpocket', steal: 0, catchOn: 4, roll: 6, caught: true, lost: 0 };
+        hero.emit('pickpocket', 'on');
+        await nextState(hero, s => runOf(s).interlude.stage === 'choose');
+        assert.ok(!room.tavernRun.interlude.spots.includes('diceDen'), 'not with 30 gold');
+    }
 });
 
 test('the Stranger stops appearing once every keepsake is yours', async () => {

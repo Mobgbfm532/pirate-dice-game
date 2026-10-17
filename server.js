@@ -845,9 +845,11 @@ function unownedKeepsakes(room) {
     return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
 }
 
-// Two different spots; the Stranger only while there are keepsakes left to offer.
+// Two different spots; the Stranger only while there are keepsakes left to offer, the Dice
+// Den only if the purse covers its smallest bet. (Picked after the pickpocket, if they came.)
 function pickSpots(room) {
-    let spots = PLACES.tavern.spots.filter(id => id !== 'stranger' || unownedKeepsakes(room).length > 0);
+    let canBet = room.tavernRun.purse >= Math.min(...INTERLUDE.diceDenBets);
+    let spots = PLACES.tavern.spots.filter(id => (id !== 'stranger' || unownedKeepsakes(room).length > 0) && (id !== 'diceDen' || canBet));
     return shuffled(spots).slice(0, 2);
 }
 
