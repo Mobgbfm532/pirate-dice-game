@@ -51,14 +51,28 @@ header {
     min-height: 44px;
 }
 /* The banner is centred on the screen, whatever sits beside it. */
-header .mute { margin-left: auto; }
+/* Music and game sounds, switched separately. Off: dimmed with a red slash. */
+.sound-toggles { display: flex; gap: 8px; margin-left: auto; }
+.mute { position: relative; }
+.mute.off { opacity: 0.6; }
+.mute.off::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 50%;
+    height: 2px;
+    background: #e57373;
+    transform: rotate(-45deg);
+    border-radius: 2px;
+}
 .room { font-size: 0.9rem; color: var(--parchment-dim); min-width: 0; max-width: max(0px, calc(50% - 200px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Whose turn it is: a nameplate in the middle of the header, with the roller's picture. */
 .turn-slot {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    width: calc(100% - 120px);
+    width: calc(100% - 200px); /* clear of the buttons on both sides */
     display: flex;
     justify-content: center;
     pointer-events: none;
@@ -257,6 +271,7 @@ footer {
     border: 1px solid var(--panel-border);
 }
 .goal .label { color: var(--parchment); font-size: 0.95rem; }
+.goal.placeholder { visibility: hidden; }
 .goal .target { font-size: 1.6rem; font-weight: 700; color: var(--gold-bright); }
 .turn-score { display: flex; align-items: baseline; gap: 10px; text-shadow: 0 2px 6px #000; }
 .turn-score .value.ahead { color: #9ccc65; }
@@ -388,6 +403,10 @@ footer {
 .game-over { white-space: pre-line; font-size: 1.05rem; }
 
 @media (max-width: 480px) {
+    /* Smaller header buttons so the banner has room between them. */
+    header .mute, header .leave { width: 36px; height: 36px; font-size: 1rem; }
+    .sound-toggles { gap: 6px; }
+    .turn-slot { width: calc(100% - 160px); }
     .turn-banner { min-height: 40px; padding-right: 14px; gap: 8px; }
     .turn-banner .portrait { width: 32px; height: 32px; }
     .turn-banner .title { font-size: 1.05rem; }
@@ -600,9 +619,23 @@ footer {
         column-gap: 16px;
         row-gap: 0;
     }
-    footer .goal { grid-area: goal; justify-self: start; }
-    footer .turn-score { grid-area: score; }
-    footer .turn-score .value { font-size: 1.8rem; }
+    /* Score to beat and turn score as a matched pair: labels on the left, numbers lined
+       up in a column on the right. The dock is their frame, so no box of their own. */
+    footer .goal, footer .turn-score {
+        justify-self: stretch;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 0 2px;
+        background: none;
+        border: none;
+        text-shadow: none;
+    }
+    footer .goal { grid-area: goal; }
+    footer .turn-score { grid-area: score; border-top: 1px solid rgba(224, 180, 76, 0.2); }
+    footer .goal .label, footer .turn-score .label { font-size: 0.95rem; color: var(--parchment-dim); }
+    footer .goal .target, footer .turn-score .value { min-width: 1.4em; text-align: right; font-size: 1.6rem; line-height: 1.25; }
     footer .roll { grid-area: roll; min-width: 160px; padding: 10px 22px; font-size: 1.25rem; }
     footer .roll.idle {
         visibility: visible;
@@ -619,9 +652,8 @@ footer {
         max-width: 200px;
     }
     footer .hint { grid-area: hint; min-height: 1.1em; font-size: 0.8rem; text-align: center; }
-    /* A thin divider before the reactions. */
-    footer .reactions { padding-left: 18px; border-left: 1px solid var(--panel-border); }
-    footer .reactions button { width: 36px; height: 36px; font-size: 1.05rem; }
+    /* Reactions stay out of the dock, in a column at the left edge. */
+    footer .reactions { position: fixed; left: 16px; bottom: max(14px, env(safe-area-inset-bottom)); flex-direction: column; }
 }
 
 @keyframes toast-in {

@@ -225,14 +225,24 @@ export async function renderCorkPop(fizz = false, sampleRate = 22050) {
     return (await ctx.startRendering()).getChannelData(0);
 }
 
-// Remembered on this device, so a muted phone stays quiet next time.
-function readMuted() {
-    try { return localStorage.getItem('tavernMuted') === '1'; } catch { return false; }
+// Music (the background tune and the tavern's ambience) and game sounds (dice, taps, cork
+// pops, cheers) switch on and off separately. Remembered on this device. The old
+// `tavernMuted = "1"` still silences both (tests rely on it) until either is switched.
+function readSetting(key: string) {
+    try { return localStorage.getItem('tavernMuted') === '1' || localStorage.getItem(key) === '1'; } catch { return false; }
+}
+function saveSettings() {
+    try {
+        localStorage.removeItem('tavernMuted');
+        localStorage.setItem('tavernMusicOff', musicOff ? '1' : '0');
+        localStorage.setItem('tavernSoundsOff', muted ? '1' : '0');
+    } catch { /* storage unavailable */ }
 }
 
-let muted = readMuted();
-music.muted = muted;
-ambience.muted = muted;
+let musicOff = readSetting('tavernMusicOff');
+let muted = readSetting('tavernSoundsOff'); // game sounds
+music.muted = musicOff;
+ambience.muted = musicOff;
 
 export function playSound(name: SoundName, playbackRate = 1) {
     if (muted) return;
@@ -251,19 +261,29 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
 // Browsers only allow audio after the player has interacted with the page.
 export function startMusic() {
     audio(); // the impact sounds need the audio context unlocked by a tap, like the music
-    if (muted || !music.paused) return;
+    if (musicOff || !music.paused) return;
     music.play().catch(() => {});
     ambience.play().catch(() => {});
 }
 
-export function setMuted(value: boolean) {
-    muted = value;
+export function setMusicOff(value: boolean) {
+    musicOff = value;
     music.muted = value;
     ambience.muted = value;
-    try { localStorage.setItem('tavernMuted', value ? '1' : '0'); } catch { /* storage unavailable */ }
-    if (!value) startMusic();
+    saveSettings();
+    if (value) { music.pause(); ambience.pause(); } else startMusic();
 }
 
-export function isMuted() {
+export function isMusicOff() {
+    return musicOff;
+}
+
+export function setSoundsOff(value: boolean) {
+    muted = value;
+    saveSettings();
+    if (!value) audio();
+}
+
+export function areSoundsOff() {
     return muted;
 }

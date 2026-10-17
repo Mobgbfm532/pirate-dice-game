@@ -63,7 +63,8 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   by the server's `throwSeed`, so every screen sees the identical tumble. Records `impacts`.
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
-  the classic mp3s from `public/`. Mute is remembered (`localStorage.tavernMuted`).
+  the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
+  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both).
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls; landscape uses
   `setViewOffset` to leave a right column for the Roll button), lights, tray, brass plates.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,

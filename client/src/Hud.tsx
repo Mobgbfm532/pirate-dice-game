@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { screenInsets } from './layout';
 import { actions, canPutBack, store, BOT_ID, type GameState, type Keepsake, type Snapshot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
-import { isMuted, playSound, setMuted } from './sounds';
+import { areSoundsOff, isMusicOff, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { AVATAR_IDS, avatarStyle, portraitFor } from './portraits';
 import { acrossTheTable, opponentName } from './Backdrop';
 
@@ -141,9 +141,9 @@ function scoreClass(state: GameState, id: string) {
 
 // What the player rolling now has to do. The lowest score of the round loses a life (and
 // dust always does), so the score to beat is the lowest among those who've finished.
-function scoreToBeat(state: GameState, rollerId: string): { label: string; target: number | null } {
+function scoreToBeat(state: GameState, rollerId: string): { label: string; target: number | null } | null {
     const finished = state.roundPlayers.filter(id => id !== rollerId && state.players[id] && state.players[id].score !== null);
-    if (finished.length === 0) return { label: 'First to roll: set the score', target: null };
+    if (finished.length === 0) return null; // first to roll: nothing to beat yet
     const scores = finishedScores(state, rollerId);
     if (scores.length === 0) return { label: 'Everyone else dusted: just find a 2 and a 4', target: null };
     return { label: 'Score to beat', target: Math.min(...scores) };
@@ -225,11 +225,14 @@ function TurnControls({ snap }: { snap: Snapshot }) {
 
     return (
         <div className="controls">
-            {goal && (
+            {goal ? (
                 <div className="goal">
                     <span className="label">{goal.target != null && !snap.isMyTurn && roller ? `${roller.name} must beat` : goal.label}</span>
                     {goal.target != null && <span className="target">{goal.target}</span>}
                 </div>
+            ) : state && !snap.waiting && (
+                // First to roll: nothing to beat yet. Keeps its space so the table doesn't move.
+                <div className="goal placeholder" aria-hidden="true"><span className="label">Score to beat</span><span className="target">0</span></div>
             )}
             <div className="turn-score">
                 <span className="label">Turn score</span>
@@ -646,7 +649,8 @@ function useFooterInset() {
 
 export function Hud() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
-    const [muted, setMutedState] = useState(isMuted());
+    const [musicOff, setMusicOffState] = useState(isMusicOff());
+    const [soundsOff, setSoundsOffState] = useState(areSoundsOff());
     const [introShowing, setIntroShowing] = useState(false);
     const footerRef = useFooterInset();
 
@@ -664,7 +668,12 @@ export function Hud() {
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
                 <span className="room">{snap.roomLabel}</span>
                 <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>
-                <button className="mute" onClick={() => { setMuted(!muted); setMutedState(!muted); }} aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? '🔇' : '🎵'}</button>
+                <div className="sound-toggles">
+                    <button className={`mute ${musicOff ? 'off' : ''}`} onClick={() => { setMusicOff(!musicOff); setMusicOffState(!musicOff); }}
+                        aria-label={musicOff ? 'Music on' : 'Music off'} aria-pressed={!musicOff} title={musicOff ? 'Music is off' : 'Music is on'}>🎵</button>
+                    <button className={`mute ${soundsOff ? 'off' : ''}`} onClick={() => { setSoundsOff(!soundsOff); setSoundsOffState(!soundsOff); }}
+                        aria-label={soundsOff ? 'Game sounds on' : 'Game sounds off'} aria-pressed={!soundsOff} title={soundsOff ? 'Game sounds are off' : 'Game sounds are on'}>🔊</button>
+                </div>
             </header>
             {state && botAcross && !introShowing && <OpponentPlate state={state} />}
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
