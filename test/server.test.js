@@ -335,6 +335,23 @@ function opponentAlwaysDusts(hero, room) {
     });
 }
 
+test('an opponent who can no longer win keeps what is left and ends the round', async () => {
+    const { hero, room } = await tavernTable('Unbeatable');
+    room.players.BOT_MOLAR.lives = 3;
+    // The opponent's first throw is all 1s: whatever they keep, 24 is then out of reach.
+    let throws = 0;
+    hero.on('diceRolled', d => {
+        if (d.turn.playerId !== 'BOT_MOLAR') return;
+        throws++;
+        if (throws === 1) room.turn.dice.forEach(die => { if (die.status === 'active') die.value = 1; });
+    });
+    const result = waitFor(hero, 'roundResult', () => true, 8000);
+    await playHand(hero, room, [2, 4, 6, 6, 6, 6]); // a perfect 24 to beat
+    await result;
+    assert.equal(throws, 1, 'no throw after 24 became impossible: they kept the rest');
+    assert.equal(room.players.BOT_MOLAR.lives, 2, 'and lost the round');
+});
+
 test('Thom sells a Thonic for its price and puts it on the shelf', async () => {
     const { hero, room } = await atThoms('Buyer', 200);
     const bought = nextState(hero, s => runOf(s).shelf.length === 1);

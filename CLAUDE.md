@@ -177,7 +177,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   they play their best (`shared/strategy.js`): the keep with the best chance of beating the
   player's score (ties count half), of a valid hand if the player dusted, or, going first, of
   leaving a score a sensible player fails to beat; the Hangman counts on his Ace at one life.
-  Tables (~0.1 s each) are warmed after the server starts. Much stronger at high scores (to
+  Tables (~0.1 s each) are warmed after the server starts. Once the player has finished and
+  the round can no longer be won or tied (`Rules.bestPossibleScore`, `tavernRoundLost`), the
+  opponent keeps everything left at once and ends the turn instead of playing it out. Much stronger at high scores (to
   beat 20: 53% vs 35% before).
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
   left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and

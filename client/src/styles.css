@@ -1325,6 +1325,10 @@ footer {
 /* ---- The spots between fights as scenes (they reuse Thom's scene: stage + counter) ----
    Each has its own light and its own entrance; the character answers what happens. */
 .spot-scene .thom-figure { animation-name: thom-rise, thom-breathe; }
+/* The Stranger and the gambler are painted wider than Thom: a little smaller, so their whole
+   head and what they hold fit the stage. */
+.spot-scene.stranger .thom-figure, .spot-scene.diceDen .thom-figure { height: min(118%, 640px); }
+.spot-scene.pickpocket .thom-figure { height: min(130%, 680px); }
 .spot-scene .thom-lantern { background: radial-gradient(circle, var(--glow, rgba(255, 190, 110, 0.35)), transparent 65%); }
 .spot-scene .thom-speech { white-space: normal; max-width: min(calc(100% - 24px), 340px); }
 .spot-scene .thom-speech.quick { animation-delay: 0.05s; }

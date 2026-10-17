@@ -67,6 +67,16 @@
         return { has2, has4, score };
     }
 
+    // The best this hand can still finish on: every die still in play lands as needed (the
+    // missing 2 and 4 first, then 6s). null if a 2 or 4 can no longer be had: dust for sure.
+    function bestPossibleScore(dice) {
+        const { has2, has4, score } = scoreDice(dice);
+        const free = dice.filter(isActive).length;
+        const missing = (has2 ? 0 : 1) + (has4 ? 0 : 1);
+        if (free < missing) return null;
+        return score + 6 * (free - missing);
+    }
+
     function createTurn(playerId) {
         return {
             playerId,
@@ -323,6 +333,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

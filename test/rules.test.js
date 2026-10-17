@@ -179,6 +179,17 @@ test('Klarg takes the highest die when no needed 2 or 4 is showing', () => {
     assert.equal(half.dice.find(d => d.status === STATUS.STOLEN).value, 4);
 });
 
+test('the best a hand can still make: missing 2 and 4 first, then 6s; null once dust is certain', () => {
+    const turn = Rules.createTurn('p1');
+    assert.equal(Rules.bestPossibleScore(turn.dice), 24, 'six dice to come');
+    Rules.rollTurn(turn, { rollFace: faces(5, 1, 1, 1, 1, 1) });
+    lockValues(turn, 5);
+    assert.equal(Rules.bestPossibleScore(turn.dice), 5 + 6 * 3, 'a 5 kept, five to come (a 2, a 4, three 6s)');
+    Rules.rollTurn(turn, { rollFace: faces(1, 1, 1, 1, 1) });
+    lockValues(turn, 1, 1, 1, 1);
+    assert.equal(Rules.bestPossibleScore(turn.dice), null, 'one die left, a 2 and a 4 still needed');
+});
+
 test('Rokr blur hides values until the next roll, and finishing reveals them', () => {
     const turn = Rules.createTurn('p1');
     Rules.rollTurn(turn, { rollFace: faces(2, 4, 6, 6, 6, 6), onRolled: t => { t.blurActive = true; } });

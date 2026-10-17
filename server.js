@@ -538,6 +538,19 @@ function getTavernScoreToBeat(room) {
     return human.score + (cushion ? 1 : 0);
 }
 
+// True when a Tavern Crawl opponent can no longer win or tie the round, whatever the dice
+// do: the player has finished, and the best this hand can still make (24 with the Hangman's
+// shot ready at 16 or more) falls short, or a 2 or 4 is out of reach. `toBeat` is from
+// getTavernScoreToBeat: undefined while the player is still to play (never concede then),
+// null if the player dusted (any valid hand wins).
+function tavernRoundLost(turn, toBeat, aceAt16) {
+    if (toBeat === undefined) return false;
+    let best = Rules.bestPossibleScore(turn.dice);
+    if (best === null) return true;
+    if (aceAt16 && best >= 16) best = 24;
+    return toBeat !== null && best < toBeat;
+}
+
 function runBotDecision(roomCode) {
     let room = rooms[roomCode];
     let turn = room.turn;
@@ -550,6 +563,10 @@ function runBotDecision(roomCode) {
     // chance of winning the round (the Hangman counts on his revolver, The Ace of Spades, when he can fire it).
     let aceAt16 = !!encounter && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24');
     let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16 });
+    // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
+    // keep everything left at once and end the turn.
+    let conceding = tavernRoundLost(turn, toBeat, aceAt16);
+    if (conceding) toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
 
     // Lock the dice one after another, and only then decide what next. (Separate timers for
     // each lock and the check could fire out of order on a busy server, and a check that ran
@@ -557,13 +574,21 @@ function runBotDecision(roomCode) {
     let lockFrom = i => {
         if (i < toLock.length) {
             performToggle(roomCode, toLock[i]);
-            botLater(roomCode, key, 400, () => lockFrom(i + 1));
+            botLater(roomCode, key, conceding ? 120 : 400, () => lockFrom(i + 1));
         } else {
             botLater(roomCode, key, 800, afterLocking);
         }
     };
     let afterLocking = () => {
         if (!turn.finalized) {
+            // What they just had to keep may have put the round out of reach: then keep the
+            // rest now rather than throw again.
+            if (!conceding && tavernRoundLost(turn, toBeat, aceAt16)) {
+                conceding = true;
+                toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
+                lockFrom(0);
+                return;
+            }
             runBotRoll(roomCode);
             return;
         }
