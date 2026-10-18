@@ -168,8 +168,8 @@ const THONICS = {
     lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: a round that would take your last heart leaves you on 1.', price: BALANCE.thonicPrices.lastGasp, drink: false },
     fizzy: { id: 'fizzy', name: 'Fizzy Thomic', text: 'After a roll: your 1s roll again, once.', price: BALANCE.thonicPrices.fizzy, drink: true },
     secondThoughts: { id: 'secondThoughts', name: 'Second Thoughts Thonic', text: 'Put back a die you kept, then roll it again.', price: BALANCE.thonicPrices.secondThoughts, drink: true },
-    steady: { id: 'steady', name: 'Steady Thonic', text: 'This turn, dust counts as a score of 0.', price: BALANCE.thonicPrices.steady, drink: true },
-    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Before you roll: the opponent's ability can't touch this round.", price: BALANCE.thonicPrices.clearEye, drink: true }
+    steady: { id: 'steady', name: 'Steady Thonic', text: "This turn, a missing 2 or 4 doesn't dust you: your dice score as they lie.", price: BALANCE.thonicPrices.steady, drink: true },
+    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Cancels the opponent's next ability, whenever it comes.", price: BALANCE.thonicPrices.clearEye, drink: true }
 };
 const SHELF_SIZE = BALANCE.shelfSize;
 const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
@@ -238,7 +238,8 @@ function getTavernRunState(room) {
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
         abilityUsed: room.tavernRun.abilityUsed,
-        clearEye: room.tavernRun.clearEyeRound === room.roundNumber,
+        clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
+        abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
         encounterRound: room.tavernRun.encounterRound,
         encounterKeepsakeUses: room.tavernRun.encounterKeepsakeUses,
@@ -311,13 +312,13 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     let moves = [];
 
-    if (canUseTavernAbility(room, encounter, 'reachAround') && Rules.stealHighestActiveDie(turn)) {
-        markAbilityUsed(room, 'reachAround');
+    let inPlay = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length;
+    if (inPlay > 1 && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
+        Rules.stealHighestActiveDie(turn);
         moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: 'Klarg uses Reach Around and steals one die.' });
     }
-    if (canUseTavernAbility(room, encounter, 'constellationBlur')) {
+    if (fireTavernAbility(roomCode, room, encounter, 'constellationBlur')) {
         turn.blurActive = true;
-        markAbilityUsed(room, 'constellationBlur');
         moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.constellationBlur, text: 'Rokr blurs the dice with constellations.' });
     }
     return moves;
@@ -390,22 +391,20 @@ function performEndTurn(roomCode) {
 
     let currentId = room.roundPlayers[room.currentTurnIndex];
     let { score, busted } = room.turn.outcome;
-    if (room.turn.steady && busted) { busted = false; score = 0; } // Steady Thonic
+    if (room.turn.steady && busted) { busted = false; score = Rules.scoreDice(room.turn.dice).score; } // Steady Thonic: the dice score as they lie
     room.players[currentId].score = score;
     room.players[currentId].busted = busted;
 
     if (room.mode === 'tavern-crawl') {
         let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-        if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === BOT_ID && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24) {
+        if (currentId === BOT_ID && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
             room.players[currentId].score = 24;
-            markAbilityUsed(room, 'deadeye24');
             io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
             io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
 
-        if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== BOT_ID && !busted && score > 0) {
+        if (currentId !== BOT_ID && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
             room.players[currentId].score = Math.max(0, score - 3);
-            markAbilityUsed(room, 'smoothTalk');
             io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
             io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
         }
@@ -548,7 +547,7 @@ function runBotDecision(roomCode) {
     // The Molar (solo games, and the first Tavern Crawl fight) plays simply, as a teacher.
     // From Klarg on, opponents play their best: Strategy works out the keep with the best
     // chance of winning the round (the Hangman counts on his revolver, The Ace of Spades, when he can fire it).
-    let aceAt16 = !!encounter && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24');
+    let aceAt16 = !!encounter && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16 });
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
     // keep everything left at once and end the turn.
@@ -625,10 +624,26 @@ function markAbilityUsed(room, abilityId) {
     room.tavernRun.abilityUsed[abilityId] = getAbilityUseCount(room, abilityId) + 1;
 }
 
+// The current opponent's ability still has uses left this fight.
+function encounterAbilityLeft(room) {
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    return encounter && encounter.ability && getAbilityUseCount(room, encounter.ability) < BALANCE.abilityUses[encounter.ability];
+}
+
+// The opponent uses their ability: one use is spent, and it happens unless a Clear-Eye Thonic
+// is waiting, which cancels it instead. Returns true if the ability goes ahead.
+function fireTavernAbility(roomCode, room, encounter, abilityId) {
+    if (!canUseTavernAbility(room, encounter, abilityId)) return false;
+    markAbilityUsed(room, abilityId);
+    if (!room.tavernRun.clearEyeArmed) return true;
+    room.tavernRun.clearEyeArmed = false;
+    io.to(roomCode).emit('thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${Rules.ABILITY_NAMES[abilityId]} is cancelled` });
+    return false;
+}
+
 function canUseTavernAbility(room, encounter, abilityId) {
-    if (room.tavernRun.clearEyeRound === room.roundNumber) return false; // Clear-Eye Thonic
     let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < Rules.getAbilityMaxUses(abilityId);
+    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < BALANCE.abilityUses[abilityId];
 }
 
 function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
@@ -803,6 +818,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.encounterRound = 1;
     room.tavernRun.abilityRound = getRandomAbilityRound(encounter);
     room.tavernRun.encounterKeepsakeUses = {};
+    room.tavernRun.clearEyeArmed = false;
     room.tavernRun.started = true;
 }
 
@@ -1446,10 +1462,11 @@ io.on('connection', (socket) => {
     // Drinking, always on your own turn. When exactly, and what it does, depends on the
     // Thonic; anything not allowed right now changes nothing and the Thonic stays on the shelf.
     //   healing         before you roll, once you've lost a heart: +1 heart
-    //   clearEye        before you roll, against an opponent with an ability: none this round
+    //   clearEye        before you roll, against an opponent with an ability left: it waits and
+    //                   cancels that ability the next time it is used (this fight)
     //   fizzy           after a roll that left active 1s: those dice roll again
     //   secondThoughts  after a roll, naming a kept die (dieId): it goes back into play
-    //   steady          any time in your turn: dust this turn counts as 0
+    //   steady          any time in your turn: a dust hand this turn scores its dice as they lie
     socket.on('drinkThonic', (slot, dieId) => {
         let room = tavernPlayer();
         if (!room || !Number.isInteger(slot)) return;
@@ -1470,9 +1487,9 @@ io.on('connection', (socket) => {
             player.lives += 1;
             text = '+1 heart';
         } else if (thonicId === 'clearEye') {
-            if (turn.hasRolled || !encounter.ability || run.clearEyeRound === room.roundNumber) return;
-            run.clearEyeRound = room.roundNumber;
-            text = `${encounter.name} can't use ${Rules.ABILITY_NAMES[encounter.ability]} this round`;
+            if (turn.hasRolled || run.clearEyeArmed || !encounterAbilityLeft(room)) return;
+            run.clearEyeArmed = true;
+            text = `${encounter.name}'s next ${Rules.ABILITY_NAMES[encounter.ability]} will be cancelled`;
         } else if (thonicId === 'fizzy') {
             rerolled = Rules.rerollOnes(turn, rollFace);
             if (!rerolled) return;

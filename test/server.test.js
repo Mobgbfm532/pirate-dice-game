@@ -8,6 +8,8 @@ const { io: connect } = require('socket.io-client');
 const Rules = require('../shared/rules');
 const server = require('../server');
 const Strategy = require('../shared/strategy');
+const BALANCE = require('../shared/balance');
+const PRICE = BALANCE.thonicPrices;
 
 let url;
 const clients = [];
@@ -358,9 +360,9 @@ test('Thom sells a Thonic for its price and puts it on the shelf', async () => {
     const bought = nextState(hero, s => runOf(s).shelf.length === 1);
     hero.emit('buyThonic', 'healing');
     const run = runOf(await bought);
-    assert.equal(run.purse, 80);
+    assert.equal(run.purse, 200 - PRICE.healing);
     assert.deepEqual(run.shelf.map(t => t.id), ['healing']);
-    assert.equal(room.tavernRun.stats.spent, 120);
+    assert.equal(room.tavernRun.stats.spent, PRICE.healing);
     assert.equal(run.shop.stock.length, 2, 'the cart is still open');
 });
 
@@ -377,8 +379,8 @@ test('the shelf holds three Thonics at most', async () => {
     const { hero, room } = await atThoms('Hoarder', 1000);
     for (let i = 0; i < 5; i++) hero.emit('buyThonic', 'healing');
     await sleep(100);
-    assert.equal(room.tavernRun.shelf.length, 3);
-    assert.equal(room.tavernRun.purse, 1000 - 3 * 120);
+    assert.equal(room.tavernRun.shelf.length, BALANCE.shelfSize);
+    assert.equal(room.tavernRun.purse, 1000 - BALANCE.shelfSize * PRICE.healing);
 });
 
 test('nothing can be bought once the cart has gone, and leaving starts the next fight', async () => {
@@ -545,7 +547,8 @@ test('going to Thom opens his cart: Healing and two others', async () => {
     assert.equal(room.turn ? room.turn.hasRolled : false, false);
 });
 
-test('the Shrine to the Lady: a free Healing Thonic, or 100 gold', async () => {
+test('the Shrine to the Lady: a free Healing Thonic, or gold', async () => {
+    const G = BALANCE.interlude.shrineGold;
     const a = await betweenFights('Pilgrim', { stage: 'choose', spots: ['shrine', 'diceDen'] }, 50);
     a.hero.emit('chooseSpot', 'shrine');
     await nextState(a.hero, s => runOf(s).interlude.stage === 'shrine');
@@ -554,7 +557,7 @@ test('the Shrine to the Lady: a free Healing Thonic, or 100 gold', async () => {
     assert.deepEqual(a.room.tavernRun.shelf, ['healing']);
     assert.equal(a.room.tavernRun.purse, 50, 'free');
 
-    const b = await betweenFights('Pilgrim2', { stage: 'shrine', gold: 100 }, 50);
+    const b = await betweenFights('Pilgrim2', { stage: 'shrine', gold: G }, 50);
     b.room.tavernRun.shelf = ['fizzy', 'steady', 'clearEye'];
     b.hero.emit('shrinePick', 'healing'); // no room on the shelf
     b.hero.emit('shrinePick', 'everything');
@@ -562,11 +565,11 @@ test('the Shrine to the Lady: a free Healing Thonic, or 100 gold', async () => {
     assert.equal(b.room.tavernRun.interlude.stage, 'shrine');
     b.hero.emit('shrinePick', 'gold');
     await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
-    assert.equal(b.room.tavernRun.purse, 150);
-    assert.equal(b.room.tavernRun.stats.eventGold, 100);
+    assert.equal(b.room.tavernRun.purse, 50 + G);
+    assert.equal(b.room.tavernRun.stats.eventGold, G);
     b.hero.emit('shrinePick', 'gold'); // only once
     await sleep(50);
-    assert.equal(b.room.tavernRun.purse, 150);
+    assert.equal(b.room.tavernRun.purse, 50 + G);
 });
 
 test('the Dice Den: bet, then roll two dice against the gambler until someone wins', async () => {
@@ -609,12 +612,12 @@ test('the Dice Den: bet, then roll two dice against the gambler until someone wi
     assert.equal(room.tavernRun.purse, 80, 'declining costs nothing');
 });
 
-test('the Hooded Stranger: a keepsake, and the next fight starts on 2 hearts', async () => {
+test('the Hooded Stranger: a keepsake, and the next fight starts a heart short', async () => {
     const { hero, room } = await betweenFights('Hooded', { stage: 'choose', spots: ['stranger', 'thom'] });
     hero.emit('chooseSpot', 'stranger');
     const shown = await nextState(hero, s => runOf(s).interlude.stage === 'stranger');
     const offers = runOf(shown).interlude.offers;
-    assert.equal(offers.length, 2);
+    assert.equal(offers.length, BALANCE.interlude.strangerOffers);
     hero.emit('strangerPick', 'notAKeepsake');
     await sleep(40);
     assert.equal(room.tavernRun.keepsakes.length, 0);
@@ -623,16 +626,17 @@ test('the Hooded Stranger: a keepsake, and the next fight starts on 2 hearts', a
     assert.deepEqual(room.tavernRun.keepsakes.map(k => k.id), [offers[1].id]);
     hero.emit('moveOn');
     const fight = await nextState(hero, s => !runOf(s).interlude);
-    assert.equal(fight.players[hero.id].lives, 2, 'this fight on 2 hearts');
+    assert.equal(fight.players[hero.id].lives, BALANCE.interlude.strangerHearts, 'this fight a heart short');
+    assert.ok(BALANCE.interlude.strangerHearts < BALANCE.playerHearts);
     assert.equal(room.tavernRun.nextFightHearts, null, 'only this one');
 
     // Walking away costs nothing.
-    const b = await betweenFights('Hooded2', { stage: 'stranger', offers, hearts: 2 });
+    const b = await betweenFights('Hooded2', { stage: 'stranger', offers, hearts: BALANCE.interlude.strangerHearts });
     b.hero.emit('strangerPick', null);
     await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
     b.hero.emit('moveOn');
     const fight2 = await nextState(b.hero, s => !runOf(s).interlude);
-    assert.equal(fight2.players[b.hero.id].lives, 3);
+    assert.equal(fight2.players[b.hero.id].lives, BALANCE.playerHearts);
     assert.equal(b.room.tavernRun.keepsakes.length, 0);
 });
 
@@ -850,12 +854,12 @@ test('Second Thoughts reopens a finished hand', async () => {
     assert.equal(room.turn.ended, false);
 });
 
-test('Steady Thonic turns dust into a score of 0, drunk before or after the dust', async () => {
+test('Steady Thonic: a dust hand scores its dice as they lie, drunk before or after the dust', async () => {
     for (const when of ['before', 'after']) {
         const { hero, room } = await tavernTable(`Steady-${when}`);
         room.tavernRun.shelf = ['steady', 'steady'];
         if (when === 'before') { hero.emit('drinkThonic', 0); await sleep(50); }
-        await rollWith(hero, room, [1, 1, 1, 1, 1, 1]);
+        await rollWith(hero, room, [1, 6, 5, 1, 3, 6]);
         const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.finalized);
         await keep(hero, [0, 1, 2, 3, 4, 5]);
         await finished;
@@ -868,33 +872,48 @@ test('Steady Thonic turns dust into a score of 0, drunk before or after the dust
         hero.emit('endTurn');
         const state = await scored;
         assert.equal(state.players[hero.id].busted, false, `${when}: not dust`);
-        assert.equal(state.players[hero.id].score, 0, `${when}: a score of 0`);
+        assert.equal(state.players[hero.id].score, 22, `${when}: 1 + 6 + 5 + 1 + 3 + 6, no 2 or 4 needed`);
     }
 });
 
-test('Clear-Eye stops Klarg\'s steal and Rokr\'s blur for the round', async () => {
+test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, Rokr\'s blur', async () => {
     const klarg = await tavernAgainst(1, 'ClearKlarg');
     const kroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[klarg.id])];
-    kroom.tavernRun.shelf = ['clearEye'];
+    kroom.tavernRun.shelf = ['clearEye', 'clearEye'];
     let moves = 0;
     klarg.on('signatureMove', () => moves++);
-    const used = waitFor(klarg, 'thonicUsed', u => u.id === 'clearEye', 8000);
+    const drunk = waitFor(klarg, 'thonicUsed', u => u.id === 'clearEye', 8000);
     klarg.emit('drinkThonic', 0);
-    assert.match((await used).text, /Klarg can't use Reach Around/);
+    assert.match((await drunk).text, /Klarg's next Reach Around will be cancelled/);
+    klarg.emit('drinkThonic', 0); // one waiting at a time
+    await sleep(40);
+    assert.equal(kroom.tavernRun.shelf.length, 1);
+    const cancelled = waitFor(klarg, 'thonicUsed', u => /Reach Around is cancelled/.test(u.text), 8000);
     klarg.emit('rollDice');
     const rolled = await waitFor(klarg, 'diceRolled', () => true, 8000);
+    await cancelled;
     await sleep(60);
     assert.equal(rolled.turn.dice.filter(d => d.status === 'stolen').length, 0, 'no die stolen');
     assert.equal(moves, 0);
+    assert.equal(kroom.tavernRun.abilityUsed.reachAround, 1, 'the steal is spent');
+    assert.equal(kroom.tavernRun.clearEyeArmed, false);
+    // Nothing left to cancel this fight: a second one is refused.
+    kroom.turn.hasRolled = false;
+    klarg.emit('drinkThonic', 0);
+    await sleep(40);
+    assert.equal(kroom.tavernRun.shelf.length, 1);
+    assert.equal(kroom.tavernRun.clearEyeArmed, false);
 
     const rokr = await tavernAgainst(2, 'ClearRokr');
     const rroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[rokr.id])];
     rroom.tavernRun.shelf = ['clearEye'];
+    rroom.tavernRun.abilityRound = 99; // not yet: it waits
     rokr.emit('drinkThonic', 0);
     await sleep(40);
     rokr.emit('rollDice');
     const seen = await waitFor(rokr, 'diceRolled', () => true, 8000);
     assert.ok(seen.turn.dice.every(d => !d.hidden && d.value > 0), 'dice not blurred');
+    assert.equal(rroom.tavernRun.clearEyeArmed, true, 'still waiting for the blur');
 });
 
 test('Clear-Eye is refused against The Molar (no ability) and after rolling', async () => {

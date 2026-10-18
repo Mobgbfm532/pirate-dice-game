@@ -205,9 +205,9 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     if (!turn) return <div className="controls" />;
     const hiddenLocked = turn.dice.some(d => d.hidden && d.status !== 'active');
     const scoring = Rules.scoreDice(turn.dice);
-    // A Steady Thonic turns dust into a 0.
+    // A Steady Thonic: a dust hand scores its dice as they lie.
     const dust = turn.finalized && !!turn.outcome?.busted && !turn.steady;
-    const scoreText = dust ? 'X' : turn.finalized && turn.outcome?.busted ? '0' : hiddenLocked ? '?' : String(scoring.score);
+    const scoreText = dust ? 'X' : hiddenLocked ? '?' : String(scoring.score);
     const state = snap.state;
     const goal = state && !snap.waiting ? scoreToBeat(state, turn.playerId) : null;
     const roller = state?.players[turn.playerId];
@@ -269,7 +269,8 @@ function Bottle({ thonic }: { thonic: Thonic | null }) {
 }
 
 // When a Thonic can be drunk, always on your own turn (the server checks the same):
-// Healing and Clear-Eye before you roll; Fizzy after a roll that shows 1s; Second Thoughts
+// Healing and Clear-Eye before you roll (Clear-Eye while the opponent's ability has uses left,
+// one at a time); Fizzy after a roll that shows 1s; Second Thoughts
 // after a roll, once you've kept a die; Steady any time, once a turn.
 function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
     const turn = snap.turn;
@@ -278,7 +279,7 @@ function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
     if (!t.drink || !me || !run || !turn || !snap.isMyTurn || snap.rolling || snap.endingTurn) return false;
     switch (t.id) {
         case 'healing': return !turn.hasRolled && me.lives < state.startingLives;
-        case 'clearEye': return !turn.hasRolled && !!run.enemy.ability && !run.clearEye;
+        case 'clearEye': return !turn.hasRolled && !!run.enemy.ability && !!run.abilityLeft && !run.clearEye;
         case 'fizzy': return turn.hasRolled && !turn.finalized && turn.dice.some(d => d.status === 'active' && !d.hidden && d.value === 1);
         case 'secondThoughts': return turn.dice.some(d => canPutBack(turn, d.status));
         case 'steady': return !turn.steady;

@@ -1,12 +1,16 @@
 // The Tavern Crawl's numbers, in one place: prices, gold, hearts and the events between fights.
 // The server plays by them and the balance simulator (balance/) reads them, so a change here
-// changes both. See balance/README.md for how they were chosen.
+// changes both. Chosen by simulation (19 Oct): see balance/README.md for how and why.
 'use strict';
 
 module.exports = {
     // Hearts at the start of every fight.
-    playerHearts: 3,
-    opponentLives: { molar: 2, klarg: 3, rokr: 3, hangman: 3, jaguar: 4 },
+    // 4 hearts against 2, 2, 3, 3, 4 lives: each opponent harder than the last (a sensible player
+    // wins about 86 / 72 / 59 / 55 / 42% of fights, before Thonics and events).
+    playerHearts: 4,
+    opponentLives: { molar: 2, klarg: 2, rokr: 3, hangman: 3, jaguar: 4 },
+    // How many times each opponent's ability can be used in a fight (from a random round 1-3).
+    abilityUses: { reachAround: 1, constellationBlur: 2, deadeye24: 1, smoothTalk: 1 },
 
     // Gold during a run: it goes into the purse as it is won, and the purse is the final score.
     gold: {
@@ -17,7 +21,9 @@ module.exports = {
     },
 
     // Thom's Thonics: what each costs, how many fit on the shelf, how many are on his cart.
-    thonicPrices: { healing: 120, lastGasp: 250, fizzy: 80, secondThoughts: 180, steady: 150, clearEye: 100 },
+    // Priced a little under what each adds to the final purse when bought before the middle
+    // fights, so the right Thonic at the right time pays for itself and a late one doesn't.
+    thonicPrices: { healing: 110, lastGasp: 130, fizzy: 20, secondThoughts: 30, steady: 90, clearEye: 60 },
     shelfSize: 3,
     shopSize: 3, // Healing, plus two others at random
 
@@ -26,9 +32,9 @@ module.exports = {
         pickpocketChance: 25,   // percent of walks across the room
         pickpocketShare: 0.25,  // of the purse, if they get away
         pickpocketCatch: 4,     // roll this or higher on one die to catch them
-        shrineGold: 100,        // the Shrine to the Lady: this much gold, or a free Healing Thonic
+        shrineGold: 125,        // the Shrine to the Lady: this much gold, or a free Healing Thonic (worth more early, less late)
         diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
         strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
-        strangerHearts: 2       // ...and you start the next fight on this many hearts if you take one
+        strangerHearts: 3       // ...and you start the next fight on this many hearts if you take one (a heart short)
     }
 };

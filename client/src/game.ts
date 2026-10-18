@@ -38,7 +38,8 @@ export interface TavernRun {
     shop: { stock: Thonic[] } | null; // Thom's cart is open
     interlude: Interlude | null; // between fights (see server.js startInterlude)
     lastWin: ShopArrival | null; // the fight just won
-    clearEye?: boolean; // a Clear-Eye Thonic blocks the opponent's ability this round
+    clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
+    abilityLeft?: boolean; // the opponent's ability has uses left this fight
 }
 
 // Between fights: a pickpocket maybe, then two spots catch your eye; you go to one.

@@ -177,7 +177,8 @@ Design doc (shared with the user, kept current):
 https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 - **Fights:** five opponents in order (`PLACES.tavern`, built as data so later places with
-  tougher opponents are new entries). Hearts reset to 3 each fight. **Turns alternate**
+  tougher opponents are new entries). Hearts reset to 4 each fight; the opponents have 2, 2,
+  3, 3 and 4 lives (`shared/balance.js`). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
@@ -194,6 +195,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`takeNeeded` in strategy.js; pure best play kept a lone 6 and left needed 2s and 4s, which
   looked like mistakes). That costs up to 5 points of win chance at high targets: to beat 20
   they win 48% (pure best 53%, the old fixed habits 35%).
+- **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Klarg 1,
+  Rokr 2, Hangman 1, Jaguar 1). Each use costs the player ~10 points of fight win chance.
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
   left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and
   goes on the leaderboard. The run-over screen shows the breakdown.
@@ -205,22 +208,24 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
   | Thonic | Price | When | Effect |
   |---|---|---|---|
-  | Healing | 120 | before rolling, once a heart is lost | +1 heart |
-  | Last Gasp | 250 | works by itself | a round that would take your last heart leaves you on 1 |
-  | Fizzy Thomic | 80 | after a roll showing 1s | those 1s roll again (`rerollOnes`, `diceRolled.rerolled`) |
-  | Second Thoughts | 180 | after keeping a die | a kept die goes back, free roll (`putBackDie`, `turn.freeRoll`, client `putBackSlot`) |
-  | Steady | 150 | any time in the turn | dust counts as 0 at End Turn (`turn.steady`) |
-  | Clear-Eye | 100 | before rolling, vs an ability | opponent's ability off this round (`clearEyeRound`) |
+  | Healing | 110 | before rolling, once a heart is lost | +1 heart |
+  | Last Gasp | 130 | works by itself | a round that would take your last heart leaves you on 1 |
+  | Fizzy Thomic | 20 | after a roll showing 1s | those 1s roll again (`rerollOnes`, `diceRolled.rerolled`) |
+  | Second Thoughts | 30 | after keeping a die | a kept die goes back, free roll (`putBackDie`, `turn.freeRoll`, client `putBackSlot`) |
+  | Steady | 90 | any time in the turn | a dust hand scores its dice as they lie at End Turn (`turn.steady`) |
+  | Clear-Eye | 60 | before rolling, while the opponent's ability has uses left | waits and cancels that ability's next use this fight (`clearEyeArmed`, `fireTavernAbility`) |
+
+  Prices and effects were set by simulation on 19 Oct (`balance/README.md`).
 
 - **Between fights** (step 3, `INTERLUDE` in `server.js`, `tavernRun.interlude`; client
   `Interlude` in Hud): in a full-screen tavern scene, **two spots catch your eye** and you go
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
   fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
-  Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 100 gold),
+  Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 125 gold),
   the Dice Den (bet 50/100, only the bets the purse covers are offered, and below 50 gold the
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again), the
-  Hooded Stranger (one of two keepsakes; the next fight starts on 2 hearts; offered only while
+  Hooded Stranger (one of two keepsakes; the next fight starts a heart short, on 3; offered only while
   keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: roll one die, a 4+
   catches him (`pickpocketCatch`), else he takes a quarter of the purse. The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
@@ -247,13 +252,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    lost round all work on screen.)
 2. **Classic page at `/`:** skipping Thom and the events there is fine until the switch-over
    (the user's answer, 18 Oct).
-3. **Step 4: balance (in progress, 18 Oct).** Findings and the plan are in
-   `balance/README.md` (simulator `balance/sim.js`, checked against the real server; numbers
-   now in `shared/balance.js`). Nothing applied yet. Every number is a first guess: Thonic prices (`THONICS`), gold
-   (`GOLD`), and the events (`INTERLUDE`: Shrine gold, Dice Den bets, the pickpocket's chance,
-   cut and catch roll, the Stranger's heart price). Simulate many runs with the real opponents
-   (`shared/strategy.js`) and a sensible player using Thonics and events; then tune by feel
-   with the user (who sets the numbers).
+3. **Step 4: balance (done 19 Oct; needs the user's feel).** Set by simulation
+   (`balance/README.md`; simulator `balance/sim.js`, checked against the real server; numbers
+   in `shared/balance.js`): 4 hearts, lives 2/2/3/3/4, new Thonic prices, Steady and Clear-Eye
+   reworked, Shrine 125, the Stranger a heart short. A sensible player finishes ~1 run in 5
+   (casual ~1 in 8). Next: the user plays and says what feels off; re-run
+   `balance/experiments/runs.js` after any change. Possible: the Molar at 1 life, a stronger
+   Brodor's Sunglasses.
 4. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build`; the user merges (that deploys the live game);
    then delete the test service. Fix anything Render-specific as it appears.

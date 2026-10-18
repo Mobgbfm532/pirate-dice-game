@@ -4,56 +4,72 @@ The numbers live in `shared/balance.js` (the server and the simulator both read 
 
 - `sim.js`: a fast offline copy of a Tavern Crawl (fights, gold, Thonics, events, keepsakes)
   on the real dice rules and opponents' play. ~2,500 fights a second. The player is
-  "sensible" (best play, the same solver the opponents use) or "casual" (the Molar's habits).
-- `check-server.js`: plays real fights on the real server over sockets to check the
+  "sensible" (best play, the same solver the opponents use, and sensible moments to drink each
+  Thonic) or "casual" (the Molar's simple habits).
+- `check-server.js`: plays real fights on the real server over sockets, to check the
   simulator: `node balance/check-server.js <opponent 0-4> <fights>`.
 - `experiments/`: the measurements below (`node balance/experiments/<name>.js`).
 
-## Checked: the simulator matches the server (18 Oct)
+## The result (19 Oct)
 
-Fight win % for a sensible player, no Thonics, current numbers:
+Whole runs, 20,000 each (`experiments/runs.js`):
+
+| | finish the run | average gold (median) | runs ending at Molar / Klarg / Rokr / Hangman / Jaguar |
+|---|---|---|---|
+| before, sensible | 4.5% | 383 (200) | 26 / 40 / 14 / 8 / 7 % |
+| before, casual | 1.8% | 235 (175) | 31 / 45 / 13 / 7 / 3 % |
+| **now, sensible** | **21.7%** | **853 (694)** | 14 / 19 / 15 / 14 / 16 % |
+| **now, casual** | **13.1%** | **555 (380)** | 19 / 24 / 20 / 13 / 10 % |
+
+Targets: a good run finishes about 1 in 5; each opponent harder than the last; no single
+wall; buying the right Thonic at the right time pays for itself in score.
+
+## What changed and why
+
+| | before | now | why |
+|---|---|---|---|
+| Player hearts | 3 | **4** | with 3, a near-perfect player beat Klarg 36% of the time |
+| Opponents' lives | 2, 3, 3, 3, 4 | **2, 2, 3, 3, 4** | a steady climb: fight wins 86 / 72 / 59 / 55 / 42% (sensible, no items) |
+| Healing | 120 | **110** | adds ~155 gold before the middle fights |
+| Last Gasp | 250 | **130** | worth about the same as Healing (it waits until needed) |
+| Fizzy | 80 | **20** | adds ~20 |
+| Second Thoughts | 180 | **30** | adds ~30 |
+| Steady | 150, dust = 0 | **90, dice score as they lie** | "dust = 0" almost always still lost the round (worth ~3 gold) |
+| Clear-Eye | 100, blocks one round | **60, cancels the next ability** | blocking a round only postponed the ability (worth ~0) |
+| Shrine gold | 100 | **125** | 100 always lost to a free Healing; now gold is right before Jaguar |
+| Stranger's price | next fight on 2 hearts | **a heart short (3 of 4)** | 2 short made every keepsake a bad deal |
+
+Prices sit a little under what each Thonic adds to the final purse when bought before the
+middle fights, so the right one pays for itself and a late one doesn't.
+
+## Checked: the simulator matches the server
+
+Fight win % for a sensible player, no Thonics:
 
 | | Molar | Klarg | Rokr | Hangman | Jaguar |
 |---|---|---|---|---|---|
-| sim (20k fights) | 74.8 | 35.5 | 41.2 | 36.0 | 26.0 |
-| server | 74.8 ± 4.3 | 33.3 ± 5.3 | 38.8 ± 2.8 | 32.0 ± 4.6 | 24.0 ± 3.4 |
+| old numbers, sim | 74.8 | 35.5 | 41.2 | 36.0 | 26.0 |
+| old numbers, server | 74.8 ± 4.3 | 33.3 ± 5.3 | 38.8 ± 2.8 | 32.0 ± 4.6 | 24.0 ± 3.4 |
+| **new numbers, sim** | 85.8 | 71.3 | 58.8 | 53.6 | 41.1 |
+| **new numbers, server** | 87.6 ± 2.9 | 72.8 ± 3.9 | 55.6 ± 4.4 | 52.0 ± 4.4 | 39.6 ± 4.3 |
 
-The sim may flatter the player by ~2 points (most likely in blind play under Rokr's blur).
+## Findings along the way
 
-## Findings so far
+- **Abilities matter:** one use of Klarg's steal, the Hangman's shot or Jaguar's Smooth Talk
+  costs the player about 10 points of fight win chance (Rokr's blur about 5)
+  (`experiments/abilities.js`). The opponents only felt alike because lives evened them out.
+- **Casual play is only ~5 points worse** than best play per fight: dice luck dominates.
+- **Healing is best saved for the last heart;** drunk at the first lost heart it is worth
+  about half as much.
+- **Keepsakes** (gold added, from Klarg on): Shield 272, Steady Hand 162, Velvet Cushion 149,
+  Trap Card 120, Brodor's Sunglasses ~20 (perfect 24s are rare). A heart short costs ~129.
+  The Sunglasses are a trap as they stand; a stronger effect is a possible later change.
+- **The Dice Den** is even odds: no gain for the score, only excitement. **The pickpocket**
+  costs ~3% of the purse per walk on average.
 
-1. **Far too hard now.** A near-perfect player finishes a run ~1% of the time (casual 0.4%).
-   The Molar, the teacher, ends ~1 run in 4.
-2. **Opponents from Klarg on are about equally strong;** lives decide a fight, abilities
-   barely do. The curve doesn't climb (Klarg, 2nd, is as hard as the Hangman, 4th).
-3. **Casual play is only ~5 points worse** than best play: dice luck dominates.
-4. **Proposed shape ("plan A", `experiments/plans.js`): player 4 hearts; opponent lives 2, 2,
-   3, 3, 4.** Win %: sensible 86 / 72 / 59 / 55 / 42 (whole run 8.3% without items);
-   casual 81 / 66 / 52 / 48 / 33 (4.4%). Fights 3.7 to 6.4 rounds. Not applied yet.
-5. **Thonic values under plan A** (`experiments/thonics.js`, +win % from holding one at the
-   start of a fight, Molar / Klarg / Rokr / Hangman / Jaguar):
+## Possible next tuning
 
-   | Thonic | price now | effect |
-   |---|---|---|
-   | Healing | 120 | +6.5 +11.8 +13.5 +14.5 +14.3 |
-   | Last Gasp | 250 | +6.8 +11.9 +13.6 +14.7 +14.0 |
-   | Fizzy | 80 | +1.5 +1.6 +2.1 +2.3 +1.3 |
-   | Second Thoughts | 180 | +0.6 +1.0 +1.6 +1.7 +1.3 |
-   | Steady | 150 | ~0 |
-   | Clear-Eye | 100 | ~0 (-2 to +1) |
-
-   A heart is worth ~10x the others. Steady barely matters (dust and a 0 both lose a round
-   unless the opponent also dusts). Clear-Eye barely matters because the abilities barely
-   matter (finding 2). Second Thoughts is only used on dust here; a smarter use may be worth
-   more. Prices out of line: Last Gasp is priced 2x Healing for the same value; Steady and
-   Second Thoughts cost more than Fizzy for less.
-
-## Next (tomorrow)
-
-1. Decide plan A (or a variant) and per-Thonic changes: re-price by value, and/or make
-   Steady and Clear-Eye worth having (e.g. stronger abilities so Clear-Eye matters; Steady
-   making dust count as a better score).
-2. Value the events (Shrine, Dice Den, Stranger's keepsakes vs a heart, pickpocket) and the
-   gold economy: what a sensible shopper buys, and whether buying raises the expected final
-   purse (the score). Target: a good run finishes ~1 in 5 with good use of Thonics and events.
-3. Apply to `shared/balance.js`, re-simulate, run the tests, write up for the user.
+- The Molar still ends about 1 run in 7 for a sensible player (1 in 5 casual). If that feels
+  harsh for the teacher, give him 1 life (then ~95%, but a much shorter first fight).
+- Brodor's Sunglasses could do more.
+- Re-run `experiments/runs.js` after any change to `shared/balance.js`.

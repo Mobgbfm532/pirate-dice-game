@@ -44,8 +44,16 @@ function fight(index, run, opts = {}) {
         keepUsed: {},
         rounds: 0
     };
-    const max = Rules.getAbilityMaxUses;
+    const max = ability => N.abilityUses[ability];
     const canUse = ability => opp.ability === ability && f.clearEyeRound !== f.round && f.round >= f.abilityRound && f.uses < max(ability);
+    // Using the ability: with Clear-Eye as "cancel the next" (opts.effects.clearEye ===
+    // 'cancelNext'), a waiting Clear-Eye spends the use instead.
+    f.fire = ability => {
+        if (!canUse(ability)) return false;
+        f.uses++;
+        if (f.cancelArmed) { f.cancelArmed = false; return false; }
+        return true;
+    };
     const has = k => run.keepsakes.includes(k);
 
     while (f.player > 0 && f.bot > 0) {
@@ -73,7 +81,7 @@ function botToBeat(p, run, f) {
 
 function botTurn(f, run, toBeat, canUse) {
     const turn = Rules.createTurn('BOT');
-    const aceAt16 = f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24');
+    const aceAt16 = f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
     while (!turn.finalized) {
         if (!Rules.rollTurn(turn)) throw new Error('the opponent could not roll');
         if (turn.finalized) break;
@@ -82,10 +90,7 @@ function botTurn(f, run, toBeat, canUse) {
         keep.forEach(id => Rules.toggleDie(turn, id));
     }
     let { busted, score } = turn.outcome;
-    if (f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !busted && score >= 16 && score < 24) {
-        score = 24;
-        f.uses++;
-    }
+    if (f.opp.ability === 'deadeye24' && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
     return { busted, score };
 }
 
@@ -95,8 +100,18 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     const shelf = run.shelf;
     const drinks = opts.drinks || DRINKS;
     // Before rolling: Healing once a heart is gone; Clear-Eye when the ability is about to come.
-    if (drinks.healing && f.player < N.playerHearts && take(shelf, 'healing')) { f.player++; run.stats.drunk.healing = (run.stats.drunk.healing || 0) + 1; }
-    if (drinks.clearEye && shelf.includes('clearEye') && clearEyeNow(f, toBeat) && take(shelf, 'clearEye')) {
+    // Healing: kept for the last heart (drinking it at the first lost heart wastes it).
+    const healAt = opts.healAt ?? 1;
+    if (drinks.healing && f.player <= healAt && f.player < N.playerHearts && take(shelf, 'healing')) { f.player++; run.stats.drunk.healing = (run.stats.drunk.healing || 0) + 1; }
+    // The game's effects; opts.effects { clearEye: 'round', steady: 'zero' } plays the old ones.
+    const effects = { clearEye: 'cancelNext', steady: 'asTheyLie', ...(opts.effects || {}) };
+    if (effects.clearEye === 'cancelNext') {
+        // Drunk at the start of the fight: it waits for the opponent's next ability.
+        if (drinks.clearEye && f.opp.ability && !f.cancelArmed && f.uses < N.abilityUses[f.opp.ability] && take(shelf, 'clearEye')) {
+            f.cancelArmed = true;
+            run.stats.drunk.clearEye = (run.stats.drunk.clearEye || 0) + 1;
+        }
+    } else if (drinks.clearEye && shelf.includes('clearEye') && clearEyeNow(f, toBeat, N) && take(shelf, 'clearEye')) {
         f.clearEyeRound = f.round;
         run.stats.drunk.clearEye = (run.stats.drunk.clearEye || 0) + 1;
     }
@@ -108,8 +123,8 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         const rolled = Rules.rollTurn(turn, {
             onRolled: t => {
                 if (t.rollCount !== 1) return;
-                if (canUse('reachAround') && Rules.stealHighestActiveDie(t)) f.uses++;
-                if (canUse('constellationBlur')) { t.blurActive = true; f.uses++; }
+                if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
+                if (f.fire('constellationBlur')) t.blurActive = true;
             }
         });
         if (!rolled) throw new Error('the player could not roll');
@@ -129,7 +144,9 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         if (!turn.finalized) continue;
         // Finished on dust: Second Thoughts reopens the hand (a kept die back in play); else
         // Steady makes it a 0.
-        if (turn.outcome.busted && drinks.secondThoughts && shelf.includes('secondThoughts')) {
+        // Second Thoughts: on dust, or (playing second) when the hand would lose the round.
+        const losing = toBeat !== undefined && toBeat !== null && !turn.outcome.busted && turn.outcome.score < toBeat;
+        if ((turn.outcome.busted || (losing && opts.secondThoughtsWhenLosing !== false)) && drinks.secondThoughts && shelf.includes('secondThoughts')) {
             const back = putBackChoice(turn);
             if (back !== null && take(shelf, 'secondThoughts') && Rules.putBackDie(turn, back)) {
                 run.stats.drunk.secondThoughts = (run.stats.drunk.secondThoughts || 0) + 1;
@@ -143,8 +160,10 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         break;
     }
     let { busted, score } = turn.outcome;
-    if (steady && busted) { busted = false; score = 0; }
-    if (canUse('smoothTalk') && !busted && score > 0) { score = Math.max(0, score - 3); f.uses++; }
+    // Steady: dust counts as 0 (now), or (opts.effects.steady === 'asTheyLie') the dice score as
+    // they lie, as if the 2 and 4 were there.
+    if (steady && busted) { busted = false; score = effects.steady === 'asTheyLie' ? Rules.scoreDice(turn.dice).score : 0; }
+    if (!busted && score > 0 && f.fire('smoothTalk')) score = Math.max(0, score - 3);
     if (score === 24 && !busted) {
         run.stats.perfect24s++;
         run.purse += N.gold.perfect24;
@@ -154,7 +173,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     return { busted, score };
 }
 
-// Second Thoughts on dust: put back the lowest kept die that isn't the 2 or 4 in use.
+// Second Thoughts: put back the lowest kept die that isn't the 2 or 4 in use.
 function putBackChoice(turn) {
     const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN);
     let saw2 = false, saw4 = false;
@@ -169,11 +188,11 @@ function putBackChoice(turn) {
 
 // Clear-Eye: when the opponent's ability is sure to come this round (it starts by round 3),
 // or, for the Hangman, when his shot is ready and he plays after you.
-function clearEyeNow(f, toBeat) {
+function clearEyeNow(f, toBeat, N) {
     const a = f.opp.ability;
     if (!a) return false;
     if (a === 'deadeye24') return f.bot <= 1 && f.uses < 1 && toBeat === undefined;
-    if (f.uses >= Rules.getAbilityMaxUses(a)) return false;
+    if (f.uses >= N.abilityUses[a]) return false;
     return f.round >= 3 || (a === 'constellationBlur' && f.uses === 1);
 }
 
@@ -230,9 +249,14 @@ function newRun(N) {
 function playRun(policy, opts = {}) {
     const N = { ...DEFAULTS, ...(opts.numbers || {}) };
     const run = newRun(N);
+    // For experiments: start at a later opponent (as if the earlier ones were beaten, with no
+    // gold from them) and/or with Thonics already on the shelf.
+    const startAt = opts.startAt || 0;
+    if (opts.shelf) run.shelf = opts.shelf.slice();
+    if (opts.setup) opts.setup(run);
     const log = { fights: [], spots: [] };
-    let defeated = 0;
-    for (let i = 0; i < OPPONENTS.length; i++) {
+    let defeated = startAt;
+    for (let i = startAt; i < OPPONENTS.length; i++) {
         const result = fight(i, run, { ...opts, numbers: N });
         run.hearts = N.playerHearts;
         log.fights.push(result);
