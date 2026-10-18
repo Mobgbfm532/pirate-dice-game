@@ -8,7 +8,8 @@ bitten us before, and what comes next. Keep it current when something important 
 
 Roll six dice; after every roll lock at least one. You must end with a **2** and a **4**
 locked; the other four dice are your score (max 24). Missing the 2 or 4 is **dust**. Each
-round, dust loses a life and the lowest valid score loses a life; ties go to sudden death.
+round, dust loses a life and the lowest valid score loses a life; ties go to sudden death
+(in a Tavern Crawl a tie costs no one a heart).
 A 24 restores a life. Last player with lives wins.
 
 Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN` = Tavern
@@ -40,7 +41,7 @@ and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `stran
 
 | Path | What |
 |---|---|
-| `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, `GOLD`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
+| `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, the events between fights, `fireTavernAbility`; its numbers come from `shared/balance.js`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
 | `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from Klarg on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
@@ -154,15 +155,16 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (18 October 2026)
+## Status (19 October 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
 - **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed):** the 3D table at
   `/next`: physics dice, all painted art, tavern backdrop and opponent busts, multiplayer with
   invites and reconnection, phone and desktop layouts, turn banner, separate music / sound
-  switches, synthesized dice sound, and the Tavern Crawl with Thonics, events between fights
-  and best-play opponents (below). 72 server/rules/strategy tests + 10 client tests.
+  switches, synthesized dice sound, and the Tavern Crawl with Thonics, events between fights,
+  best-play opponents and a balance pass set by simulation (below). 75 server/rules/strategy
+  tests + 10 client tests.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
@@ -200,7 +202,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
   left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and
   goes on the leaderboard. The run-over screen shows the breakdown.
-- **Thom's Thonics:** after each win, a full-screen scene (`.thom-scene`; Thom's bust from
+- **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
   shows 3 Thonics (Healing + 2 random, `pickThomStock`). A shelf holds up to 3, carried
   between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
@@ -217,7 +219,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
   Prices and effects were set by simulation on 19 Oct (`balance/README.md`).
 
-- **Between fights** (step 3, `INTERLUDE` in `server.js`, `tavernRun.interlude`; client
+- **Between fights** (step 3, `INTERLUDE` = `shared/balance.js` `interlude`, `tavernRun.interlude`; client
   `Interlude` in Hud): in a full-screen tavern scene, **two spots catch your eye** and you go
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
   fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
@@ -236,10 +238,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
   the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with
   the real dice sound (`simulateRoll` impacts). Gold won or lost here is
-  `stats.eventGold` ("Between fights" on the run-over screen). Numbers are first guesses.
+  `stats.eventGold` ("Between fights" on the run-over screen). Numbers set by simulation.
   Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
   sailors. Game text calls the pickpocket "the thief" (no assumed gender).
-- **Keepsakes:** only from the Hooded Stranger now. Jaguar's drop waits for a second place.
+- **Keepsakes:** only from the Hooded Stranger now (for a heart). Simulated worth from Klarg on:
+  Shield ~270, Steady Hand ~160 (duplicates the Steady Thonic), Velvet Cushion ~150, Trap Card
+  ~120, Brodor's Sunglasses ~20 (a dud). A rework is proposed (next steps). Jaguar's drop
+  waits for a second place.
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
   at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
   with that until the switch-over.
@@ -248,33 +253,39 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **User plays the test site on the phone:** a full Tavern Crawl to the end, then two phones
-   over mobile data. Collect feedback; fix what comes up. (18 Oct: the user confirmed Rokr's
-   blur lifting on the next roll, a Dice Den tie, Klarg's steal and an opponent conceding a
-   lost round all work on screen.)
-2. **Classic page at `/`:** skipping Thom and the events there is fine until the switch-over
-   (the user's answer, 18 Oct).
-3. **Step 4: balance (done 19 Oct; needs the user's feel).** Set by simulation
-   (`balance/README.md`; simulator `balance/sim.js`, checked against the real server; numbers
-   in `shared/balance.js`): 4 hearts, lives 2/2/3/3/4, new Thonic prices, Steady and Clear-Eye
-   reworked, the Stranger a heart short; then (19 Oct, the user's design) the Lady's random
-   blessings replaced the Shrine's Healing-or-gold choice (each worth ~100 gold mid-run). A sensible player finishes ~1 run in 5
-   (casual ~1 in 8). Next: the user plays and says what feels off; re-run
-   `balance/experiments/runs.js` after any change. Possible: the Molar at 1 life, a stronger
-   Brodor's Sunglasses.
+1. **User plays the test site on the phone** (needs the user): a full Tavern Crawl on the new
+   balance (4 hearts, new prices, the reworked Steady and Clear-Eye, the Lady's blessings),
+   then two phones over mobile data. Collect what feels off; change `shared/balance.js` and
+   re-run `node balance/experiments/runs.js` to see the effect before pushing.
+2. **Keepsake rework** (proposed 19 Oct; the user picks): keep Shield, Velvet Cushion and Trap
+   Card as the protective three; rework Steady Hand Wrap (e.g. once a fight re-roll a kept
+   die) and Brodor's Sunglasses (e.g. 22+ also restores a heart); add play-changing ones
+   (Loaded Die, Lucky Coin, Sailor's Compass), spending ones (Thom's Loyalty Card, Gambler's
+   Charm, Pickpocket's Glove, Gold Tooth) and anti-opponent ones (Hangman's Spare Bullet, Star
+   Chart, Klarg's Mitt). The Stranger offers one protective + one other. Simulate each in
+   `balance/sim.js` to land at ~120-180 gold, show the user the shortlist with numbers, then
+   build; keepsake icons on the strip with a flash when one triggers. The user names them.
+3. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur (it removes your
+   choice and is the weakest: e.g. "reading the stars" hides his score until you finish, or a
+   partial blur), and give every ability a warning on the nameplate before it fires (it
+   starts in a random round 1-3, and Clear-Eye now waits for it). Re-simulate and adjust
+   lives after any change. Klarg, the Hangman and Jaguar are fine as they are.
 4. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build`; the user merges (that deploys the live game);
    then delete the test service. Fix anything Render-specific as it appears.
 5. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
    (more important now that gold is the score).
 6. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
-   classic page reachable for a while), update the PWA manifest/service worker, retire the old
-   client code in `public/index.html`.
+   classic page reachable for a while; until then it skips Thom and the events, which the
+   user accepted), update the PWA manifest/service worker, retire the old client code in
+   `public/index.html`.
 7. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
    perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
 8. **Later / nice to have:** Jaguar's keepsake drop (once there is a second place to carry it
-   into); new places with tougher opponents (the roguelite); optional art
-   (`docs/art-direction.md` "Wanted": keepsake pictures, Klarg's hand, the Hangman's
-   revolver); delete the unused keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`);
-   smaller bundle (lazy-load three.js), compressed audio (the 9.5 MB ambience track),
-   spectator mode, emoji reactions floating over the table.
+   into); new places with tougher opponents (the roguelite); possibly the Molar at 1 life if
+   he ends too many runs (~1 in 7 for a careful player); optional art (`docs/art-direction.md`
+   "Wanted": keepsake pictures, Klarg's hand, the Hangman's revolver); delete the unused
+   keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) and `Rules.getAbilityMaxUses`
+   (replaced by `abilityUses` in `shared/balance.js`); smaller bundle (lazy-load three.js),
+   compressed audio (the 9.5 MB ambience track), spectator mode, emoji reactions floating over
+   the table.
