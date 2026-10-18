@@ -10,7 +10,8 @@ Roll six dice; after every roll lock at least one. You must end with a **2** and
 locked; the other four dice are your score (max 24). Missing the 2 or 4 is **dust**. Each
 round, dust loses a life and the lowest valid score loses a life; ties go to sudden death
 (in a Tavern Crawl a tie costs no one a heart).
-A 24 restores a life. Last player with lives wins.
+A 24 restores a life (Tavern Crawl opponents too, since 18 Oct: a rolled 24, up to their lives for
+the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with lives wins.
 
 Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN` = Tavern
 Crawl (five opponents in a row: The Molar, Klarg, Rokr, The Hangman, Jaguar Cantona, each
@@ -204,7 +205,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   goes on the leaderboard. The run-over screen shows the breakdown.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
-  shows 3 Thonics (Healing + 2 random, `pickThomStock`). A shelf holds up to 3, carried
+  shows 3 Thonics (Healing + 2 random, `pickThomStock`). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
   between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
   handler; the client's `drinkable()` mirrors it), with a cork pop:
 
@@ -230,8 +231,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again), the
   Hooded Stranger (one of two keepsakes; the next fight starts a heart short, on 3; offered only while
-  keepsakes remain). About 1 walk in 4 a **pickpocket** strikes first: roll one die, a 4+
-  catches him (`pickpocketCatch`), else he takes a quarter of the purse. The choice screen
+  keepsakes remain). **One event per walk:** about 1 walk in 4 a **pickpocket** strikes instead of the
+  spots: roll one die, a 4+ catches him (`pickpocketCatch`), else he takes a quarter of the
+  purse; then straight on to the next fight (the user asked for this; it moved a sensible
+  player's whole-run wins from ~20% to ~17% in `runs.js`). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character

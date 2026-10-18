@@ -485,7 +485,7 @@ test('a perfect 24 pays 75 gold into the purse straight away', async () => {
     assert.equal(room.tavernRun.stats.perfect24s, 1);
 });
 
-test('beating an opponent pays for the win and the hearts left, then two spots catch your eye', async () => {
+test('beating an opponent pays for the win and the hearts left, then one event: the thief or two spots', async () => {
     const { hero, room } = await tavernTable('Winner');
     room.players.BOT_MOLAR.lives = 1;
     room.players[hero.id].lives = 2;
@@ -499,24 +499,18 @@ test('beating an opponent pays for the win and the hearts left, then two spots c
     assert.deepEqual(room.tavernRun.lastWin, offer);
     assert.equal(room.tavernRun.shop, null, 'no cart until you go to Thom');
     assert.equal(room.tavernRun.pendingKeepsakeChoices, null, 'no keepsake after a win any more');
-    let interlude = room.tavernRun.interlude;
+    const interlude = room.tavernRun.interlude;
+    hero.emit('rollDice'); // no fighting between fights
+    await sleep(60);
+    assert.equal(room.turn ? room.turn.hasRolled : false, false);
     if (interlude.stage === 'pickpocket') {
         assert.equal(interlude.steal, 37, 'a quarter of the purse');
-        hero.emit('pickpocket', 'roll');
-        await nextState(hero, s => runOf(s).interlude.roll);
-        hero.emit('pickpocket', 'on');
-        await nextState(hero, s => runOf(s).interlude.stage === 'choose');
-        interlude = room.tavernRun.interlude;
-        assert.equal(room.tavernRun.purse, interlude.note.caught ? 150 : 113);
+        return;
     }
     assert.equal(interlude.stage, 'choose');
     assert.equal(interlude.spots.length, 2);
     assert.equal(new Set(interlude.spots).size, 2, 'two different spots');
     interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen', 'stranger'].includes(id)));
-
-    hero.emit('rollDice'); // no fighting between fights
-    await sleep(60);
-    assert.equal(room.turn ? room.turn.hasRolled : false, false);
 });
 
 // Puts the run between fights at the given stage, with the given purse.
@@ -662,7 +656,7 @@ test('the Hooded Stranger: a keepsake, and the next fight starts a heart short',
     assert.equal(b.room.tavernRun.keepsakes.length, 0);
 });
 
-test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away', async () => {
+test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away; then the next fight', async () => {
     const seen = new Set();
     for (let n = 0; n < 12; n++) {
         const { hero, room } = await betweenFights(`Chaser${n}`, { stage: 'pickpocket', steal: 50, catchOn: 4 }, 200);
@@ -684,8 +678,9 @@ test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away', async (
         assert.equal(room.tavernRun.interlude.roll, roll);
         assert.equal(room.tavernRun.purse, caught ? 200 : 150);
         hero.emit('pickpocket', 'on');
-        const after = await nextState(hero, s => runOf(s).interlude.stage === 'choose');
-        assert.deepEqual(runOf(after).interlude.note, { roll, caught, lost });
+        await nextState(hero, s => !runOf(s).interlude); // the thief is the walk's one event
+        assert.equal(room.tavernRun.shop, null);
+        assert.equal(room.tavernRun.purse, caught ? 200 : 150);
         assert.equal(room.tavernRun.stats.eventGold, 0 - lost);
     }
     assert.equal(seen.size, 2, 'in 12 tries he was both caught and got away');
@@ -702,12 +697,9 @@ test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away', async (
 });
 
 test('the Dice Den only appears when the purse covers its smallest bet', async () => {
-    const { hero, room } = await betweenFights('Skint', { stage: 'pickpocket', steal: 0, catchOn: 4, roll: 6, caught: true, lost: 0 }, 30);
+    const { room } = await betweenFights('Skint', { stage: 'choose', spots: ['thom', 'shrine'] }, 30);
     for (let i = 0; i < 20; i++) {
-        room.tavernRun.interlude = { stage: 'pickpocket', steal: 0, catchOn: 4, roll: 6, caught: true, lost: 0 };
-        hero.emit('pickpocket', 'on');
-        await nextState(hero, s => runOf(s).interlude.stage === 'choose');
-        assert.ok(!room.tavernRun.interlude.spots.includes('diceDen'), 'not with 30 gold');
+        assert.ok(!server.pickSpots(room).includes('diceDen'), 'not with 30 gold');
     }
 });
 
@@ -723,10 +715,7 @@ test('the Stranger stops appearing once every keepsake is yours', async () => {
     }
     assert.equal(new Set(room.tavernRun.keepsakes.map(k => k.id)).size, 5, 'all five, none twice');
     for (let i = 0; i < 20; i++) {
-        room.tavernRun.interlude = { stage: 'pickpocket', steal: 0, catchOn: 4, roll: 6, caught: true, lost: 0 };
-        hero.emit('pickpocket', 'on');
-        await nextState(hero, s => runOf(s).interlude.stage === 'choose');
-        assert.ok(!room.tavernRun.interlude.spots.includes('stranger'));
+        assert.ok(!server.pickSpots(room).includes('stranger'));
     }
 });
 
@@ -746,14 +735,14 @@ test('full runs through the spots between fights keep the books straight', async
     const runs = [1, 2, 3, 4].map(async n => {
         const { hero, room } = await tavernTable(`Shopper${n}`);
         autoPlay(hero, async () => {
-            // Between fights: deal with the pickpocket, then go wherever comes first. At Thom's,
-            // try to buy everything (the server refuses what the purse can't cover).
+            // Between fights: deal with the pickpocket (that's the walk), or go wherever comes
+            // first. At Thom's, try to buy everything (the server refuses what the purse can't cover).
             const run = room.tavernRun;
             if (run.interlude.stage === 'pickpocket') {
                 hero.emit('pickpocket', 'roll');
                 await sleep(20);
                 hero.emit('pickpocket', 'on');
-                await sleep(20);
+                return;
             }
             const spot = run.interlude.spots[0];
             hero.emit('chooseSpot', spot);
@@ -788,7 +777,7 @@ test('full runs through the spots between fights keep the books straight', async
         assert.equal(progress + hearts + perfect + events - spent, t.gold, 'score = earned + events - spent');
         assert.equal(t.gold, Math.max(0, room.tavernRun.purse + (t.won ? 0 : (t.defeated + 1) * 25)));
         assert.ok(room.tavernRun.purse >= 0, 'the purse never goes negative');
-        assert.ok(room.tavernRun.shelf.length <= 3);
+        assert.ok(room.tavernRun.shelf.length <= BALANCE.shelfSize);
         assert.equal(spent, room.tavernRun.stats.spent);
         return t;
     });
@@ -978,6 +967,23 @@ test('Clear-Eye stops Jaguar\'s Smooth Talk and the Hangman\'s Ace of Spades', a
         await playHand(hang, hroom, [2, 4, 1, 1, 1, 1]); // the player scores 4
         await result;
         assert.equal(ace, !clear, clear ? 'no Ace this round' : 'the Ace without Clear-Eye');
+        assert.equal(hroom.players.BOT_MOLAR.lives, 1, 'no life back for the Ace of Spades');
+    }
+});
+
+test('a rolled 24 from an opponent restores a life, up to their lives for the fight', async () => {
+    for (const [lives, after] of [[1, 2], [3, 3]]) {
+        const hang = await tavernAgainst(3, `Hang24-${lives}`);
+        const room = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hang.id])];
+        room.tavernRun.abilityRound = 99; // no Ace: a 24 of his own
+        room.players.BOT_MOLAR.lives = lives;
+        hang.on('diceRolled', d => {
+            if (d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1) room.turn.dice.forEach((die, i) => { die.value = [2, 4, 6, 6, 6, 6][i]; });
+        });
+        const result = waitFor(hang, 'roundResult', () => true, 4000);
+        await playHand(hang, room, [2, 4, 1, 1, 1, 1]); // the player scores 4 and loses the round
+        await result;
+        assert.equal(room.players.BOT_MOLAR.lives, after, lives === 1 ? 'one life back' : 'never above his 3');
     }
 });
 

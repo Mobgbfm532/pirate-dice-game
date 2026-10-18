@@ -648,17 +648,11 @@ function Interlude({ state }: { state: GameState }) {
         const spot = interlude.stage === 'done' ? interlude.spot : interlude.stage;
         return <SpotScene key={spot} spot={spot} state={state} next={next} leaving={leaving} onMoveOn={moveOn} />;
     }
-    const note = interlude.note;
     return (
         <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
                 <Winnings state={state} />
-                {note && (
-                    <p className={`event-note ${note.caught ? 'good' : ''}`}>
-                        {note.caught ? 'You caught the pickpocket: your gold is safe.' : `The pickpocket got away with ${note.lost} gold.`}
-                    </p>
-                )}
                 <h2 className="interlude-title">Make your choice</h2>
                 <div className="spot-cards">
                     {interlude.spots.map((spot, i) => (
@@ -771,7 +765,7 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
     const [picked, setPicked] = useState<string | null>(null);
     const challenge = <button className="primary onward" onClick={onMoveOn}>Challenge {next}</button>;
 
-    if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} setRevealed={setRevealed} />;
+    if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} purse={run.purse} setRevealed={setRevealed} next={challenge} />;
 
     if (interlude.stage === 'shrine') {
         return (
@@ -873,8 +867,8 @@ function clatter(values: number[]) {
 
 const DIE_ROLL_MS = 850;
 
-// The pickpocket: one die to catch the thief.
-function PickpocketRoll({ interlude, setRevealed }: { interlude: Extract<Interlude, { stage: 'pickpocket' }>; setRevealed: (v: boolean) => void }) {
+// The pickpocket: one die to catch the thief. They are the walk's one event: then the next fight.
+function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Extract<Interlude, { stage: 'pickpocket' }>; purse: number; setRevealed: (v: boolean) => void; next: JSX.Element }) {
     const rolled = interlude.roll !== undefined;
     const [rolling, setRolling] = useState(false);
     useLayoutEffect(() => {
@@ -903,12 +897,12 @@ function PickpocketRoll({ interlude, setRevealed }: { interlude: Extract<Interlu
                 <p className={`outcome ${interlude.caught ? 'good' : 'bad'}`}>
                     {interlude.caught
                         ? <>You rolled a {interlude.roll}: <strong>caught the thief!</strong> Your gold is safe.</>
-                        : <>You rolled a {interlude.roll}: the thief slips away with {interlude.lost} gold.</>}
+                        : <>You rolled a {interlude.roll}: the thief slips away with <strong>{interlude.lost}</strong> gold. You have {purse} left.</>}
                 </p>
             )}
             <div className="event-choices">
                 {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch the thief</button>}
-                {done && <button className="primary" onClick={() => actions.pickpocket('on')}>Carry on</button>}
+                {done && next}
             </div>
         </>
     );

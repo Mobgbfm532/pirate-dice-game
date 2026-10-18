@@ -65,7 +65,12 @@ Fight win % for a sensible player, no Thonics:
   Trap Card 120, Brodor's Sunglasses ~20 (perfect 24s are rare). A heart short costs ~129.
   The Sunglasses are a trap as they stand; a stronger effect is a possible later change.
 - **The Dice Den** is even odds: no gain for the score, only excitement. **The pickpocket**
-  costs ~3% of the purse per walk on average.
+  costs ~3% of the purse per walk on average, and since 18 Oct he is that walk's only event
+  (no spot after him): a sensible player's whole-run wins went from ~20% to ~17%.
+- **Opponents' rolled 24s restore a life too** (18 Oct, the user's call; it used to be the
+  player's alone; the Hangman's Ace of Spades 24 doesn't heal him): whole-run wins for a
+  sensible player ~17% -> ~15.5%, casual ~9.5% -> ~8%. (Had the Ace healed too: ~13%, with the
+  Hangman ending ~20% of runs.) The shelf going from 3 to 2 Thonics costs only ~0.5 points.
 
 ## Possible next tuning
 

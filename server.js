@@ -417,10 +417,14 @@ function performEndTurn(roomCode) {
         }
     }
 
-    let tavernEnemyPerfect = room.mode === 'tavern-crawl' && currentId === BOT_ID;
-    if (!tavernEnemyPerfect && room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
+    // A 24 restores a life, up to what the player started with (a Tavern Crawl opponent: up to
+    // their own lives for the fight). An opponent's 24 must be rolled: the Hangman's Ace of
+    // Spades makes one that doesn't heal him (`score` is the hand before the Ace).
+    let maxLives = room.mode === 'tavern-crawl' && currentId === BOT_ID ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].lives : room.startingLives;
+    let natural = currentId !== BOT_ID || score === 24;
+    if (natural && room.players[currentId].score === 24 && room.players[currentId].lives < maxLives) {
         let restoredLives = (room.mode === 'tavern-crawl' && currentId !== BOT_ID && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
-        room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
+        room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + restoredLives);
         if (restoredLives > 1) emitKeepsakeActivated(roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
         io.to(roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
     }
@@ -826,15 +830,16 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 
 // ---- Between fights ----
 // After a win the run pauses in `tavernRun.interlude` until the player moves on:
+// Each walk is one event: either the pickpocket strikes, or two spots catch your eye and
+// you go to one of them (or neither). Then on to the next fight.
 //   pickpocket  { steal, roll? }         roll one die: pickpocketCatch or more catches him,
-//                                        else he gets away with `steal`; then carry on
+//                                        else he gets away with `steal`; then the next fight
 //   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
 //   shrine      {}                       light a candle ('pray'): the Lady grants a blessing at random
 //   diceDen     { bets, bet?, throws }   bet one of them (or decline), then the player rolls
 //                                        two dice and the gambler two; a tie rolls again
 //   stranger    { offers, hearts }       take a keepsake (next fight on `hearts`) or walk away
 //   done        { spot, ... }            what happened, until the player moves on
-// The choice after the pickpocket carries `note`: how that went, for the client.
 
 function shuffled(list) {
     let out = list.slice();
@@ -851,7 +856,7 @@ function unownedKeepsakes(room) {
 }
 
 // Two different spots; the Stranger only while there are keepsakes left to offer, the Dice
-// Den only if the purse covers its smallest bet. (Picked after the pickpocket, if they came.)
+// Den only if the purse covers its smallest bet.
 function pickSpots(room) {
     let canBet = room.tavernRun.purse >= Math.min(...INTERLUDE.diceDenBets);
     let spots = PLACES.tavern.spots.filter(id => (id !== 'stranger' || unownedKeepsakes(room).length > 0) && (id !== 'diceDen' || canBet));
@@ -1369,7 +1374,7 @@ io.on('connection', (socket) => {
         return interlude && interlude.stage === stage ? room : null;
     };
 
-    // 'roll' once, to try to catch him; then 'on' to the two spots.
+    // 'roll' once, to try to catch him; then 'on' to the next fight (he is the walk's one event).
     socket.on('pickpocket', (action) => {
         let room = interludeAt('pickpocket');
         if (!room) return;
@@ -1379,8 +1384,8 @@ io.on('connection', (socket) => {
             interlude.caught = interlude.roll >= INTERLUDE.pickpocketCatch;
             interlude.lost = interlude.caught ? 0 : -changePurse(run, -interlude.steal);
         } else if (action === 'on' && interlude.roll) {
-            let { roll, caught, lost } = interlude;
-            run.interlude = { stage: 'choose', spots: pickSpots(room), note: { roll, caught, lost } };
+            moveOnToNextFight(socket.roomCode);
+            return;
         } else {
             return;
         }
@@ -1574,4 +1579,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState };
+module.exports = { start, http, io, rooms, emitState, pickSpots };

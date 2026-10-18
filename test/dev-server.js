@@ -9,7 +9,7 @@
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
 //   curl "http://localhost:3003/between?spots=thom,stranger"   between fights, two spots
-//        (&pickpocket=1 to be robbed first; &stage=shrine|diceDen|stranger to go straight there)
+//        (&pickpocket=1 for the thief instead of the spots; &stage=shrine|diceDen|stranger to go straight there)
 //
 // Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
 process.env.LEADERBOARD_READONLY = '1';

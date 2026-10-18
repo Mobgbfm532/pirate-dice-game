@@ -24,7 +24,7 @@ module.exports = {
     // Priced a little under what each adds to the final purse when bought before the middle
     // fights, so the right Thonic at the right time pays for itself and a late one doesn't.
     thonicPrices: { healing: 110, lastGasp: 130, fizzy: 20, secondThoughts: 30, steady: 90, clearEye: 60 },
-    shelfSize: 3,
+    shelfSize: 2,
     shopSize: 3, // Healing, plus two others at random
 
     // Between fights: two spots catch your eye; now and then a pickpocket strikes first.

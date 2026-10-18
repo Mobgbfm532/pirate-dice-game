@@ -1249,7 +1249,6 @@ footer {
     text-shadow: 0 2px 8px #000;
     animation: fade-up 0.4s 0.1s both;
 }
-.event-note { margin: 0; font-size: 0.9rem; color: #ffab91; text-shadow: 0 1px 4px #000; }
 
 /* The two spots: big tappable cards side by side, each with its picture in a lit medallion. */
 .spot-cards { display: flex; gap: 12px; width: 100%; }
@@ -1320,7 +1319,6 @@ footer {
     .interlude-body { gap: 6px; }
 }
 
-.event-note.good { color: #c5e1a5; }
 
 /* ---- The spots between fights as scenes (they reuse Thom's scene: stage + counter) ----
    Each has its own light and its own entrance; the character answers what happens. */

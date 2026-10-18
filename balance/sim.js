@@ -37,6 +37,7 @@ function fight(index, run, opts = {}) {
         index, opp,
         player: run.hearts ?? N.playerHearts,
         bot: N.opponentLives[opp.id],
+        botMax: N.opponentLives[opp.id],
         round: 1,
         abilityRound: opp.ability ? 1 + Math.floor(Math.random() * 3) : 0,
         uses: 0,
@@ -90,6 +91,9 @@ function botTurn(f, run, toBeat, canUse) {
         keep.forEach(id => Rules.toggleDie(turn, id));
     }
     let { busted, score } = turn.outcome;
+    // A rolled 24 restores a life for the opponent too, up to their lives for the fight (the
+    // Ace of Spades' 24 doesn't).
+    if (score === 24 && !busted && f.bot < f.botMax) f.bot++;
     if (f.opp.ability === 'deadeye24' && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
     return { busted, score };
 }
@@ -278,10 +282,13 @@ const changePurse = (run, amount) => { const a = Math.max(amount, -run.purse); r
 
 function between(run, policy, N, nextIndex, log) {
     const I = N.interlude;
-    // The pickpocket, first, now and then: roll one die to catch them.
-    if (Math.random() * 100 < I.pickpocketChance) {
-        const steal = Math.floor(run.purse * I.pickpocketShare);
-        if (steal > 0 && d6() < I.pickpocketCatch) changePurse(run, -steal);
+    // Now and then the pickpocket strikes: roll one die to catch them. That's the walk's one
+    // event (the server only sends them with something to steal).
+    const steal = Math.floor(run.purse * I.pickpocketShare);
+    if (steal > 0 && Math.random() * 100 < I.pickpocketChance) {
+        if (d6() < I.pickpocketCatch) changePurse(run, -steal);
+        log.spots.push('pickpocket');
+        return;
     }
     const canBet = run.purse >= Math.min(...I.diceDenBets);
     const unowned = KEEPSAKES.filter(k => !run.keepsakes.includes(k));
