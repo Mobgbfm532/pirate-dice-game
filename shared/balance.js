@@ -32,7 +32,8 @@ module.exports = {
         pickpocketChance: 25,   // percent of walks across the room
         pickpocketShare: 0.25,  // of the purse, if they get away
         pickpocketCatch: 4,     // roll this or higher on one die to catch them
-        shrineGold: 125,        // the Shrine to the Lady: this much gold, or a free Healing Thonic (worth more early, less late)
+        shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
+        favourHearts: 1,        // the Lady's Favour: the next fight starts with this many extra hearts
         diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
         strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
         strangerHearts: 3       // ...and you start the next fight on this many hearts if you take one (a heart short)

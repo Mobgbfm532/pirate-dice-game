@@ -259,6 +259,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
             <span className="purse" aria-label={`${run.purse} gold`}><span aria-hidden="true">🪙</span> {run.purse}</span>
             <Shelf snap={snap} state={state} />
             {run.keepsakes.map(k => <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
+            {run.ladysGrace && <span className="keepsake blessing" title="The next time you'd lose a heart to dust, the Lady saves you.">The Lady's Grace</span>}
         </div>
     );
 }
@@ -615,7 +616,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
 // ---- Between fights: two spots in the tavern catch your eye ----
 const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
-    shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A free Healing Thonic, or gold' },
+    shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A blessing from the Lady' },
     diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
     stranger: { name: 'The Hooded Stranger', line: '"I have something for you… for a price."', offer: 'A keepsake, for a heart' }
 };
@@ -734,7 +735,8 @@ function SpotScene({ spot, state, next, leaving, onMoveOn }: { spot: SceneSpot; 
     const firstLine = useRef(line);
     const mood = interlude.stage === 'pickpocket' && interlude.roll !== undefined && revealed ? (interlude.caught ? 'caught' : 'escaped')
         : interlude.stage === 'done' && interlude.spot === 'diceDen' && interlude.bet && revealed ? (interlude.won ? 'lost' : 'won')
-            : '';
+            : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'blessed'
+                : '';
     const portrait = SPOT_PORTRAITS[spot];
     return (
         <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
@@ -767,7 +769,6 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
     const run = state.tavernRun!;
     const interlude = run.interlude!;
     const [picked, setPicked] = useState<string | null>(null);
-    const shelfFull = run.shelf.length >= run.shelfSize;
     const challenge = <button className="primary onward" onClick={onMoveOn}>Challenge {next}</button>;
 
     if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} setRevealed={setRevealed} />;
@@ -775,12 +776,9 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
     if (interlude.stage === 'shrine') {
         return (
             <>
-                <p className="scene-text">You light a candle. The Lady offers one gift.</p>
+                <p className="scene-text">Light a candle, and the Lady who keeps sailors safe grants a blessing: an extra heart for your next fight, or her Grace against the dust.</p>
                 <div className="event-choices">
-                    <button className="primary" disabled={shelfFull} onClick={() => actions.shrinePick('healing')}>
-                        {shelfFull ? 'Shelf full: no Healing Thonic' : 'A Healing Thonic'}
-                    </button>
-                    <button className="primary" onClick={() => actions.shrinePick('gold')}>{interlude.gold} gold</button>
+                    <button className="primary" onClick={actions.pray}>Light a candle</button>
                 </div>
             </>
         );
@@ -836,7 +834,9 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
         <>
             <p className="outcome">
                 {interlude.spot === 'shrine'
-                    ? (interlude.gift === 'healing' ? 'A Healing Thonic is on your shelf.' : <>The Lady's blessing: <strong>+{interlude.gold}</strong> gold.</>)
+                    ? (interlude.gift === 'favour'
+                        ? <><strong>The Lady's Favour:</strong> you start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</>
+                        : <><strong>The Lady's Grace:</strong> the next time you'd lose a heart to dust, she saves you.</>)
                     : interlude.spot === 'stranger'
                         ? (interlude.keepsake ? <><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</> : 'You leave the Stranger to the shadows.')
                         : 'You leave the dice to others.'}

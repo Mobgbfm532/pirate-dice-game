@@ -18,7 +18,8 @@ const VALUE = {
     luckySeat: [0, 120, 99, 70, 30],
     velvetCushion: [0, 149, 119, 81, 40],
     steadyHand: [0, 162, 125, 80, 35],
-    heartShort: [0, 129, 129, 124, 69]
+    heartShort: [0, 129, 129, 124, 69],
+    blessing: [0, 101, 100, 83, 52] // the Lady's: the average of Favour and Grace (shrine.js)
 };
 
 const sensible = {
@@ -26,7 +27,7 @@ const sensible = {
         const room = run.shelf.length < N.shelfSize;
         const worth = {
             thom: room && run.purse >= Math.min(...Object.values(N.thonicPrices)) ? 30 : -1,
-            shrine: Math.max(N.interlude.shrineGold, room ? VALUE.healing[next] : 0),
+            shrine: N.interlude.shrineGifts ? VALUE.blessing[next] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[next] : 0),
             diceDen: -1, // even odds: no gain for the score
             stranger: 60 // two offers; often one is worth the heart
         };
@@ -59,7 +60,7 @@ const BEFORE = {
         playerHearts: 3,
         opponentLives: { molar: 2, klarg: 3, rokr: 3, hangman: 3, jaguar: 4 },
         thonicPrices: { healing: 120, lastGasp: 250, fizzy: 80, secondThoughts: 180, steady: 150, clearEye: 100 },
-        interlude: { ...S.DEFAULTS.interlude, shrineGold: 100, strangerHearts: 2 }
+        interlude: { ...S.DEFAULTS.interlude, shrineGifts: null, shrineGold: 100, strangerHearts: 2 }
     },
     effects: { clearEye: 'round', steady: 'zero' }
 };

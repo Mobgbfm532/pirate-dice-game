@@ -40,6 +40,7 @@ export interface TavernRun {
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
+    ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
 }
 
 // Between fights: a pickpocket maybe, then two spots catch your eye; you go to one.
@@ -49,10 +50,10 @@ export type PickpocketNote = { roll: number; caught: boolean; lost: number };
 export type Interlude =
     | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }
     | { stage: 'choose'; spots: Spot[]; note?: PickpocketNote }
-    | { stage: 'shrine'; gold: number }
+    | { stage: 'shrine' }
     | { stage: 'diceDen'; bets: number[]; bet: number | null; throws: DiceThrow[] }
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
-    | { stage: 'done'; spot: 'shrine'; gift: 'healing' | 'gold'; gold?: number }
+    | { stage: 'done'; spot: 'shrine'; gift: 'favour' | 'grace'; hearts?: number }
     | { stage: 'done'; spot: 'diceDen'; bet: number; throws?: DiceThrow[]; won?: boolean }
     | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number };
 
@@ -446,6 +447,15 @@ socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
     });
 });
 
+// The Lady's Grace saves a dust: her moment on the table, like a Thonic's (no cork).
+socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => {
+    enqueue(done => {
+        playSound('yay');
+        update({ ability: { name: 'Shrine to the Lady', ability: data.name, text: data.text, extra: '♥ saved', at: performance.now() } });
+        done();
+    });
+});
+
 socket.on('keepsakeActivated', (data: { name: string; text: string }) => {
     showToast(`Keepsake: ${data.name}`, data.text, 'signature', 3600);
 });
@@ -600,9 +610,10 @@ export const actions = {
         playSound('click');
         socket.emit('pickpocket', action);
     },
-    shrinePick(gift: 'healing' | 'gold') {
+    // The Shrine: light a candle; the Lady grants a blessing at random.
+    pray() {
         playSound('click');
-        socket.emit('shrinePick', gift);
+        socket.emit('shrinePick', 'pray');
     },
     diceBet(bet: number) {
         playSound('click');

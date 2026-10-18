@@ -547,29 +547,51 @@ test('going to Thom opens his cart: Healing and two others', async () => {
     assert.equal(room.turn ? room.turn.hasRolled : false, false);
 });
 
-test('the Shrine to the Lady: a free Healing Thonic, or gold', async () => {
-    const G = BALANCE.interlude.shrineGold;
-    const a = await betweenFights('Pilgrim', { stage: 'choose', spots: ['shrine', 'diceDen'] }, 50);
-    a.hero.emit('chooseSpot', 'shrine');
-    await nextState(a.hero, s => runOf(s).interlude.stage === 'shrine');
-    a.hero.emit('shrinePick', 'healing');
-    await nextState(a.hero, s => runOf(s).interlude.stage === 'done');
-    assert.deepEqual(a.room.tavernRun.shelf, ['healing']);
-    assert.equal(a.room.tavernRun.purse, 50, 'free');
+test('the Shrine to the Lady: light a candle, and she grants a blessing at random', async () => {
+    const seen = new Set();
+    for (let n = 0; n < 24; n++) {
+        const { hero, room } = await betweenFights(`Pilgrim${n}`, { stage: 'choose', spots: ['shrine', 'thom'] }, 50);
+        hero.emit('chooseSpot', 'shrine');
+        await nextState(hero, s => runOf(s).interlude.stage === 'shrine');
+        hero.emit('shrinePick', 'gold'); // the old choices are gone
+        await sleep(20);
+        assert.equal(room.tavernRun.interlude.stage, 'shrine');
+        hero.emit('shrinePick', 'pray');
+        const after = await nextState(hero, s => runOf(s).interlude.stage === 'done');
+        const { gift } = runOf(after).interlude;
+        seen.add(gift);
+        assert.equal(room.tavernRun.purse, 50, 'a blessing, not gold');
+        if (gift === 'favour') {
+            hero.emit('moveOn');
+            const fight = await nextState(hero, s => !runOf(s).interlude);
+            assert.equal(fight.players[hero.id].lives, BALANCE.playerHearts + BALANCE.interlude.favourHearts, 'an extra heart this fight');
+        } else {
+            assert.equal(gift, 'grace');
+            assert.equal(runOf(after).ladysGrace, true);
+        }
+    }
+    assert.deepEqual([...seen].sort(), ['favour', 'grace'], 'both blessings come up');
 
-    const b = await betweenFights('Pilgrim2', { stage: 'shrine', gold: G }, 50);
-    b.room.tavernRun.shelf = ['fizzy', 'steady', 'clearEye'];
-    b.hero.emit('shrinePick', 'healing'); // no room on the shelf
-    b.hero.emit('shrinePick', 'everything');
-    await sleep(50);
-    assert.equal(b.room.tavernRun.interlude.stage, 'shrine');
-    b.hero.emit('shrinePick', 'gold');
-    await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
-    assert.equal(b.room.tavernRun.purse, 50 + G);
-    assert.equal(b.room.tavernRun.stats.eventGold, G);
-    b.hero.emit('shrinePick', 'gold'); // only once
-    await sleep(50);
-    assert.equal(b.room.tavernRun.purse, 50 + G);
+    // Already carrying her Grace: she gives her Favour instead.
+    for (let n = 0; n < 8; n++) {
+        const { hero, room } = await betweenFights(`Graced${n}`, { stage: 'shrine' });
+        room.tavernRun.ladysGrace = true;
+        hero.emit('shrinePick', 'pray');
+        const after = await nextState(hero, s => runOf(s).interlude.stage === 'done');
+        assert.equal(runOf(after).interlude.gift, 'favour');
+    }
+});
+
+test("the Lady's Grace saves a dust once, then is gone", async () => {
+    const { hero, room } = await tavernTable('Graceful');
+    room.tavernRun.ladysGrace = true;
+    room.players.BOT_MOLAR.lives = 9;
+    const saved = waitFor(hero, 'blessingUsed', () => true, 5000);
+    const result = waitFor(hero, 'roundResult', () => true, 5000);
+    await playHand(hero, room, [1, 1, 3, 3, 5, 5]); // no 2 or 4: dust
+    await Promise.all([saved, result]);
+    assert.equal(room.players[hero.id].lives, BALANCE.playerHearts, 'no heart lost');
+    assert.equal(room.tavernRun.ladysGrace, false, 'used up');
 });
 
 test('the Dice Den: bet, then roll two dice against the gambler until someone wins', async () => {

@@ -36,7 +36,7 @@ wall; buying the right Thonic at the right time pays for itself in score.
 | Second Thoughts | 180 | **30** | adds ~30 |
 | Steady | 150, dust = 0 | **90, dice score as they lie** | "dust = 0" almost always still lost the round (worth ~3 gold) |
 | Clear-Eye | 100, blocks one round | **60, cancels the next ability** | blocking a round only postponed the ability (worth ~0) |
-| Shrine gold | 100 | **125** | 100 always lost to a free Healing; now gold is right before Jaguar |
+| Shrine | Healing or 100 gold | **the Lady's blessing at random** (the user's design, later on 19 Oct): Favour, the next fight on 5 hearts, or Grace, the next dust forgiven | each worth ~100 gold mid-run (`experiments/shrine.js`); whole runs 20.3% sensible, 11.4% casual |
 | Stranger's price | next fight on 2 hearts | **a heart short (3 of 4)** | 2 short made every keepsake a bad deal |
 
 Prices sit a little under what each Thonic adds to the final purse when bought before the

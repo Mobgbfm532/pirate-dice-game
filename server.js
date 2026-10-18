@@ -237,6 +237,7 @@ function getTavernRunState(room) {
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
+        ladysGrace: !!room.tavernRun.ladysGrace,
         abilityUsed: room.tavernRun.abilityUsed,
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
@@ -692,7 +693,8 @@ function createTavernRun() {
         shop: null,
         interlude: null,   // between fights: { stage, ... } (see startInterlude)
         lastWin: null,     // the fight just won: { defeated, nextEnemy, gold: { win, hearts } }
-        nextFightHearts: null, // the Hooded Stranger's price: the next fight starts on fewer hearts
+        nextFightHearts: null, // the next fight starts on other than full hearts (the Stranger's price, the Lady's Favour)
+        ladysGrace: false,     // the Lady's Grace: the next dust that would cost a heart doesn't
         abilityUsed: {},
         abilityRound: 1,
         encounterRound: 1,
@@ -827,7 +829,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 //   pickpocket  { steal, roll? }         roll one die: pickpocketCatch or more catches him,
 //                                        else he gets away with `steal`; then carry on
 //   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
-//   shrine      { gold }                 a free Healing Thonic or that much gold
+//   shrine      {}                       light a candle ('pray'): the Lady grants a blessing at random
 //   diceDen     { bets, bet?, throws }   bet one of them (or decline), then the player rolls
 //                                        two dice and the gambler two; a tie rolls again
 //   stranger    { offers, hearts }       take a keepsake (next fight on `hearts`) or walk away
@@ -1050,6 +1052,12 @@ function evaluateTavernRound(roomCode) {
         if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
             room.tavernRun.encounterKeepsakeUses.bentCopper = true;
             emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield catches the loss.');
+            return;
+        }
+
+        if (loser.id === humanId && human.busted && room.tavernRun.ladysGrace) {
+            room.tavernRun.ladysGrace = false;
+            io.to(roomCode).emit('blessingUsed', { id: 'grace', name: "The Lady's Grace", text: 'The Lady saves you from the dust' });
             return;
         }
 
@@ -1387,7 +1395,7 @@ io.on('connection', (socket) => {
             run.interlude = null;
             run.shop = { stock: pickThomStock(PLACES.tavern) };
         } else if (spot === 'shrine') {
-            run.interlude = { stage: 'shrine', gold: INTERLUDE.shrineGold };
+            run.interlude = { stage: 'shrine' };
         } else if (spot === 'diceDen') {
             run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
         } else if (spot === 'stranger') {
@@ -1397,20 +1405,19 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
-    socket.on('shrinePick', (gift) => {
+    // The Shrine to the Lady: light a candle and she grants a blessing, at random:
+    //   favour  the next fight starts with an extra heart
+    //   grace   the next dust that would cost a heart doesn't (kept until it's needed)
+    // Grace isn't given twice: carrying one already, it's her Favour.
+    socket.on('shrinePick', (action) => {
         let room = interludeAt('shrine');
-        if (!room) return;
+        if (!room || action !== 'pray') return;
         let run = room.tavernRun;
-        if (gift === 'healing') {
-            if (run.shelf.length >= SHELF_SIZE) return;
-            run.shelf.push('healing');
-            run.interlude = { stage: 'done', spot: 'shrine', gift };
-        } else if (gift === 'gold') {
-            changePurse(run, INTERLUDE.shrineGold);
-            run.interlude = { stage: 'done', spot: 'shrine', gift, gold: INTERLUDE.shrineGold };
-        } else {
-            return;
-        }
+        let gift = INTERLUDE.shrineGifts[crypto.randomInt(0, INTERLUDE.shrineGifts.length)];
+        if (gift === 'grace' && run.ladysGrace) gift = 'favour';
+        if (gift === 'favour') run.nextFightHearts = BALANCE.playerHearts + INTERLUDE.favourHearts;
+        else run.ladysGrace = true;
+        run.interlude = { stage: 'done', spot: 'shrine', gift, hearts: gift === 'favour' ? run.nextFightHearts : undefined };
         emitState(socket.roomCode);
     });
 

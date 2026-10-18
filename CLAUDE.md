@@ -221,7 +221,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `Interlude` in Hud): in a full-screen tavern scene, **two spots catch your eye** and you go
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
   fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
-  Thom's cart (opens `ThomShop`), the Shrine to the Lady (free Healing Thonic or 125 gold),
+  Thom's cart (opens `ThomShop`), the Shrine to the Lady (light a candle: a blessing at random,
+  her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
+  cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
   the Dice Den (bet 50/100, only the bets the purse covers are offered, and below 50 gold the
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again), the
@@ -255,7 +257,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 3. **Step 4: balance (done 19 Oct; needs the user's feel).** Set by simulation
    (`balance/README.md`; simulator `balance/sim.js`, checked against the real server; numbers
    in `shared/balance.js`): 4 hearts, lives 2/2/3/3/4, new Thonic prices, Steady and Clear-Eye
-   reworked, Shrine 125, the Stranger a heart short. A sensible player finishes ~1 run in 5
+   reworked, the Stranger a heart short; then (19 Oct, the user's design) the Lady's random
+   blessings replaced the Shrine's Healing-or-gold choice (each worth ~100 gold mid-run). A sensible player finishes ~1 run in 5
    (casual ~1 in 8). Next: the user plays and says what feels off; re-run
    `balance/experiments/runs.js` after any change. Possible: the Molar at 1 life, a stronger
    Brodor's Sunglasses.

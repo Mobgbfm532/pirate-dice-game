@@ -1465,3 +1465,20 @@ footer {
     75% { transform: translateY(-4px) rotate(270deg); }
     100% { transform: translateY(0) rotate(360deg); }
 }
+
+/* The Lady grants her blessing: the candles flare and a warm light washes the shrine. */
+.spot-scene.shrine.blessed .thom-stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 55% 45% at 50% 40%, rgba(255, 230, 160, 0.75), rgba(255, 200, 110, 0.2) 55%, transparent 75%);
+    mix-blend-mode: screen;
+    animation: blessing-flare 2.4s ease-out forwards;
+    pointer-events: none;
+}
+@keyframes blessing-flare {
+    0% { opacity: 0; }
+    18% { opacity: 1; }
+    100% { opacity: 0.35; }
+}
+.keepsake.blessing { border-color: rgba(255, 220, 150, 0.8); color: #ffe082; }

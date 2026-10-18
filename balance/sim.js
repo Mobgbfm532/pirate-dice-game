@@ -229,6 +229,7 @@ function settleRound(f, run, p, b, has, N) {
     for (const who of losers) {
         if (who === 'B') { f.bot--; continue; }
         if (has('bentCopper') && !f.keepUsed.bentCopper) { f.keepUsed.bentCopper = true; continue; }
+        if (p.busted && run.grace) { run.grace = false; continue; } // the Lady's Grace
         if (f.player <= 1 && take(run.shelf, 'lastGasp')) { run.stats.drunk.lastGasp = (run.stats.drunk.lastGasp || 0) + 1; continue; }
         f.player--;
     }
@@ -298,7 +299,15 @@ function between(run, policy, N, nextIndex, log) {
             }
         }
     } else if (spot === 'shrine') {
-        if (policy.shrine(run, N, nextIndex) === 'healing' && run.shelf.length < N.shelfSize) run.shelf.push('healing');
+        if (I.shrineGifts) {
+            // The Lady's blessing, at random: Favour (an extra heart next fight) or Grace (the
+            // next dust that would cost a heart doesn't; not given twice).
+            let gift = I.shrineGifts[Math.floor(Math.random() * I.shrineGifts.length)];
+            if (gift === 'grace' && run.grace) gift = 'favour';
+            if (gift === 'favour') run.hearts = N.playerHearts + I.favourHearts;
+            else run.grace = true;
+            run.stats.blessings = (run.stats.blessings || 0) + 1;
+        } else if (policy.shrine(run, N, nextIndex) === 'healing' && run.shelf.length < N.shelfSize) run.shelf.push('healing'); // before 19 Oct
         else changePurse(run, I.shrineGold);
     } else if (spot === 'diceDen') {
         const bet = policy.bet(run, I.diceDenBets.filter(b => run.purse >= b), N, nextIndex);
