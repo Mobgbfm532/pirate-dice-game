@@ -116,7 +116,7 @@ function CameraRig() {
             place(distance);
         }
 
-        layoutBackdrop(screenY(farPoint) * size.height, size.width);
+        layoutBackdrop(screenY(farPoint) * size.height, size.width, drift.current > 0.001);
         projected.copy(railEnd).project(cam);
         const railX = (projected.x + 1) / 2 * size.width, railY = (1 - projected.y) / 2 * size.height;
         projected.copy(farPoint).project(cam);

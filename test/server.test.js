@@ -1125,38 +1125,61 @@ test("Danhausen's Curse: the lowest valid score wins the round", async () => {
     assert.equal(room.players[hero.id].lives, heroLives);
 });
 
-test("the Duke's Devil: three 6s for him, and you can't score above 18", async () => {
+test("the Duke's Devil: once he holds a 2 and a 4, three 6s, and you can't score above 18", async () => {
     const hero = await tavernAgainst(3, 'Devilled');
     const room = roomOf(hero);
-    room.tavernRun.roundEffect = { kind: 'devil', by: 'opponent', ability: 'devil', as: null };
-    const his = waitFor(hero, 'diceRolled', d => d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1, 6000);
+    room.tavernRun.roundEffect = null;
+    room.tavernRun.pendingDevil = { as: null };
+    room.tavernRun.abilityUsed = {};
+    // His first throw: a 2 and a 4 and four 1s. He keeps the 2 and 4; the Devil comes next.
+    hero.on('diceRolled', d => {
+        if (d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1) room.turn.dice.forEach((x, i) => { x.value = [2, 4, 1, 1, 1, 1][i]; });
+    });
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Sympathy for the Devil', 6000);
+    const first = waitFor(hero, 'diceRolled', d => d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1, 6000);
+    await playHand(hero, room, [2, 4, 6, 6, 6, 6]); // 24 ...
+    assert.equal((await first).devil, false, 'nothing on his first throw: no 2 and 4 kept yet');
+    assert.equal(room.tavernRun.roundEffect, null);
+    await move;
+    const kept = room.turn.dice.filter(d => d.status !== 'active').map(d => d.value);
+    assert.ok(kept.includes(2) && kept.includes(4), 'he held a 2 and a 4');
+    assert.ok(room.turn.dice.filter(d => d.value === 6).length >= 3, 'then three 6s');
+    assert.equal(room.tavernRun.roundEffect.kind, 'devil');
+    const result = waitFor(hero, 'roundResult', () => true, 6000);
+    await result;
+    assert.equal(room.tavernRun.abilityUsed.devil, 1);
+});
+
+test("the Duke's Devil caps your score at 18, even when you played first", async () => {
+    const hero = await tavernAgainst(3, 'Capped');
+    const room = roomOf(hero);
+    room.tavernRun.roundEffect = { kind: 'devil', by: 'opponent', ability: 'devil', as: null, landed: true };
     const ended = nextState(hero, s => s.currentTurnId !== hero.id);
     await playHand(hero, room, [2, 4, 6, 6, 6, 6]); // 24 ...
     await ended;
     assert.equal(room.players[hero.id].score, 18, '... counts as 18');
-    const first = await his;
-    assert.ok(first.turn.dice.filter(d => d.value === 6).length >= 3, 'his first throw has three 6s');
-    assert.equal(first.devil, true, 'the devil shows');
 });
 
 test("Martha's disguises: Frak's, Danhausen's or the Duke's trick at random, twice a fight", async () => {
     const hero = await tavernAgainst(4, 'Masked');
     const room = roomOf(hero);
     const kinds = new Set();
+    const code = Object.keys(server.rooms).find(c => server.rooms[c] === room);
     for (let i = 0; i < 40; i++) {
         room.tavernRun.abilityUsed = {};
-        server.beginTavernRound(room.code || Object.keys(server.rooms).find(c => server.rooms[c] === room), room);
+        server.beginTavernRound(code, room);
         const effect = room.tavernRun.roundEffect;
+        // The Devil waits for her 2 and 4 (in the Duke's face).
+        if (room.tavernRun.pendingDevil) { assert.equal(room.tavernRun.pendingDevil.as, 'Duke Morrigan'); kinds.add('devil'); continue; }
         assert.ok(effect && effect.by === 'opponent' && effect.as);
         kinds.add(effect.kind);
     }
     assert.deepEqual([...kinds].sort(), ['curse', 'devil', 'fog']);
-    room.tavernRun.abilityUsed = {};
-    const code = Object.keys(server.rooms).find(c => server.rooms[c] === room);
-    server.beginTavernRound(code, room);
-    server.beginTavernRound(code, room);
-    server.beginTavernRound(code, room);
-    assert.equal(room.tavernRun.roundEffect, null, 'a third disguise is one too many');
+    room.tavernRun.abilityUsed = { disguises: 2 };
+    for (let i = 0; i < 10; i++) {
+        server.beginTavernRound(code, room);
+        assert.ok(!room.tavernRun.roundEffect && !room.tavernRun.pendingDevil, 'a third disguise is one too many');
+    }
 });
 
 test("beating Martha wins her mask and the invitation to the Yawning Portal", async () => {

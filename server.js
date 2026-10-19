@@ -325,6 +325,7 @@ function getTavernRunState(room) {
         nextFightHearts: room.tavernRun.nextFightHearts,
         ladysGrace: !!room.tavernRun.ladysGrace,
         abilityUsed: room.tavernRun.abilityUsed,
+        abilityMax: encounter && encounter.ability ? BALANCE.abilityUses[encounter.ability] : 0, // uses a fight
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
@@ -395,16 +396,34 @@ function sendBotReaction(roomCode, emoji, times = 3) {
 }
 
 function applyTavernRollAbilities(roomCode, room, turn) {
-    if (room.mode !== 'tavern-crawl' || turn.rollCount !== 1) return [];
-    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (room.mode !== 'tavern-crawl') return [];
+    let run = room.tavernRun;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     let moves = [];
-    let effect = room.tavernRun.roundEffect;
+    let effect = run.roundEffect;
     let mine = turn.playerId !== BOT_ID;
+    let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    let sixes = () => shuffled(active).slice(0, 3).forEach(d => { d.value = 6; });
 
-    // Sympathy for the Devil: whoever plays it throws three 6s with their first roll.
-    if (effect && effect.kind === 'devil' && !effect.landed && (effect.by === 'player') === mine) {
+    // The Duke's Sympathy for the Devil (or Martha in his face): it waits until he has kept a 2
+    // and a 4 with three dice still to throw; that throw comes up three 6s, and the player can't
+    // score above devilCap this round (capped when the round is judged if they played first).
+    let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+    if (!mine && run.pendingDevil && kept.includes(2) && kept.includes(4) && active.length >= 3) {
+        let as = run.pendingDevil.as;
+        run.pendingDevil = null;
+        if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
+            sixes();
+            run.roundEffect = { kind: 'devil', by: 'opponent', ability: 'devil', as, landed: true };
+            moves.push(roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT.devil.opponent));
+        }
+    }
+    if (turn.rollCount !== 1) return moves;
+
+    // Martha's mask: the player's Devil comes up three 6s on their first throw.
+    if (mine && effect && effect.kind === 'devil' && effect.by === 'player' && !effect.landed) {
         effect.landed = true;
-        shuffled(turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE)).slice(0, 3).forEach(d => { d.value = 6; });
+        sixes();
     }
     if (!mine) return moves;
 
@@ -635,8 +654,10 @@ function getTavernScoreToBeat(room) {
     if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
     if (human.busted) return null;
     let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
-    let cursed = room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
-    return human.score + (cushion ? (cursed ? -1 : 1) : 0);
+    let effect = room.tavernRun.roundEffect;
+    let cursed = effect && effect.kind === 'curse';
+    let score = effect && effect.kind === 'devil' && effect.by === 'opponent' ? Math.min(human.score, BALANCE.devilCap) : human.score;
+    return score + (cushion ? (cursed ? -1 : 1) : 0);
 }
 
 // True when a Tavern Crawl opponent can no longer win or tie the round, whatever the dice
@@ -975,11 +996,15 @@ const ROUND_EFFECT_TEXT = {
 function beginTavernRound(roomCode, room) {
     let run = room.tavernRun;
     run.roundEffect = null;
+    run.pendingDevil = null;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     if (!encounter || !encounter.ability) return;
     let disguise = encounter.ability === 'disguises' ? DISGUISES[crypto.randomInt(0, DISGUISES.length)] : null;
     let ability = disguise ? disguise.ability : encounter.ability;
-    if (!ROUND_ABILITIES[ability] || !fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
+    if (!ROUND_ABILITIES[ability] || !canUseTavernAbility(room, encounter, encounter.ability)) return;
+    // The Devil waits for the Duke's 2 and 4 (applyTavernRollAbilities); it's spent only then.
+    if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
+    if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
     // The Fog shows when it lands; the Curse and the Devil now.
     if (run.roundEffect.kind !== 'fog') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));

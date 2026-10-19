@@ -10,6 +10,9 @@ export interface Portrait {
     face: [number, number];
     zoom: number;
     bust: boolean; // a painted cut-out that can sit behind the table
+    // Behind the table: how much larger than the others to draw it, for a cut-out that shows
+    // more of the body (the head stays at the same height; less of the body shows).
+    seat?: number;
 }
 
 const bust = (file: string, face: [number, number], zoom: number): Portrait => ({ src: `${BASE}art/${file}`, face, zoom, bust: true });
@@ -18,8 +21,8 @@ const classic = (file: string): Portrait => ({ src: `/${encodeURI(file)}`, face:
 // Keyed by player avatar id and by opponent name (the bot's name in each encounter).
 export const PORTRAITS: Record<string, Portrait> = {
     'The Molar': bust('molar.webp', [53, 34], 2.3),
-    'Sperm McGrath': bust('mcgrath.webp', [66, 6], 3.0),
-    Frak: bust('frak.webp', [52, 16], 2.3),
+    'Sperm McGrath': { ...bust('mcgrath.webp', [66, 6], 3.0), seat: 2 },
+    Frak: { ...bust('frak.webp', [52, 16], 2.3), seat: 1.4 },
     Klarg: bust('klarg.webp', [58, 30], 3.0),
     Rokr: bust('rokr.webp', [48, 30], 3.0),
     'The Hangman': bust('hangman.webp', [51, 38], 2.8),

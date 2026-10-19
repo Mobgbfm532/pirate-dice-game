@@ -88,7 +88,8 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   `Backdrop.tsx`: the scene behind the table (`SCENES` by opponent: the tavern, or outside the
   Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`, `center`) + the bot opponent's
   bust behind the table (multiplayer tables show no one there). `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
-  `SPOT_PORTRAITS`).
+  `SPOT_PORTRAITS`; `seat` draws a cut-out that shows more body larger, so heads match: McGrath 2,
+  Frak 1.4). While the camera leans in on a suspense roll the bust keeps its size.
 
 ## Commands
 
@@ -217,10 +218,15 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   **Psychic Fog** (your first throw lands one die face-down, `turn.fogDieId`, hidden by
   `Rules.viewTurn` until kept or rolled again); Danhausen's **You are Cursed** (the lowest valid
   score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
-  with `low`); the Duke's **Sympathy for the Devil** (his first throw gets three 6s, the devil
-  effect plays, and you can't score above `devilCap` 18 that round; the solver's `cap`);
+  with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
+  with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s, the devil effect
+  plays, and you can't score above `devilCap` 18 that round, capped when the round is judged if
+  you played first; never fires if he doesn't get there; the solver's `cap`);
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
-  shows a banner and a line under the Roll button ("Cursed round: ...").
+  shows a 3.6 s banner, a badge under the Roll button ("Cursed round: ..."), and in a cursed
+  round a violet glow round the screen edges (`.curse-veil`). The opponent's nameplate/chip
+  shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after
+  the banner.
 - **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
   before you roll, in a round with no effect yet, wear Danhausen's Curse or the Duke's Devil
   yourself (`wearMask`, `by: 'player'`; the Devil's three 6s are yours and the opponent is

@@ -92,10 +92,13 @@ function fight(index, run, opts = {}) {
 // chance they get each fight.
 function beginRound(f, run, has) {
     f.effect = null;
+    f.pendingDevil = false;
     const a = f.opp.ability;
     if (a && (ROUND_KIND[a] || a === 'disguises')) {
         const as = a === 'disguises' ? DISGUISES[Math.floor(Math.random() * 3)] : a;
-        if (f.fire(a)) f.effect = { kind: ROUND_KIND[as], by: 'opponent' };
+        // The Devil waits for the Duke's 2 and 4 (botTurn).
+        if (as === 'devil') f.pendingDevil = true;
+        else if (f.fire(a)) f.effect = { kind: ROUND_KIND[as], by: 'opponent' };
     }
     if (!f.effect && has('marthasMask') && !f.keepUsed.marthasMask) {
         f.keepUsed.marthasMask = true;
@@ -118,7 +121,13 @@ function botTurn(f, run, toBeat, canUse) {
     const low = cursed(f), cap = devilBy(f, 'player') ? DEFAULTS.devilCap : null;
     const aceAt16 = !low && f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
     while (!turn.finalized) {
-        if (!Rules.rollTurn(turn, { onRolled: t => { if (t.rollCount === 1 && devilBy(f, 'opponent')) devilThrow(t); } })) throw new Error('the opponent could not roll');
+        if (!Rules.rollTurn(turn, { onRolled: t => {
+            const kept = t.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
+            if (f.pendingDevil && kept.includes(2) && kept.includes(4) && active(t).length >= 3) {
+                f.pendingDevil = false;
+                if (f.fire(f.opp.ability)) { f.effect = { kind: 'devil', by: 'opponent' }; devilThrow(t); }
+            }
+        } })) throw new Error('the opponent could not roll');
         if (turn.finalized) break;
         if (active(turn).length === 1) { Rules.toggleDie(turn, active(turn)[0].id); break; }
         const keep = f.opp.id === 'molar' ? Rules.planBotLocks(turn, 'molar', toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, low, cap });
@@ -261,6 +270,8 @@ function settleRound(f, run, p, b, has, N) {
         steadyHandSaved = true;
         f.keepUsed.steadyHand = true;
     }
+    // The Devil's cap, for a side that played before it landed.
+    if (devilBy(f, 'opponent') && !p.busted) p = { ...p, score: Math.min(p.score, DEFAULTS.devilCap) };
     if (p.busted) losers.push('P');
     if (b.busted) losers.push('B');
     if (!p.busted && !b.busted) {

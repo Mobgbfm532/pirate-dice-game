@@ -204,6 +204,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                             <div className="name">{p.name}</div>
                             {/* A Tavern Crawl opponent's hearts are out of their own lives, not yours. */}
                             <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? state.tavernRun.enemy.lives : state.startingLives} />
+                            {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
                     </div>
@@ -223,8 +224,27 @@ function OpponentPlate({ state }: { state: GameState }) {
             {state.tavernRun && <span className="encounter">{state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
             <span className="name">{opponentName() ?? bot.name}</span>
             <Hearts lives={bot.lives} starting={starting} />
+            {state.tavernRun && <AbilityMarks state={state} />}
             <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
         </div>
+    );
+}
+
+// The opponent's ability on their nameplate: one ✦ per use this fight, lit while it's left and
+// dark once spent. The plate flashes when one is spent.
+function AbilityMarks({ state }: { state: GameState }) {
+    const run = state.tavernRun!;
+    const ability = run.enemy.ability;
+    const max = run.abilityMax ?? 0;
+    if (!ability || !max) return null;
+    const raw = run.abilityUsed?.[ability];
+    const used = Math.min(max, raw === true ? 1 : Number(raw || 0));
+    const name = Rules.ABILITY_NAMES[ability as keyof typeof Rules.ABILITY_NAMES] ?? ability;
+    return (
+        <span key={used} className={`ability-marks ${used > 0 ? 'spent-now' : ''}`}
+            title={`${name}: ${max - used} of ${max} left this fight`} aria-label={`${name}: ${max - used} of ${max} left`}>
+            {Array.from({ length: max }, (_, i) => <span key={i} className={i < max - used ? 'left' : 'used'}>✦</span>)}
+        </span>
     );
 }
 
@@ -276,7 +296,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 onClick={actions.roll}
                 aria-hidden={!snap.isMyTurn}
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
-            <div className="hint">{hint}</div>
+            <div className={`hint ${!hint.startsWith('Tap') && state?.tavernRun?.roundEffect ? `round-${state.tavernRun.roundEffect.kind}` : ''}`}>{hint}</div>
         </div>
     );
 }
@@ -584,7 +604,7 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
 // the move's name, plus the shot from The Hangman's revolver and Jaguar's -3.
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
-    const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3200 : 2600);
+    const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3600 : 3600);
     if (!visible || !moment) return null;
     const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
     return (
@@ -921,8 +941,8 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
             <p className="outcome">
                 {interlude.spot === 'shrine'
                     ? (interlude.gift === 'favour'
-                        ? <><strong>The Lady's Favour:</strong> you start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</>
-                        : <><strong>The Lady's Grace:</strong> the next time you'd lose a heart to dust, she saves you.</>)
+                        ? <><span className="blessing-name">The Lady's Favour</span>You start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</>
+                        : <><span className="blessing-name">The Lady's Grace</span>The next time you'd lose a heart to dust, she saves you.</>)
                     : interlude.spot === 'stranger'
                         ? (interlude.keepsake ? <><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</> : 'You leave the Stranger to the shadows.')
                         : 'You leave the dice to others.'}
@@ -1117,6 +1137,8 @@ export function Hud() {
             <header>
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
                 <span className="room">{snap.roomLabel}</span>
+                {/* A cursed round: the screen's edges glow violet (pointer-free, clear of the dice). */}
+                {state?.tavernRun?.roundEffect?.kind === 'curse' && <div className="curse-veil" aria-hidden="true" />}
                 {/* Tavern Crawl: the opponent's nameplate and your chip show whose turn it is. */}
                 {state?.mode !== 'tavern-crawl' && <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>}
                 <div className="sound-toggles">

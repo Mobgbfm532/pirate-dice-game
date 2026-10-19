@@ -738,7 +738,7 @@ footer {
     border: 2px solid var(--gold);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 22px rgba(255, 138, 101, 0.35);
-    animation: banner-in 2.6s ease-out forwards;
+    animation: banner-in 3.6s ease-out forwards;
 }
 .ability-banner .who { font-size: 0.9rem; color: var(--parchment-dim); }
 .ability-banner .what { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ffab91; }
@@ -1505,3 +1505,43 @@ button.keepsake.used { opacity: 0.55; }
 .saved-run { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 .saved-run .detail { display: block; font-size: 0.75rem; opacity: 0.85; }
 .saved-run .link-button { color: #5d4037; text-shadow: none; animation: none; font-size: 0.8rem; padding: 2px 10px; }
+
+/* The opponent's ability uses on the nameplate. */
+.ability-marks { display: inline-flex; gap: 1px; font-size: 0.85rem; line-height: 1; }
+.ability-marks .left { color: #ffab91; text-shadow: 0 0 6px rgba(255, 138, 101, 0.9); }
+.ability-marks .used { color: #5d4037; text-shadow: none; }
+/* Just spent: once the move's banner has gone (the plate hides under it), the marks flare. */
+.ability-marks.spent-now { border-radius: 6px; animation: marks-spent 2s ease-out 3.4s 1 both; }
+@keyframes marks-spent {
+    0% { transform: scale(1); box-shadow: none; }
+    15%, 45% { transform: scale(1.5); box-shadow: 0 0 18px 6px rgba(255, 112, 67, 0.9); background: rgba(255, 112, 67, 0.35); }
+    100% { transform: scale(1); box-shadow: none; background: none; }
+}
+
+/* This round's ability, as a badge under the Roll button. */
+.hint.round-curse, .hint.round-devil {
+    display: inline-block; padding: 2px 12px; border-radius: 999px; font-weight: 700; color: #fff;
+    animation: round-pulse 1.8s ease-in-out infinite;
+}
+.hint.round-curse { background: rgba(106, 27, 154, 0.85); border: 1px solid #ce93d8; box-shadow: 0 0 14px rgba(186, 104, 200, 0.8); }
+.hint.round-devil { background: rgba(140, 20, 20, 0.85); border: 1px solid #ff8a65; box-shadow: 0 0 14px rgba(255, 87, 34, 0.75); }
+@keyframes round-pulse { 50% { filter: brightness(1.25); } }
+
+/* A cursed round: a violet glow around the screen's edges. */
+.curse-veil {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    box-shadow: inset 0 0 70px 18px rgba(123, 31, 162, 0.55);
+    animation: curse-breathe 3s ease-in-out infinite;
+}
+@keyframes curse-breathe { 50% { box-shadow: inset 0 0 90px 26px rgba(156, 39, 176, 0.65); } }
+.you-are-cursed .ability-banner { background: linear-gradient(#3b0a52, #1c0428); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 30px rgba(186, 104, 200, 0.7); }
+.you-are-cursed .ability-banner .what { color: #e1bee7; }
+
+/* The Lady's blessing, glowing gold. */
+.blessing-name {
+    display: block; margin-bottom: 4px;
+    font-size: clamp(1.4rem, 6vw, 1.9rem); font-weight: 700; color: #ffe082;
+    text-shadow: 0 0 10px rgba(255, 213, 79, 0.95), 0 0 22px rgba(255, 179, 0, 0.7);
+    animation: blessing-glow 2.4s ease-in-out infinite;
+}
+@keyframes blessing-glow { 50% { text-shadow: 0 0 16px rgba(255, 236, 179, 1), 0 0 34px rgba(255, 193, 7, 0.9); } }

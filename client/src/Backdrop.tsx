@@ -23,9 +23,12 @@ function currentScene(): Scene {
 const HEADER_SPACE = 58; // keep the opponent's head clear of the turn line at the top
 
 let last = '';
+let steadyBust = 0;
 
-// Called by the camera rig every frame with the far edge's height on screen (px).
-export function layoutBackdrop(horizon: number, width: number) {
+// Called by the camera rig every frame with the far edge's height on screen (px). leaning: the
+// camera is leaning in on a suspense roll; the opponent keeps their size (only moves with the
+// table's edge) rather than shrinking as the edge rises.
+export function layoutBackdrop(horizon: number, width: number, leaning = false) {
     // Scale the room so its floor meets our table, and always cover the full width.
     const scene = currentScene();
     const height = Math.max(horizon / scene.floor, width / scene.aspect);
@@ -33,7 +36,9 @@ export function layoutBackdrop(horizon: number, width: number) {
     const top = horizon - height * scene.floor;
     const left = Math.min(0, Math.max(width - roomWidth, width / 2 - roomWidth * scene.center));
     // About 80% of the bust shows above the table; the rest is hidden behind it.
-    const bustHeight = Math.max(0, Math.min((horizon - HEADER_SPACE) / 0.8, 460));
+    let bustHeight = Math.max(0, Math.min((horizon - HEADER_SPACE) / 0.8, 460));
+    if (leaning && steadyBust > 0) bustHeight = steadyBust;
+    else steadyBust = bustHeight;
 
     const key = [horizon, height, top, left, bustHeight].map(v => Math.round(v)).join(',') + scene.file;
     if (key === last) return;
@@ -91,7 +96,8 @@ export function Backdrop() {
         <div className="backdrop" aria-hidden="true">
             <div className="tavern-room" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${currentScene().file}")` }} />
             {portrait?.bust && (
-                <img key={name} className={`opponent ${theirTurn ? 'active' : ''}`} src={portrait.src} alt="" />
+                <img key={name} className={`opponent ${theirTurn ? 'active' : ''}`} src={portrait.src} alt=""
+                    style={portrait.seat ? { height: `calc(var(--bust-h, 0px) * ${portrait.seat})` } : undefined} />
             )}
         </div>
     );
