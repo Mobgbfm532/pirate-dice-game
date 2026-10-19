@@ -272,7 +272,8 @@
         return {
             key: turn.key,
             playerId: turn.playerId,
-            dice: turn.dice.map(d => hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }),
+            // fog: hidden by Psychic Fog (drawn as Frak's eye, not Rokr's stars).
+            dice: turn.dice.map(d => hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true, ...(d.id === turn.fogDieId ? { fog: true } : {}) } : { id: d.id, value: d.value, status: d.status }),
             rollCount: turn.rollCount,
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,

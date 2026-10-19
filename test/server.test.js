@@ -476,13 +476,14 @@ test('Last Gasp keeps you on your last heart once, then the run can end', async 
     assert.equal((await over).tavern.won, false, 'no Thonic left this time');
 });
 
-test('a perfect 24 pays 75 gold into the purse straight away', async () => {
+test('a perfect 24 is counted but pays no gold', async () => {
     const { hero, room } = await tavernTable('Perfect');
-    const paid = nextState(hero, s => runOf(s).purse === 75);
+    const ended = nextState(hero, s => s.currentTurnId !== hero.id);
     await playHand(hero, room, [2, 4, 6, 6, 6, 6]);
-    await paid;
-    assert.equal(room.tavernRun.stats.perfectGold, 75);
+    await ended;
     assert.equal(room.tavernRun.stats.perfect24s, 1);
+    assert.equal(room.tavernRun.stats.perfectGold, 0);
+    assert.equal(room.tavernRun.purse, 0);
 });
 
 test('beating an opponent pays for the win and the hearts left, then one event: the thief, the Stranger or two spots', async () => {

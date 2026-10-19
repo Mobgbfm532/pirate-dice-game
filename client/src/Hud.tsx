@@ -504,7 +504,7 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
     const rows: [string, string][] = [
         ['How far you got', String(b.progress)],
         ['Hearts spared', String(b.hearts)],
-        ['Perfect 24s', String(b.perfect)],
+        ...(b.perfect ? [['Perfect 24s', String(b.perfect)] as [string, string]] : []), // no gold for 24s since 19 Oct
         ['Between fights', b.events ? (b.events > 0 ? `+${b.events}` : `−${-b.events}`) : '0'],
         ["Spent at Thom's", b.spent ? `−${b.spent}` : '0']
     ];
@@ -516,7 +516,7 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
             <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
                 <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
                 <p className="subtitle">
-                    {summary.won ? 'You beat the whole House Table.' : `${summary.fellTo} ended your run.`}
+                    {summary.won ? 'You won the final at the Yawning Portal.' : `${summary.fellTo} ended your run.`}
                 </p>
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
@@ -600,6 +600,29 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
     );
 }
 
+// While an ability lasts, a glow round the screen's edges in its colours (never over the dice:
+// it's an inset shadow at the edges, and it takes no taps):
+//   the Curse        violet, breathing          (Danhausen, or Martha in his face, or your mask)
+//   the Devil        embers rising, red edges   (the Duke's round, once his three 6s land)
+//   Psychic Fog      green-violet mist          (while Frak's fogged die is face-down)
+//   Rokr's blur      twinkling stars            (while your dice are blurred)
+function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const effect = state.tavernRun?.roundEffect;
+    const turn = snap.turn;
+    const kind = effect?.kind === 'curse' ? 'curse'
+        : effect?.kind === 'devil' ? 'devil'
+            : turn?.dice.some(d => d.fog) ? 'fog'
+                : turn?.blurActive ? 'stars'
+                    : null;
+    if (!kind) return null;
+    return (
+        <div className={`aura ${kind === 'curse' ? 'curse-veil' : `${kind}-veil`}`} aria-hidden="true">
+            {kind === 'devil' && Array.from({ length: 14 }, (_, i) => <span key={i} className="ember" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.53) % 4}s` }} />)}
+            {kind === 'stars' && Array.from({ length: 18 }, (_, i) => <span key={i} className="star" style={{ left: `${(i * 53) % 100}%`, top: `${i % 2 ? (i * 29) % 22 : 78 + (i * 17) % 20}%`, animationDelay: `${(i * 0.37) % 2.4}s` }} />)}
+        </div>
+    );
+}
+
 // An opponent's signature move. Klarg's steal and Rokr's stars happen on the 3D table; here
 // the move's name, plus the shot from The Hangman's revolver and Jaguar's -3.
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
@@ -615,6 +638,10 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {moment.ability === 'Smooth Talk' && <span className="minus">−3</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
+            {moment.ability === 'Reach Around' && (
+                <div className="claw-marks" aria-hidden="true"><span /><span /><span /></div>
+            )}
+            {moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
             {moment.ability === 'The Ace of Spades' && (
                 <>
                     <div className="gun-flash" aria-hidden="true" />
@@ -1137,8 +1164,8 @@ export function Hud() {
             <header>
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
                 <span className="room">{snap.roomLabel}</span>
-                {/* A cursed round: the screen's edges glow violet (pointer-free, clear of the dice). */}
-                {state?.tavernRun?.roundEffect?.kind === 'curse' && <div className="curse-veil" aria-hidden="true" />}
+                {/* While an ability lasts, the screen's edges glow in its colours (pointer-free, clear of the dice). */}
+                {state && <AbilityAura snap={snap} state={state} />}
                 {/* Tavern Crawl: the opponent's nameplate and your chip show whose turn it is. */}
                 {state?.mode !== 'tavern-crawl' && <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>}
                 <div className="sound-toggles">

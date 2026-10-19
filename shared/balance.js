@@ -20,7 +20,7 @@ module.exports = {
     gold: {
         winPerPlace: 100,   // beating an opponent: 100 x their place in the run (Molar 100 ... Jaguar 500)
         perHeartLeft: 25,   // for each heart still standing when you win a fight
-        perfect24: 75,      // each perfect 24 you roll
+        perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct; it was 75); it still restores a heart
         consolation: 25     // losing the run: 25 x the place of the opponent you fell to
     },
 

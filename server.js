@@ -879,7 +879,6 @@ function getTavernScoreSummary(room, completedRun = false) {
             `Gold earned: ${totalGold}`,
             `Progress: ${progressGold}`,
             `Hearts spared: ${stats.heartGold}`,
-            `Perfect 24s: ${stats.perfectGold}`,
             `Between fights: ${stats.eventGold}`,
             `Spent at Thom's: ${stats.spent}`
         ]

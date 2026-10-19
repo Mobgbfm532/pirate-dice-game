@@ -229,7 +229,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   you played first; never fires if he doesn't get there; the solver's `cap`);
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
   shows a 3.6 s banner, a badge under the Roll button ("Cursed round: ..."), and in a cursed
-  round a violet glow round the screen edges (`.curse-veil`). The opponent's nameplate/chip
+  round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
+  (`AbilityAura` + banner classes by ability name): Fog a green-violet mist and Frak's eye die
+  (`fog` on the hidden die, `materials.fog`; Rokr's blur keeps the blue "?" and stars), the Devil
+  smouldering edges with rising embers, Rokr's blur twinkling stars, Klarg claw marks, Jaguar a
+  gold sweep, the Hangman a gun-metal banner. The opponent's nameplate/chip
   shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after
   the banner.
 - **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
@@ -243,7 +247,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the
   invitation with a fresh save; an edited or used one sends `resumeFailed` and a fresh crawl.
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
-  left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and
+  left; a perfect 24 pays nothing since 19 Oct, `perfect24: 0`, the user's call); the purse (+ a consolation for a lost run) is the final score and
   goes on the leaderboard. The run-over screen shows the breakdown.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
