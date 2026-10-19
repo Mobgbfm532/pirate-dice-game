@@ -110,6 +110,8 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | his revolver, The Ace of Spades |
 | Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
 | Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
+| Sperm McGrath | Grizzled grey-haired bouncer, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
+| Frak | Portly half-elf sorcerer with pointed ears, balding with sideburns, purple rune-stitched vest over blue sleeves | sly smirk | a smoking cigar |
 
 Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's Thonics" itself.
 
@@ -124,7 +126,11 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
 | Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
 | Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
+| Backdrop: outside the Ghoul and Gourd | Done | `art/ghoul-gourd-outside.jpg` → `ghoul-gourd-outside.webp` (1376×768), Sperm McGrath's fight; `SCENES` in `client/src/Backdrop.tsx` |
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
+| Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
+| Frak (half-elf sorcerer) | Done | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `smokeBox` so the cigar smoke is see-through) → `frak.webp` |
+| Danhausen, Duke Morrigan, Martha Mystery | Wanted | Busts for the other qualifier opponents; they use the Molar's art until then |
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
 | Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |

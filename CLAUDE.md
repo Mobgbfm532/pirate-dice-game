@@ -85,8 +85,9 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
   and Thonic shelf (`drinkable()`), Thom's full-screen shop scene (`ThomShop`), the choice
   between fights (`Interlude`) and each event's scene (`SpotScene`), the run-over screen.
-  `Backdrop.tsx`: tavern image + the bot opponent's bust behind the table (multiplayer tables
-  show no one there). `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
+  `Backdrop.tsx`: the scene behind the table (`SCENES` by opponent: the tavern, or outside the
+  Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`, `center`) + the bot opponent's
+  bust behind the table (multiplayer tables show no one there). `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
   `SPOT_PORTRAITS`).
 
 ## Commands
@@ -189,8 +190,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Fights:** nine opponents in order (`TAVERN_ENCOUNTERS`, each with its `place`, a key of
   `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak, Danhausen, Duke Morrigan,
   Martha Mystery) then the Yawning Portal (Klarg, Rokr, the Hangman, Jaguar). McGrath is the
-  Molar renamed (keeps the id `molar`, plays simply). The new four use the Molar's art until
-  the user paints theirs (`portraitFor` falls back to it). Hearts reset to 4 each fight; the
+  Molar renamed (keeps the id `molar`, plays simply). McGrath and Frak have busts; Danhausen, the Duke and
+  Martha use the Molar's avatar until the user paints them (and show no bust behind the table). Hearts reset to 4 each fight; the
   opponents have 2 | 2, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`, the user's starting
   point). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,

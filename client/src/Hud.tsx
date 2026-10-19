@@ -202,7 +202,8 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                         <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                         <div>
                             <div className="name">{p.name}</div>
-                            <Hearts lives={p.lives} starting={state.startingLives} />
+                            {/* A Tavern Crawl opponent's hearts are out of their own lives, not yours. */}
+                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? state.tavernRun.enemy.lives : state.startingLives} />
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
                     </div>

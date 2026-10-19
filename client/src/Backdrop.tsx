@@ -6,8 +6,20 @@ import { PORTRAITS, type Portrait } from './portraits';
 // It is drawn underneath the transparent 3D canvas, so the table covers whatever is
 // below the table's far edge (the "horizon", measured each frame by the camera).
 
-const BACKDROP_FLOOR = 0.77; // how far down the backdrop image its own foreground table starts
-const BACKDROP_ASPECT = 1408 / 768;
+// The scenes behind the table. floor: how far down the image its own foreground table starts
+// (our table covers from there); aspect: width / height; center: the point of the image that
+// sits behind the opponent (on a phone only a slice around it shows).
+interface Scene { file: string; floor: number; aspect: number; center: number }
+const TAVERN: Scene = { file: 'tavern.webp', floor: 0.77, aspect: 1408 / 768, center: 0.45 };
+// Outside the Ghoul and Gourd: the bouncer's fight, by the front door.
+const OUTSIDE: Scene = { file: 'ghoul-gourd-outside.webp', floor: 0.75, aspect: 1376 / 768, center: 0.6 };
+const SCENES: Record<string, Scene> = { 'Sperm McGrath': OUTSIDE };
+
+function currentScene(): Scene {
+    const name = opponentName();
+    return (name && SCENES[name]) || TAVERN;
+}
+
 const HEADER_SPACE = 58; // keep the opponent's head clear of the turn line at the top
 
 let last = '';
@@ -15,14 +27,15 @@ let last = '';
 // Called by the camera rig every frame with the far edge's height on screen (px).
 export function layoutBackdrop(horizon: number, width: number) {
     // Scale the room so its floor meets our table, and always cover the full width.
-    const height = Math.max(horizon / BACKDROP_FLOOR, width / BACKDROP_ASPECT);
-    const roomWidth = height * BACKDROP_ASPECT;
-    const top = horizon - height * BACKDROP_FLOOR;
-    const left = width / 2 - roomWidth * 0.45;
+    const scene = currentScene();
+    const height = Math.max(horizon / scene.floor, width / scene.aspect);
+    const roomWidth = height * scene.aspect;
+    const top = horizon - height * scene.floor;
+    const left = Math.min(0, Math.max(width - roomWidth, width / 2 - roomWidth * scene.center));
     // About 80% of the bust shows above the table; the rest is hidden behind it.
     const bustHeight = Math.max(0, Math.min((horizon - HEADER_SPACE) / 0.8, 460));
 
-    const key = [horizon, height, top, left, bustHeight].map(v => Math.round(v)).join(',');
+    const key = [horizon, height, top, left, bustHeight].map(v => Math.round(v)).join(',') + scene.file;
     if (key === last) return;
     last = key;
     const css = document.documentElement.style;
@@ -76,7 +89,7 @@ export function Backdrop() {
 
     return (
         <div className="backdrop" aria-hidden="true">
-            <div className="tavern-room" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }} />
+            <div className="tavern-room" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${currentScene().file}")` }} />
             {portrait?.bust && (
                 <img key={name} className={`opponent ${theirTurn ? 'active' : ''}`} src={portrait.src} alt="" />
             )}

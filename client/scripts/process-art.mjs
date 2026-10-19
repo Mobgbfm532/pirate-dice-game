@@ -247,6 +247,30 @@ function despill(img, mask, bg, radius) {
     }
 }
 
+// Smoke (or mist) painted over the background: thin grey with the magenta showing through.
+// Inside the box (original pixels), each kept pixel that is pinkish grey (red a little
+// above green, blue not far below it: smoke, not skin or embers) is unmixed: the red
+// excess says how much background is in it, that share becomes transparency, and the
+// pixel becomes grey of the smoke's own brightness.
+// Returns the alpha to apply after applyMask.
+function veil(img, mask, bg, [x0, y0, x1, y1]) {
+    const { data, width } = img;
+    const alpha = new Map();
+    const excess = Math.max(1, bg[0] - bg[1]);
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const p = y * width + x, i = p * 4;
+        if (mask[p]) continue;
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        if (r - g <= 0 || r - g > 1.3 * excess || b - g < -25) continue;
+        const a = Math.max(0.05, 1 - (r - g) / excess);
+        // Smoke is grey: keep the unmixed brightness (from green), with a touch of warmth.
+        const grey = Math.max(0, Math.min(255, (g - (1 - a) * bg[1]) / a));
+        data[i] = Math.min(255, Math.round(grey + 6)); data[i + 1] = Math.round(grey); data[i + 2] = Math.max(0, Math.round(grey - 8));
+        alpha.set(p, a);
+    }
+    return alpha;
+}
+
 // Options (all optional):
 //   tolerance  how close (RGB distance) a pixel must be to the background to be cleared (80)
 //   minRed, minBlue  how far red / blue must sit above green for a pixel to count as
@@ -254,12 +278,16 @@ function despill(img, mask, bg, radius) {
 //   pocket     clears background caught between hair strands up to this many px from the
 //              edge (14)
 //   despillRadius  how far in from the edge the background tint is taken out (6)
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6 } = {}) {
+//   smokeBox   [x0, y0, x1, y1]: thin smoke painted over the background in this box turns
+//              see-through instead of staying pink (none)
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null } = {}) {
     const img = await readRgba(file);
     const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket });
     keepMainShape(img, mask);
+    const smoke = smokeBox ? veil(img, mask, bg, smokeBox) : null;
     despill(img, mask, bg, despillRadius);
     applyMask(img, mask);
+    smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
     await writePreview(name, img);
     const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());
     const info = await sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, `${name}.webp`));
@@ -305,6 +333,9 @@ async function spotScene(file, name) {
 async function backdrop() {
     const info = await sharp(path.join(ART, 'tavern-backdrop.jpg')).webp({ quality: 78 }).toFile(path.join(OUT, 'tavern.webp'));
     console.log(`tavern.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    // Outside the Ghoul and Gourd (Sperm McGrath's fight).
+    const outside = await sharp(path.join(ART, 'ghoul-gourd-outside.jpg')).webp({ quality: 80 }).toFile(path.join(OUT, 'ghoul-gourd-outside.webp'));
+    console.log(`ghoul-gourd-outside.webp  ${outside.width}x${outside.height}  ${Math.round(outside.size / 1024)} KB`);
 }
 
 // Tiling wood for the 3D table, and parchment for dialogs (used once per panel, not tiled).
@@ -336,4 +367,6 @@ await cutOutFlat('bust-thom.jpg', 'thom');
 await cutOutFlat('bust-stranger.jpg', 'stranger');
 await cutOutFlat('bust-dicer.jpg', 'dicer', { pocket: 60 }); // background shows between the dice and his fingers
 await cutOutFlat('bust-pickpocket.jpg', 'pickpocket', { pocket: 40 }); // and behind the hair at the shoulder
+await cutOutFlat('bust-frak.jpg', 'frak', { smokeBox: [190, 130, 298, 466] }); // the cigar smoke above his shoulder
+await cutOutFlat('bust-mcgrath.jpg', 'mcgrath');
 await spotScene('shrine.jpg', 'shrine');
