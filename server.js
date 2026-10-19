@@ -89,17 +89,59 @@ function submitTavernLeaderboardScore(name, gold) {
     return tavernLeaderboard;
 }
 
+// The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
+// the high-roller table), then the final at the Yawning Portal. `place` is a key of PLACES.
+// McGrath is the Molar renamed and keeps his id ('molar'): he plays simply, as a teacher.
 const TAVERN_ENCOUNTERS = [
     {
         id: 'molar',
-        name: 'The Molar',
+        place: 'ghoulAndGourd',
+        name: 'Sperm McGrath',
         avatar: '🦷',
         lives: BALANCE.opponentLives.molar,
         ability: null,
-        intro: 'The Molar slides into the seat and teaches you the house game: find a 2, find a 4, then chase 24.'
+        intro: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
+    },
+    {
+        id: 'frak',
+        place: 'ghoulAndGourd',
+        name: 'Frak',
+        avatar: '🦑',
+        lives: BALANCE.opponentLives.frak,
+        ability: 'psychicFog',
+        intro: 'Frak, a slimy half-elf sorcerer and lowly thief, his illithid side showing more and more. Psychic Fog turns one of your dice face-down until you keep it.'
+    },
+    {
+        id: 'danhausen',
+        place: 'ghoulAndGourd',
+        name: 'Danhausen',
+        avatar: '🧛',
+        lives: BALANCE.opponentLives.danhausen,
+        ability: 'cursed',
+        intro: "Danhausen, dhampir warlock and a cartoon come to life, knows he's in a game. You are Cursed: for a round, the lowest valid score wins."
+    },
+    {
+        id: 'duke',
+        place: 'ghoulAndGourd',
+        name: 'Duke Morrigan',
+        avatar: '😈',
+        lives: BALANCE.opponentLives.duke,
+        ability: 'devil',
+        intro: "Duke Morrigan, noble rogue and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s, and that round you can't score above 18."
+    },
+    {
+        id: 'martha',
+        place: 'ghoulAndGourd',
+        name: 'Martha Mystery',
+        avatar: '🎭',
+        lives: BALANCE.opponentLives.martha,
+        ability: 'disguises',
+        boss: true, // beating her wins her mask and the invitation to the final
+        intro: "Martha Mystery, the table's boss, has watched you all night. Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
     },
     {
         id: 'klarg',
+        place: 'yawningPortal',
         name: 'Klarg',
         avatar: '🐻',
         lives: BALANCE.opponentLives.klarg,
@@ -108,6 +150,7 @@ const TAVERN_ENCOUNTERS = [
     },
     {
         id: 'rokr',
+        place: 'yawningPortal',
         name: 'Rokr',
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
@@ -116,6 +159,7 @@ const TAVERN_ENCOUNTERS = [
     },
     {
         id: 'hangman',
+        place: 'yawningPortal',
         name: 'The Hangman',
         avatar: '🤠',
         lives: BALANCE.opponentLives.hangman,
@@ -124,6 +168,7 @@ const TAVERN_ENCOUNTERS = [
     },
     {
         id: 'jaguar',
+        place: 'yawningPortal',
         name: 'Jaguar Cantona',
         avatar: '😎',
         lives: BALANCE.opponentLives.jaguar,
@@ -165,6 +210,14 @@ const TAVERN_KEEPSAKES = [
     }
 ];
 const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
+
+// Martha's mask: dropped by Martha Mystery (never offered by the Stranger). Once a fight, before
+// you roll, you wear one of her disguises for the round (the wearMask handler).
+const MARTHAS_MASK = {
+    id: 'marthasMask',
+    name: "Martha's Mask",
+    text: "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you; your opponent can't score above 18)."
+};
 const LOADED_DIE = 0; // the die the Loaded Die keepsake loads (marked on the table)
 
 // Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
@@ -181,18 +234,28 @@ const THONICS = {
 const SHELF_SIZE = BALANCE.shelfSize;
 const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
 
-// A place in the run: its opponents in order and what Thom sells there. Only the tavern
-// for now; later places (new environments, tougher opponents) are new entries.
+// The places in the run: what Thom sells there and the spots between fights. (Each opponent
+// names its place.) Both have the same spots for now; a split is a later choice.
 const PLACES = {
-    tavern: {
-        name: 'The Tavern',
-        encounters: TAVERN_ENCOUNTERS,
+    ghoulAndGourd: {
+        name: 'The Ghoul and Gourd',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
         // Between fights two of these catch your eye, and you go to one, unless the pickpocket
         // or the Hooded Stranger finds you first (startInterlude).
         spots: ['thom', 'shrine', 'diceDen']
+    },
+    yawningPortal: {
+        name: 'The Yawning Portal',
+        thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
+        spots: ['thom', 'shrine', 'diceDen']
     }
 };
+
+// Where the run is now (between fights: where the next fight is).
+function placeOf(room) {
+    let index = Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1);
+    return PLACES[TAVERN_ENCOUNTERS[index].place];
+}
 
 // Between fights, one event: now and then a pickpocket or the Hooded Stranger finds you, else
 // two spots in the room catch your eye and you choose one. Gold during a run goes into the purse as it is won, and the purse
@@ -246,7 +309,11 @@ function getTavernRunState(room) {
     return {
         encounterNumber: room.tavernRun.encounterIndex + 1,
         totalEncounters: TAVERN_ENCOUNTERS.length,
+        place: placeOf(room).name,
         enemy: encounter,
+        roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Fog (see beginTavernRound)
+        devilCap: BALANCE.devilCap,
+        maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
         purse: room.tavernRun.purse,
@@ -328,9 +395,28 @@ function sendBotReaction(roomCode, emoji, times = 3) {
 }
 
 function applyTavernRollAbilities(roomCode, room, turn) {
-    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID || turn.rollCount !== 1) return [];
+    if (room.mode !== 'tavern-crawl' || turn.rollCount !== 1) return [];
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     let moves = [];
+    let effect = room.tavernRun.roundEffect;
+    let mine = turn.playerId !== BOT_ID;
+
+    // Sympathy for the Devil: whoever plays it throws three 6s with their first roll.
+    if (effect && effect.kind === 'devil' && !effect.landed && (effect.by === 'player') === mine) {
+        effect.landed = true;
+        shuffled(turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE)).slice(0, 3).forEach(d => { d.value = 6; });
+    }
+    if (!mine) return moves;
+
+    // Psychic Fog: one of the player's dice lands face-down.
+    if (effect && effect.kind === 'fog' && !effect.landed) {
+        effect.landed = true;
+        let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+        if (active.length > 0) {
+            turn.fogDieId = active[crypto.randomInt(0, active.length)].id;
+            moves.push(roundEffectMove(room, effect, 'One of your dice lands face-down. You see it once you keep it.'));
+        }
+    }
 
     let inPlay = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length;
     if (inPlay > 1 && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
@@ -417,13 +503,19 @@ function performEndTurn(roomCode) {
 
     if (room.mode === 'tavern-crawl') {
         let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-        if (currentId === BOT_ID && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
+        let effect = room.tavernRun.roundEffect;
+        let cursed = !!effect && effect.kind === 'curse';
+        if (effect && effect.kind === 'devil' && (effect.by === 'player') === (currentId === BOT_ID) && !busted && score > BALANCE.devilCap) {
+            score = BALANCE.devilCap;
+            room.players[currentId].score = score;
+        }
+        if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
             room.players[currentId].score = 24;
             io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
             io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
 
-        if (currentId !== BOT_ID && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
             room.players[currentId].score = Math.max(0, score - 3);
             io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
             io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
@@ -543,7 +635,8 @@ function getTavernScoreToBeat(room) {
     if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
     if (human.busted) return null;
     let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
-    return human.score + (cushion ? 1 : 0);
+    let cursed = room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+    return human.score + (cushion ? (cursed ? -1 : 1) : 0);
 }
 
 // True when a Tavern Crawl opponent can no longer win or tie the round, whatever the dice
@@ -551,11 +644,14 @@ function getTavernScoreToBeat(room) {
 // shot ready at 16 or more) falls short, or a 2 or 4 is out of reach. `toBeat` is from
 // getTavernScoreToBeat: undefined while the player is still to play (never concede then),
 // null if the player dusted (any valid hand wins).
-function tavernRoundLost(turn, toBeat, aceAt16) {
-    if (toBeat === undefined) return false;
+// In a cursed round they always play it out; under the player's Devil, their best counts as
+// no more than the cap.
+function tavernRoundLost(turn, toBeat, aceAt16, { low = false, cap = null } = {}) {
+    if (toBeat === undefined || low) return false;
     let best = Rules.bestPossibleScore(turn.dice);
     if (best === null) return true;
     if (aceAt16 && best >= 16) best = 24;
+    if (cap !== null) best = Math.min(best, cap);
     return toBeat !== null && best < toBeat;
 }
 
@@ -569,11 +665,15 @@ function runBotDecision(roomCode) {
     // The Molar (solo games, and the first Tavern Crawl fight) plays simply, as a teacher.
     // From Klarg on, opponents play their best: Strategy works out the keep with the best
     // chance of winning the round (the Hangman counts on his revolver, The Ace of Spades, when he can fire it).
-    let aceAt16 = !!encounter && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
-    let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16 });
+    // A cursed round is played for the fewest points; under the player's Devil the bot's
+    // score counts as no more than the cap.
+    let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
+    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap : null };
+    let aceAt16 = !!encounter && !round.low && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
+    let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
     // keep everything left at once and end the turn.
-    let conceding = tavernRoundLost(turn, toBeat, aceAt16);
+    let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
     if (conceding) toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
 
     // Lock the dice one after another, and only then decide what next. (Separate timers for
@@ -591,7 +691,7 @@ function runBotDecision(roomCode) {
         if (!turn.finalized) {
             // What they just had to keep may have put the round out of reach: then keep the
             // rest now rather than throw again.
-            if (!conceding && tavernRoundLost(turn, toBeat, aceAt16)) {
+            if (!conceding && tavernRoundLost(turn, toBeat, aceAt16, round)) {
                 conceding = true;
                 toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
                 lockFrom(0);
@@ -701,8 +801,8 @@ function getHumanPlayerId(room) {
     return room.playerOrder.find(id => id !== BOT_ID && room.players[id]);
 }
 
-// For testing a particular opponent: TAVERN_START_ENCOUNTER=1 starts runs at Klarg, etc.
-const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(4, parseInt(process.env.TAVERN_START_ENCOUNTER, 10) || 0));
+// For testing a particular opponent: TAVERN_START_ENCOUNTER=1 starts runs at Frak, 5 at Klarg, etc.
+const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(8, parseInt(process.env.TAVERN_START_ENCOUNTER, 10) || 0));
 
 function createTavernRun() {
     return {
@@ -843,6 +943,99 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.encounterKeepsakeUses = {};
     room.tavernRun.clearEyeArmed = false;
     room.tavernRun.started = true;
+    beginTavernRound(roomCode, room);
+}
+
+// ---- Round effects ----
+// Some abilities change a whole round. They're decided as the round begins (beginTavernRound)
+// and kept in tavernRun.roundEffect = { kind, by, ability, as?, landed? }:
+//   fog    Psychic Fog: the player's first throw lands one die face-down (Rules.viewTurn hides it)
+//   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
+//   devil  Sympathy for the Devil: `by` throws three 6s first; the other side can't score above devilCap
+// `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
+// Martha (or the mask) wears.
+const ROUND_ABILITIES = { psychicFog: 'fog', cursed: 'curse', devil: 'devil' };
+const DISGUISES = [
+    { ability: 'psychicFog', as: 'Frak' },
+    { ability: 'cursed', as: 'Danhausen' },
+    { ability: 'devil', as: 'Duke Morrigan' }
+];
+
+function roundEffectMove(room, effect, text) {
+    let humanId = getHumanPlayerId(room);
+    let name = effect.by === 'player' ? (humanId ? room.players[humanId].name : 'You') : TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name;
+    return { name, ability: Rules.ABILITY_NAMES[effect.ability], text: effect.as && effect.by === 'opponent' ? `In ${effect.as}'s face. ${text}` : text, disguise: effect.as || null };
+}
+
+const ROUND_EFFECT_TEXT = {
+    curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
+    devil: { opponent: "Three 6s for them, and you can't score above 18 this round.", player: "Three 6s for you, and your opponent can't score above 18 this round." }
+};
+
+function beginTavernRound(roomCode, room) {
+    let run = room.tavernRun;
+    run.roundEffect = null;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    if (!encounter || !encounter.ability) return;
+    let disguise = encounter.ability === 'disguises' ? DISGUISES[crypto.randomInt(0, DISGUISES.length)] : null;
+    let ability = disguise ? disguise.ability : encounter.ability;
+    if (!ROUND_ABILITIES[ability] || !fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
+    run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
+    // The Fog shows when it lands; the Curse and the Devil now.
+    if (run.roundEffect.kind !== 'fog') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+}
+
+// ---- Saving after the Ghoul and Gourd ----
+// The run can be saved at the invitation to the Yawning Portal. The save lives on the player's
+// phone, sealed with SAVE_SECRET so it can't be edited; each one opens once (while the server
+// runs). Without SAVE_SECRET, saves last only until the server restarts.
+const SAVE_SECRET = process.env.SAVE_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.SAVE_SECRET && !process.env.GAME_TIME_SCALE) console.log('SAVE_SECRET is not set: saved Tavern Crawl runs last only until the server restarts.');
+const SAVE_VERSION = 1;
+const openedSaves = new Set();
+const keepsakeById = id => (id === MARTHAS_MASK.id ? MARTHAS_MASK : TAVERN_KEEPSAKES.find(k => k.id === id));
+
+function sealSave(room, name) {
+    let run = room.tavernRun;
+    let data = {
+        v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
+        encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
+        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin
+    };
+    let body = Buffer.from(JSON.stringify(data)).toString('base64url');
+    let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
+    return `${body}.${sig}`;
+}
+
+// The save's contents, or null if it isn't one of ours, was changed or was opened already.
+function openSave(text) {
+    if (typeof text !== 'string' || text.length > 20000) return null;
+    let [body, sig] = text.split('.');
+    if (!body || !sig) return null;
+    let expected = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+    let data;
+    try { data = JSON.parse(Buffer.from(body, 'base64url').toString()); } catch { return null; }
+    if (!data || data.v !== SAVE_VERSION || openedSaves.has(data.id)) return null;
+    if (!Number.isInteger(data.encounterIndex) || data.encounterIndex < 0 || data.encounterIndex >= TAVERN_ENCOUNTERS.length) return null;
+    openedSaves.add(data.id);
+    return data;
+}
+
+function restoreRun(room, data) {
+    let run = room.tavernRun;
+    run.encounterIndex = data.encounterIndex;
+    run.keepsakes = (data.keepsakes || []).map(keepsakeById).filter(Boolean);
+    run.purse = Math.max(0, Number(data.purse) || 0);
+    run.shelf = (data.shelf || []).filter(id => THONICS[id]).slice(0, SHELF_SIZE + KEEPSAKE_NUMBERS.beltSlots);
+    run.stats = { ...run.stats, ...(data.stats || {}) };
+    run.ladysGrace = !!data.ladysGrace;
+    run.lastWin = data.lastWin || null;
+}
+
+// The invitation to the final: Martha's mask is yours; go on now, or save and come back.
+function invitation(room, name) {
+    return { stage: 'invitation', place: placeOf(room).name, save: sealSave(room, name) };
 }
 
 // ---- Between fights ----
@@ -877,7 +1070,7 @@ function unownedKeepsakes(room) {
 // Loyalty Card, his cart is always one of them.
 function pickSpots(room) {
     let canBet = room.tavernRun.purse >= Math.min(...INTERLUDE.diceDenBets);
-    let spots = shuffled(PLACES.tavern.spots.filter(id => id !== 'diceDen' || canBet)).slice(0, 2);
+    let spots = shuffled(placeOf(room).spots.filter(id => id !== 'diceDen' || canBet)).slice(0, 2);
     if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
 }
@@ -1036,18 +1229,29 @@ function evaluateTavernRound(roomCode) {
     let busted = roundPlayers.filter(id => room.players[id].busted);
     busted.forEach(id => losersThisRound.push({ id, reason: 'Dust!' }));
 
+    // The Devil's round: the side that didn't play it counts no more than the cap (also when
+    // the mask was worn after the opponent had already played). A cursed round: the highest
+    // valid score loses.
+    let effect = room.tavernRun.roundEffect;
+    if (effect && effect.kind === 'devil') {
+        let capped = room.players[effect.by === 'player' ? enemyId : humanId];
+        if (!capped.busted) capped.score = Math.min(capped.score, BALANCE.devilCap);
+    }
+    let cursed = !!effect && effect.kind === 'curse';
     let valid = roundPlayers.filter(id => !room.players[id].busted);
     if (valid.length > 1) {
-        let minScore = Math.min(...valid.map(id => room.players[id].score));
-        let lowest = valid.filter(id => room.players[id].score === minScore);
-        if (lowest.length === 1) {
-            losersThisRound.push({ id: lowest[0], reason: 'Lowest score at the table.' });
+        let scores = valid.map(id => room.players[id].score);
+        let worst = cursed ? Math.max(...scores) : Math.min(...scores);
+        let losing = valid.filter(id => room.players[id].score === worst);
+        if (losing.length === 1) {
+            losersThisRound.push({ id: losing[0], reason: cursed ? 'Highest score in a cursed round.' : 'Lowest score at the table.' });
         } else {
-            tiedPlayers = lowest;
+            tiedPlayers = losing;
         }
     }
+    room.tavernRun.roundEffect = null;
 
-    if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && human.score + 1 === enemy.score) {
+    if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && Math.abs(human.score - enemy.score) === 1) {
         room.tavernRun.encounterKeepsakeUses.velvetCushion = true;
         losersThisRound = [];
         tiedPlayers = [humanId, enemyId];
@@ -1123,17 +1327,25 @@ function evaluateTavernRound(roomCode) {
             room.tavernRun.runComplete = true;
             io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
             emitState(roomCode);
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
+            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final at the Yawning Portal! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
         }
 
-        // Between fights: two spots in the room catch your eye (maybe a pickpocket first).
         let won = {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
             gold: { win: winGold, hearts: heartGold }
         };
-        startInterlude(room, won);
+        if (TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1].boss) {
+            // Martha's mask is the invitation to the final (no events on the way there).
+            if (!hasKeepsake(room, MARTHAS_MASK.id)) room.tavernRun.keepsakes.push(MARTHAS_MASK);
+            won.mask = MARTHAS_MASK;
+            room.tavernRun.lastWin = won;
+            room.tavernRun.interlude = invitation(room, human.name);
+        } else {
+            // Between fights: one event (see startInterlude).
+            startInterlude(room, won);
+        }
         room.roundPlayers = [];
         emitState(roomCode);
         io.to(roomCode).emit('offerShop', won); // the fight is won (the name is historical)
@@ -1146,6 +1358,7 @@ function evaluateTavernRound(roomCode) {
     // Turns alternate: the player goes first in a fight's odd rounds, the opponent in even ones.
     room.roundPlayers = room.tavernRun.encounterRound % 2 === 1 ? [humanId, enemyId] : [enemyId, humanId];
     room.currentTurnIndex = 0;
+    beginTavernRound(roomCode, room);
     emitState(roomCode);
 }
 
@@ -1263,8 +1476,22 @@ io.on('connection', (socket) => {
             room.currentTurnIndex = 0;
         }
 
+        // A saved run (from the invitation to the final) carries on at a fresh table: back at the
+        // invitation, with a fresh save in case they leave again.
+        let fresh = room.mode === 'tavern-crawl' && !room.tavernRun.started;
+        let resumed = fresh && data.resume ? openSave(data.resume) : null;
+        if (fresh && data.resume && !resumed) socket.emit('resumeFailed');
+        if (resumed) {
+            restoreRun(room, resumed);
+            room.players[socket.id].name = asText(resumed.name).substring(0, 15) || room.players[socket.id].name;
+        }
+
         if (room.mode === 'tavern-crawl' && !room.tavernRun.started) {
             resetTavernEncounter(roomCode, false);
+        }
+        if (resumed) {
+            room.tavernRun.interlude = invitation(room, room.players[socket.id].name);
+            room.roundPlayers = [];
         }
 
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
@@ -1357,6 +1584,21 @@ io.on('connection', (socket) => {
         return room;
     };
 
+    // Martha's mask: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil
+    // for the round (not in a round that already has one).
+    socket.on('wearMask', (kind) => {
+        let room = tavernPlayer();
+        if (!room || (kind !== 'curse' && kind !== 'devil') || !isMyTurn() || !isTurnPlayable(socket.roomCode)) return;
+        let run = room.tavernRun;
+        if (!hasKeepsake(room, MARTHAS_MASK.id) || run.encounterKeepsakeUses.marthasMask || room.turn.hasRolled || run.roundEffect) return;
+        run.roundEffect = kind === 'curse'
+            ? { kind, by: 'player', ability: 'cursed', as: 'Danhausen' }
+            : { kind, by: 'player', ability: 'devil', as: 'Duke Morrigan' };
+        emitKeepsakeActivated(socket.roomCode, room, MARTHAS_MASK.id, `You wear ${run.roundEffect.as}'s face. ${ROUND_EFFECT_TEXT[kind].player}`);
+        io.to(socket.roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[kind].player));
+        emitState(socket.roomCode);
+    });
+
     socket.on('buyThonic', (thonicId) => {
         let room = tavernPlayer();
         if (!room || !room.tavernRun.shop) return;
@@ -1413,7 +1655,7 @@ io.on('connection', (socket) => {
         if (spot === 'thom') {
             run.interlude = null;
             // Thom's Loyalty Card: the first Thonic of the visit is free.
-            run.shop = { stock: pickThomStock(PLACES.tavern), free: hasKeepsake(room, 'loyaltyCard') };
+            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard') };
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine' };
         } else if (spot === 'diceDen') {
@@ -1593,4 +1835,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, pickSpots, startInterlude, strangerOffer, rollFaceFor };
+module.exports = { start, http, io, rooms, emitState, pickSpots, startInterlude, strangerOffer, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, TAVERN_ENCOUNTERS };

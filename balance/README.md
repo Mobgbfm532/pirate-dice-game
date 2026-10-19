@@ -82,6 +82,24 @@ Fight win % for a sensible player, no Thonics:
   half price +20): Thonics cost about what they're worth, so cheaper ones change little.
   Steady Hand Wrap and Brodor's Sunglasses left. Whole runs: unchanged, ~16.6% sensible.
 
+## Nine fights (19 Oct, Phase two)
+
+The Ghoul and Gourd (McGrath 2, Frak 2, Danhausen 3, Duke 3, Martha 4) then the Yawning
+Portal (Klarg 3, Rokr 3, Hangman 3, Jaguar 4): the user's starting lives. The sim knows the
+new abilities (Fog, Curse, Devil, Martha's random disguise) and Martha's mask (the sensible
+player wears the Devil the first round they can each fight). runs.js's values are per fight
+still to come: a fight with five or more after it counts like Klarg's did.
+
+- Per fight, fresh on 4 hearts, no Thonics (mask from Klarg on), sensible / casual: McGrath
+  85/80, Frak 78/75, Danhausen 65/31 (a casual player doesn't adapt to the Curse; a person
+  reading the banner would), Duke 56/48, Martha 42/28, Klarg 62/53, Rokr 66/60, Hangman
+  64/56, Jaguar 49/41%.
+- Whole runs, sensible: qualify ~23%, win the final 6.5-6.8% (casual ~1%). Options:
+  Martha 3 → 8.8%; Martha and Jaguar 3 → 10.8%; Danhausen 2, Duke 2, Martha 3 → 12.8%.
+- The older experiments (keepsakes.js, thonic-gold.js, ...) count opponents 1-4 as Klarg to
+  Jaguar; with nine fights their `startAt` means Frak to Martha. Re-run them with 5-8 for the
+  Yawning Portal.
+
 ## Possible next tuning
 
 - The Molar still ends about 1 run in 7 for a sensible player (1 in 5 casual). If that feels

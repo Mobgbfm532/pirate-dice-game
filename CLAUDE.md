@@ -14,10 +14,11 @@ A 24 restores a life (Tavern Crawl opponents too, since 18 Oct: a rolled 24, up 
 the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with lives wins.
 
 Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN` = Tavern
-Crawl (five opponents in a row: The Molar, Klarg, Rokr, The Hangman, Jaguar Cantona, each
-with an ability; between fights you choose Thom's Thonics shop or another event; gold and a
-global leaderboard). See
-"Tavern Crawl now" below.
+Crawl (since 19 Oct a tournament of nine fights across two pubs: the Ghoul and Gourd, a
+qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), then the final at
+the Yawning Portal (Klarg, Rokr, The Hangman, Jaguar Cantona); each from Frak on has an
+ability; between fights one event; gold and a global leaderboard; the run can be saved after
+the Ghoul and Gourd). See "Tavern Crawl now" below.
 
 ## The person
 
@@ -38,7 +39,8 @@ The **server is authoritative**: it rolls (crypto RNG), validates every action, 
 the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`rollDice`,
 `toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `drinkThonic(slot, dieId?)`
 and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `strangerPick`,
-`diceRoll`, `moveOn` (`leaveShop` is its older name)) and render what comes back. Two clients share one server:
+`diceRoll`, `moveOn` (`leaveShop` is its older name); `wearMask(curse|devil)` for Martha's mask;
+`joinTavern` may carry `resume`, a saved run) and render what comes back. Two clients share one server:
 
 | Path | What |
 |---|---|
@@ -56,7 +58,7 @@ and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `stran
 Key socket events (server → client): `gameStateUpdate` (players, order, lives, mode, tavern
 run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finalized`),
 `diceRolled {turn, preRollCallout, suspense, devil, animationMs, throwSeed, rerolled?}`,
-`roundResult`, `signatureMove`, `offerShop` (a fight is won; the name is historical), `thonicUsed`, `keepsakeActivated`, `gameOver`
+`roundResult`, `signatureMove`, `offerShop` (a fight is won; the name is historical), `thonicUsed`, `keepsakeActivated`, `resumeFailed`, `gameOver`
 (with a `tavern` summary at the end of a run), `triggerNewGameSplash`. (`offerKeepsakes` /
 `chooseKeepsake` are left over from the old keepsake-after-every-win; unused.)
 
@@ -110,11 +112,14 @@ read and follow the file):
 
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
-`/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/between?spots=thom,stranger` (add `&pickpocket=1`,
-or `&stage=shrine|diceDen|stranger`). The pane's launch entry for it is `dev-test-server`.
+`/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
+against opponent 0-8, ability ready), `/invitation` (Martha beaten), `/between?spots=thom,shrine` (add
+`&pickpocket=1`, or `&stage=shrine|diceDen|stranger`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
-`TAVERN_START_ENCOUNTER` (1 = Klarg … 4 = Jaguar, for testing), `GAME_SERVER` (dev proxy target).
+`TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Klarg … 8 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
+`SAVE_SECRET` (seals saved runs; **set it on Render**, or saves only last until the server restarts,
+which on the free tier is every sleep and deploy).
 
 ## Working here: lessons learned
 
@@ -164,9 +169,10 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   `/next`: physics dice, all painted art, tavern backdrop and opponent busts, multiplayer with
   invites and reconnection, phone and desktop layouts, turn banner, separate music / sound
   switches, synthesized dice sound, and the Tavern Crawl with Thonics, events between fights,
-  best-play opponents and a balance pass set by simulation (below). 79 server/rules/strategy
-  tests + 10 client tests. A sensible player finishes a whole crawl ~17% of the time
-  (`node balance/experiments/runs.js`).
+  best-play opponents and a balance pass set by simulation (below); since 19 Oct the two
+  pubs and nine fights (Phase two of the design doc). 88 server/rules/strategy tests + 10
+  client tests. A sensible player finishes the nine fights ~6.5% of the time with the user's
+  starting lives (`node balance/experiments/runs.js`; see the next steps).
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
@@ -180,9 +186,13 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 Design doc (shared with the user, kept current):
 https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
-- **Fights:** five opponents in order (`PLACES.tavern`, built as data so later places with
-  tougher opponents are new entries). Hearts reset to 4 each fight; the opponents have 2, 2,
-  3, 3 and 4 lives (`shared/balance.js`). **Turns alternate**
+- **Fights:** nine opponents in order (`TAVERN_ENCOUNTERS`, each with its `place`, a key of
+  `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak, Danhausen, Duke Morrigan,
+  Martha Mystery) then the Yawning Portal (Klarg, Rokr, the Hangman, Jaguar). McGrath is the
+  Molar renamed (keeps the id `molar`, plays simply). The new four use the Molar's art until
+  the user paints theirs (`portraitFor` falls back to it). Hearts reset to 4 each fight; the
+  opponents have 2 | 2, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`, the user's starting
+  point). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
@@ -199,8 +209,27 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`takeNeeded` in strategy.js; pure best play kept a lone 6 and left needed 2s and 4s, which
   looked like mistakes). That costs up to 5 points of win chance at high targets: to beat 20
   they win 48% (pure best 53%, the old fixed habits 35%).
-- **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Klarg 1,
-  Rokr 2, Hangman 1, Jaguar 1). Each use costs the player ~10 points of fight win chance.
+- **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
+  Danhausen 2, Duke 1, Martha 2, Klarg 1, Rokr 2, Hangman 1, Jaguar 1). Each use costs the
+  player ~10 points of fight win chance. The new ones are **round effects**, decided as a round
+  begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
+  **Psychic Fog** (your first throw lands one die face-down, `turn.fogDieId`, hidden by
+  `Rules.viewTurn` until kept or rolled again); Danhausen's **You are Cursed** (the lowest valid
+  score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
+  with `low`); the Duke's **Sympathy for the Devil** (his first throw gets three 6s, the devil
+  effect plays, and you can't score above `devilCap` 18 that round; the solver's `cap`);
+  Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
+  shows a banner and a line under the Roll button ("Cursed round: ...").
+- **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
+  before you roll, in a round with no effect yet, wear Danhausen's Curse or the Duke's Devil
+  yourself (`wearMask`, `by: 'player'`; the Devil's three 6s are yours and the opponent is
+  capped). On the strip it lights up and shows two choices inline (never over the rail).
+- **The invitation and saving:** beating Martha gives `interlude.stage = 'invitation'` instead of
+  an event (no events on the way to the final). "On to the Yawning Portal" or "Save and continue
+  later": the server seals the run (`sealSave`, HMAC with `SAVE_SECRET`); the client keeps it in
+  `localStorage.tavernSave` and the start screen offers "Continue your crawl" (`actions.resume`,
+  `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the
+  invitation with a fresh save; an edited or used one sends `resumeFailed` and a fresh crawl.
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
   left, 75 per perfect 24); the purse (+ a consolation for a lost run) is the final score and
   goes on the leaderboard. The run-over screen shows the breakdown.
@@ -268,10 +297,15 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **User plays the test site on the phone** (needs the user): a full Tavern Crawl on the new
-   balance (4 hearts, new prices, the reworked Steady and Clear-Eye, the Lady's blessings),
-   then two phones over mobile data. Collect what feels off; change `shared/balance.js` and
-   re-run `node balance/experiments/runs.js` to see the effect before pushing.
+1. **Lives for nine fights** (the user's call): with the user's starting lives a sensible
+   player qualifies ~23% and wins the final ~6.5% (per fight: McGrath 85, Frak 78, Danhausen
+   65, Duke 56, Martha 42, Klarg 62, Rokr 66, Hangman 64, Jaguar 49%). Simulated options: Martha
+   3 → 8.8%; Martha and Jaguar 3 → 10.8%; Danhausen 2, Duke 2, Martha 3 → 12.8%
+   (`balance/README.md`). **Set `SAVE_SECRET` on Render** (an env var, any long random text) so
+   saves survive sleeps and deploys.
+   **User plays the test site on the phone** (needs the user): a full Tavern Crawl, then two
+   phones over mobile data. Collect what feels off; change `shared/balance.js` and re-run
+   `node balance/experiments/runs.js` to see the effect before pushing.
 2. **Keepsakes, more** (the first rework is done, 19 Oct): ideas left from the shortlist, if the
    user wants more: Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's Glove, Gold
    Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt. Simulate each in `balance/sim.js`

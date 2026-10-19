@@ -6,6 +6,8 @@ const runs = Number(process.argv[2] || 20000);
 
 // What things are worth in gold from the next fight on (index 1 = Klarg ... 4 = Jaguar), from
 // thonic-gold.js, effects.js and keepsakes.js (plan A hearts/lives, the new effects).
+// Over nine fights: a fight with five or more still to come counts like Klarg's did (index 1).
+const at = next => Math.max(1, next - 4);
 const VALUE = {
     healing: [0, 157, 156, 124, 64],
     lastGasp: [0, 199, 174, 128, 62],
@@ -31,7 +33,7 @@ const sensible = {
         const room = run.shelf.length < N.shelfSize + (run.keepsakes.includes('potionBelt') ? 1 : 0);
         const worth = {
             thom: room && run.purse >= Math.min(...Object.values(N.thonicPrices)) ? 30 : -1,
-            shrine: N.interlude.shrineGifts ? VALUE.blessing[next] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[next] : 0),
+            shrine: N.interlude.shrineGifts ? VALUE.blessing[at(next)] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[at(next)] : 0),
             diceDen: -1, // even odds: no gain for the score
             stranger: 60 // two offers; often one is worth the heart
         };
@@ -39,14 +41,14 @@ const sensible = {
         return best && worth[best] > 0 ? best : null;
     },
     shop(run, stock, N, next) {
-        return stock.filter(t => VALUE[t][next] > N.thonicPrices[t]).sort((a, b) => (VALUE[b][next] - N.thonicPrices[b]) - (VALUE[a][next] - N.thonicPrices[a]));
+        return stock.filter(t => VALUE[t][at(next)] > N.thonicPrices[t]).sort((a, b) => (VALUE[b][at(next)] - N.thonicPrices[b]) - (VALUE[a][at(next)] - N.thonicPrices[a]));
     },
-    shrine: (run, N, next) => (VALUE.healing[next] > N.interlude.shrineGold ? 'healing' : 'gold'),
+    shrine: (run, N, next) => (VALUE.healing[at(next)] > N.interlude.shrineGold ? 'healing' : 'gold'),
     bet: () => 0,
     stranger(run, offers, N, next) {
-        const cost = VALUE.heartShort[next] * (N.playerHearts - N.interlude.strangerHearts);
-        const best = offers.slice().sort((a, b) => VALUE[b][next] - VALUE[a][next])[0];
-        return VALUE[best][next] > cost ? best : null;
+        const cost = VALUE.heartShort[at(next)] * (N.playerHearts - N.interlude.strangerHearts);
+        const best = offers.slice().sort((a, b) => VALUE[b][at(next)] - VALUE[a][at(next)])[0];
+        return VALUE[best][at(next)] > cost ? best : null;
     }
 };
 
@@ -72,7 +74,7 @@ const NOW = { numbers: {}, effects: {} };
 const setups = process.env.SETUPS ? JSON.parse(process.env.SETUPS) : null;
 
 function report(label, policy, setup, player) {
-    let won = 0, gold = 0, reach = [0, 0, 0, 0, 0, 0], spent = 0, events = 0;
+    let won = 0, gold = 0, reach = new Array(10).fill(0), spent = 0, events = 0;
     const golds = [];
     for (let k = 0; k < runs; k++) {
         const r = S.playRun(policy, { numbers: setup.numbers, effects: setup.effects, player });
@@ -85,7 +87,7 @@ function report(label, policy, setup, player) {
     }
     golds.sort((a, b) => a - b);
     const pct = x => (100 * x / runs).toFixed(1);
-    console.log(`${label.padEnd(30)} whole run ${pct(won).padStart(5)}%  gold avg ${Math.round(gold / runs)} (median ${golds[runs >> 1]}, top 10% ${golds[Math.floor(runs * 0.9)]})  spent ${Math.round(spent / runs)}  events ${Math.round(events / runs)}  fell to M/K/R/H/J ${reach.slice(0, 5).map(pct).join(' / ')}`);
+    console.log(`${label.padEnd(30)} whole run ${pct(won).padStart(5)}%  gold avg ${Math.round(gold / runs)} (median ${golds[runs >> 1]}, top 10% ${golds[Math.floor(runs * 0.9)]})  spent ${Math.round(spent / runs)}  events ${Math.round(events / runs)}  fell to McG/F/Dan/Duke/Mar | K/R/H/J ${reach.slice(0, 5).map(pct).join(' / ')} | ${reach.slice(5, 9).map(pct).join(' / ')}`);
 }
 
 module.exports = { sensible, casual, VALUE };

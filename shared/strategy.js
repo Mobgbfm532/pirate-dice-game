@@ -12,6 +12,9 @@
 //   - The player dusted: the chance of a valid hand (a 2 and a 4).
 //   - It goes first: the chance that a sensible player then fails to beat it (see
 //     firstMoverValue: the player's scores are taken from playing for the most points).
+// Two rounds change what "beat" means: a cursed one (low: the lowest valid score wins, and a
+// sensible player plays for the fewest points), and the Devil's (cap: a score counts as no
+// more than cap).
 'use strict';
 
 const MAX_S = 36; // six dice of 6
@@ -102,11 +105,12 @@ function solve(finish) {
     return V;
 }
 
-// The player's likely final scores, if they play for the most points: { dust, score[] }.
-let playerScores = null;
-function sensiblePlayerScores() {
-    if (playerScores) return playerScores;
-    const V = solve((s, valid) => (valid ? s / 24 : 0));
+// The player's likely final scores, if they play for the most points (or, low, the fewest):
+// { dust, score[] }.
+const playerScores = {};
+function sensiblePlayerScores(low = false) {
+    if (playerScores[low]) return playerScores[low];
+    const V = solve((s, valid) => (valid ? (low ? 24 - Math.min(s, 24) : s) / 24 : 0));
     const P = new Float64Array(STATES);
     P[at(6, 0, 0)] = 1;
     const result = { dust: 0, score: new Array(MAX_S + 1).fill(0) };
@@ -129,35 +133,38 @@ function sensiblePlayerScores() {
         const p = P[at(0, s, h)];
         if (h === 3) result.score[s] += p; else result.dust += p;
     }
-    playerScores = result;
+    playerScores[low] = result;
     return result;
 }
 
 // Going first: the value of finishing on a score is the chance the player then fails to
-// beat it (they dust, score lower, or tie and lose the sudden death half the time).
-function firstMoverValue(score) {
-    const d = sensiblePlayerScores();
-    let below = d.dust;
-    for (let x = 0; x < score; x++) below += d.score[x];
-    return below + 0.5 * d.score[score];
+// beat it (they dust, score lower, or tie and lose the sudden death half the time). Cursed
+// (low), beating it means scoring lower.
+function firstMoverValue(score, low = false) {
+    const d = sensiblePlayerScores(low);
+    let fails = d.dust;
+    for (let x = 0; x <= MAX_S; x++) if (low ? x > score : x < score) fails += d.score[x];
+    return fails + 0.5 * d.score[score];
 }
 
 // The finish value for what the bot knows. toBeat: the player's score, null if they dusted,
-// undefined if they haven't played yet. aceAt16: the Hangman can turn 16+ into 24.
-function finishFor(toBeat, { aceAt16 = false } = {}) {
-    const lift = s => (aceAt16 && s >= 16 && s < 24 ? 24 : s);
+// undefined if they haven't played yet. aceAt16: the Hangman can turn 16+ into 24. low: a
+// cursed round. cap: the bot's score counts as no more than this (the Devil's round).
+function finishFor(toBeat, { aceAt16 = false, low = false, cap = null } = {}) {
+    const lift = s => Math.min(aceAt16 && !low && s >= 16 && s < 24 ? 24 : s, cap ?? MAX_S);
     if (toBeat === null) return (s, valid) => (valid ? 1 : 0);
-    if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S)) : 0);
+    if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S), low) : 0);
     return (s, valid) => {
         if (!valid) return 0;
         const score = lift(s);
-        return score > toBeat ? 1 : score === toBeat ? 0.5 : 0;
+        if (score === toBeat) return 0.5;
+        return (low ? score < toBeat : score > toBeat) ? 1 : 0;
     };
 }
 
 const tables = new Map();
 function tableFor(toBeat, options = {}) {
-    const key = `${toBeat}|${options.aceAt16 ? 1 : 0}`;
+    const key = `${toBeat}|${options.aceAt16 ? 1 : 0}|${options.low ? 1 : 0}|${options.cap ?? ''}`;
     if (!tables.has(key)) tables.set(key, { V: solve(finishFor(toBeat, options)), finish: finishFor(toBeat, options) });
     return tables.get(key);
 }

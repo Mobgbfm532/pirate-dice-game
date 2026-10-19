@@ -8,6 +8,8 @@
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
+//   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
+//   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the final
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
 //        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen to go straight to a spot)
@@ -33,6 +35,10 @@ const COMMANDS = {
     '/lives': (r, q) => { const p = human(r); if (p) p.lives = Number(q.get('n')); },
     '/shelf': (r, q) => { r.tavernRun.shelf = (q.get('ids') || '').split(',').filter(Boolean); },
     '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
+    // A fight against opponent n (0 McGrath ... 4 Martha, 5 Klarg ... 8 Jaguar), its ability ready from round 1.
+    '/fight': (r, q, code) => { r.tavernRun.encounterIndex = Number(q.get('n')); r.tavernRun.interlude = null; r.tavernRun.shop = null; server.resetTavernEncounter(code); r.tavernRun.abilityRound = 1; r.tavernRun.abilityUsed = {}; server.beginTavernRound(code, r); },
+    // Martha just beaten: her mask and the invitation to the Yawning Portal.
+    '/invitation': (r) => { r.tavernRun.encounterIndex = 5; r.tavernRun.keepsakes = [...r.tavernRun.keepsakes.filter(k => k.id !== 'marthasMask'), { id: 'marthasMask', name: "Martha's Mask", text: '' }]; r.tavernRun.lastWin = { defeated: 'Martha Mystery', nextEnemy: 'Klarg', gold: { win: 500, hearts: 50 } }; r.tavernRun.interlude = { stage: 'invitation', place: 'The Yawning Portal', save: server.sealSave(r, (Object.values(r.players).find(p => p.id !== 'BOT_MOLAR') || {}).name || 'Tester') }; r.roundPlayers = []; },
     // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard).
     '/keepsakes': (r, q) => { r.tavernRun.keepsakes = (q.get('ids') || '').split(',').filter(Boolean).map(id => ({ id, name: id, text: '' })); },
     '/between': (r, q) => {
@@ -61,6 +67,6 @@ http.createServer((req, res) => {
         return;
     }
     const tables = tavernTables();
-    tables.forEach(([code, r]) => { command(r, url.searchParams); server.emitState(code); });
+    tables.forEach(([code, r]) => { command(r, url.searchParams, code); server.emitState(code); });
     res.end(`ok: ${tables.length} Tavern Crawl table(s)\n`);
 }).listen(CONTROL_PORT, '127.0.0.1', () => console.log(`Test controls on http://localhost:${CONTROL_PORT}`));

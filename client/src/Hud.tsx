@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, readSavedRun, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { areSoundsOff, isMusicOff, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
@@ -50,6 +50,8 @@ function JoinScreen() {
         savePrefs(name, avatar, tableCode);
         actions.join(name, avatar, tableCode, lives);
     };
+    // A Tavern Crawl saved at the invitation to the final.
+    const [saved, setSaved] = useState(readSavedRun);
 
     return (
         <div className="modal-backdrop">
@@ -63,6 +65,15 @@ function JoinScreen() {
                 </div>
                 <input value={name} maxLength={15} placeholder="Adventurer name" onChange={e => setName(e.target.value)} />
                 {invite && <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>}
+                {saved && !invite && (
+                    <div className="saved-run">
+                        <button className="primary" onClick={() => actions.resume(saved, avatar)}>
+                            Continue your crawl
+                            <span className="detail">{saved.name}: {saved.next} at {saved.place} · {saved.purse} gold</span>
+                        </button>
+                        <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
+                    </div>
+                )}
                 <button className={invite ? 'secondary' : 'primary'} onClick={() => join('COMP')}>Solo vs The Molar</button>
                 <button className={invite ? 'secondary' : 'primary alt'} onClick={() => join('TAVERN')}>Tavern Crawl</button>
                 <div className="row">
@@ -137,7 +148,23 @@ function scoreClass(state: GameState, id: string) {
     if (!p || p.score === null) return 'waiting';
     if (p.busted) return 'dust';
     const scores = finishedScores(state);
-    return scores.length > 1 && p.score === Math.min(...scores) ? 'lowest' : 'scored';
+    const worst = cursed(state) ? Math.max(...scores) : Math.min(...scores);
+    return scores.length > 1 && p.score === worst ? 'lowest' : 'scored';
+}
+
+// A Tavern Crawl round where the lowest valid score wins (Danhausen's Curse).
+function cursed(state: GameState) {
+    return state.tavernRun?.roundEffect?.kind === 'curse';
+}
+
+// What this round's ability means for you, in a line (shown under the Roll button).
+function roundEffectHint(state: GameState) {
+    const effect = state.tavernRun?.roundEffect;
+    if (!effect) return '';
+    const cap = state.tavernRun?.devilCap ?? 18;
+    if (effect.kind === 'curse') return 'Cursed round: the lowest valid score wins';
+    if (effect.kind === 'devil') return effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`;
+    return '';
 }
 
 // What the player rolling now has to do. The lowest score of the round loses a life (and
@@ -147,6 +174,7 @@ function scoreToBeat(state: GameState, rollerId: string): { label: string; targe
     if (finished.length === 0) return null; // first to roll: nothing to beat yet
     const scores = finishedScores(state, rollerId);
     if (scores.length === 0) return { label: 'Everyone else dusted: just find a 2 and a 4', target: null };
+    if (cursed(state)) return { label: 'Score to stay under', target: Math.max(...scores) };
     return { label: 'Score to beat', target: Math.min(...scores) };
 }
 
@@ -212,8 +240,9 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     const goal = state && !snap.waiting ? scoreToBeat(state, turn.playerId) : null;
     const roller = state?.players[turn.playerId];
     // Green once the dice already beat it (with the 2 and 4 in hand), amber on a tie.
+    const low = !!state && cursed(state);
     const standing = goal?.target != null && !hiddenLocked && scoring.has2 && scoring.has4
-        ? (scoring.score > goal.target ? 'ahead' : scoring.score === goal.target ? 'level' : '')
+        ? ((low ? scoring.score < goal.target : scoring.score > goal.target) ? 'ahead' : scoring.score === goal.target ? 'level' : '')
         : '';
 
     let label = 'Roll Dice';
@@ -222,13 +251,14 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     else if (turn.finalized) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
 
     const hint = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
-        : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again' : '';
+        : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again'
+            : state ? roundEffectHint(state) : '';
 
     return (
         <div className="controls">
             {goal ? (
                 <div className="goal">
-                    <span className="label">{goal.target != null && !snap.isMyTurn && roller ? `${roller.name} must beat` : goal.label}</span>
+                    <span className="label">{goal.target != null && !snap.isMyTurn && roller ? `${roller.name} must ${low ? 'stay under' : 'beat'}` : goal.label}</span>
                     {goal.target != null && <span className="target">{goal.target}</span>}
                 </div>
             ) : state && !snap.waiting && (
@@ -258,9 +288,38 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
         <div className="tavern-strip">
             <span className="purse" aria-label={`${run.purse} gold`}><span aria-hidden="true">🪙</span> {run.purse}</span>
             <Shelf snap={snap} state={state} />
-            {run.keepsakes.map(k => <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
+            {run.keepsakes.map(k => k.id === 'marthasMask'
+                ? <MaskKeepsake key={k.id} snap={snap} state={state} />
+                : <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
             {run.ladysGrace && <span className="keepsake blessing" title="The next time you'd lose a heart to dust, the Lady saves you.">The Lady's Grace</span>}
         </div>
+    );
+}
+
+// Martha's mask: lit when it can be worn (your turn, before you roll, once a fight, in a
+// round no one has played a trick in yet). Tap, then pick Danhausen's Curse or the Duke's Devil.
+function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const run = state.tavernRun!;
+    const turn = snap.turn;
+    const [open, setOpen] = useState(false);
+    const usable = !!run.maskReady && snap.isMyTurn && !!turn && !turn.hasRolled && !run.roundEffect && !snap.rolling;
+    useEffect(() => { if (!usable) setOpen(false); }, [usable]);
+    const wear = (kind: 'curse' | 'devil') => { setOpen(false); actions.wearMask(kind); };
+    return (
+        <span className="mask-keepsake">
+            <button
+                className={`keepsake ${usable ? 'usable' : ''} ${run.maskReady ? '' : 'used'}`}
+                disabled={!usable}
+                title="Martha's Mask: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round."
+                onClick={() => { setOpen(!open); playSound('click'); }}
+            >🎭 Martha's Mask</button>
+            {open && (
+                <span className="mask-choice" role="group" aria-label="Wear a disguise for this round">
+                    <button onClick={() => wear('curse')}>Curse<small>lowest wins</small></button>
+                    <button onClick={() => wear('devil')}>Devil<small>three 6s; they max {state.tavernRun?.devilCap ?? 18}</small></button>
+                </span>
+            )}
+        </span>
     );
 }
 
@@ -511,7 +570,7 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
     const ability = enemy.ability ? Rules.ABILITY_NAMES[enemy.ability as keyof typeof Rules.ABILITY_NAMES] : null;
     return (
         <button key={snap.introAt} className="encounter-intro" onClick={dismiss}>
-            <span className="encounter">Opponent {run.encounterNumber} of {run.totalEncounters}</span>
+            <span className="encounter">{run.place} · Opponent {run.encounterNumber} of {run.totalEncounters}</span>
             <span className="name">{enemy.name}</span>
             <Hearts lives={enemy.lives} starting={enemy.lives} />
             {ability && <span className="ability">{ability}</span>}
@@ -647,6 +706,7 @@ function Interlude({ state }: { state: GameState }) {
         setLeaving(true);
         setTimeout(actions.moveOn, LEAVE_MS);
     };
+    if (interlude.stage === 'invitation') return <Invitation state={state} interlude={interlude} next={next} leaving={leaving} onMoveOn={moveOn} />;
     if (interlude.stage !== 'choose') {
         const spot = interlude.stage === 'done' ? interlude.spot : interlude.stage;
         return <SpotScene key={spot} spot={spot} state={state} next={next} leaving={leaving} onMoveOn={moveOn} />;
@@ -668,6 +728,33 @@ function Interlude({ state }: { state: GameState }) {
                     ))}
                 </div>
                 <button className="link-button" onClick={moveOn}>Or challenge {next} right away</button>
+            </div>
+        </div>
+    );
+}
+
+// After Martha: her mask is yours, and it is the invitation to the final. Go on now, or keep
+// the run on this phone and come back to it (the lobby's "Continue your crawl").
+function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: GameState; interlude: Extract<Interlude, { stage: 'invitation' }>; next: string; leaving: boolean; onMoveOn: () => void }) {
+    const run = state.tavernRun!;
+    const me = Object.values(state.players).find(p => p.id !== BOT_ID);
+    const save = () => actions.saveAndLeave(interlude.save, { name: me?.name ?? 'Traveller', place: interlude.place, next, purse: run.purse });
+    return (
+        <div className={`interlude-scene invitation ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="An invitation to the final"
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
+            <div className="interlude-body">
+                <Winnings state={state} />
+                <h2 className="interlude-title">You qualify for the final</h2>
+                <div className="invitation-card">
+                    <span className="icon" aria-hidden="true">🎭</span>
+                    <p>Martha Mystery lifts off her mask and presses it into your hand. "You've earned this. Show it at {interlude.place}."</p>
+                    <p className="mask-text"><strong>Martha's Mask</strong> is yours: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round.</p>
+                </div>
+                <div className="event-choices">
+                    <button className="primary onward" onClick={onMoveOn} disabled={leaving}>On to {interlude.place}: challenge {next}</button>
+                    <button className="secondary" onClick={save}>Save and continue later</button>
+                </div>
+                <p className="fine">The save stays on this device. Pick it up from the start screen.</p>
             </div>
         </div>
     );

@@ -42,7 +42,11 @@
         reachAround: 'Reach Around',
         constellationBlur: 'Constellation Blur',
         deadeye24: 'The Ace of Spades',
-        smoothTalk: 'Smooth Talk'
+        smoothTalk: 'Smooth Talk',
+        psychicFog: 'Psychic Fog',
+        cursed: 'You are Cursed',
+        devil: 'Sympathy for the Devil',
+        disguises: 'Disguises'
     };
 
     function getAbilityMaxUses(abilityId) {
@@ -86,6 +90,7 @@
             hasRolled: false,
             inTrouble: false,
             blurActive: false,
+            fogDieId: null, // Psychic Fog: this die landed face-down (hidden while it's in play)
             suspense: SUSPENSE.NONE,
             callout: null,
             finalized: false,
@@ -158,6 +163,7 @@
         if (!canRoll(turn)) return null;
 
         if (turn.blurActive && turn.locksThisRoll > 0) turn.blurActive = false;
+        turn.fogDieId = null; // a fogged die rolled again lands face-up
         applyPreRollCallouts(turn);
 
         turn.rollCount++;
@@ -260,7 +266,9 @@
     // in play this roll are hidden from everyone (value 0, hidden: true).
     function viewTurn(turn) {
         if (!turn) return null;
-        const hide = d => turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL);
+        // Psychic Fog hides one die until it's kept (or the turn is over).
+        const hide = d => (turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL))
+            || (d.id === turn.fogDieId && d.status === STATUS.ACTIVE && !turn.finalized);
         return {
             key: turn.key,
             playerId: turn.playerId,

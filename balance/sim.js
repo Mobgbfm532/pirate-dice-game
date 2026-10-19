@@ -11,13 +11,23 @@ const Strategy = require('../shared/strategy');
 const DEFAULTS = require('../shared/balance');
 
 const { STATUS } = Rules;
+// The Ghoul and Gourd (McGrath keeps the Molar's id; Martha is the boss: her mask, then the
+// final), then the Yawning Portal.
 const OPPONENTS = [
     { id: 'molar', ability: null },
+    { id: 'frak', ability: 'psychicFog' },
+    { id: 'danhausen', ability: 'cursed' },
+    { id: 'duke', ability: 'devil' },
+    { id: 'martha', ability: 'disguises', boss: true },
     { id: 'klarg', ability: 'reachAround' },
     { id: 'rokr', ability: 'constellationBlur' },
     { id: 'hangman', ability: 'deadeye24' },
     { id: 'jaguar', ability: 'smoothTalk' }
 ];
+// Round abilities (decided as a round begins; server.js beginTavernRound). Martha's disguises
+// pick one of the three at random.
+const ROUND_KIND = { psychicFog: 'fog', cursed: 'curse', devil: 'devil' };
+const DISGUISES = ['psychicFog', 'cursed', 'devil'];
 // What the Hooded Stranger offers (since 19 Oct). blessedTankard (Brodor's Sunglasses) and
 // steadyHand (Steady Hand Wrap) left the game; the sim still knows them, for old experiments.
 const KEEPSAKES = ['bentCopper', 'luckySeat', 'velvetCushion', 'loadedDie', 'potionBelt', 'loyaltyCard'];
@@ -33,7 +43,7 @@ const active = turn => turn.dice.filter(d => d.status === STATUS.ACTIVE);
 // run: { shelf, keepsakes, hearts (start of fight), stats } (changed in place)
 // opts.player: 'sensible' (best play) or 'casual' (the Molar's simple habits)
 function fight(index, run, opts = {}) {
-    const N = { ...DEFAULTS, ...(opts.numbers || {}) };
+    const N = numbersFor(opts);
     const opp = OPPONENTS[index];
     const f = {
         index, opp,
@@ -61,6 +71,7 @@ function fight(index, run, opts = {}) {
 
     while (f.player > 0 && f.bot > 0) {
         f.rounds++;
+        beginRound(f, run, has);
         const playerFirst = f.round % 2 === 1;
         let p, b;
         if (playerFirst) {
@@ -76,27 +87,49 @@ function fight(index, run, opts = {}) {
     return { won: f.bot <= 0, heartsLeft: Math.max(0, f.player), rounds: f.rounds };
 }
 
+// The round's ability, as it begins: { kind, by } or null. The opponent's (Martha's at random),
+// or, if the opponent has none this round, Martha's mask: the player wears the Devil the first
+// chance they get each fight.
+function beginRound(f, run, has) {
+    f.effect = null;
+    const a = f.opp.ability;
+    if (a && (ROUND_KIND[a] || a === 'disguises')) {
+        const as = a === 'disguises' ? DISGUISES[Math.floor(Math.random() * 3)] : a;
+        if (f.fire(a)) f.effect = { kind: ROUND_KIND[as], by: 'opponent' };
+    }
+    if (!f.effect && has('marthasMask') && !f.keepUsed.marthasMask) {
+        f.keepUsed.marthasMask = true;
+        f.effect = { kind: 'devil', by: 'player' };
+    }
+}
+const cursed = f => !!f.effect && f.effect.kind === 'curse';
+const devilBy = (f, who) => !!f.effect && f.effect.kind === 'devil' && f.effect.by === who;
+// The Devil's three 6s, on the first throw of whoever plays it.
+const devilThrow = t => active(t).slice(0, 3).forEach(d => { d.value = 6; });
+
 // What the opponent must beat, as the server tells them (keepsakes included).
 function botToBeat(p, run, f) {
     if (p.busted) return run.keepsakes.includes('steadyHand') && !f.keepUsed.steadyHand ? 0 : null;
-    return p.score + (run.keepsakes.includes('velvetCushion') && !f.keepUsed.velvetCushion ? 1 : 0);
+    return p.score + (run.keepsakes.includes('velvetCushion') && !f.keepUsed.velvetCushion ? (cursed(f) ? -1 : 1) : 0);
 }
 
 function botTurn(f, run, toBeat, canUse) {
     const turn = Rules.createTurn('BOT');
-    const aceAt16 = f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
+    const low = cursed(f), cap = devilBy(f, 'player') ? DEFAULTS.devilCap : null;
+    const aceAt16 = !low && f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
     while (!turn.finalized) {
-        if (!Rules.rollTurn(turn)) throw new Error('the opponent could not roll');
+        if (!Rules.rollTurn(turn, { onRolled: t => { if (t.rollCount === 1 && devilBy(f, 'opponent')) devilThrow(t); } })) throw new Error('the opponent could not roll');
         if (turn.finalized) break;
         if (active(turn).length === 1) { Rules.toggleDie(turn, active(turn)[0].id); break; }
-        const keep = f.opp.id === 'molar' ? Rules.planBotLocks(turn, 'molar', toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16 });
+        const keep = f.opp.id === 'molar' ? Rules.planBotLocks(turn, 'molar', toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, low, cap });
         keep.forEach(id => Rules.toggleDie(turn, id));
     }
     let { busted, score } = turn.outcome;
+    if (cap !== null && !busted) score = Math.min(score, cap);
     // A rolled 24 restores a life for the opponent too, up to their lives for the fight (the
     // Ace of Spades' 24 doesn't).
     if (score === 24 && !busted && f.bot < f.botMax) f.bot++;
-    if (f.opp.ability === 'deadeye24' && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
+    if (!low && f.opp.ability === 'deadeye24' && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
     return { busted, score };
 }
 
@@ -124,14 +157,26 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
 
     const turn = Rules.createTurn('P');
     let steady = false;
-    const choose = () => (opts.player === 'casual' ? Rules.planBotLocks(turn, 'molar', toBeat) : Strategy.bestKeeps(turn.dice, toBeat));
+    // A cursed round: play for the fewest points (a casual player doesn't adjust). Under the
+    // Duke's Devil, the hand counts as no more than the cap. Psychic Fog: one die unseen (the
+    // choice is made without it, and it stays in play).
+    const round = { low: cursed(f), cap: devilBy(f, 'opponent') ? DEFAULTS.devilCap : null };
+    let fogged = null;
+    const choose = () => {
+        if (opts.player === 'casual') return Rules.planBotLocks(turn, 'molar', toBeat);
+        const seen = turn.dice.map(d => (d.id === fogged && d.status === STATUS.ACTIVE ? { ...d, status: STATUS.STOLEN } : d));
+        return Strategy.bestKeeps(seen, toBeat, round);
+    };
     for (;;) {
         const rolled = Rules.rollTurn(turn, {
             rollFace: loadedFace(run, N),
             onRolled: t => {
+                fogged = null;
                 if (t.rollCount !== 1) return;
+                if (devilBy(f, 'player')) devilThrow(t);
                 if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
                 if (f.fire('constellationBlur')) t.blurActive = true;
+                if (f.effect && f.effect.kind === 'fog' && active(t).length > 1) fogged = active(t)[Math.floor(Math.random() * active(t).length)].id;
             }
         });
         if (!rolled) throw new Error('the player could not roll');
@@ -170,7 +215,8 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     // Steady: dust counts as 0 (now), or (opts.effects.steady === 'asTheyLie') the dice score as
     // they lie, as if the 2 and 4 were there.
     if (steady && busted) { busted = false; score = effects.steady === 'asTheyLie' ? Rules.scoreDice(turn.dice).score : 0; }
-    if (!busted && score > 0 && f.fire('smoothTalk')) score = Math.max(0, score - 3);
+    if (round.cap !== null && !busted) score = Math.min(score, round.cap);
+    if (!round.low && !busted && score > 0 && f.fire('smoothTalk')) score = Math.max(0, score - 3);
     if (score === 24 && !busted) {
         run.stats.perfect24s++;
         run.purse += N.gold.perfect24;
@@ -218,12 +264,15 @@ function settleRound(f, run, p, b, has, N) {
     if (p.busted) losers.push('P');
     if (b.busted) losers.push('B');
     if (!p.busted && !b.busted) {
-        if (p.score < b.score) losers.push('P');
-        else if (b.score < p.score) losers.push('B');
+        // A cursed round: the higher score loses.
+        const pLoses = cursed(f) ? p.score > b.score : p.score < b.score;
+        const bLoses = cursed(f) ? b.score > p.score : b.score < p.score;
+        if (pLoses) losers.push('P');
+        else if (bLoses) losers.push('B');
         else tied = true;
     }
     if (steadyHandSaved) losers = losers.filter(x => x !== 'P');
-    if (losers.length === 1 && losers[0] === 'P' && !p.busted && !b.busted && has('velvetCushion') && !f.keepUsed.velvetCushion && p.score + 1 === b.score) {
+    if (losers.length === 1 && losers[0] === 'P' && !p.busted && !b.busted && has('velvetCushion') && !f.keepUsed.velvetCushion && Math.abs(p.score - b.score) === 1) {
         f.keepUsed.velvetCushion = true;
         losers = [];
         tied = true;
@@ -254,8 +303,15 @@ function newRun(N) {
     return { purse: 0, shelf: [], keepsakes: [], hearts: N.playerHearts, stats: { perfect24s: 0, perfectGold: 0, winGold: 0, heartGold: 0, eventGold: 0, spent: 0, drunk: {} } };
 }
 
+// The numbers for a run: shared/balance.js, with opts.numbers on top (opponents' lives merged,
+// so an experiment can change some).
+function numbersFor(opts) {
+    const numbers = opts.numbers || {};
+    return { ...DEFAULTS, ...numbers, opponentLives: { ...DEFAULTS.opponentLives, ...(numbers.opponentLives || {}) } };
+}
+
 function playRun(policy, opts = {}) {
-    const N = { ...DEFAULTS, ...(opts.numbers || {}) };
+    const N = numbersFor(opts);
     const run = newRun(N);
     // For experiments: start at a later opponent (as if the earlier ones were beaten, with no
     // gold from them) and/or with Thonics already on the shelf.
@@ -274,7 +330,9 @@ function playRun(policy, opts = {}) {
         run.purse += win + hearts;
         run.stats.winGold += win;
         run.stats.heartGold += hearts;
-        if (i < OPPONENTS.length - 1) between(run, policy, N, i + 1, log);
+        // After Martha: her mask, and straight on to the final (no events on the way).
+        if (OPPONENTS[i].boss) run.keepsakes.push('marthasMask');
+        else if (i < OPPONENTS.length - 1) between(run, policy, N, i + 1, log);
     }
     const won = defeated === OPPONENTS.length;
     const consolation = won ? 0 : (defeated + 1) * N.gold.consolation;

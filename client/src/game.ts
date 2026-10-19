@@ -25,9 +25,18 @@ export interface Keepsake { id: string; name: string; text: string }
 // One of Thom's Thonics. `drink`: tapped by the player (the others work by themselves).
 export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean }
 
+// A round changed by an ability (server.js beginTavernRound): the Fog, the Curse (lowest valid
+// score wins) or the Devil (`by` throws three 6s; the other side can't score above devilCap).
+// `by` is 'player' when Martha's mask was worn.
+export interface RoundEffect { kind: 'fog' | 'curse' | 'devil'; by: 'opponent' | 'player'; ability: string; as: string | null }
+
 export interface TavernRun {
     encounterNumber: number;
     totalEncounters: number;
+    place: string; // The Ghoul and Gourd, then the Yawning Portal
+    roundEffect?: RoundEffect | null;
+    devilCap?: number;
+    maskReady?: boolean; // Martha's mask can be worn this fight
     enemy: { id: string; name: string; intro: string; ability: string | null; lives: number };
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
@@ -55,7 +64,9 @@ export type Interlude =
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
     | { stage: 'done'; spot: 'shrine'; gift: 'favour' | 'grace'; hearts?: number }
     | { stage: 'done'; spot: 'diceDen'; bet: number; throws?: DiceThrow[]; won?: boolean }
-    | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number };
+    | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number }
+    // After Martha: her mask is the invitation to the final. `save` is sealed by the server.
+    | { stage: 'invitation'; place: string; save: string };
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
 export interface TavernSummary {
@@ -74,7 +85,7 @@ export interface TavernSummary {
 export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string }
 
 // What the last fight paid out, shown when Thom's cart opens.
-export interface ShopArrival { defeated: string; nextEnemy: string; gold: { win: number; hearts: number } }
+export interface ShopArrival { defeated: string; nextEnemy: string; gold: { win: number; hearts: number }; mask?: Keepsake }
 
 export interface GameState {
     players: Record<string, Player>;
@@ -353,7 +364,21 @@ function announceYourTurn() {
 // connection (a phone going to sleep) puts you straight back in your seat. The server
 // recognises you by the session token and hands your seat back.
 
-interface Seat { roomCode: string; name: string; avatar: string; lives: number }
+interface Seat { roomCode: string; name: string; avatar: string; lives: number; resume?: string }
+
+// A Tavern Crawl saved at the invitation to the final (localStorage, kept on this device).
+export interface SavedRun { save: string; name: string; place: string; next: string; purse: number; at: number }
+
+export function readSavedRun(): SavedRun | null {
+    try { return JSON.parse(localStorage.getItem('tavernSave') ?? 'null'); } catch { return null; }
+}
+
+function writeSavedRun(run: SavedRun | null) {
+    try {
+        if (run) localStorage.setItem('tavernSave', JSON.stringify(run));
+        else localStorage.removeItem('tavernSave');
+    } catch { /* storage unavailable */ }
+}
 
 function readSeat(): Seat | null {
     try { return JSON.parse(sessionStorage.getItem('tavernSeat') ?? 'null'); } catch { return null; }
@@ -367,7 +392,7 @@ function writeSeat(seat: Seat | null) {
 }
 
 function takeSeat(seat: Seat) {
-    socket.emit('joinTavern', { name: seat.name, avatar: seat.avatar, roomCode: seat.roomCode, token: getSessionToken(), startingLives: seat.lives });
+    socket.emit('joinTavern', { name: seat.name, avatar: seat.avatar, roomCode: seat.roomCode, token: getSessionToken(), startingLives: seat.lives, resume: seat.resume });
 }
 
 function roomLabel(code: string) {
@@ -413,7 +438,7 @@ socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
 });
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
-const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk']);
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Psychic Fog', 'You are Cursed', 'Sympathy for the Devil']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
@@ -429,6 +454,11 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string 
             done();
         }, Math.max(0, steal));
     });
+});
+
+// A saved run the server wouldn't open (changed, or opened already): this is a fresh crawl.
+socket.on('resumeFailed', () => {
+    showToast('That save could not be opened', 'It was used already, or the server has been reset. A new crawl begins.', 'info', 5000);
 });
 
 // A fight is won: the run pauses between fights (tavernRun.interlude, then maybe Thom's
@@ -595,6 +625,29 @@ export const actions = {
     },
     leaveShop() {
         actions.moveOn();
+    },
+    // A saved Tavern Crawl carries on at a fresh table (the save is used up).
+    resume(saved: SavedRun, avatar: string) {
+        writeSavedRun(null);
+        const roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
+        startMusic();
+        const seat = { roomCode, name: saved.name, avatar, lives: 3, resume: saved.save };
+        writeSeat(seat);
+        takeSeat(seat);
+        update({ joined: true, roomLabel: roomLabel(roomCode), roomCode });
+    },
+    forgetSavedRun() {
+        writeSavedRun(null);
+    },
+    // At the invitation to the final: keep the run on this device and leave the table.
+    saveAndLeave(save: string, info: Omit<SavedRun, 'save' | 'at'>) {
+        writeSavedRun({ save, ...info, at: Date.now() });
+        actions.leave();
+    },
+    // Martha's mask: before you roll, wear Danhausen's Curse or the Duke's Devil for the round.
+    wearMask(kind: 'curse' | 'devil') {
+        playSound('click');
+        socket.emit('wearMask', kind);
     },
     // Between fights: on to the next opponent, from Thom's cart or any spot.
     moveOn() {
