@@ -1545,3 +1545,30 @@ button.keepsake.used { opacity: 0.55; }
     animation: blessing-glow 2.4s ease-in-out infinite;
 }
 @keyframes blessing-glow { 50% { text-shadow: 0 0 16px rgba(255, 236, 179, 1), 0 0 34px rgba(255, 193, 7, 0.9); } }
+
+/* Phones held upright: a shorter footer, so the table sits lower and the tavern (and the
+   opponent behind the table) gets more of the screen. The score to beat and the turn score
+   share a line; at a table with reactions they take the Roll button's place while it isn't
+   your turn (the two are the same height, so nothing moves between turns). */
+@media (orientation: portrait) and (max-width: 600px) {
+    footer .controls {
+        display: grid;
+        grid-template-columns: auto auto;
+        grid-template-areas: "goal score" "roll roll" "hint hint";
+        justify-content: center;
+        align-items: center;
+        column-gap: 14px;
+        row-gap: 6px;
+    }
+    footer .goal { grid-area: goal; }
+    footer .turn-score { grid-area: score; }
+    footer .roll { grid-area: roll; justify-self: center; }
+    footer .hint { grid-area: hint; justify-self: center; text-align: center; }
+    footer:has(.reactions) .roll.idle { display: none; }
+    footer:has(.roll:not(.idle)) .reactions { display: none; }
+    footer .reactions { min-height: 52px; align-items: center; margin-top: -6px; }
+    /* A Tavern Crawl: the purse and shelf beside your chip when they fit (else they wrap). */
+    footer { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 10px; }
+    footer .tavern-strip { margin-top: 0; }
+    footer .controls, footer .reactions { flex-basis: 100%; justify-content: center; }
+}

@@ -36,7 +36,10 @@ export function layoutBackdrop(horizon: number, width: number, leaning = false) 
     const top = horizon - height * scene.floor;
     const left = Math.min(0, Math.max(width - roomWidth, width / 2 - roomWidth * scene.center));
     // About 80% of the bust shows above the table; the rest is hidden behind it.
-    let bustHeight = Math.max(0, Math.min((horizon - HEADER_SPACE) / 0.8, 460));
+    // A Tavern Crawl has no turn banner at the top, so the opponent may rise nearly to the top edge
+    // (the header's buttons sit in the corners).
+    const headerSpace = store.get().state?.mode === 'tavern-crawl' ? 10 : HEADER_SPACE;
+    let bustHeight = Math.max(0, Math.min((horizon - headerSpace) / 0.8, 460));
     if (leaning && steadyBust > 0) bustHeight = steadyBust;
     else steadyBust = bustHeight;
 

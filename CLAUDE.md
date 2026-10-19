@@ -152,6 +152,12 @@ which on the free tier is every sleep and deploy).
   the footer using its measured height (`screenInsets.bottom`); on narrow screens, where the
   table can't shrink further, it pins the rail above the controls and the tavern gives way.
   Check at ~360x640 and ~384x800 after any HUD or camera change.
+- **The phone footer decides how big the tavern and the opponent are** (the table sits right
+  above it). Upright phones (`orientation: portrait`, width up to 600) keep it short: the score to
+  beat and the turn score share a line, the purse/shelf sit beside your chip when they fit, and
+  at tables with reactions the emoji row takes the hidden Roll button's place (same height, so
+  nothing moves between turns). In a Tavern Crawl the bust may rise to 10 px from the top (no
+  turn banner there). At 412x780 the far edge is at ~240 px (the old, rail-covering layout ~250).
 - **Timers in order:** never rely on two `setTimeout`s with different delays firing in order;
   on a busy event loop they can come out swapped (this stalled the bot). Chain steps instead
   (`runBotDecision` locks one die, then schedules the next). The "too busy" test hogs the loop.
