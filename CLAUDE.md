@@ -89,7 +89,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`, `center`) + the bot opponent's
   bust behind the table (multiplayer tables show no one there). `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
   `SPOT_PORTRAITS`; `seat` draws a cut-out that shows more body larger, so heads match: McGrath 2,
-  Frak 1.4). While the camera leans in on a suspense roll the bust keeps its size.
+  Frak 1.4, Danhausen 1.6, Martha 1.15). While the camera leans in on a suspense roll the bust keeps its size.
 
 ## Commands
 
@@ -197,8 +197,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Fights:** nine opponents in order (`TAVERN_ENCOUNTERS`, each with its `place`, a key of
   `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak, Danhausen, Duke Morrigan,
   Martha Mystery) then the Yawning Portal (Klarg, Rokr, the Hangman, Jaguar). McGrath is the
-  Molar renamed (keeps the id `molar`, plays simply). McGrath and Frak have busts; Danhausen, the Duke and
-  Martha use the Molar's avatar until the user paints them (and show no bust behind the table). Hearts reset to 4 each fight; the
+  Molar renamed (keeps the id `molar`, plays simply). All nine have painted busts (the new five since 19 Oct). Hearts reset to 4 each fight; the
   opponents have 2 | 2, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`, the user's starting
   point). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,

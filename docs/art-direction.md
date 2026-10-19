@@ -112,6 +112,9 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
 | Sperm McGrath | Grizzled grey-haired bouncer, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
 | Frak | Portly half-elf sorcerer with pointed ears, balding with sideburns, purple rune-stitched vest over blue sleeves | sly smirk | a smoking cigar |
+| Danhausen | Wiry showman in white face paint with black markings, small curled horns, a high-collared black cape, white gloves | huge manic grin | a small purple gourd |
+| Duke Morrigan | Elegant purple-skinned tiefling with big curled ram's horns, a purple high-collared coat over a yellow shirt | sly smile | none (head and shoulders) |
+| Martha Mystery | Red-haired tavern regular in an apron over a brown jumper | knowing half-smile | an ornate brass vape, purple smoke curling round her |
 
 Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's Thonics" itself.
 
@@ -130,7 +133,9 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
 | Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
 | Frak (half-elf sorcerer) | Done | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `smokeBox` so the cigar smoke is see-through) → `frak.webp` |
-| Danhausen, Duke Morrigan, Martha Mystery | Wanted | Busts for the other qualifier opponents; they use the Molar's art until then |
+| Danhausen | Done | `art/bust-danhausen.jpg` (flat magenta, `cutOutFlat`) → `danhausen.webp`; `seat: 1.6` behind the table (he shows more body) |
+| Duke Morrigan | Done | `art/bust-duke.jpg` (flat magenta, `cutOutFlat` with a low `tolerance` so his purple coat and skin stay, and `holes` for the background inside his curled horn) → `duke.webp` |
+| Martha Mystery | Done | `art/bust-martha.jpg` (flat magenta, `cutOutFlat` with `smokeBox` + `smokeColour: 'own'`: her vape smoke stays purple and see-through) → `martha.webp`; `seat: 1.15` |
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
 | Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |

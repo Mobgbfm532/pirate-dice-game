@@ -186,7 +186,7 @@ async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [
 // checkerboard. Flood-fill from the border through anything close to the border's colour,
 // then take the background's tint out of the edge pixels (wispy hair over magenta would
 // otherwise keep a pink fringe).
-function floodFlat(img, { tolerance, minRed, minBlue, pocket }) {
+function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [] }) {
     const { data, width, height } = img;
     const border = [];
     for (let x = 0; x < width; x++) border.push(x, (height - 1) * width + x);
@@ -203,6 +203,8 @@ function floodFlat(img, { tolerance, minRed, minBlue, pocket }) {
     const stack = [];
     const visit = p => { if (!mask[p] && near(p)) { mask[p] = 1; stack.push(p); } };
     border.forEach(visit);
+    // Background boxed in by the character (inside a curled horn): filled from a point in it.
+    holes.forEach(([x, y]) => visit(y * width + x));
     while (stack.length) {
         const p = stack.pop();
         const x = p % width;
@@ -229,12 +231,12 @@ function floodFlat(img, { tolerance, minRed, minBlue, pocket }) {
 // and blue in the background's own proportions, so the blue excess (which skin, hair and
 // cloth don't have) measures how much background is mixed in, and the matching share of
 // red comes off with it. (Taking equal amounts off left reddish tips on stray hairs.)
-function despill(img, mask, bg, radius) {
+function despill(img, mask, bg, radius, skip = null) {
     const redPerBlue = (bg[0] - bg[1]) / Math.max(1, bg[2] - bg[1]);
     const { data, width, height } = img;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         const p = y * width + x;
-        if (mask[p]) continue;
+        if (mask[p] || skip?.has(p)) continue;
         let edge = false;
         for (let dy = -radius; dy <= radius && !edge; dy++) for (let dx = -radius; dx <= radius; dx++) {
             const nx = x + dx, ny = y + dy;
@@ -271,6 +273,29 @@ function veil(img, mask, bg, [x0, y0, x1, y1]) {
     return alpha;
 }
 
+// Coloured smoke (Martha's purple vape smoke) stays coloured instead. Inside the box, each
+// kept pixel with blue well above green (purple smoke and the background itself, not skin,
+// lips or hair) is repainted in the smoke's colour `tint`, lighter or darker as the painted
+// smoke was against the background, and gets its transparency from how far it is from the
+// background colour: see-through at `from` (the flood's tolerance), at most `solid` opaque.
+// (Taking the background's share out of the colour instead left the smoke nearly black.)
+function tintVeil(img, mask, bg, boxes, from, { tint = [170, 130, 200], reach = 45, solid = 0.85 } = {}) {
+    const { data, width } = img;
+    const alpha = new Map();
+    const bgLum = 0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2];
+    for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const p = y * width + x, i = p * 4;
+        if (mask[p]) continue;
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        if (b - g < 6 || b - g < 0.3 * (r - g)) continue;
+        const a = Math.min(solid, Math.max(0, (Math.hypot(r - bg[0], g - bg[1], b - bg[2]) - from) / (reach - from)));
+        const shade = lum(data, i) / bgLum;
+        for (let c = 0; c < 3; c++) data[i + c] = Math.min(255, Math.round(tint[c] * shade));
+        alpha.set(p, a);
+    }
+    return alpha;
+}
+
 // Options (all optional):
 //   tolerance  how close (RGB distance) a pixel must be to the background to be cleared (80)
 //   minRed, minBlue  how far red / blue must sit above green for a pixel to count as
@@ -278,14 +303,19 @@ function veil(img, mask, bg, [x0, y0, x1, y1]) {
 //   pocket     clears background caught between hair strands up to this many px from the
 //              edge (14)
 //   despillRadius  how far in from the edge the background tint is taken out (6)
+//   holes      [[x, y], ...]: points (original pixels) inside background that the character
+//              boxes in, too far from the edge for pocket (none)
 //   smokeBox   [x0, y0, x1, y1]: thin smoke painted over the background in this box turns
 //              see-through instead of staying pink (none)
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null } = {}) {
+//   smokeColour  'grey' (Frak's cigar) turns that smoke grey; 'own' keeps it coloured (lilac)
+//              (Martha's purple smoke; pair it with a low tolerance so the flood leaves it);
+//              then smokeBox may also be a list of boxes
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [] } = {}) {
     const img = await readRgba(file);
-    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket });
+    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes });
     keepMainShape(img, mask);
-    const smoke = smokeBox ? veil(img, mask, bg, smokeBox) : null;
-    despill(img, mask, bg, despillRadius);
+    const smoke = !smokeBox ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox], tolerance) : veil(img, mask, bg, smokeBox);
+    despill(img, mask, bg, despillRadius, smoke);
     applyMask(img, mask);
     smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
     await writePreview(name, img);
@@ -369,4 +399,7 @@ await cutOutFlat('bust-dicer.jpg', 'dicer', { pocket: 60 }); // background shows
 await cutOutFlat('bust-pickpocket.jpg', 'pickpocket', { pocket: 40 }); // and behind the hair at the shoulder
 await cutOutFlat('bust-frak.jpg', 'frak', { smokeBox: [190, 130, 298, 466] }); // the cigar smoke above his shoulder
 await cutOutFlat('bust-mcgrath.jpg', 'mcgrath');
+await cutOutFlat('bust-danhausen.jpg', 'danhausen');
+await cutOutFlat('bust-duke.jpg', 'duke', { tolerance: 30, despillRadius: 2, holes: [[380, 280]] }); // purple coat and skin: only the flat background colour goes
+await cutOutFlat('bust-martha.jpg', 'martha', { tolerance: 10, smokeBox: [[60, 215, 700, 720], [700, 215, 990, 515]], smokeColour: 'own', holes: [[744, 790]] }); // her purple smoke stays purple and see-through
 await spotScene('shrine.jpg', 'shrine');
