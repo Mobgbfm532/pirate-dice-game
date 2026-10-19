@@ -485,7 +485,7 @@ test('a perfect 24 pays 75 gold into the purse straight away', async () => {
     assert.equal(room.tavernRun.stats.perfect24s, 1);
 });
 
-test('beating an opponent pays for the win and the hearts left, then one event: the thief or two spots', async () => {
+test('beating an opponent pays for the win and the hearts left, then one event: the thief, the Stranger or two spots', async () => {
     const { hero, room } = await tavernTable('Winner');
     room.players.BOT_MOLAR.lives = 1;
     room.players[hero.id].lives = 2;
@@ -507,10 +507,11 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
         assert.equal(interlude.steal, 37, 'a quarter of the purse');
         return;
     }
+    if (interlude.stage === 'stranger') return;
     assert.equal(interlude.stage, 'choose');
     assert.equal(interlude.spots.length, 2);
     assert.equal(new Set(interlude.spots).size, 2, 'two different spots');
-    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen', 'stranger'].includes(id)));
+    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen'].includes(id)));
 });
 
 // Puts the run between fights at the given stage, with the given purse.
@@ -629,10 +630,12 @@ test('the Dice Den: bet, then roll two dice against the gambler until someone wi
 });
 
 test('the Hooded Stranger: a keepsake, and the next fight starts a heart short', async () => {
-    const { hero, room } = await betweenFights('Hooded', { stage: 'choose', spots: ['stranger', 'thom'] });
-    hero.emit('chooseSpot', 'stranger');
-    const shown = await nextState(hero, s => runOf(s).interlude.stage === 'stranger');
-    const offers = runOf(shown).interlude.offers;
+    const { hero, room } = await betweenFights('Hooded', { stage: 'choose', spots: ['shrine', 'thom'] });
+    hero.emit('chooseSpot', 'stranger'); // not a spot any more
+    await sleep(40);
+    assert.equal(room.tavernRun.interlude.stage, 'choose');
+    room.tavernRun.interlude = server.strangerOffer(room);
+    const offers = room.tavernRun.interlude.offers;
     assert.equal(offers.length, BALANCE.interlude.strangerOffers);
     hero.emit('strangerPick', 'notAKeepsake');
     await sleep(40);
@@ -646,14 +649,77 @@ test('the Hooded Stranger: a keepsake, and the next fight starts a heart short',
     assert.ok(BALANCE.interlude.strangerHearts < BALANCE.playerHearts);
     assert.equal(room.tavernRun.nextFightHearts, null, 'only this one');
 
-    // Walking away costs nothing.
+    // Turning him down costs nothing, even after a fight that ended on one heart.
     const b = await betweenFights('Hooded2', { stage: 'stranger', offers, hearts: BALANCE.interlude.strangerHearts });
+    b.room.players[b.hero.id].lives = 1;
     b.hero.emit('strangerPick', null);
     await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
     b.hero.emit('moveOn');
     const fight2 = await nextState(b.hero, s => !runOf(s).interlude);
     assert.equal(fight2.players[b.hero.id].lives, BALANCE.playerHearts);
     assert.equal(b.room.tavernRun.keepsakes.length, 0);
+});
+
+// Hands the player a keepsake as the Stranger would.
+async function takeKeepsake(hero, room, id) {
+    room.tavernRun.interlude = server.strangerOffer(room);
+    room.tavernRun.interlude.offers = [{ id, name: id, text: '' }];
+    hero.emit('strangerPick', id);
+    return nextState(hero, s => runOf(s).interlude.stage === 'done');
+}
+
+test("the Loaded Die: one of your dice always rolls a 4, 5 or 6; the opponent's dice are fair", async () => {
+    const { hero, room } = await tavernTable('Loaded');
+    room.tavernRun.keepsakes.push({ id: 'loadedDie', name: 'Loaded Die', text: '' });
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    assert.ok(rolled.turn.dice[0].value >= BALANCE.keepsakes.loadedDieLow, 'on the table');
+    const mine = server.rollFaceFor(room, { playerId: hero.id }), theirs = server.rollFaceFor(room, { playerId: 'BOT_MOLAR' });
+    const seen = new Set(), others = new Set(), bot = new Set();
+    for (let i = 0; i < 600; i++) {
+        seen.add(mine({ id: 0 }));
+        others.add(mine({ id: 3 }));
+        bot.add(theirs({ id: 0 }));
+    }
+    assert.deepEqual([...seen].sort(), [4, 5, 6]);
+    assert.equal(others.size, 6, 'the other five are fair');
+    assert.equal(bot.size, 6, "the opponent's first die is fair");
+});
+
+test('the Potion Belt: a third shelf slot, and it comes with a Healing Thonic', async () => {
+    const { hero, room } = await betweenFights('Belted', { stage: 'choose', spots: ['shrine', 'thom'] }, 1000);
+    room.tavernRun.shelf = ['fizzy', 'steady'];
+    const done = await takeKeepsake(hero, room, 'potionBelt');
+    assert.equal(runOf(done).shelfSize, BALANCE.shelfSize + 1);
+    assert.deepEqual(shelfOf(room), ['fizzy', 'steady', 'healing'], 'the Healing fills the new slot');
+    room.tavernRun.shelf = ['fizzy'];
+    room.tavernRun.shop = { stock: ['healing', 'lastGasp', 'steady'] };
+    room.tavernRun.interlude = null;
+    ['healing', 'lastGasp', 'steady'].forEach(id => hero.emit('buyThonic', id));
+    await sleep(60);
+    assert.deepEqual(shelfOf(room), ['fizzy', 'healing', 'lastGasp'], 'three slots, no more');
+});
+
+test("Thom's Loyalty Card: Thom is always on offer, and the first Thonic each visit is free", async () => {
+    const { hero, room } = await betweenFights('Loyal', { stage: 'choose', spots: ['shrine', 'diceDen'] }, 500);
+    await takeKeepsake(hero, room, 'loyaltyCard');
+    for (let i = 0; i < 100; i++) {
+        const spots = server.pickSpots(room);
+        assert.ok(spots.includes('thom'), `Thom among ${spots}`);
+        assert.equal(new Set(spots).size, 2);
+    }
+    room.tavernRun.interlude = { stage: 'choose', spots: ['thom', 'shrine'] };
+    hero.emit('chooseSpot', 'thom');
+    const open = await nextState(hero, s => runOf(s).shop);
+    assert.equal(runOf(open).shop.free, true);
+    hero.emit('buyThonic', 'healing');
+    const first = await nextState(hero, s => runOf(s).shelf.length === 1);
+    assert.equal(room.tavernRun.purse, 500, 'free');
+    assert.equal(runOf(first).shop.free, false);
+    hero.emit('buyThonic', room.tavernRun.shop.stock[1]);
+    await nextState(hero, s => runOf(s).shelf.length === 2);
+    assert.equal(room.tavernRun.purse, 500 - BALANCE.thonicPrices[room.tavernRun.shop.stock[1]], 'the second one costs');
+    assert.equal(room.tavernRun.stats.spent, BALANCE.thonicPrices[room.tavernRun.shop.stock[1]]);
 });
 
 test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away; then the next fight', async () => {
@@ -703,20 +769,31 @@ test('the Dice Den only appears when the purse covers its smallest bet', async (
     }
 });
 
-test('the Stranger stops appearing once every keepsake is yours', async () => {
-    const { hero, room } = await betweenFights('Collector', { stage: 'choose', spots: ['stranger', 'thom'] });
-    // Take a keepsake from him five times: then they're all yours.
-    for (let i = 0; i < 5; i++) {
-        room.tavernRun.interlude = { stage: 'choose', spots: ['stranger', 'thom'] };
-        hero.emit('chooseSpot', 'stranger');
-        const shown = await nextState(hero, s => runOf(s).interlude.stage === 'stranger');
-        hero.emit('strangerPick', runOf(shown).interlude.offers[0].id);
+test('the Hooded Stranger finds you now and then, instead of the spots, until his keepsakes are yours', async () => {
+    const { hero, room } = await betweenFights('Collector', { stage: 'choose', spots: ['shrine', 'thom'] });
+    const walks = n => {
+        const seen = { pickpocket: 0, stranger: 0, choose: 0 };
+        for (let i = 0; i < n; i++) {
+            server.startInterlude(room, null);
+            seen[room.tavernRun.interlude.stage]++;
+            if (room.tavernRun.interlude.stage === 'choose') assert.ok(!room.tavernRun.interlude.spots.includes('stranger'));
+        }
+        return seen;
+    };
+    // 200 gold to steal: the thief 25%, then the Stranger 20% of the rest (15%), else the spots.
+    const seen = walks(4000);
+    const share = k => seen[k] / 4000;
+    assert.ok(Math.abs(share('pickpocket') - 0.25) < 0.04, `thief ${share('pickpocket')}`);
+    assert.ok(Math.abs(share('stranger') - 0.15) < 0.04, `Stranger ${share('stranger')}`);
+
+    // Take a keepsake from him six times: then they're all yours, and he stops coming.
+    for (let i = 0; i < 6; i++) {
+        room.tavernRun.interlude = server.strangerOffer(room);
+        hero.emit('strangerPick', room.tavernRun.interlude.offers[0].id);
         await nextState(hero, s => runOf(s).interlude.stage === 'done');
     }
-    assert.equal(new Set(room.tavernRun.keepsakes.map(k => k.id)).size, 5, 'all five, none twice');
-    for (let i = 0; i < 20; i++) {
-        assert.ok(!server.pickSpots(room).includes('stranger'));
-    }
+    assert.deepEqual(room.tavernRun.keepsakes.map(k => k.id).sort(), ['bentCopper', 'loadedDie', 'loyaltyCard', 'luckySeat', 'potionBelt', 'velvetCushion'], 'all six, none twice');
+    assert.equal(walks(400).stranger, 0);
 });
 
 test('the shelf and purse survive a reconnect', async () => {
@@ -744,6 +821,11 @@ test('full runs through the spots between fights keep the books straight', async
                 hero.emit('pickpocket', 'on');
                 return;
             }
+            if (run.interlude.stage === 'stranger') {
+                hero.emit('strangerPick', run.interlude.offers[0].id);
+                setTimeout(() => hero.emit('moveOn'), 20);
+                return;
+            }
             const spot = run.interlude.spots[0];
             hero.emit('chooseSpot', spot);
             await sleep(20);
@@ -753,7 +835,6 @@ test('full runs through the spots between fights keep the books straight', async
                 hero.emit('diceBet', 50);
                 for (let i = 0; i < 20 && run.interlude.stage === 'diceDen'; i++) { hero.emit('diceRoll'); await sleep(10); }
             }
-            if (spot === 'stranger') hero.emit('strangerPick', run.interlude.offers[0].id);
             setTimeout(() => hero.emit('moveOn'), 20);
         });
         // At the start of each turn, drink what can be drunk then: Healing once a heart is lost,

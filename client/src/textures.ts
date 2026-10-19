@@ -73,8 +73,10 @@ export function createDiceMaterials() {
     const faces = FACE_VALUES.map(v => new THREE.MeshStandardMaterial({ map: faceTexture(v), ...diceMaterialProps }));
     const hiddenMap = hiddenTexture();
     const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
-    loadPaintedFaces(faces);
-    return { faces, hidden };
+    // The Loaded Die keepsake's die: the same faces, warmed to old gold so it stands out.
+    const loaded = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps }));
+    loadPaintedFaces(faces, loaded);
+    return { faces, hidden, loaded };
 }
 
 // The painted dice sheet (docs/art-direction.md): six faces in a 3x2 grid, values 1-6
@@ -87,7 +89,7 @@ const DICE_SHEET_FACES: Record<number, [number, number]> = {
 const DICE_SHEET_FACE_SIZE = 339;
 
 // Swaps the drawn placeholder faces for the painted ones once the sheet has loaded.
-function loadPaintedFaces(materials: THREE.MeshStandardMaterial[]) {
+function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.MeshStandardMaterial[]) {
     const image = new Image();
     image.onload = () => {
         FACE_VALUES.forEach((value, i) => {
@@ -98,6 +100,8 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[]) {
             materials[i].map?.dispose();
             materials[i].map = texture;
             materials[i].needsUpdate = true;
+            alike[i].map = texture;
+            alike[i].needsUpdate = true;
         });
     };
     image.src = DICE_SHEET_URL;

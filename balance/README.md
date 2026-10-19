@@ -71,10 +71,19 @@ Fight win % for a sensible player, no Thonics:
   player's alone; the Hangman's Ace of Spades 24 doesn't heal him): whole-run wins for a
   sensible player ~17% -> ~15.5%, casual ~9.5% -> ~8%. (Had the Ace healed too: ~13%, with the
   Hangman ending ~20% of runs.) The shelf going from 3 to 2 Thonics costs only ~0.5 points.
+- **The Hooded Stranger as a random event** (19 Oct, decided in the design doc): 20% of the
+  walks the thief leaves (`strangerChance`), instead of one of four spots. Whole-run wins
+  ~15.5% -> ~17% (sensible), ~8% (casual): with three spots, Thom is on offer more often.
+  15% and 25% gave about the same; 20% means about half the runs meet him once.
+- **New keepsakes** (19 Oct, the user's picks; `experiments/new-keepsakes.js`, from Klarg on):
+  the Loaded Die (one die rolls 4-6) +105 (never-a-1 was +40, 3-6 +80); the Potion Belt +175,
+  but only for the Healing it comes with: an extra slot alone is worth ~0, as players rarely
+  fill 2; Thom's Loyalty Card (Thom always on offer, first Thonic free) +25 (25% off was +5,
+  half price +20): Thonics cost about what they're worth, so cheaper ones change little.
+  Steady Hand Wrap and Brodor's Sunglasses left. Whole runs: unchanged, ~16.6% sensible.
 
 ## Possible next tuning
 
 - The Molar still ends about 1 run in 7 for a sensible player (1 in 5 casual). If that feels
   harsh for the teacher, give him 1 life (then ~95%, but a much shorter first fight).
-- Brodor's Sunglasses could do more.
 - Re-run `experiments/runs.js` after any change to `shared/balance.js`.

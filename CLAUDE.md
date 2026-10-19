@@ -77,7 +77,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   column at the left edge); phones on their side use `setViewOffset` to leave a right column
   for the Roll button.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
-  Klarg's steal motion, Rokr's constellations.
+  Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
 - `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), turn banner (not in Tavern Crawl, where
   the nameplates show whose turn it is), chips, opponent nameplate, score to
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
@@ -164,8 +164,9 @@ Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
   `/next`: physics dice, all painted art, tavern backdrop and opponent busts, multiplayer with
   invites and reconnection, phone and desktop layouts, turn banner, separate music / sound
   switches, synthesized dice sound, and the Tavern Crawl with Thonics, events between fights,
-  best-play opponents and a balance pass set by simulation (below). 75 server/rules/strategy
-  tests + 10 client tests.
+  best-play opponents and a balance pass set by simulation (below). 79 server/rules/strategy
+  tests + 10 client tests. A sensible player finishes a whole crawl ~17% of the time
+  (`node balance/experiments/runs.js`).
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
@@ -229,12 +230,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
   the Dice Den (bet 50/100, only the bets the purse covers are offered, and below 50 gold the
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
-  higher total doubles the bet, a tie rolls again), the
-  Hooded Stranger (one of two keepsakes; the next fight starts a heart short, on 3; offered only while
-  keepsakes remain). **One event per walk:** about 1 walk in 4 a **pickpocket** strikes instead of the
-  spots: roll one die, a 4+ catches him (`pickpocketCatch`), else he takes a quarter of the
-  purse; then straight on to the next fight (the user asked for this; it moved a sensible
-  player's whole-run wins from ~20% to ~17% in `runs.js`). The choice screen
+  higher total doubles the bet, a tie rolls again). **One event per walk** (the user asked for
+  this, 18 Oct): about 1 walk in 4 a **pickpocket** strikes instead of the spots: roll one die, a
+  4+ catches him (`pickpocketCatch`), else he takes a quarter of the purse; then straight on
+  to the next fight. Else, 20% of the time (`strangerChance`, ~1 walk in 7), the **Hooded
+  Stranger** finds you instead (a random event since 19 Oct, as the design doc decided; no
+  longer a spot): one of two keepsakes, the next fight a heart short (on 3), or turn him
+  down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
@@ -244,10 +246,20 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `stats.eventGold` ("Between fights" on the run-over screen). Numbers set by simulation.
   Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
   sailors. Game text calls the pickpocket "the thief" (no assumed gender).
-- **Keepsakes:** only from the Hooded Stranger now (for a heart). Simulated worth from Klarg on:
-  Shield ~270, Steady Hand ~160 (duplicates the Steady Thonic), Velvet Cushion ~150, Trap Card
-  ~120, Brodor's Sunglasses ~20 (a dud). A rework is proposed (next steps). Jaguar's drop
-  waits for a second place.
+- **Keepsakes:** only from the Hooded Stranger now (a random event, for a heart). Six since 19 Oct
+  (the user picked the new three; Steady Hand Wrap and Brodor's Sunglasses were dropped). Gold
+  each adds to a run from Klarg on (`balance/experiments/new-keepsakes.js`):
+
+  | Keepsake (id) | Effect | Worth |
+  |---|---|---|
+  | Shield (`bentCopper`) | once a fight, the first life you'd lose isn't | ~275 |
+  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~165 |
+  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~135 |
+  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~175 (mostly the Healing) |
+  | Loaded Die | die 0 (`LOADED_DIE`) rolls 4-6 (`loadedDieLow`); old gold on your turns | ~105 |
+  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~25 (a fun one: Thonics are priced near their worth) |
+
+  Numbers in `shared/balance.js` `keepsakes`. Jaguar's drop waits for a second place.
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
   at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
   with that until the switch-over.
@@ -260,14 +272,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    balance (4 hearts, new prices, the reworked Steady and Clear-Eye, the Lady's blessings),
    then two phones over mobile data. Collect what feels off; change `shared/balance.js` and
    re-run `node balance/experiments/runs.js` to see the effect before pushing.
-2. **Keepsake rework** (proposed 19 Oct; the user picks): keep Shield, Velvet Cushion and Trap
-   Card as the protective three; rework Steady Hand Wrap (e.g. once a fight re-roll a kept
-   die) and Brodor's Sunglasses (e.g. 22+ also restores a heart); add play-changing ones
-   (Loaded Die, Lucky Coin, Sailor's Compass), spending ones (Thom's Loyalty Card, Gambler's
-   Charm, Pickpocket's Glove, Gold Tooth) and anti-opponent ones (Hangman's Spare Bullet, Star
-   Chart, Klarg's Mitt). The Stranger offers one protective + one other. Simulate each in
-   `balance/sim.js` to land at ~120-180 gold, show the user the shortlist with numbers, then
-   build; keepsake icons on the strip with a flash when one triggers. The user names them.
+2. **Keepsakes, more** (the first rework is done, 19 Oct): ideas left from the shortlist, if the
+   user wants more: Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's Glove, Gold
+   Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt. Simulate each in `balance/sim.js`
+   (~120-180 gold), show the user the numbers, then build. Keepsake icons on the strip with a
+   flash when one triggers.
 3. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur (it removes your
    choice and is the weakest: e.g. "reading the stars" hides his score until you finish, or a
    partial blur), and give every ability a warning on the nameplate before it fires (it

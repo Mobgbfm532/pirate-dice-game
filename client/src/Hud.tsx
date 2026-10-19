@@ -357,10 +357,11 @@ function YourTurnBanner({ at }: { at: number }) {
 // A picture for each keepsake card.
 const KEEPSAKE_ICONS: Record<string, string> = {
     bentCopper: '🛡️',
-    blessedTankard: '🕶️',
     luckySeat: '🃏',
     velvetCushion: '🪶',
-    steadyHand: '✋'
+    loadedDie: '🎲',
+    potionBelt: '🧪',
+    loyaltyCard: '🎫'
 };
 
 // After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then
@@ -583,16 +584,19 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                     </p>
                 )}
                 <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
+                {shop.free && <p className="purse-line"><span aria-hidden="true">🎫</span> Loyalty Card: one Thonic free this visit</p>}
                 <div className="thonic-cards">
                     {shop.stock.map((t, i) => {
-                        const short = run.purse < t.price;
+                        // Thom's Loyalty Card: the first Thonic of the visit is free.
+                        const price = shop.free ? 0 : t.price;
+                        const short = run.purse < price;
                         return (
                             <div key={t.id} className="thonic-card" style={{ animationDelay: `${0.9 + i * 0.15}s` }}>
                                 <Bottle thonic={t} />
                                 <strong>{t.name}</strong>
                                 <span className="text">{t.text}</span>
                                 <button className="buy" disabled={short || shelfFull} onClick={() => actions.buyThonic(t.id)}>
-                                    {shelfFull ? 'Shelf full' : short ? `${t.price} gold` : `Buy · ${t.price}`}
+                                    {shelfFull ? 'Shelf full' : shop.free ? 'Free' : short ? `${t.price} gold` : `Buy · ${t.price}`}
                                 </button>
                             </div>
                         );
@@ -617,12 +621,11 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
 const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
     shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A blessing from the Lady' },
-    diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
-    stranger: { name: 'The Hooded Stranger', line: '"I have something for you… for a price."', offer: 'A keepsake, for a heart' }
+    diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' }
 };
 
 // Who (or what) is at the spot, in a lit round frame.
-function SpotPicture({ spot }: { spot: Spot | 'pickpocket' }) {
+function SpotPicture({ spot }: { spot: Spot }) {
     return (
         <span className={`spot-pic ${spot}`} aria-hidden="true">
             <span className="face" style={avatarStyle(SPOT_PORTRAITS[spot])} />
@@ -686,7 +689,8 @@ function Winnings({ state }: { state: GameState }) {
     );
 }
 
-type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket';
+// The spots, and the events that find you instead (the pickpocket, the Hooded Stranger).
+type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket' | 'stranger';
 
 // Each scene's sign, and what its character says as things happen.
 const SCENES: Record<SceneSpot, { name: string; tag: string }> = {

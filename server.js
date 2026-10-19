@@ -139,11 +139,6 @@ const TAVERN_KEEPSAKES = [
         text: 'Once per encounter, the first life you would lose is ignored.'
     },
     {
-        id: 'blessedTankard',
-        name: "Brodor's Sunglasses",
-        text: 'A perfect 24 restores one extra life.'
-    },
-    {
         id: 'luckySeat',
         name: 'Trap Card',
         text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
@@ -154,11 +149,23 @@ const TAVERN_KEEPSAKES = [
         text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.'
     },
     {
-        id: 'steadyHand',
-        name: 'Steady Hand Wrap',
-        text: 'Once per encounter, if you dust, it becomes a score of 0 instead of a dust result.'
+        id: 'loadedDie',
+        name: 'Loaded Die',
+        text: 'One of your dice always rolls a 4, 5 or 6.'
+    },
+    {
+        id: 'potionBelt',
+        name: 'Potion Belt',
+        text: 'Your shelf holds one more Thonic. Comes with a Healing Thonic.'
+    },
+    {
+        id: 'loyaltyCard',
+        name: "Thom's Loyalty Card",
+        text: "Thom's cart is always one of the spots, and your first Thonic each visit is free."
     }
 ];
+const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
+const LOADED_DIE = 0; // the die the Loaded Die keepsake loads (marked on the table)
 
 // Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
 // SHELF_SIZE) until drunk. `drink` = tapped by the player on their own turn (when exactly
@@ -181,13 +188,14 @@ const PLACES = {
         name: 'The Tavern',
         encounters: TAVERN_ENCOUNTERS,
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        // Between fights two of these catch your eye, and you go to one (see INTERLUDE).
-        spots: ['thom', 'shrine', 'diceDen', 'stranger']
+        // Between fights two of these catch your eye, and you go to one, unless the pickpocket
+        // or the Hooded Stranger finds you first (startInterlude).
+        spots: ['thom', 'shrine', 'diceDen']
     }
 };
 
-// Between fights: two spots in the room catch your eye and you choose one; now and then a
-// pickpocket strikes first. Gold during a run goes into the purse as it is won, and the purse
+// Between fights, one event: now and then a pickpocket or the Hooded Stranger finds you, else
+// two spots in the room catch your eye and you choose one. Gold during a run goes into the purse as it is won, and the purse
 // is the final score. The numbers live in shared/balance.js.
 const INTERLUDE = BALANCE.interlude;
 const GOLD = BALANCE.gold;
@@ -200,6 +208,17 @@ function pickThomStock(place) {
         [others[i], others[j]] = [others[j], others[i]];
     }
     return ['healing', ...others.slice(0, SHOP_SIZE - 1)];
+}
+
+// The shelf, one slot more with the Potion Belt.
+function shelfSizeOf(room) {
+    return SHELF_SIZE + (hasKeepsake(room, 'potionBelt') ? KEEPSAKE_NUMBERS.beltSlots : 0);
+}
+
+// How the dice land on this turn: the Loaded Die only rolls loadedDieLow or more.
+function rollFaceFor(room, turn) {
+    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID || !hasKeepsake(room, 'loadedDie')) return rollFace;
+    return d => (d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
 }
 
 const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink });
@@ -232,8 +251,8 @@ function getTavernRunState(room) {
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
         purse: room.tavernRun.purse,
         shelf: room.tavernRun.shelf.map(thonicView),
-        shelfSize: SHELF_SIZE,
-        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView) } : null,
+        shelfSize: shelfSizeOf(room),
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView), free: !!room.tavernRun.shop.free } : null,
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
@@ -335,7 +354,7 @@ function performRoll(roomCode) {
     let signatureMoves = [];
     let preRollCallout = null;
     let result = Rules.rollTurn(turn, {
-        rollFace,
+        rollFace: rollFaceFor(room, turn),
         onRolled: t => {
             preRollCallout = t.callout;
             signatureMoves = applyTavernRollAbilities(roomCode, room, t);
@@ -423,10 +442,8 @@ function performEndTurn(roomCode) {
     let maxLives = room.mode === 'tavern-crawl' && currentId === BOT_ID ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].lives : room.startingLives;
     let natural = currentId !== BOT_ID || score === 24;
     if (natural && room.players[currentId].score === 24 && room.players[currentId].lives < maxLives) {
-        let restoredLives = (room.mode === 'tavern-crawl' && currentId !== BOT_ID && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
-        room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + restoredLives);
-        if (restoredLives > 1) emitKeepsakeActivated(roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
-        io.to(roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
+        room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + 1);
+        io.to(roomCode).emit('displayMessage', { text: '+1 Life Restored!', color: "#aed581" });
     }
 
     advanceTurn(roomCode);
@@ -524,7 +541,7 @@ function getTavernScoreToBeat(room) {
     let humanId = getHumanPlayerId(room);
     let human = humanId && room.players[humanId];
     if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
-    if (human.busted) return hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand ? 0 : null;
+    if (human.busted) return null;
     let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
     return human.score + (cushion ? 1 : 0);
 }
@@ -830,15 +847,16 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 
 // ---- Between fights ----
 // After a win the run pauses in `tavernRun.interlude` until the player moves on:
-// Each walk is one event: either the pickpocket strikes, or two spots catch your eye and
-// you go to one of them (or neither). Then on to the next fight.
+// Each walk is one event: the pickpocket strikes, or the Hooded Stranger finds you, or two
+// spots catch your eye and you go to one of them (or neither). Then on to the next fight.
 //   pickpocket  { steal, roll? }         roll one die: pickpocketCatch or more catches him,
 //                                        else he gets away with `steal`; then the next fight
 //   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
 //   shrine      {}                       light a candle ('pray'): the Lady grants a blessing at random
 //   diceDen     { bets, bet?, throws }   bet one of them (or decline), then the player rolls
 //                                        two dice and the gambler two; a tie rolls again
-//   stranger    { offers, hearts }       take a keepsake (next fight on `hearts`) or walk away
+//   stranger    { offers, hearts }       a random event, while he has keepsakes left: take one
+//                                        (next fight on `hearts`) or turn him down
 //   done        { spot, ... }            what happened, until the player moves on
 
 function shuffled(list) {
@@ -855,12 +873,19 @@ function unownedKeepsakes(room) {
     return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
 }
 
-// Two different spots; the Stranger only while there are keepsakes left to offer, the Dice
-// Den only if the purse covers its smallest bet.
+// Two different spots; the Dice Den only if the purse covers its smallest bet. With Thom's
+// Loyalty Card, his cart is always one of them.
 function pickSpots(room) {
     let canBet = room.tavernRun.purse >= Math.min(...INTERLUDE.diceDenBets);
-    let spots = PLACES.tavern.spots.filter(id => (id !== 'stranger' || unownedKeepsakes(room).length > 0) && (id !== 'diceDen' || canBet));
-    return shuffled(spots).slice(0, 2);
+    let spots = shuffled(PLACES.tavern.spots.filter(id => id !== 'diceDen' || canBet)).slice(0, 2);
+    if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
+    return spots;
+}
+
+// The Hooded Stranger, with keepsakes you don't have yet.
+function strangerOffer(room) {
+    let offers = shuffled(unownedKeepsakes(room)).slice(0, INTERLUDE.strangerOffers);
+    return { stage: 'stranger', offers, hearts: INTERLUDE.strangerHearts };
 }
 
 function startInterlude(room, won) {
@@ -869,6 +894,8 @@ function startInterlude(room, won) {
     let steal = Math.floor(run.purse * INTERLUDE.pickpocketShare);
     if (steal > 0 && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
+    } else if (unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
+        run.interlude = strangerOffer(room);
     } else {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
     }
@@ -1004,16 +1031,6 @@ function evaluateTavernRound(roomCode) {
     let losersThisRound = [];
     let lifeLosersThisRound = [];
     let tiedPlayers = [];
-    let protectedBySteadyHand = false;
-
-    if (human.busted && hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand) {
-        human.busted = false;
-        human.score = 0;
-        protectedBySteadyHand = true;
-        room.tavernRun.encounterKeepsakeUses.steadyHand = true;
-        emitKeepsakeActivated(roomCode, room, 'steadyHand', 'Steady Hand Wrap catches the dice. Dust becomes safe.');
-        io.to(roomCode).emit('displayMessage', { text: 'Steady Hand Wrap catches the dice. Dust becomes safe.', color: '#aed581' });
-    }
 
     let roundPlayers = [humanId, enemyId].filter(id => room.players[id]);
     let busted = roundPlayers.filter(id => room.players[id].busted);
@@ -1028,10 +1045,6 @@ function evaluateTavernRound(roomCode) {
         } else {
             tiedPlayers = lowest;
         }
-    }
-
-    if (protectedBySteadyHand) {
-        losersThisRound = losersThisRound.filter(loser => loser.id !== humanId);
     }
 
     if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && human.score + 1 === enemy.score) {
@@ -1349,8 +1362,9 @@ io.on('connection', (socket) => {
         if (!room || !room.tavernRun.shop) return;
         let run = room.tavernRun;
         if (typeof thonicId !== 'string' || !run.shop.stock.includes(thonicId) || !THONICS[thonicId]) return;
-        let price = THONICS[thonicId].price;
-        if (run.purse < price || run.shelf.length >= SHELF_SIZE) return;
+        let price = run.shop.free ? 0 : THONICS[thonicId].price;
+        if (run.purse < price || run.shelf.length >= shelfSizeOf(room)) return;
+        run.shop.free = false;
         run.purse -= price;
         run.stats.spent += price;
         run.shelf.push(thonicId);
@@ -1398,14 +1412,12 @@ io.on('connection', (socket) => {
         let run = room.tavernRun;
         if (spot === 'thom') {
             run.interlude = null;
-            run.shop = { stock: pickThomStock(PLACES.tavern) };
+            // Thom's Loyalty Card: the first Thonic of the visit is free.
+            run.shop = { stock: pickThomStock(PLACES.tavern), free: hasKeepsake(room, 'loyaltyCard') };
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine' };
         } else if (spot === 'diceDen') {
             run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
-        } else if (spot === 'stranger') {
-            let offers = shuffled(unownedKeepsakes(room)).slice(0, INTERLUDE.strangerOffers);
-            run.interlude = { stage: 'stranger', offers, hearts: INTERLUDE.strangerHearts };
         }
         emitState(socket.roomCode);
     });
@@ -1465,6 +1477,8 @@ io.on('connection', (socket) => {
             let keepsake = run.interlude.offers.find(k => k.id === keepsakeId);
             if (!keepsake) return;
             run.keepsakes.push(keepsake);
+            // The Potion Belt comes with a Thonic, in its new slot.
+            if (keepsake.id === 'potionBelt' && run.shelf.length < shelfSizeOf(room)) run.shelf.push(KEEPSAKE_NUMBERS.beltThonic);
             run.nextFightHearts = INTERLUDE.strangerHearts;
             run.interlude = { stage: 'done', spot: 'stranger', keepsake, hearts: INTERLUDE.strangerHearts };
         }
@@ -1503,7 +1517,7 @@ io.on('connection', (socket) => {
             run.clearEyeArmed = true;
             text = `${encounter.name}'s next ${Rules.ABILITY_NAMES[encounter.ability]} will be cancelled`;
         } else if (thonicId === 'fizzy') {
-            rerolled = Rules.rerollOnes(turn, rollFace);
+            rerolled = Rules.rerollOnes(turn, rollFaceFor(room, turn));
             if (!rerolled) return;
             text = 'Your 1s roll again';
         } else if (thonicId === 'secondThoughts') {
@@ -1579,4 +1593,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, pickSpots };
+module.exports = { start, http, io, rooms, emitState, pickSpots, startInterlude, strangerOffer, rollFaceFor };

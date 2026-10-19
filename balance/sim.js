@@ -18,7 +18,9 @@ const OPPONENTS = [
     { id: 'hangman', ability: 'deadeye24' },
     { id: 'jaguar', ability: 'smoothTalk' }
 ];
-const KEEPSAKES = ['bentCopper', 'blessedTankard', 'luckySeat', 'velvetCushion', 'steadyHand'];
+// What the Hooded Stranger offers (since 19 Oct). blessedTankard (Brodor's Sunglasses) and
+// steadyHand (Steady Hand Wrap) left the game; the sim still knows them, for old experiments.
+const KEEPSAKES = ['bentCopper', 'luckySeat', 'velvetCushion', 'loadedDie', 'potionBelt', 'loyaltyCard'];
 const THONIC_IDS = ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'];
 
 const d6 = () => 1 + Math.floor(Math.random() * 6);
@@ -125,6 +127,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     const choose = () => (opts.player === 'casual' ? Rules.planBotLocks(turn, 'molar', toBeat) : Strategy.bestKeeps(turn.dice, toBeat));
     for (;;) {
         const rolled = Rules.rollTurn(turn, {
+            rollFace: loadedFace(run, N),
             onRolled: t => {
                 if (t.rollCount !== 1) return;
                 if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
@@ -278,6 +281,12 @@ function playRun(policy, opts = {}) {
     return { won, defeated, gold: Math.max(0, run.purse + consolation), run, log };
 }
 
+// Keepsakes since 19 Oct (N.keepsakes): the Loaded Die (die 0 rolls loadedDieLow or more), the
+// Potion Belt (beltSlots more shelf slots, comes with beltThonic) and Thom's Loyalty Card (Thom
+// always one of the spots, the first Thonic of each visit free).
+const loadedFace = (run, N) => (run.keepsakes.includes('loadedDie') ? (low => d => (d.id === 0 ? low + Math.floor(Math.random() * (7 - low)) : d6()))(N.keepsakes.loadedDieLow) : undefined);
+const shelfSize = (run, N) => N.shelfSize + (run.keepsakes.includes('potionBelt') ? N.keepsakes.beltSlots : 0);
+
 const changePurse = (run, amount) => { const a = Math.max(amount, -run.purse); run.purse += a; run.stats.eventGold += a; return a; };
 
 function between(run, policy, N, nextIndex, log) {
@@ -292,14 +301,25 @@ function between(run, policy, N, nextIndex, log) {
     }
     const canBet = run.purse >= Math.min(...I.diceDenBets);
     const unowned = KEEPSAKES.filter(k => !run.keepsakes.includes(k));
-    const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger'].filter(s => (s !== 'stranger' || unowned.length) && (s !== 'diceDen' || canBet))).slice(0, 2);
-    const spot = policy.choose(run, spots, N, nextIndex);
+    // Else, now and then, the Hooded Stranger finds you (while he has keepsakes left): that's
+    // the walk. (strangerChance null: he's one of the spots, as before 19 Oct.)
+    const strangerEvent = I.strangerChance != null;
+    let spot;
+    if (strangerEvent && unowned.length && Math.random() * 100 < I.strangerChance) {
+        spot = 'stranger';
+    } else {
+        const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger'].filter(s => (s !== 'stranger' || (!strangerEvent && unowned.length)) && (s !== 'diceDen' || canBet))).slice(0, 2);
+        if (run.keepsakes.includes('loyaltyCard') && !spots.includes('thom')) spots[Math.floor(Math.random() * 2)] = 'thom';
+        spot = policy.choose(run, spots, N, nextIndex);
+    }
     log.spots.push(spot);
     if (spot === 'thom') {
         const stock = ['healing', ...shuffle(THONIC_IDS.filter(t => t !== 'healing')).slice(0, N.shopSize - 1)];
-        for (const id of policy.shop(run, stock, N, nextIndex)) {
-            const price = N.thonicPrices[id];
-            if (run.purse >= price && run.shelf.length < N.shelfSize) {
+        let free = run.keepsakes.includes('loyaltyCard'); // the Loyalty Card's free Thonic
+        for (const id of policy.shop(run, stock, { ...N, shelfSize: shelfSize(run, N) }, nextIndex)) {
+            const price = free ? 0 : N.thonicPrices[id];
+            if (run.purse >= price && run.shelf.length < shelfSize(run, N)) {
+                free = false;
                 run.purse -= price;
                 run.stats.spent += price;
                 run.shelf.push(id);
@@ -314,7 +334,7 @@ function between(run, policy, N, nextIndex, log) {
             if (gift === 'favour') run.hearts = N.playerHearts + I.favourHearts;
             else run.grace = true;
             run.stats.blessings = (run.stats.blessings || 0) + 1;
-        } else if (policy.shrine(run, N, nextIndex) === 'healing' && run.shelf.length < N.shelfSize) run.shelf.push('healing'); // before 19 Oct
+        } else if (policy.shrine(run, N, nextIndex) === 'healing' && run.shelf.length < shelfSize(run, N)) run.shelf.push('healing'); // before 19 Oct
         else changePurse(run, I.shrineGold);
     } else if (spot === 'diceDen') {
         const bet = policy.bet(run, I.diceDenBets.filter(b => run.purse >= b), N, nextIndex);
@@ -329,7 +349,11 @@ function between(run, policy, N, nextIndex, log) {
     } else if (spot === 'stranger') {
         const offers = shuffle(unowned.slice()).slice(0, I.strangerOffers);
         const pick = policy.stranger(run, offers, N, nextIndex);
-        if (pick) { run.keepsakes.push(pick); run.hearts = I.strangerHearts; }
+        if (pick) {
+            run.keepsakes.push(pick);
+            run.hearts = I.strangerHearts;
+            if (pick === 'potionBelt' && run.shelf.length < shelfSize(run, N)) run.shelf.push(N.keepsakes.beltThonic);
+        }
     }
 }
 

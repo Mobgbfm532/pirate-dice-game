@@ -8,6 +8,9 @@ import { readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
 import { createDiceMaterials } from './textures';
 
+// The die the Loaded Die keepsake loads (the server's LOADED_DIE).
+const LOADED_DIE = 0;
+
 const DICE_IDS = [0, 1, 2, 3, 4, 5];
 
 // Starting positions are created once. Passing a fresh Vector3 on every render would make
@@ -91,6 +94,8 @@ export function Dice() {
     const hitGeometry = useMemo(() => new THREE.SphereGeometry(DIE_SIZE * 0.76, 16, 12), []);
 
     const turn = snap.turn;
+    // The Loaded Die keepsake: one of the player's dice (LOADED_DIE) is gold on their turns.
+    const loadedId = turn && turn.playerId !== 'BOT_MOLAR' && snap.state?.tavernRun?.keepsakes.some(k => k.id === 'loadedDie') ? LOADED_DIE : -1;
     const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);
 
@@ -153,7 +158,7 @@ export function Dice() {
                 mesh.quaternion.slerp(targetQuat, ease);
             }
 
-            mesh.material = showHidden ? materials.hidden : materials.faces;
+            mesh.material = showHidden ? materials.hidden : die.id === loadedId ? materials.loaded : materials.faces;
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.

@@ -8,8 +8,9 @@
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
-//   curl "http://localhost:3003/between?spots=thom,stranger"   between fights, two spots
-//        (&pickpocket=1 for the thief instead of the spots; &stage=shrine|diceDen|stranger to go straight there)
+//   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
+//   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
+//        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen to go straight to a spot)
 //
 // Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
 process.env.LEADERBOARD_READONLY = '1';
@@ -32,6 +33,8 @@ const COMMANDS = {
     '/lives': (r, q) => { const p = human(r); if (p) p.lives = Number(q.get('n')); },
     '/shelf': (r, q) => { r.tavernRun.shelf = (q.get('ids') || '').split(',').filter(Boolean); },
     '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
+    // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard).
+    '/keepsakes': (r, q) => { r.tavernRun.keepsakes = (q.get('ids') || '').split(',').filter(Boolean).map(id => ({ id, name: id, text: '' })); },
     '/between': (r, q) => {
         const run = r.tavernRun;
         const spots = (q.get('spots') || 'thom,diceDen').split(',');
@@ -41,7 +44,7 @@ const COMMANDS = {
         if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), catchOn: 4 };
         else if (stage === 'shrine') run.interlude = { stage };
         else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100], bet: null, throws: [] };
-        else if (stage === 'stranger') run.interlude = { stage, hearts: 2, offers: [{ id: 'bentCopper', name: 'Shield', text: 'Once per encounter, the first life you would lose is ignored.' }, { id: 'velvetCushion', name: 'Velvet Cushion', text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.' }] };
+        else if (stage === 'stranger') run.interlude = server.strangerOffer(r);
         else run.interlude = { stage: 'choose', spots };
         run.shop = null;
         r.roundPlayers = [];

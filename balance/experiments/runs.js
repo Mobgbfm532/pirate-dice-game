@@ -18,13 +18,17 @@ const VALUE = {
     luckySeat: [0, 120, 99, 70, 30],
     velvetCushion: [0, 149, 119, 81, 40],
     steadyHand: [0, 162, 125, 80, 35],
+    // Since 19 Oct, from new-keepsakes.js (from Klarg on; later fights scaled down like the others).
+    loadedDie: [0, 105, 85, 60, 30],
+    potionBelt: [0, 170, 155, 124, 64], // mostly the Healing Thonic it comes with
+    loyaltyCard: [0, 25, 20, 10, 0],
     heartShort: [0, 129, 129, 124, 69],
     blessing: [0, 101, 100, 83, 52] // the Lady's: the average of Favour and Grace (shrine.js)
 };
 
 const sensible = {
     choose(run, spots, N, next) {
-        const room = run.shelf.length < N.shelfSize;
+        const room = run.shelf.length < N.shelfSize + (run.keepsakes.includes('potionBelt') ? 1 : 0);
         const worth = {
             thom: room && run.purse >= Math.min(...Object.values(N.thonicPrices)) ? 30 : -1,
             shrine: N.interlude.shrineGifts ? VALUE.blessing[next] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[next] : 0),
@@ -60,7 +64,7 @@ const BEFORE = {
         playerHearts: 3,
         opponentLives: { molar: 2, klarg: 3, rokr: 3, hangman: 3, jaguar: 4 },
         thonicPrices: { healing: 120, lastGasp: 250, fizzy: 80, secondThoughts: 180, steady: 150, clearEye: 100 },
-        interlude: { ...S.DEFAULTS.interlude, shrineGifts: null, shrineGold: 100, strangerHearts: 2 }
+        interlude: { ...S.DEFAULTS.interlude, shrineGifts: null, shrineGold: 100, strangerHearts: 2, strangerChance: null }
     },
     effects: { clearEye: 'round', steady: 'zero' }
 };
@@ -84,7 +88,10 @@ function report(label, policy, setup, player) {
     console.log(`${label.padEnd(30)} whole run ${pct(won).padStart(5)}%  gold avg ${Math.round(gold / runs)} (median ${golds[runs >> 1]}, top 10% ${golds[Math.floor(runs * 0.9)]})  spent ${Math.round(spent / runs)}  events ${Math.round(events / runs)}  fell to M/K/R/H/J ${reach.slice(0, 5).map(pct).join(' / ')}`);
 }
 
-for (const [name, setup] of Object.entries(setups || { before: BEFORE, now: NOW })) {
-    report(`${name}, sensible`, sensible, setup, 'sensible');
-    report(`${name}, casual`, casual, setup, 'casual');
+module.exports = { sensible, casual, VALUE };
+if (require.main === module) {
+    for (const [name, setup] of Object.entries(setups || { before: BEFORE, now: NOW })) {
+        report(`${name}, sensible`, sensible, setup, 'sensible');
+        report(`${name}, casual`, casual, setup, 'casual');
+    }
 }

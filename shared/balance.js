@@ -27,7 +27,7 @@ module.exports = {
     shelfSize: 2,
     shopSize: 3, // Healing, plus two others at random
 
-    // Between fights: two spots catch your eye; now and then a pickpocket strikes first.
+    // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots catch your eye.
     interlude: {
         pickpocketChance: 25,   // percent of walks across the room
         pickpocketShare: 0.25,  // of the purse, if they get away
@@ -35,7 +35,16 @@ module.exports = {
         shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
         favourHearts: 1,        // the Lady's Favour: the next fight starts with this many extra hearts
         diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
+        strangerChance: 20,     // percent of walks the Hooded Stranger finds you (if the thief didn't)
         strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
         strangerHearts: 3       // ...and you start the next fight on this many hearts if you take one (a heart short)
+    },
+
+    // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on
+    // 19 Oct to add ~100-170 gold to a run from Klarg on (balance/experiments/new-keepsakes.js).
+    keepsakes: {
+        loadedDieLow: 4,        // the Loaded Die: one of your dice only rolls this or higher
+        beltSlots: 1,           // the Potion Belt: extra shelf slots...
+        beltThonic: 'healing'   // ...and the Thonic it comes with
     }
 };

@@ -35,7 +35,7 @@ export interface TavernRun {
     purse: number;
     shelf: Thonic[];
     shelfSize: number;
-    shop: { stock: Thonic[] } | null; // Thom's cart is open
+    shop: { stock: Thonic[]; free?: boolean } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take)
     interlude: Interlude | null; // between fights (see server.js startInterlude)
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
@@ -43,8 +43,9 @@ export interface TavernRun {
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
 }
 
-// Between fights, one event: a pickpocket now and then, else two spots catch your eye and you go to one.
-export type Spot = 'thom' | 'shrine' | 'diceDen' | 'stranger';
+// Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots
+// catch your eye and you go to one.
+export type Spot = 'thom' | 'shrine' | 'diceDen';
 export interface DiceThrow { you: [number, number]; them: [number, number] }
 export type Interlude =
     | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }

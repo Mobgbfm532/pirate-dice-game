@@ -164,7 +164,7 @@
         turn.dice.forEach(d => { if (d.status === STATUS.LOCKED_THIS_ROLL) d.status = STATUS.LOCKED; });
         turn.suspense = getSuspense(turn.dice);
 
-        turn.dice.forEach(d => { if (isActive(d)) d.value = rollFace(); });
+        turn.dice.forEach(d => { if (isActive(d)) d.value = rollFace(d); });
         turn.hasRolled = true;
         turn.locksThisRoll = 0;
         turn.freeRoll = false;
@@ -219,7 +219,7 @@
         if (!turn.hasRolled || turn.finalized) return null;
         const ones = turn.dice.filter(d => isActive(d) && d.value === 1);
         if (ones.length === 0) return null;
-        ones.forEach(d => { d.value = rollFace(); });
+        ones.forEach(d => { d.value = rollFace(d); });
         settleTurn(turn);
         return ones.map(d => d.id);
     }
