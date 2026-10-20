@@ -231,7 +231,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   **Mind Whip** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps your worst
   die for you, `Rules.mindWhip`: a 1, else the lowest you don't need, else the lowest;
   `turn.mindDieId`, `mind` in the view; it counts as the throw's keep, can't be tapped back, and you
-  may keep others; the solver's `optional`); Danhausen's **You are Cursed** (the lowest valid
+  may keep others; the solver's `optional`; its mist and badge show only once it has landed on
+  your throw, and only while it's still your turn: the user's call, 20 Oct); Danhausen's **You are Cursed** (the lowest valid
   score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
   with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
   with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s, the devil effect
@@ -256,6 +257,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `localStorage.tavernSave` and the start screen offers "Continue your crawl" (`actions.resume`,
   `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the
   invitation with a fresh save; an edited or used one sends `resumeFailed` and a fresh crawl.
+- **Between fights, the flow** (the user asked for no stutter, 20 Oct): the server's `seated` is who
+  sits at the table (the beaten opponent until the next fight starts; `enemy` is already the next
+  one). The client waits for the fight's last roll plus `BETWEEN_PAUSE_MS` before raising the
+  scenes (`snapshot.betweenShown`); while they are up nobody sits at the table, so leaving a scene
+  shows an empty table and then the next opponent's entrance. The summary fades straight into
+  the event underneath (Modals renders both while it leaves).
 - **After each win** a summary screen (`FightWon` in Hud, before the event or the invitation):
   the opponent's portrait, the gold for the win and for each heart left, one line at a time with
   synthesized coin clinks (`playCoins`), the purse counting up, then "Next" (`lastWin` carries

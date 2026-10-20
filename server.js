@@ -345,8 +345,14 @@ function getRoomState(roomCode) {
 function getTavernRunState(room) {
     if (!room || room.mode !== 'tavern-crawl') return null;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    // Who sits across the table: the current opponent, or, between fights, the one just beaten
+    // (enemy is already the next one then). Browsers draw the table from this.
+    let bot = room.players[BOT_ID];
+    let seatedIndex = bot ? TAVERN_ENCOUNTERS.findIndex(e => e.name === bot.name) : -1;
+    let seated = seatedIndex >= 0 ? { ...TAVERN_ENCOUNTERS[seatedIndex], number: seatedIndex + 1 } : { ...encounter, number: room.tavernRun.encounterIndex + 1 };
     return {
         encounterNumber: room.tavernRun.encounterIndex + 1,
+        seated,
         totalEncounters: TAVERN_ENCOUNTERS.length,
         place: placeOf(room).name,
         enemy: encounter,
@@ -367,7 +373,7 @@ function getTavernRunState(room) {
         tubSurge: room.tavernRun.tubSurge ? { id: room.tavernRun.tubSurge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[room.tavernRun.tubSurge] } : null,
         nextSurge: room.tavernRun.nextFightSurge || null,
         abilityUsed: room.tavernRun.abilityUsed,
-        abilityMax: encounter && encounter.ability ? BALANCE.abilityUses[encounter.ability] : 0, // uses a fight
+        abilityMax: seated.ability ? BALANCE.abilityUses[seated.ability] : 0, // uses a fight (the seated opponent's)
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,

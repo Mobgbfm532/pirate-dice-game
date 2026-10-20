@@ -30,14 +30,20 @@ export interface Thonic { id: string; name: string; text: string; price: number;
 // `by` is 'player' when Martha's mask was worn.
 export interface RoundEffect { kind: 'mind' | 'curse' | 'devil'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean }
 
+// A Tavern Crawl opponent (server.js TAVERN_ENCOUNTERS).
+export interface Enemy { id: string; name: string; intro: string; ability: string | null; lives: number }
+
 export interface TavernRun {
     encounterNumber: number;
+    // Who sits across the table: the current opponent or, between fights, the one just beaten
+    // (enemy is already the next one then). number: their place in the run.
+    seated?: Enemy & { number: number };
     totalEncounters: number;
     place: string; // The Ghoul and Gourd, then the Yawning Portal
     roundEffect?: RoundEffect | null;
     devilCap?: number;
     maskReady?: boolean; // Martha's mask can be worn this fight
-    enemy: { id: string; name: string; intro: string; ability: string | null; lives: number };
+    enemy: Enemy;
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
     runComplete?: boolean;
@@ -140,6 +146,9 @@ export interface Snapshot {
     introAt: number; // when the current Tavern Crawl opponent was introduced
     ability: AbilityMoment | null;
     shopArrival: ShopArrival | null;
+    // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
+    // fight's last roll to finish (BETWEEN_PAUSE_MS), and while they're up nobody sits at the table.
+    betweenShown: boolean;
     putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
 }
 
@@ -179,6 +188,7 @@ let snapshot: Snapshot = {
     introAt: 0,
     ability: null,
     shopArrival: null,
+    betweenShown: false,
     putBackSlot: null
 };
 
@@ -420,12 +430,33 @@ socket.on('connect', () => {
     if (seat) takeSeat(seat);
 });
 
+// A fight won: the last roll plays out on the table and the beaten opponent stays a moment
+// before the scenes between fights come up.
+const BETWEEN_PAUSE_MS = 1400;
+let betweenPending = false;
+
 socket.on('gameStateUpdate', (state: GameState) => {
     const waiting = isWaiting(state);
     const isMyTurn = computeIsMyTurn(state, snapshot.turn);
     // The second player arriving starts play; if it starts with you, say so.
     const nowYourTurn = snapshot.waiting && !waiting && isMyTurn;
-    update({ state, isMyTurn, waiting });
+    const run = state.tavernRun;
+    const between = !!run && !!(run.interlude || run.shop);
+    // Straight in after a reload or a resume; after a fight, once its last roll has played out.
+    const fromFight = !!snapshot.state?.tavernRun && !snapshot.state.tavernRun.interlude && !snapshot.state.tavernRun.shop;
+    update({ state, isMyTurn, waiting, ...(between ? {} : { betweenShown: false }) });
+    if (between && !snapshot.betweenShown && !betweenPending) {
+        if (!fromFight) update({ betweenShown: true });
+        else {
+            betweenPending = true;
+            enqueue(done => setTimeout(() => {
+                betweenPending = false;
+                const now = snapshot.state?.tavernRun;
+                if (now && (now.interlude || now.shop)) update({ betweenShown: true });
+                done();
+            }, BETWEEN_PAUSE_MS));
+        }
+    }
     if (nowYourTurn) announceYourTurn();
     introduceOpponent(state);
 });
@@ -479,8 +510,7 @@ socket.on('resumeFailed', () => {
 // A fight is won: the run pauses between fights (tavernRun.interlude, then maybe Thom's
 // cart in tavernRun.shop).
 socket.on('offerShop', (data: ShopArrival) => {
-    playSound('winner');
-    update({ shopArrival: data });
+    update({ shopArrival: data }); // (the fanfare plays when the summary comes up)
 });
 
 // A Thonic was drunk, or worked by itself (Last Gasp): shown like an opponent's move.

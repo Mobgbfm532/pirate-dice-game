@@ -167,15 +167,18 @@ const SURGE_HINTS: Record<string, string> = {
 };
 
 // What this round's ability means for you, in a line (shown under the Roll button).
-function roundEffectHint(state: GameState) {
+// Mind Whip shows only once it has landed (your first throw) and only while it's still your
+// turn; on the opponent's turn the hot tub's surge (if any) shows instead.
+// Returns the line and its badge colour.
+function roundEffectHint(state: GameState, myTurn: boolean): { text: string; kind: string } {
     const effect = state.tavernRun?.roundEffect;
     const surge = state.tavernRun?.tubSurge;
-    if (!effect) return surge && surge.id !== 'pruney' ? `${surge.name}: ${SURGE_HINTS[surge.id]}` : '';
     const cap = state.tavernRun?.devilCap ?? 18;
-    if (effect.kind === 'curse') return 'Cursed round: the lowest valid score wins';
-    if (effect.kind === 'mind') return effect.landed ? 'Mind Whip: that die stays kept' : 'Mind Whip: your worst die will be kept';
-    if (effect.kind === 'devil') return effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`;
-    return '';
+    if (effect?.kind === 'curse') return { text: 'Cursed round: the lowest valid score wins', kind: 'curse' };
+    if (effect?.kind === 'mind' && effect.landed && myTurn) return { text: 'Mind Whip: that die stays kept', kind: 'mind' };
+    if (effect?.kind === 'devil') return { text: effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`, kind: 'devil' };
+    if (surge && surge.id !== 'pruney') return { text: `${surge.name}: ${SURGE_HINTS[surge.id]}`, kind: 'tub' };
+    return { text: '', kind: '' };
 }
 
 // What the player rolling now has to do. The lowest score of the round loses a life (and
@@ -214,7 +217,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                         <div>
                             <div className="name">{p.name}</div>
                             {/* A Tavern Crawl opponent's hearts are out of their own lives, not yours. */}
-                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? state.tavernRun.enemy.lives : state.startingLives} />
+                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} />
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
@@ -228,12 +231,14 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
 // The opponent's name, lives and score on the table edge, under their portrait.
 function OpponentPlate({ state }: { state: GameState }) {
     const bot = state.players[BOT_ID];
-    if (!bot) return null;
-    const starting = state.mode === 'tavern-crawl' && state.tavernRun ? state.tavernRun.enemy.lives : state.startingLives;
+    const name = opponentName();
+    if (!bot || (state.tavernRun && !name)) return null; // nobody at the table between fights
+    const seated = state.tavernRun ? state.tavernRun.seated ?? state.tavernRun.enemy : null;
+    const starting = seated ? seated.lives : state.startingLives;
     return (
         <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
-            {state.tavernRun && <span className="encounter">{state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
-            <span className="name">{opponentName() ?? bot.name}</span>
+            {state.tavernRun && <span className="encounter">{state.tavernRun.seated?.number ?? state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
+            <span className="name">{name ?? bot.name}</span>
             <Hearts lives={bot.lives} starting={starting} />
             {state.tavernRun && <AbilityMarks state={state} />}
             <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
@@ -245,7 +250,7 @@ function OpponentPlate({ state }: { state: GameState }) {
 // dark once spent. The plate flashes when one is spent.
 function AbilityMarks({ state }: { state: GameState }) {
     const run = state.tavernRun!;
-    const ability = run.enemy.ability;
+    const ability = (run.seated ?? run.enemy).ability;
     const max = run.abilityMax ?? 0;
     if (!ability || !max) return null;
     const raw = run.abilityUsed?.[ability];
@@ -282,9 +287,11 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     if (snap.rolling) { label = 'Rolling…'; disabled = true; }
     else if (turn.finalized) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
 
-    const hint = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
+    const badge = state ? roundEffectHint(state, turn.playerId === snap.myId) : { text: '', kind: '' };
+    const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
         : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again'
-            : state ? roundEffectHint(state) : '';
+            : '';
+    const hint = tip || badge.text;
 
     return (
         <div className="controls">
@@ -307,7 +314,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 onClick={actions.roll}
                 aria-hidden={!snap.isMyTurn}
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
-            <div className={`hint ${!hint.startsWith('Tap') && state?.tavernRun?.roundEffect ? `round-${state.tavernRun.roundEffect.kind}` : !hint.startsWith('Tap') && hint && state?.tavernRun?.tubSurge ? 'round-tub' : ''}`}>{hint}</div>
+            <div className={`hint ${!tip && badge.kind ? `round-${badge.kind}` : ''}`}>{hint}</div>
         </div>
     );
 }
@@ -615,14 +622,14 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
 // it's an inset shadow at the edges, and it takes no taps):
 //   the Curse        violet, breathing          (Danhausen, or Martha in his face, or your mask)
 //   the Devil        embers rising, red edges   (the Duke's round, once his three 6s land)
-//   Mind Whip        green-violet mist          (Frak's round, until the die he chose is thrown again)
+//   Mind Whip        green-violet mist          (once it lands on your throw, until Frak's turn)
 //   Rokr's blur      twinkling stars            (while your dice are blurred)
 function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
     const effect = state.tavernRun?.roundEffect;
     const turn = snap.turn;
     const kind = effect?.kind === 'curse' ? 'curse'
         : effect?.kind === 'devil' ? 'devil'
-            : effect?.kind === 'mind' && (!effect.landed || turn?.dice.some(d => d.mind)) ? 'mind'
+            : effect?.kind === 'mind' && effect.landed && !!turn && turn.playerId === snap.myId ? 'mind'
                 : turn?.blurActive ? 'stars'
                     : null;
     if (!kind) return null;
@@ -1184,7 +1191,7 @@ function readSeenWin() {
     try { return localStorage.getItem('tavernWinSeen') ?? ''; } catch { return ''; }
 }
 
-function FightWon({ state, won, onNext }: { state: GameState; won: ShopArrival; onNext: () => void }) {
+function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: ShopArrival; onLeaving: () => void; onNext: () => void }) {
     const run = state.tavernRun!;
     const gold = won.gold;
     const heartsLeft = gold.heartsLeft ?? (gold.perHeart ? Math.round(gold.hearts / gold.perHeart) : 0);
@@ -1197,6 +1204,7 @@ function FightWon({ state, won, onNext }: { state: GameState; won: ShopArrival; 
     // step: how many rows are showing; one more than the rows = the purse counts up.
     const [step, setStep] = useState(0);
     useEffect(() => {
+        playSound('winner');
         const timers = rows.map((row, i) => setTimeout(() => { setStep(i + 1); playCoins(row.key === 'win' ? 4 : 2); }, 500 + i * WIN_STEP_MS));
         timers.push(setTimeout(() => { setStep(rows.length + 1); playCoins(6); }, 500 + rows.length * WIN_STEP_MS));
         return () => timers.forEach(clearTimeout);
@@ -1204,9 +1212,11 @@ function FightWon({ state, won, onNext }: { state: GameState; won: ShopArrival; 
     const counting = step > rows.length;
     const added = useCountUp(counting ? total : 0, 900);
     const [leaving, setLeaving] = useState(false);
+    // The event comes up underneath as the summary fades away (no flash of the table between).
     const next = () => {
         if (leaving) return;
         setLeaving(true);
+        onLeaving();
         setTimeout(onNext, LEAVE_MS);
     };
     return (
@@ -1242,18 +1252,26 @@ function FightWon({ state, won, onNext }: { state: GameState; won: ShopArrival; 
 function Modals({ snap }: { snap: Snapshot }) {
     const modal = snap.modal;
     const [seenWin, setSeenWin] = useState(readSeenWin);
+    const [winLeaving, setWinLeaving] = useState('');
     const run = snap.state?.tavernRun;
-    const won = run?.lastWin;
-    if (won && !won.resumed && (run.interlude || run.shop) && !modal && winKey(won) !== seenWin) {
-        const key = winKey(won);
+    // Between fights: once the fight's last roll has played out (betweenShown), the summary of
+    // what it paid, then the event (or Thom's cart) underneath as the summary fades.
+    if (run && (run.interlude || run.shop) && !modal) {
+        if (!snap.betweenShown) return null;
+        const won = run.lastWin;
+        const key = won && !won.resumed && winKey(won) !== seenWin ? winKey(won) : '';
         const done = () => {
             try { localStorage.setItem('tavernWinSeen', key); } catch { /* storage unavailable */ }
             setSeenWin(key);
         };
-        return <FightWon key={key} state={snap.state!} won={won} onNext={done} />;
+        const scene = run.interlude ? <Interlude state={snap.state!} /> : <ThomShop snap={snap} state={snap.state!} />;
+        return (
+            <>
+                {(!key || winLeaving === key) && scene}
+                {key && <FightWon key={key} state={snap.state!} won={won!} onLeaving={() => setWinLeaving(key)} onNext={done} />}
+            </>
+        );
     }
-    if (snap.state?.tavernRun?.interlude && !modal) return <Interlude state={snap.state} />;
-    if (snap.state?.tavernRun?.shop && !modal) return <ThomShop snap={snap} state={snap.state} />;
     if (!modal) return null;
     if (modal.type === 'keepsakes') return <KeepsakeCards key={modal.nextEnemy} {...modal} />;
     if (modal.type === 'tavernOver') return <TavernOver summary={modal.summary} leaderboard={snap.leaderboard} />;

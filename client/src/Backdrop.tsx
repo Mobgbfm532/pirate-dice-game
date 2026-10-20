@@ -70,10 +70,11 @@ export function setRailAnchor(x: number, y: number, tableCenterX: number) {
 
 // The bot opponent at this table, if any: The Molar in solo games, the current
 // encounter in a Tavern Crawl.
+// Between fights (the scenes are up) nobody sits there; the next opponent makes an entrance.
 export function opponentName(): string | null {
-    const { state } = store.get();
+    const { state, betweenShown } = store.get();
     if (!state || !state.players[BOT_ID]) return null;
-    if (state.mode === 'tavern-crawl' && state.tavernRun) return state.tavernRun.enemy.name;
+    if (state.mode === 'tavern-crawl' && state.tavernRun) return betweenShown ? null : (state.tavernRun.seated ?? state.tavernRun.enemy).name;
     return state.players[BOT_ID].name;
 }
 
