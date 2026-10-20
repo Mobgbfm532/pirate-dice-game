@@ -170,7 +170,8 @@ function tableFor(toBeat, options = {}) {
 }
 
 // The dice to keep from a turn the bot has just rolled (dice: [{ id, value, status }]).
-// Returns die ids, at least one. Ties go to keeping more (ending sooner).
+// Returns die ids, at least one (none allowed with options.optional, when this throw's keep is
+// already made, as after Mind Control). Ties go to keeping more (ending sooner).
 function bestKeeps(dice, toBeat, options = {}) {
     const { V } = tableFor(toBeat, options);
     const active = dice.filter(d => d.status === 'active');
@@ -182,7 +183,9 @@ function bestKeeps(dice, toBeat, options = {}) {
     const counts = [0, 0, 0, 0, 0, 0];
     active.forEach(d => { counts[d.value - 1]++; });
     let best = null;
-    for (const choice of keepChoices(counts)) {
+    const choices = keepChoices(counts);
+    if (options.optional) choices.push({ keep: [0, 0, 0, 0, 0, 0], k: 0 });
+    for (const choice of choices) {
         if (!takesNeeded(h, counts, choice.keep)) continue;
         const next = afterKeeping(s, h, choice.keep);
         const v = V[at(active.length - choice.k, next.s, next.h)];

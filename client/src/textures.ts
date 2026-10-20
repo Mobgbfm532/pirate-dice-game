@@ -67,62 +67,18 @@ function hiddenTexture() {
     });
 }
 
-// Frak's Psychic Fog: a sickly green face with a violet eye watching you, unlike Rokr's stars.
-function fogTexture() {
-    return canvasTexture(ctx => {
-        const g = ctx.createRadialGradient(SIZE / 2, SIZE / 2, 8, SIZE / 2, SIZE / 2, SIZE * 0.72);
-        g.addColorStop(0, '#3d6b3a');
-        g.addColorStop(0.6, '#1f3b2a');
-        g.addColorStop(1, '#120f1f');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, SIZE, SIZE);
-        // Swirls of mist.
-        ctx.lineCap = 'round';
-        for (let i = 0; i < 7; i++) {
-            ctx.strokeStyle = `rgba(${150 + i * 10}, ${200 - i * 12}, 170, ${0.18 + (i % 3) * 0.08})`;
-            ctx.lineWidth = 6 + (i % 3) * 3;
-            ctx.beginPath();
-            ctx.arc(SIZE / 2 + Math.sin(i) * 30, SIZE / 2 + Math.cos(i * 1.7) * 30, 40 + i * 12, i * 0.9, i * 0.9 + 2.2);
-            ctx.stroke();
-        }
-        // The eye.
-        const cx = SIZE / 2, cy = SIZE / 2, w = SIZE * 0.34, h = SIZE * 0.17;
-        ctx.beginPath();
-        ctx.moveTo(cx - w, cy);
-        ctx.quadraticCurveTo(cx, cy - h * 2, cx + w, cy);
-        ctx.quadraticCurveTo(cx, cy + h * 2, cx - w, cy);
-        ctx.fillStyle = '#d7e8c4';
-        ctx.fill();
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = '#0d1a10';
-        ctx.stroke();
-        const iris = ctx.createRadialGradient(cx, cy, 2, cx, cy, h * 1.05);
-        iris.addColorStop(0, '#f3e5f5');
-        iris.addColorStop(0.35, '#ab47bc');
-        iris.addColorStop(1, '#4a148c');
-        ctx.beginPath();
-        ctx.arc(cx, cy, h * 1.05, 0, Math.PI * 2);
-        ctx.fillStyle = iris;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, h * 0.18, h * 0.7, 0, 0, Math.PI * 2);
-        ctx.fillStyle = '#0b0610';
-        ctx.fill();
-    });
-}
-
 const diceMaterialProps = { roughness: 0.32, metalness: 0.0 };
 
 export function createDiceMaterials() {
     const faces = FACE_VALUES.map(v => new THREE.MeshStandardMaterial({ map: faceTexture(v), ...diceMaterialProps }));
     const hiddenMap = hiddenTexture();
     const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
-    const fogMap = fogTexture();
-    const fog = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: fogMap, emissive: new THREE.Color('#2e5d2a'), emissiveIntensity: 0.55, ...diceMaterialProps }));
     // The Loaded Die keepsake's die: the same faces, warmed to old gold so it stands out.
     const loaded = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps }));
-    loadPaintedFaces(faces, loaded);
-    return { faces, hidden, loaded, fog };
+    // Frak's Mind Control: the die he made you keep glows his sickly green and violet.
+    const mind = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps }));
+    loadPaintedFaces(faces, [loaded, mind]);
+    return { faces, hidden, loaded, mind };
 }
 
 // The painted dice sheet (docs/art-direction.md): six faces in a 3x2 grid, values 1-6
@@ -135,7 +91,7 @@ const DICE_SHEET_FACES: Record<number, [number, number]> = {
 const DICE_SHEET_FACE_SIZE = 339;
 
 // Swaps the drawn placeholder faces for the painted ones once the sheet has loaded.
-function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.MeshStandardMaterial[]) {
+function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.MeshStandardMaterial[][]) {
     const image = new Image();
     image.onload = () => {
         FACE_VALUES.forEach((value, i) => {
@@ -146,8 +102,7 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.
             materials[i].map?.dispose();
             materials[i].map = texture;
             materials[i].needsUpdate = true;
-            alike[i].map = texture;
-            alike[i].needsUpdate = true;
+            alike.forEach(set => { set[i].map = texture; set[i].needsUpdate = true; });
         });
     };
     image.src = DICE_SHEET_URL;

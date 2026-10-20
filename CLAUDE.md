@@ -198,8 +198,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   new opponents (Sylvester Stonefist: Sucker Punch, Vaelin Inkhand: Inkfire Brand, Stason Jatham:
   Flourish, the Ridgeler: Divine Smite, Brodor: Astral Flood, the boss, drops Brodor's Sunglasses,
   a 23 heals); Klarg's four move to a docked ship, the Salty Swallow (word comes its crew are
-  top-tier players). Frak's Mind Control (1 use; he picks the die you must keep) replaces Psychic
-  Fog, and Martha copies it. Save after the Yawning Portal too. Vaelin Inkhand is the Vaelin
+  top-tier players). Save after the Yawning Portal too. Vaelin Inkhand is the Vaelin
   avatar (new art). Only in the simulator so far: `balance/sim.js` `TOURNAMENT`,
   `balance/experiments/tournament.js` and `tournament-lives.js` (README for how each ability is
   played). Spots per place, the ship's events and stronger late abilities: to workshop.
@@ -229,8 +228,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Danhausen 2, Duke 1, Martha 2, Klarg 1, Rokr 2, Hangman 1, Jaguar 1). Each use costs the
   player ~10 points of fight win chance. The new ones are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
-  **Psychic Fog** (your first throw lands one die face-down, `turn.fogDieId`, hidden by
-  `Rules.viewTurn` until kept or rolled again); Danhausen's **You are Cursed** (the lowest valid
+  **Mind Control** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps your worst
+  die for you, `Rules.mindControl`: a 1, else the lowest you don't need, else the lowest;
+  `turn.mindDieId`, `mind` in the view; it counts as the throw's keep, can't be tapped back, and you
+  may keep others; the solver's `optional`); Danhausen's **You are Cursed** (the lowest valid
   score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
   with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
   with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s, the devil effect
@@ -239,8 +240,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
   shows a 3.6 s banner, a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
-  (`AbilityAura` + banner classes by ability name): Fog a green-violet mist and Frak's eye die
-  (`fog` on the hidden die, `materials.fog`; Rokr's blur keeps the blue "?" and stars), the Devil
+  (`AbilityAura` + banner classes by ability name): Mind Control a green-violet mist and a
+  green-violet glow on the die he chose (`materials.mind`; Rokr's blur keeps the blue "?" and stars), the Devil
   smouldering edges with rising embers, Rokr's blur twinkling stars, Klarg claw marks, Jaguar a
   gold sweep, the Hangman a gun-metal banner. The opponent's nameplate/chip
   shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after

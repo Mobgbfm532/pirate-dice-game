@@ -1089,22 +1089,27 @@ test("the run is nine fights: the Ghoul and Gourd, then the Yawning Portal", asy
     assert.equal(runOf(state).totalEncounters, 9);
 });
 
-test("Frak's Psychic Fog: one of your dice lands face-down until you keep it", async () => {
-    const hero = await tavernAgainst(1, 'Foggy');
+test("Frak's Mind Control: your first throw, he makes you keep your worst die", async () => {
+    const hero = await tavernAgainst(1, 'Puppet');
     const room = roomOf(hero);
-    room.tavernRun.roundEffect = { kind: 'fog', by: 'opponent', ability: 'psychicFog', as: null };
+    room.tavernRun.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindControl', as: null };
     const move = waitFor(hero, 'signatureMove');
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
-    const hidden = rolled.turn.dice.filter(d => d.hidden);
-    assert.equal(hidden.length, 1, 'one die face-down');
-    assert.equal(hidden[0].value, 0, 'its value never reaches the browser');
-    assert.equal((await move).ability, 'Psychic Fog');
+    const forced = rolled.turn.dice.filter(d => d.mind);
+    assert.equal(forced.length, 1, 'one die is his pick');
+    assert.equal(forced[0].status, 'lockedThisTurn', 'already kept');
+    // Nothing kept yet: the lowest die that isn't a 2 or a 4, else the lowest.
+    const values = rolled.turn.dice.map(d => d.value), spare = values.filter(v => v !== 2 && v !== 4);
+    assert.equal(forced[0].value, Math.min(...(spare.length ? spare : values)), 'the worst die');
+    const shown = await move;
+    assert.equal(shown.ability, 'Mind Control');
+    assert.match(shown.text, new RegExp(`keep your ${forced[0].value}`));
     await sleep(rolled.animationMs * 0.01 + 20);
-    hero.emit('toggleDie', hidden[0].id);
-    const kept = await waitFor(hero, 'turnState', d => d.turn && d.turn.dice.find(x => x.id === hidden[0].id).status !== 'active');
-    const die = kept.turn.dice.find(x => x.id === hidden[0].id);
-    assert.ok(!die.hidden && die.value >= 1, 'kept, it shows');
+    hero.emit('toggleDie', forced[0].id);
+    await sleep(30);
+    assert.equal(room.turn.dice[forced[0].id].status, 'lockedThisTurn', "it can't be tapped back");
+    assert.ok(room.turn.locksThisRoll >= 1 && Rules.canRoll(room.turn), "it is the throw's keep: you may roll again");
 });
 
 test("Danhausen's Curse: the lowest valid score wins the round", async () => {
@@ -1175,7 +1180,7 @@ test("Martha's disguises: Frak's, Danhausen's or the Duke's trick at random, twi
         assert.ok(effect && effect.by === 'opponent' && effect.as);
         kinds.add(effect.kind);
     }
-    assert.deepEqual([...kinds].sort(), ['curse', 'devil', 'fog']);
+    assert.deepEqual([...kinds].sort(), ['curse', 'devil', 'mind']);
     room.tavernRun.abilityUsed = { disguises: 2 };
     for (let i = 0; i < 10; i++) {
         server.beginTavernRound(code, room);

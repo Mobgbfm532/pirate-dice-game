@@ -55,8 +55,7 @@ function Constellation({ index, meshes }: { index: number; meshes: MutableRefObj
         const g = group.current;
         const mesh = meshes.current[index];
         const die = store.get().turn?.dice.find(d => d.id === index);
-        // Rokr's blur only: a die hidden by Frak's Psychic Fog shows his eye instead.
-        const show = !!g && !!mesh && mesh.visible && !!die?.hidden && !die.fog;
+        const show = !!g && !!mesh && mesh.visible && !!die?.hidden;
         if (!g) return;
         g.visible = show;
         if (!show || !mesh) return;
@@ -159,7 +158,7 @@ export function Dice() {
                 mesh.quaternion.slerp(targetQuat, ease);
             }
 
-            mesh.material = showHidden ? (die.fog ? materials.fog : materials.hidden) : die.id === loadedId ? materials.loaded : materials.faces;
+            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === loadedId ? materials.loaded : materials.faces;
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.
@@ -178,7 +177,7 @@ export function Dice() {
     const tappable = (id: number) => {
         const die = turn?.dice.find(d => d.id === id);
         if (putBack) return canTouch && !!die && !!turn && canPutBack(turn, die.status);
-        return canTouch && !!die && (die.status === 'active' || die.status === 'lockedThisTurn');
+        return canTouch && !!die && !die.mind && (die.status === 'active' || die.status === 'lockedThisTurn');
     };
 
     return (

@@ -10,7 +10,7 @@ export interface Die {
     value: number; // 0 = not rolled yet, or hidden by Rokr's blur
     status: DieStatus;
     hidden?: boolean;
-    fog?: boolean; // hidden by Frak's Psychic Fog (an eye, not Rokr's stars)
+    mind?: boolean; // the die Frak's Mind Control made you keep this throw (can't be tapped back)
 }
 
 export interface TurnOutcome {

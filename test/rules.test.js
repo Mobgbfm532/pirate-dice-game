@@ -263,3 +263,39 @@ test('bot plays complete turns without getting stuck', () => {
         }
     }
 });
+
+test("mindControl: keeps your worst die (a 1, else the lowest you don't need) and it can't be tapped back", () => {
+    const rolled = (values, kept = []) => {
+        const turn = Rules.createTurn('P');
+        turn.hasRolled = true;
+        turn.rollCount = 1;
+        values.forEach((v, i) => { turn.dice[i].value = v; });
+        kept.forEach(i => { turn.dice[i].status = STATUS.LOCKED; });
+        return turn;
+    };
+    let turn = rolled([5, 2, 1, 4, 6, 3]);
+    assert.equal(Rules.mindControl(turn).value, 1, 'a 1 first');
+    assert.equal(turn.dice[2].status, STATUS.LOCKED_THIS_ROLL);
+    assert.equal(Rules.toggleDie(turn, 2), null, "it can't be tapped back");
+    assert.ok(Rules.canRoll(turn), "it is this throw's keep");
+    assert.ok(Rules.toggleDie(turn, 0), 'other dice can still be kept');
+    assert.ok(Rules.viewTurn(turn).dice[2].mind, 'the view marks it');
+
+    turn = rolled([2, 4, 6, 5, 4, 3]);
+    assert.equal(Rules.mindControl(turn).value, 3, "the lowest that isn't a needed 2 or 4");
+    turn = rolled([2, 4, 2, 6, 6, 6], [1]);
+    assert.equal(Rules.mindControl(turn).value, 6, 'a 2 still needed is spared, even over a 6');
+    turn = rolled([2, 4, 2, 6, 6, 6], [0]);
+    assert.equal(Rules.mindControl(turn).value, 2, 'once a 2 is kept, another 2 is spare');
+    turn = rolled([4, 2, 4, 2, 4, 2]);
+    assert.equal(Rules.mindControl(turn).value, 2, 'all needed: the lowest');
+    turn = rolled([2, 4, 4, 6, 6, 6], [5]);
+    turn.dice.slice(1).forEach(d => { d.status = STATUS.LOCKED; });
+    assert.equal(Rules.mindControl(turn), null, 'two dice or more in play only');
+
+    turn = rolled([1, 2, 3, 4, 5, 6]);
+    Rules.mindControl(turn);
+    Rules.rollTurn(turn, { rollFace: () => 6 });
+    assert.equal(turn.mindDieId, null, 'cleared by the next throw');
+    assert.equal(turn.dice[0].status, STATUS.LOCKED);
+});

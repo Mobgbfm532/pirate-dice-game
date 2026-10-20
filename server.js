@@ -108,8 +108,8 @@ const TAVERN_ENCOUNTERS = [
         name: 'Frak',
         avatar: '🦑',
         lives: BALANCE.opponentLives.frak,
-        ability: 'psychicFog',
-        intro: 'Frak, a slimy half-elf sorcerer and lowly thief, his illithid side showing more and more. Psychic Fog turns one of your dice face-down until you keep it.'
+        ability: 'mindControl',
+        intro: 'Frak, a slimy half-elf sorcerer and lowly thief, his illithid side showing more and more. Mind Control: on your first throw he makes you keep your worst die.'
     },
     {
         id: 'danhausen',
@@ -311,7 +311,7 @@ function getTavernRunState(room) {
         totalEncounters: TAVERN_ENCOUNTERS.length,
         place: placeOf(room).name,
         enemy: encounter,
-        roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Fog (see beginTavernRound)
+        roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Mind Control (see beginTavernRound)
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
         keepsakes: room.tavernRun.keepsakes,
@@ -427,14 +427,11 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     }
     if (!mine) return moves;
 
-    // Psychic Fog: one of the player's dice lands face-down.
-    if (effect && effect.kind === 'fog' && !effect.landed) {
+    // Frak's Mind Control: he makes the player keep their worst die (Rules.mindControl).
+    if (effect && effect.kind === 'mind' && !effect.landed) {
         effect.landed = true;
-        let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
-        if (active.length > 0) {
-            turn.fogDieId = active[crypto.randomInt(0, active.length)].id;
-            moves.push(roundEffectMove(room, effect, 'One of your dice lands face-down. You see it once you keep it.'));
-        }
+        let die = Rules.mindControl(turn);
+        if (die) moves.push(roundEffectMove(room, effect, `You must keep your ${die.value}. You may keep others too.`));
     }
 
     let inPlay = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length;
@@ -969,14 +966,14 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 // ---- Round effects ----
 // Some abilities change a whole round. They're decided as the round begins (beginTavernRound)
 // and kept in tavernRun.roundEffect = { kind, by, ability, as?, landed? }:
-//   fog    Psychic Fog: the player's first throw lands one die face-down (Rules.viewTurn hides it)
+//   mind   Mind Control: on the player's first throw Frak makes them keep their worst die (Rules.mindControl)
 //   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
 //   devil  Sympathy for the Devil: `by` throws three 6s first; the other side can't score above devilCap
 // `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
 // Martha (or the mask) wears.
-const ROUND_ABILITIES = { psychicFog: 'fog', cursed: 'curse', devil: 'devil' };
+const ROUND_ABILITIES = { mindControl: 'mind', cursed: 'curse', devil: 'devil' };
 const DISGUISES = [
-    { ability: 'psychicFog', as: 'Frak' },
+    { ability: 'mindControl', as: 'Frak' },
     { ability: 'cursed', as: 'Danhausen' },
     { ability: 'devil', as: 'Duke Morrigan' }
 ];
@@ -1005,8 +1002,8 @@ function beginTavernRound(roomCode, room) {
     if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
     if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
-    // The Fog shows when it lands; the Curse and the Devil now.
-    if (run.roundEffect.kind !== 'fog') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+    // Mind Control shows when it lands; the Curse and the Devil now.
+    if (run.roundEffect.kind !== 'mind') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
 }
 
 // ---- Saving after the Ghoul and Gourd ----

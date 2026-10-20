@@ -163,6 +163,7 @@ function roundEffectHint(state: GameState) {
     if (!effect) return '';
     const cap = state.tavernRun?.devilCap ?? 18;
     if (effect.kind === 'curse') return 'Cursed round: the lowest valid score wins';
+    if (effect.kind === 'mind') return effect.landed ? 'Mind Control: that die stays kept' : 'Mind Control: your worst die will be kept';
     if (effect.kind === 'devil') return effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`;
     return '';
 }
@@ -604,14 +605,14 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
 // it's an inset shadow at the edges, and it takes no taps):
 //   the Curse        violet, breathing          (Danhausen, or Martha in his face, or your mask)
 //   the Devil        embers rising, red edges   (the Duke's round, once his three 6s land)
-//   Psychic Fog      green-violet mist          (while Frak's fogged die is face-down)
+//   Mind Control     green-violet mist          (Frak's round, until the die he chose is thrown again)
 //   Rokr's blur      twinkling stars            (while your dice are blurred)
 function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
     const effect = state.tavernRun?.roundEffect;
     const turn = snap.turn;
     const kind = effect?.kind === 'curse' ? 'curse'
         : effect?.kind === 'devil' ? 'devil'
-            : turn?.dice.some(d => d.fog) ? 'fog'
+            : effect?.kind === 'mind' && (!effect.landed || turn?.dice.some(d => d.mind)) ? 'mind'
                 : turn?.blurActive ? 'stars'
                     : null;
     if (!kind) return null;

@@ -43,7 +43,7 @@
         constellationBlur: 'Constellation Blur',
         deadeye24: 'The Ace of Spades',
         smoothTalk: 'Smooth Talk',
-        psychicFog: 'Psychic Fog',
+        mindControl: 'Mind Control',
         cursed: 'You are Cursed',
         devil: 'Sympathy for the Devil',
         disguises: 'Disguises'
@@ -90,7 +90,7 @@
             hasRolled: false,
             inTrouble: false,
             blurActive: false,
-            fogDieId: null, // Psychic Fog: this die landed face-down (hidden while it's in play)
+            mindDieId: null, // Mind Control: the die Frak made you keep this throw (it can't be tapped back)
             suspense: SUSPENSE.NONE,
             callout: null,
             finalized: false,
@@ -163,7 +163,7 @@
         if (!canRoll(turn)) return null;
 
         if (turn.blurActive && turn.locksThisRoll > 0) turn.blurActive = false;
-        turn.fogDieId = null; // a fogged die rolled again lands face-up
+        turn.mindDieId = null;
         applyPreRollCallouts(turn);
 
         turn.rollCount++;
@@ -189,6 +189,7 @@
         if (!turn.hasRolled || turn.finalized) return null;
         const die = turn.dice.find(d => d.id === dieId);
         if (!die || die.status === STATUS.LOCKED || die.status === STATUS.STOLEN) return null;
+        if (die.id === turn.mindDieId) return null;
 
         if (die.status === STATUS.ACTIVE) { die.status = STATUS.LOCKED_THIS_ROLL; turn.locksThisRoll++; }
         else { die.status = STATUS.ACTIVE; turn.locksThisRoll--; }
@@ -262,18 +263,32 @@
         return stolen;
     }
 
+    // Frak's Mind Control: on your first throw he makes you keep your worst die: a 1 if there is
+    // one, else the lowest that isn't a 2 or 4 you still need, else the lowest. It counts as this
+    // throw's keep and can't be tapped back; you may keep others too. Returns the die, or null
+    // (it needs two or more dice in play).
+    function mindControl(turn) {
+        if (!turn.hasRolled || turn.finalized) return null;
+        const dice = turn.dice.filter(isActive).sort((a, b) => a.value - b.value || a.id - b.id);
+        if (dice.length < 2) return null;
+        const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
+        const needed = d => (d.value === 2 && !kept.includes(2)) || (d.value === 4 && !kept.includes(4));
+        const die = dice.find(d => !needed(d)) || dice[0];
+        toggleDie(turn, die.id);
+        turn.mindDieId = die.id;
+        return die;
+    }
+
     // What players are allowed to see. While Rokr's blur is up, dice that are still
     // in play this roll are hidden from everyone (value 0, hidden: true).
     function viewTurn(turn) {
         if (!turn) return null;
-        // Psychic Fog hides one die until it's kept (or the turn is over).
-        const hide = d => (turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL))
-            || (d.id === turn.fogDieId && d.status === STATUS.ACTIVE && !turn.finalized);
+        const hide = d => turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL);
         return {
             key: turn.key,
             playerId: turn.playerId,
-            // fog: hidden by Psychic Fog (drawn as Frak's eye, not Rokr's stars).
-            dice: turn.dice.map(d => hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true, ...(d.id === turn.fogDieId ? { fog: true } : {}) } : { id: d.id, value: d.value, status: d.status }),
+            // mind: the die Mind Control made you keep (this throw).
+            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}) })),
             rollCount: turn.rollCount,
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,
@@ -342,6 +357,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, mindControl, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

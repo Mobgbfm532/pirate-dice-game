@@ -1520,12 +1520,13 @@ button.keepsake.used { opacity: 0.55; }
 }
 
 /* This round's ability, as a badge under the Roll button. */
-.hint.round-curse, .hint.round-devil {
+.hint.round-curse, .hint.round-devil, .hint.round-mind {
     display: inline-block; padding: 2px 12px; border-radius: 999px; font-weight: 700; color: #fff;
     animation: round-pulse 1.8s ease-in-out infinite;
 }
 .hint.round-curse { background: rgba(106, 27, 154, 0.85); border: 1px solid #ce93d8; box-shadow: 0 0 14px rgba(186, 104, 200, 0.8); }
 .hint.round-devil { background: rgba(140, 20, 20, 0.85); border: 1px solid #ff8a65; box-shadow: 0 0 14px rgba(255, 87, 34, 0.75); }
+.hint.round-mind { background: rgba(31, 59, 42, 0.9); border: 1px solid #9ccc65; box-shadow: 0 0 14px rgba(156, 204, 101, 0.7); }
 @keyframes round-pulse { 50% { filter: brightness(1.25); } }
 
 /* A cursed round: a violet glow around the screen's edges. */
@@ -1577,13 +1578,13 @@ button.keepsake.used { opacity: 0.55; }
 /* ---- Each ability's colours: its banner, and a glow while it lasts (AbilityAura) ---- */
 .aura { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
 
-/* Frak: Psychic Fog. A green-violet mist at the edges while his die is face-down. */
-.fog-veil { box-shadow: inset 0 0 80px 22px rgba(76, 140, 74, 0.5), inset 0 0 140px 40px rgba(106, 27, 154, 0.3); animation: fog-swirl 4s ease-in-out infinite; }
+/* Frak: Mind Control. A green-violet mist at the edges until the die he chose is thrown again. */
+.mind-veil { box-shadow: inset 0 0 80px 22px rgba(76, 140, 74, 0.5), inset 0 0 140px 40px rgba(106, 27, 154, 0.3); animation: fog-swirl 4s ease-in-out infinite; }
 @keyframes fog-swirl {
     50% { box-shadow: inset 0 0 100px 30px rgba(106, 27, 154, 0.45), inset 0 0 150px 46px rgba(76, 140, 74, 0.35); }
 }
-.psychic-fog .ability-banner { background: linear-gradient(#1f3b2a, #120f1f); border-color: #9ccc65; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 28px rgba(156, 204, 101, 0.55); }
-.psychic-fog .ability-banner .what { color: #c5e1a5; }
+.mind-control .ability-banner { background: linear-gradient(#1f3b2a, #120f1f); border-color: #9ccc65; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 28px rgba(156, 204, 101, 0.55); }
+.mind-control .ability-banner .what { color: #c5e1a5; }
 
 /* The Duke: Sympathy for the Devil. Embers rise from the bottom; the edges smoulder. */
 .devil-veil { box-shadow: inset 0 0 40px 6px rgba(191, 54, 12, 0.5); animation: devil-smoulder 2.6s ease-in-out infinite; }

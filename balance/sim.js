@@ -15,7 +15,7 @@ const { STATUS } = Rules;
 // final), then the Yawning Portal.
 const OPPONENTS = [
     { id: 'molar', ability: null },
-    { id: 'frak', ability: 'psychicFog' },
+    { id: 'frak', ability: 'mindControl' },
     { id: 'danhausen', ability: 'cursed' },
     { id: 'duke', ability: 'devil' },
     { id: 'martha', ability: 'disguises', boss: true },
@@ -24,11 +24,10 @@ const OPPONENTS = [
     { id: 'hangman', ability: 'deadeye24' },
     { id: 'jaguar', ability: 'smoothTalk' }
 ];
-// The 14-fight tournament (design doc, 20 Oct; not in the game yet): the Ghoul and Gourd with
-// Frak's Mind Control, the Yawning Portal's five (Brodor the boss, drops his Sunglasses), then
+// The 14-fight tournament (design doc, 20 Oct; not in the game yet): the Ghoul and Gourd, the Yawning Portal's five (Brodor the boss, drops his Sunglasses), then
 // Klarg's four aboard the Salty Swallow. Pass it as opts.order.
 const TOURNAMENT = [
-    ...OPPONENTS.slice(0, 5).map(o => (o.id === 'frak' ? { ...o, ability: 'mindControl' } : o)),
+    ...OPPONENTS.slice(0, 5),
     { id: 'sylvester', ability: 'suckerPunch' },
     { id: 'vaelin', ability: 'inkfire' },
     { id: 'stason', ability: 'flourish' },
@@ -38,8 +37,8 @@ const TOURNAMENT = [
 ];
 // Round abilities (decided as a round begins; server.js beginTavernRound). Martha's disguises
 // pick one of the three at random (Frak's, Danhausen's, the Duke's).
-const ROUND_KIND = { psychicFog: 'fog', cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
-const disguisesIn = order => [(order.find(o => o.id === 'frak') || {}).ability || 'psychicFog', 'cursed', 'devil'];
+const ROUND_KIND = { cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
+const disguisesIn = () => ['mindControl', 'cursed', 'devil'];
 // What the Hooded Stranger offers (since 19 Oct). blessedTankard (Brodor's Sunglasses) and
 // steadyHand (Steady Hand Wrap) left the game; the sim still knows them, for old experiments.
 const KEEPSAKES = ['bentCopper', 'luckySeat', 'velvetCushion', 'loadedDie', 'potionBelt', 'loyaltyCard'];
@@ -194,24 +193,21 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     const turn = Rules.createTurn('P');
     let steady = false;
     // A cursed round: play for the fewest points (a casual player doesn't adjust). Under the
-    // Duke's Devil, the hand counts as no more than the cap. Psychic Fog: one die unseen (the
-    // choice is made without it, and it stays in play).
+    // Duke's Devil, the hand counts as no more than the cap.
     const round = { low: cursed(f), cap: devilBy(f, 'opponent') ? DEFAULTS.devilCap : null };
-    let fogged = null, mind = false;
+    let mind = false;
     // Vaelin's Inkfire Brand: 6 is burned into the table this round; your dice that land on it
     // roll again (so they land 1-5; the Loaded Die 4-5).
     const loaded = loadedFace(run, N);
     const face = f.effect && f.effect.kind === 'ink' ? d => { let v; do v = loaded ? loaded(d) : d6(); while (v === 6); return v; } : loaded;
     const choose = () => {
         if (opts.player === 'casual') return Rules.planBotLocks(turn, 'molar', toBeat);
-        const seen = turn.dice.map(d => (d.id === fogged && d.status === STATUS.ACTIVE ? { ...d, status: STATUS.STOLEN } : d));
-        return Strategy.bestKeeps(seen, toBeat, round);
+        return Strategy.bestKeeps(turn.dice, toBeat, round);
     };
     for (;;) {
         const rolled = Rules.rollTurn(turn, {
             rollFace: face,
             onRolled: t => {
-                fogged = null;
                 mind = false;
                 if (t.rollCount !== 1) return;
                 if (devilBy(f, 'player')) devilThrow(t);
@@ -219,7 +215,6 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
                 if (f.pendingMind && active(t).length > 1 && f.fire(f.opp.ability)) { f.pendingMind = false; mind = true; }
                 if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
                 if (f.fire('constellationBlur')) t.blurActive = true;
-                if (f.effect && f.effect.kind === 'fog' && active(t).length > 1) fogged = active(t)[Math.floor(Math.random() * active(t).length)].id;
             }
         });
         if (!rolled) throw new Error('the player could not roll');
@@ -233,7 +228,10 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         }
         if (!turn.finalized) {
             if (active(turn).length === 1) Rules.toggleDie(turn, active(turn)[0].id);
-            else if (mind) Rules.toggleDie(turn, mindControlPick(turn)); // that die is this roll's keep
+            else if (mind && Rules.mindControl(turn)) {
+                // That die is this throw's keep; you may keep others too.
+                if (!turn.finalized) (opts.player === 'casual' ? [] : Strategy.bestKeeps(turn.dice, toBeat, { ...round, optional: true })).forEach(id => Rules.toggleDie(turn, id));
+            }
             else if (turn.blurActive) Rules.toggleDie(turn, active(turn)[Math.floor(Math.random() * active(turn).length)].id); // blind
             else choose().forEach(id => Rules.toggleDie(turn, id));
         }
@@ -279,14 +277,6 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     return { busted, score };
 }
 
-// Mind Control: Frak makes you keep your worst die: a 1 if there is one, else the lowest die
-// that isn't a 2 or 4 you still need, else the lowest.
-function mindControlPick(turn) {
-    const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
-    const dice = active(turn).slice().sort((a, b) => a.value - b.value);
-    const spare = dice.filter(d => !((d.value === 2 && !kept.includes(2)) || (d.value === 4 && !kept.includes(4))));
-    return (spare[0] || dice[0]).id;
-}
 
 // Second Thoughts: put back the lowest kept die that isn't the 2 or 4 in use.
 function putBackChoice(turn) {
