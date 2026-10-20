@@ -108,8 +108,8 @@ const TAVERN_ENCOUNTERS = [
         name: 'Frak',
         avatar: '🦑',
         lives: BALANCE.opponentLives.frak,
-        ability: 'mindControl',
-        intro: 'Frak, a slimy half-elf sorcerer and lowly thief, his illithid side showing more and more. Mind Control: on your first throw he makes you keep your worst die.'
+        ability: 'mindWhip',
+        intro: 'Frak, a slimy half-elf sorcerer and lowly thief, his illithid side showing more and more. Mind Whip: on your first throw he makes you keep your worst die.'
     },
     {
         id: 'danhausen',
@@ -311,7 +311,7 @@ function getTavernRunState(room) {
         totalEncounters: TAVERN_ENCOUNTERS.length,
         place: placeOf(room).name,
         enemy: encounter,
-        roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Mind Control (see beginTavernRound)
+        roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Mind Whip (see beginTavernRound)
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
         keepsakes: room.tavernRun.keepsakes,
@@ -427,10 +427,10 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     }
     if (!mine) return moves;
 
-    // Frak's Mind Control: he makes the player keep their worst die (Rules.mindControl).
+    // Frak's Mind Whip: he makes the player keep their worst die (Rules.mindWhip).
     if (effect && effect.kind === 'mind' && !effect.landed) {
         effect.landed = true;
-        let die = Rules.mindControl(turn);
+        let die = Rules.mindWhip(turn);
         if (die) moves.push(roundEffectMove(room, effect, `You must keep your ${die.value}. You may keep others too.`));
     }
 
@@ -831,7 +831,7 @@ function createTavernRun() {
         shelf: [],
         shop: null,
         interlude: null,   // between fights: { stage, ... } (see startInterlude)
-        lastWin: null,     // the fight just won: { defeated, nextEnemy, gold: { win, hearts } }
+        lastWin: null,     // the fight just won: { defeated, nextEnemy, place, gold: { win, hearts, heartsLeft, perHeart, perPlace }, at }
         nextFightHearts: null, // the next fight starts on other than full hearts (the Stranger's price, the Lady's Favour)
         ladysGrace: false,     // the Lady's Grace: the next dust that would cost a heart doesn't
         abilityUsed: {},
@@ -966,14 +966,14 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 // ---- Round effects ----
 // Some abilities change a whole round. They're decided as the round begins (beginTavernRound)
 // and kept in tavernRun.roundEffect = { kind, by, ability, as?, landed? }:
-//   mind   Mind Control: on the player's first throw Frak makes them keep their worst die (Rules.mindControl)
+//   mind   Mind Whip: on the player's first throw Frak makes them keep their worst die (Rules.mindWhip)
 //   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
 //   devil  Sympathy for the Devil: `by` throws three 6s first; the other side can't score above devilCap
 // `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
 // Martha (or the mask) wears.
-const ROUND_ABILITIES = { mindControl: 'mind', cursed: 'curse', devil: 'devil' };
+const ROUND_ABILITIES = { mindWhip: 'mind', cursed: 'curse', devil: 'devil' };
 const DISGUISES = [
-    { ability: 'mindControl', as: 'Frak' },
+    { ability: 'mindWhip', as: 'Frak' },
     { ability: 'cursed', as: 'Danhausen' },
     { ability: 'devil', as: 'Duke Morrigan' }
 ];
@@ -1002,7 +1002,7 @@ function beginTavernRound(roomCode, room) {
     if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
     if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
-    // Mind Control shows when it lands; the Curse and the Devil now.
+    // Mind Whip shows when it lands; the Curse and the Devil now.
     if (run.roundEffect.kind !== 'mind') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
 }
 
@@ -1051,7 +1051,7 @@ function restoreRun(room, data) {
     run.shelf = (data.shelf || []).filter(id => THONICS[id]).slice(0, SHELF_SIZE + KEEPSAKE_NUMBERS.beltSlots);
     run.stats = { ...run.stats, ...(data.stats || {}) };
     run.ladysGrace = !!data.ladysGrace;
-    run.lastWin = data.lastWin || null;
+    run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
 }
 
 // The invitation to the final: Martha's mask is yours; go on now, or save and come back.
@@ -1352,10 +1352,13 @@ function evaluateTavernRound(roomCode) {
             return;
         }
 
+        // What the fight paid, for the summary the browser shows before the next event (at: shown once).
         let won = {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
-            gold: { win: winGold, hearts: heartGold }
+            place: room.tavernRun.encounterIndex,
+            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, perPlace: GOLD.winPerPlace },
+            at: Date.now()
         };
         if (TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1].boss) {
             // Martha's mask is the invitation to the final (no events on the way there).

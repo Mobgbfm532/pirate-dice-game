@@ -8,10 +8,10 @@ const runs = Number(process.argv[2] || 20000);
 const fights = Number(process.argv[3] || 8000);
 
 // Lives and hearts come from shared/balance.js (the user's, 20 Oct).
-// Uses a fight: Mind Control 1 (the user's); the rest first guesses (Inkfire 2 cost 19 points of
+// Uses a fight: Mind Whip 1 (the user's); the rest first guesses (Inkfire 2 cost 19 points of
 // Vaelin's fight, twice the others, so 1).
 const numbers = {
-    abilityUses: { mindControl: 1, suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1 },
+    abilityUses: { mindWhip: 1, suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1 },
     ...(process.env.NUMBERS ? JSON.parse(process.env.NUMBERS) : {})
 };
 const order = S.TOURNAMENT;

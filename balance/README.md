@@ -109,12 +109,12 @@ still to come: a fight with five or more after it counts like Klarg's did.
 ## The 14-fight tournament (20 Oct, simulator only)
 
 `experiments/tournament.js` plays the design doc's 14 fights (`sim.TOURNAMENT`, passed as
-`opts.order`): the Ghoul and Gourd with Frak's Mind Control (Martha copies it), the Yawning
+`opts.order`): the Ghoul and Gourd with Frak's Mind Whip (Martha copies it), the Yawning
 Portal's five (lives 3, 3, 3, 3, 4, the user's), then Klarg's four aboard the Salty Swallow
-(3, 3, 3, 4). Uses a fight: Mind Control 1 (the user's); Sucker Punch, Inkfire, Flourish,
+(3, 3, 3, 4). Uses a fight: Mind Whip 1 (the user's); Sucker Punch, Inkfire, Flourish,
 Divine Smite and Astral Flood 1 each (first guesses; Inkfire at 2 cost 19 points).
 
-How the new abilities are played (the server will need the same choices): Mind Control makes
+How the new abilities are played (the server will need the same choices): Mind Whip makes
 you keep your worst die on your first throw (a 1, else the lowest you don't need) and that is
 the throw's only keep; Sucker Punch knocks a random kept die loose from a finished, valid hand;
 Inkfire burns the 6 for your round (your dice land 1-5); Flourish rolls each of Stason's dice

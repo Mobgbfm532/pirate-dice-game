@@ -25,7 +25,7 @@ export interface Keepsake { id: string; name: string; text: string }
 // One of Thom's Thonics. `drink`: tapped by the player (the others work by themselves).
 export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean }
 
-// A round changed by an ability (server.js beginTavernRound): Mind Control, the Curse (lowest valid
+// A round changed by an ability (server.js beginTavernRound): Mind Whip, the Curse (lowest valid
 // score wins) or the Devil (`by` throws three 6s; the other side can't score above devilCap).
 // `by` is 'player' when Martha's mask was worn.
 export interface RoundEffect { kind: 'mind' | 'curse' | 'devil'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean }
@@ -87,7 +87,11 @@ export interface TavernSummary {
 export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string }
 
 // What the last fight paid out, shown when Thom's cart opens.
-export interface ShopArrival { defeated: string; nextEnemy: string; gold: { win: number; hearts: number }; mask?: Keepsake }
+// A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
+export interface ShopArrival {
+    defeated: string; nextEnemy: string; place?: number; at?: number; resumed?: boolean; mask?: Keepsake;
+    gold: { win: number; hearts: number; heartsLeft?: number; perHeart?: number; perPlace?: number };
+}
 
 export interface GameState {
     players: Record<string, Player>;
@@ -440,7 +444,7 @@ socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
 });
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
-const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Control', 'You are Cursed', 'Sympathy for the Devil']);
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,

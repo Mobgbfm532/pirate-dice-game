@@ -15,7 +15,7 @@ const { STATUS } = Rules;
 // final), then the Yawning Portal.
 const OPPONENTS = [
     { id: 'molar', ability: null },
-    { id: 'frak', ability: 'mindControl' },
+    { id: 'frak', ability: 'mindWhip' },
     { id: 'danhausen', ability: 'cursed' },
     { id: 'duke', ability: 'devil' },
     { id: 'martha', ability: 'disguises', boss: true },
@@ -38,7 +38,7 @@ const TOURNAMENT = [
 // Round abilities (decided as a round begins; server.js beginTavernRound). Martha's disguises
 // pick one of the three at random (Frak's, Danhausen's, the Duke's).
 const ROUND_KIND = { cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
-const disguisesIn = () => ['mindControl', 'cursed', 'devil'];
+const disguisesIn = () => ['mindWhip', 'cursed', 'devil'];
 // What the Hooded Stranger offers (since 19 Oct). blessedTankard (Brodor's Sunglasses) and
 // steadyHand (Steady Hand Wrap) left the game; the sim still knows them, for old experiments.
 const KEEPSAKES = ['bentCopper', 'luckySeat', 'velvetCushion', 'loadedDie', 'potionBelt', 'loyaltyCard'];
@@ -110,11 +110,11 @@ function beginRound(f, run, has) {
     const a = f.opp.ability;
     // Brodor's Astral Flood: heals one of his lives, once he has lost one.
     if (a === 'astralFlood' && f.bot < f.botMax && f.fire(a)) f.bot++;
-    if (a && (ROUND_KIND[a] || a === 'disguises' || a === 'mindControl')) {
+    if (a && (ROUND_KIND[a] || a === 'disguises' || a === 'mindWhip')) {
         const as = a === 'disguises' ? f.disguises[Math.floor(Math.random() * 3)] : a;
-        // The Devil waits for the Duke's 2 and 4 (botTurn); Mind Control for your first throw.
+        // The Devil waits for the Duke's 2 and 4 (botTurn); Mind Whip for your first throw.
         if (as === 'devil') f.pendingDevil = true;
-        else if (as === 'mindControl') f.pendingMind = true;
+        else if (as === 'mindWhip') f.pendingMind = true;
         else if (f.fire(a)) f.effect = { kind: ROUND_KIND[as], by: 'opponent' };
     }
     if (!f.effect && has('marthasMask') && !f.keepUsed.marthasMask) {
@@ -211,7 +211,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
                 mind = false;
                 if (t.rollCount !== 1) return;
                 if (devilBy(f, 'player')) devilThrow(t);
-                // Frak's Mind Control (or Martha's copy): he picks the die you must keep.
+                // Frak's Mind Whip (or Martha's copy): he picks the die you must keep.
                 if (f.pendingMind && active(t).length > 1 && f.fire(f.opp.ability)) { f.pendingMind = false; mind = true; }
                 if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
                 if (f.fire('constellationBlur')) t.blurActive = true;
@@ -228,7 +228,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         }
         if (!turn.finalized) {
             if (active(turn).length === 1) Rules.toggleDie(turn, active(turn)[0].id);
-            else if (mind && Rules.mindControl(turn)) {
+            else if (mind && Rules.mindWhip(turn)) {
                 // That die is this throw's keep; you may keep others too.
                 if (!turn.finalized) (opts.player === 'casual' ? [] : Strategy.bestKeeps(turn.dice, toBeat, { ...round, optional: true })).forEach(id => Rules.toggleDie(turn, id));
             }

@@ -1578,13 +1578,13 @@ button.keepsake.used { opacity: 0.55; }
 /* ---- Each ability's colours: its banner, and a glow while it lasts (AbilityAura) ---- */
 .aura { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
 
-/* Frak: Mind Control. A green-violet mist at the edges until the die he chose is thrown again. */
+/* Frak: Mind Whip. A green-violet mist at the edges until the die he chose is thrown again. */
 .mind-veil { box-shadow: inset 0 0 80px 22px rgba(76, 140, 74, 0.5), inset 0 0 140px 40px rgba(106, 27, 154, 0.3); animation: fog-swirl 4s ease-in-out infinite; }
 @keyframes fog-swirl {
     50% { box-shadow: inset 0 0 100px 30px rgba(106, 27, 154, 0.45), inset 0 0 150px 46px rgba(76, 140, 74, 0.35); }
 }
-.mind-control .ability-banner { background: linear-gradient(#1f3b2a, #120f1f); border-color: #9ccc65; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 28px rgba(156, 204, 101, 0.55); }
-.mind-control .ability-banner .what { color: #c5e1a5; }
+.mind-whip .ability-banner { background: linear-gradient(#1f3b2a, #120f1f); border-color: #9ccc65; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 28px rgba(156, 204, 101, 0.55); }
+.mind-whip .ability-banner .what { color: #c5e1a5; }
 
 /* The Duke: Sympathy for the Devil. Embers rise from the bottom; the edges smoulder. */
 .devil-veil { box-shadow: inset 0 0 40px 6px rgba(191, 54, 12, 0.5); animation: devil-smoulder 2.6s ease-in-out infinite; }
@@ -1644,3 +1644,65 @@ button.keepsake.used { opacity: 0.55; }
     animation: gold-sweep 1.6s ease-out forwards;
 }
 @keyframes gold-sweep { from { background-position: 100% 0; opacity: 1; } to { background-position: 0 0; opacity: 0; } }
+
+/* After a fight is won (FightWon): the beaten opponent, what the fight paid one line at a time,
+   then the purse counting up. */
+.fight-won .won-portrait {
+    width: clamp(96px, 30vw, 140px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    background-color: #1d120a;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.5), 0 0 32px rgba(255, 213, 79, 0.45);
+    filter: grayscale(0.35);
+    animation: won-portrait-in 0.6s ease-out both;
+}
+@keyframes won-portrait-in { from { transform: scale(0.7) rotate(-6deg); opacity: 0; } }
+.fight-won .won-fight { margin: -6px 0 4px; color: var(--parchment); opacity: 0.8; font-size: 0.95rem; animation: fade-up 0.4s 0.2s both; }
+.won-rows { list-style: none; margin: 0; padding: 0; width: min(100%, 360px); display: flex; flex-direction: column; gap: 8px; }
+.won-rows li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(29, 18, 10, 0.88);
+    border: 1px solid rgba(184, 134, 11, 0.6);
+    color: var(--parchment);
+    text-align: left;
+    opacity: 0;
+    transform: translateX(-24px);
+}
+.won-rows li.shown { animation: won-row-in 0.45s ease-out forwards; }
+@keyframes won-row-in { to { opacity: 1; transform: none; } }
+.won-rows .what { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-weight: 700; }
+.won-rows .detail { font-weight: 400; font-size: 0.85rem; opacity: 0.75; }
+.won-rows .amount { font-size: 1.35rem; font-weight: 700; color: var(--gold-bright); white-space: nowrap; }
+.won-rows li.shown .amount { animation: won-amount-pop 0.5s 0.25s ease-out both; }
+@keyframes won-amount-pop { from { transform: scale(1.6); opacity: 0; } }
+.won-hearts { display: inline-flex; gap: 2px; color: var(--red); font-size: 1.05rem; }
+.won-rows li.shown .won-hearts span { display: inline-block; animation: won-heart-pop 0.35s ease-out both; }
+@keyframes won-heart-pop { from { transform: scale(0); } 70% { transform: scale(1.3); } }
+.won-purse {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+    color: var(--parchment);
+    text-shadow: 0 1px 4px #000;
+    opacity: 0;
+}
+.won-purse.shown { animation: fade-up 0.4s ease-out both; }
+.won-purse .amount { font-size: 2.2rem; font-weight: 700; color: var(--gold-bright); }
+.fight-won .onward { margin-top: 8px; min-width: 180px; animation: fade-up 0.4s 0.4s both; }
+@media (max-height: 500px) {
+    .fight-won .interlude-body { gap: 6px; }
+    .fight-won .won-portrait { width: 64px; }
+    .fight-won .interlude-title { margin: 0; font-size: 1.4rem; }
+    .won-rows li { padding: 6px 12px; }
+    .won-purse { margin-top: 0; }
+    .won-purse .amount { font-size: 1.7rem; }
+    .fight-won .onward { margin-top: 2px; }
+}

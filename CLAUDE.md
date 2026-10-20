@@ -115,7 +115,7 @@ read and follow the file):
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
-against opponent 0-8, ability ready), `/invitation` (Martha beaten), `/between?spots=thom,shrine` (add
+against opponent 0-8, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|stranger`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
@@ -228,8 +228,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Danhausen 2, Duke 1, Martha 2, Klarg 1, Rokr 2, Hangman 1, Jaguar 1). Each use costs the
   player ~10 points of fight win chance. The new ones are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
-  **Mind Control** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps your worst
-  die for you, `Rules.mindControl`: a 1, else the lowest you don't need, else the lowest;
+  **Mind Whip** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps your worst
+  die for you, `Rules.mindWhip`: a 1, else the lowest you don't need, else the lowest;
   `turn.mindDieId`, `mind` in the view; it counts as the throw's keep, can't be tapped back, and you
   may keep others; the solver's `optional`); Danhausen's **You are Cursed** (the lowest valid
   score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
@@ -240,7 +240,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
   shows a 3.6 s banner, a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
-  (`AbilityAura` + banner classes by ability name): Mind Control a green-violet mist and a
+  (`AbilityAura` + banner classes by ability name): Mind Whip a green-violet mist and a
   green-violet glow on the die he chose (`materials.mind`; Rokr's blur keeps the blue "?" and stars), the Devil
   smouldering edges with rising embers, Rokr's blur twinkling stars, Klarg claw marks, Jaguar a
   gold sweep, the Hangman a gun-metal banner. The opponent's nameplate/chip
@@ -256,6 +256,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `localStorage.tavernSave` and the start screen offers "Continue your crawl" (`actions.resume`,
   `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the
   invitation with a fresh save; an edited or used one sends `resumeFailed` and a fresh crawl.
+- **After each win** a summary screen (`FightWon` in Hud, before the event or the invitation):
+  the opponent's portrait, the gold for the win and for each heart left, one line at a time with
+  synthesized coin clinks (`playCoins`), the purse counting up, then "Next" (`lastWin` carries
+  `place`, `gold.heartsLeft/perHeart/perPlace` and `at`; shown once, `localStorage.tavernWinSeen`;
+  not after a resume). The event scenes show only the purse now.
 - **Gold:** a purse during the run (`GOLD`: 100 x the opponent's place per win, 25 per heart
   left; a perfect 24 pays nothing since 19 Oct, `perfect24: 0`, the user's call); the purse (+ a consolation for a lost run) is the final score and
   goes on the leaderboard. The run-over screen shows the breakdown.

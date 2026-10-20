@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, readSavedRun, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, readSavedRun, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
-import { areSoundsOff, isMusicOff, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
 import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
 import { acrossTheTable, opponentName } from './Backdrop';
@@ -163,7 +163,7 @@ function roundEffectHint(state: GameState) {
     if (!effect) return '';
     const cap = state.tavernRun?.devilCap ?? 18;
     if (effect.kind === 'curse') return 'Cursed round: the lowest valid score wins';
-    if (effect.kind === 'mind') return effect.landed ? 'Mind Control: that die stays kept' : 'Mind Control: your worst die will be kept';
+    if (effect.kind === 'mind') return effect.landed ? 'Mind Whip: that die stays kept' : 'Mind Whip: your worst die will be kept';
     if (effect.kind === 'devil') return effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`;
     return '';
 }
@@ -605,7 +605,7 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
 // it's an inset shadow at the edges, and it takes no taps):
 //   the Curse        violet, breathing          (Danhausen, or Martha in his face, or your mask)
 //   the Devil        embers rising, red edges   (the Duke's round, once his three 6s land)
-//   Mind Control     green-violet mist          (Frak's round, until the die he chose is thrown again)
+//   Mind Whip        green-violet mist          (Frak's round, until the die he chose is thrown again)
 //   Rokr's blur      twinkling stars            (while your dice are blurred)
 function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
     const effect = state.tavernRun?.roundEffect;
@@ -685,12 +685,6 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                     <h2>Thom's Thonics</h2>
                     <p className="thom-tag">Potions for 2, 4, 24 players</p>
                 </div>
-                {arrival && (
-                    <p className="winnings">
-                        {arrival.defeated} is beaten: <strong>+{arrival.gold.win}</strong> gold
-                        {arrival.gold.hearts > 0 && <>, <strong>+{arrival.gold.hearts}</strong> for hearts left</>}
-                    </p>
-                )}
                 <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
                 {shop.free && <p className="purse-line"><span aria-hidden="true">🎫</span> Loyalty Card: one Thonic free this visit</p>}
                 <div className="thonic-cards">
@@ -764,7 +758,7 @@ function Interlude({ state }: { state: GameState }) {
         <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
-                <Winnings state={state} />
+                <PurseLine state={state} />
                 <h2 className="interlude-title">Make your choice</h2>
                 <div className="spot-cards">
                     {interlude.spots.map((spot, i) => (
@@ -792,7 +786,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
         <div className={`interlude-scene invitation ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="An invitation to the final"
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
-                <Winnings state={state} />
+                <PurseLine state={state} />
                 <h2 className="interlude-title">You qualify for the final</h2>
                 <div className="invitation-card">
                     <span className="icon" aria-hidden="true">🎭</span>
@@ -809,20 +803,9 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     );
 }
 
-function Winnings({ state }: { state: GameState }) {
-    const run = state.tavernRun!;
-    const won = run.lastWin;
-    return (
-        <>
-            {won && (
-                <p className="winnings">
-                    {won.defeated} is beaten: <strong>+{won.gold.win}</strong> gold
-                    {won.gold.hearts > 0 && <>, <strong>+{won.gold.hearts}</strong> for hearts left</>}
-                </p>
-            )}
-            <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
-        </>
-    );
+// The purse, on the scenes between fights (what the fight paid has its own screen: FightWon).
+function PurseLine({ state }: { state: GameState }) {
+    return <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{state.tavernRun!.purse}</strong> gold in your purse</p>;
 }
 
 // The spots, and the events that find you instead (the pickpocket, the Hooded Stranger).
@@ -891,7 +874,7 @@ function SpotScene({ spot, state, next, leaving, onMoveOn }: { spot: SceneSpot; 
                     <h2>{SCENES[spot].name}</h2>
                     <p className="thom-tag">{SCENES[spot].tag}</p>
                 </div>
-                <Winnings state={state} />
+                <PurseLine state={state} />
                 <SceneCounter state={state} next={next} onMoveOn={onMoveOn} setRevealed={setRevealed} />
             </div>
         </div>
@@ -1107,8 +1090,83 @@ function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; th
     );
 }
 
+// After a fight is won, before the next event: what it paid, one line at a time with a clink of
+// coins, then the purse counting up to its new total. Shown once per win (remembered on this
+// device); a resumed run's last win was shown before it was saved.
+const WIN_STEP_MS = 700;
+const winKey = (won: ShopArrival) => String(won.at ?? won.defeated);
+function readSeenWin() {
+    try { return localStorage.getItem('tavernWinSeen') ?? ''; } catch { return ''; }
+}
+
+function FightWon({ state, won, onNext }: { state: GameState; won: ShopArrival; onNext: () => void }) {
+    const run = state.tavernRun!;
+    const gold = won.gold;
+    const heartsLeft = gold.heartsLeft ?? (gold.perHeart ? Math.round(gold.hearts / gold.perHeart) : 0);
+    const rows = [
+        { key: 'win', label: `Beating ${won.defeated}`, detail: won.place && gold.perPlace ? `opponent ${won.place} × ${gold.perPlace}` : '', amount: gold.win },
+        ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${gold.perHeart}` : '', amount: gold.hearts }] : [])
+    ];
+    const total = gold.win + gold.hearts;
+    const [before] = useState(() => Math.max(0, run.purse - total));
+    // step: how many rows are showing; one more than the rows = the purse counts up.
+    const [step, setStep] = useState(0);
+    useEffect(() => {
+        const timers = rows.map((row, i) => setTimeout(() => { setStep(i + 1); playCoins(row.key === 'win' ? 4 : 2); }, 500 + i * WIN_STEP_MS));
+        timers.push(setTimeout(() => { setStep(rows.length + 1); playCoins(6); }, 500 + rows.length * WIN_STEP_MS));
+        return () => timers.forEach(clearTimeout);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const counting = step > rows.length;
+    const added = useCountUp(counting ? total : 0, 900);
+    const [leaving, setLeaving] = useState(false);
+    const next = () => {
+        if (leaving) return;
+        setLeaving(true);
+        setTimeout(onNext, LEAVE_MS);
+    };
+    return (
+        <div className={`interlude-scene fight-won ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${won.defeated} is beaten`}
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
+            <div className="interlude-body">
+                <span className="won-portrait" style={avatarStyle(portraitFor(won.defeated))} aria-hidden="true" />
+                <h2 className="interlude-title">{won.defeated} is beaten!</h2>
+                {won.place && <p className="won-fight">Fight {won.place} of {run.totalEncounters}</p>}
+                <ul className="won-rows">
+                    {rows.map((row, i) => (
+                        <li key={row.key} className={i < step ? 'shown' : ''}>
+                            <span className="what">
+                                {row.label}
+                                {row.key === 'hearts' && <span className="won-hearts" aria-hidden="true">{Array.from({ length: heartsLeft }, (_, k) => <span key={k} style={{ animationDelay: `${0.12 * k}s` }}>♥</span>)}</span>}
+                                {row.detail && <span className="detail">{row.detail}</span>}
+                            </span>
+                            <span className="amount">+{row.amount}</span>
+                        </li>
+                    ))}
+                </ul>
+                <div className={`won-purse ${counting ? 'shown' : ''}`}>
+                    <span aria-hidden="true">🪙</span>
+                    <span className="amount">{before + added}</span>
+                    <span className="unit">gold in your purse</span>
+                </div>
+                <button className="primary onward" onClick={next} disabled={leaving}>Next</button>
+            </div>
+        </div>
+    );
+}
+
 function Modals({ snap }: { snap: Snapshot }) {
     const modal = snap.modal;
+    const [seenWin, setSeenWin] = useState(readSeenWin);
+    const run = snap.state?.tavernRun;
+    const won = run?.lastWin;
+    if (won && !won.resumed && (run.interlude || run.shop) && !modal && winKey(won) !== seenWin) {
+        const key = winKey(won);
+        const done = () => {
+            try { localStorage.setItem('tavernWinSeen', key); } catch { /* storage unavailable */ }
+            setSeenWin(key);
+        };
+        return <FightWon key={key} state={snap.state!} won={won} onNext={done} />;
+    }
     if (snap.state?.tavernRun?.interlude && !modal) return <Interlude state={snap.state} />;
     if (snap.state?.tavernRun?.shop && !modal) return <ThomShop snap={snap} state={snap.state} />;
     if (!modal) return null;

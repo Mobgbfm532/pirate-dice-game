@@ -217,6 +217,30 @@ export function playCorkPop(fizz = false) {
     scheduleCorkPop(ctx, ctx.destination, ctx.currentTime + 0.02, fizz);
 }
 
+// A coin landing on the pile: a short metallic clink (inharmonic partials, a fast decay).
+function scheduleCoin(ctx: BaseAudioContext, out: AudioNode, when: number, pitch = 1) {
+    [[2637, 0.22], [3951, 0.12], [5588, 0.07]].forEach(([freq, level], i) => {
+        const tone = ctx.createOscillator();
+        tone.type = 'sine';
+        tone.frequency.setValueAtTime(freq * pitch * (1 + i * 0.013), when);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, when);
+        gain.gain.exponentialRampToValueAtTime(level, when + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.28 - i * 0.06);
+        tone.connect(gain).connect(out);
+        tone.start(when);
+        tone.stop(when + 0.3);
+    });
+}
+
+// Coins added to the purse: a few clinks, a little apart and slightly different.
+export function playCoins(count = 3) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    for (let i = 0; i < count; i++) scheduleCoin(ctx, ctx.destination, ctx.currentTime + 0.02 + i * 0.075, 0.94 + ((i * 7) % 5) * 0.03);
+}
+
 // Development only: renders the cork pop offline to raw samples, for listening outside the game.
 export async function renderCorkPop(fizz = false, sampleRate = 22050) {
     const ctx = new OfflineAudioContext(1, Math.ceil(1.2 * sampleRate), sampleRate);

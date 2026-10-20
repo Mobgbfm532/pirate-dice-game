@@ -9,6 +9,7 @@
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
 //   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
+//   curl "http://localhost:3003/won?hearts=2"        the fight is won: the gold summary, then the event
 //   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the final
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
@@ -37,6 +38,16 @@ const COMMANDS = {
     '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
     // A fight against opponent n (0 McGrath ... 4 Martha, 5 Klarg ... 8 Jaguar), its ability ready from round 1.
     '/fight': (r, q, code) => { r.tavernRun.encounterIndex = Number(q.get('n')); r.tavernRun.interlude = null; r.tavernRun.shop = null; server.resetTavernEncounter(code); r.tavernRun.abilityRound = 1; r.tavernRun.abilityUsed = {}; server.beginTavernRound(code, r); },
+    // A fight just won (the current opponent, &hearts=2 left): its gold summary, then the event between fights.
+    '/won': (r, q) => {
+        const run = r.tavernRun, place = run.encounterIndex + 1, left = Number(q.get('hearts') || 2);
+        const enemy = server.TAVERN_ENCOUNTERS[run.encounterIndex], next = server.TAVERN_ENCOUNTERS[place] || enemy;
+        const gold = { win: 100 * place, hearts: 25 * left, heartsLeft: left, perHeart: 25, perPlace: 100 };
+        run.purse += gold.win + gold.hearts;
+        run.encounterIndex = Math.min(place, server.TAVERN_ENCOUNTERS.length - 1);
+        server.startInterlude(r, { defeated: enemy.name, nextEnemy: next.name, place, gold, at: Date.now() });
+        r.roundPlayers = [];
+    },
     // Martha just beaten: her mask and the invitation to the Yawning Portal.
     '/invitation': (r) => { r.tavernRun.encounterIndex = 5; r.tavernRun.keepsakes = [...r.tavernRun.keepsakes.filter(k => k.id !== 'marthasMask'), { id: 'marthasMask', name: "Martha's Mask", text: '' }]; r.tavernRun.lastWin = { defeated: 'Martha Mystery', nextEnemy: 'Klarg', gold: { win: 500, hearts: 50 } }; r.tavernRun.interlude = { stage: 'invitation', place: 'The Yawning Portal', save: server.sealSave(r, (Object.values(r.players).find(p => p.id !== 'BOT_MOLAR') || {}).name || 'Tester') }; r.roundPlayers = []; },
     // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard).

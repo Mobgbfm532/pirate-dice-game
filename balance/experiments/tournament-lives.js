@@ -5,7 +5,7 @@ const S = require('../sim');
 const { sensible, casual } = require('./runs');
 const runs = Number(process.argv[2] || 5000);
 
-const uses = { mindControl: 1, suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1 };
+const uses = { mindWhip: 1, suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1 };
 const now = { molar: 2, frak: 2, danhausen: 3, duke: 3, martha: 4, sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4, klarg: 3, rokr: 3, hangman: 3, jaguar: 4 };
 const lives = changes => ({ ...now, ...changes });
 // More hearts: the Stranger's price stays a heart short, the Lady's Favour a heart over.

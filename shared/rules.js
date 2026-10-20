@@ -43,7 +43,7 @@
         constellationBlur: 'Constellation Blur',
         deadeye24: 'The Ace of Spades',
         smoothTalk: 'Smooth Talk',
-        mindControl: 'Mind Control',
+        mindWhip: 'Mind Whip',
         cursed: 'You are Cursed',
         devil: 'Sympathy for the Devil',
         disguises: 'Disguises'
@@ -90,7 +90,7 @@
             hasRolled: false,
             inTrouble: false,
             blurActive: false,
-            mindDieId: null, // Mind Control: the die Frak made you keep this throw (it can't be tapped back)
+            mindDieId: null, // Mind Whip: the die Frak made you keep this throw (it can't be tapped back)
             suspense: SUSPENSE.NONE,
             callout: null,
             finalized: false,
@@ -263,11 +263,11 @@
         return stolen;
     }
 
-    // Frak's Mind Control: on your first throw he makes you keep your worst die: a 1 if there is
+    // Frak's Mind Whip: on your first throw he makes you keep your worst die: a 1 if there is
     // one, else the lowest that isn't a 2 or 4 you still need, else the lowest. It counts as this
     // throw's keep and can't be tapped back; you may keep others too. Returns the die, or null
     // (it needs two or more dice in play).
-    function mindControl(turn) {
+    function mindWhip(turn) {
         if (!turn.hasRolled || turn.finalized) return null;
         const dice = turn.dice.filter(isActive).sort((a, b) => a.value - b.value || a.id - b.id);
         if (dice.length < 2) return null;
@@ -287,7 +287,7 @@
         return {
             key: turn.key,
             playerId: turn.playerId,
-            // mind: the die Mind Control made you keep (this throw).
+            // mind: the die Mind Whip made you keep (this throw).
             dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}) })),
             rollCount: turn.rollCount,
             locksThisRoll: turn.locksThisRoll,
@@ -357,6 +357,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, mindControl, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, mindWhip, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

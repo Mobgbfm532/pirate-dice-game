@@ -118,7 +118,8 @@ test('a browser cannot report its own score', async () => {
 
 // Puts a fresh Tavern Crawl table straight onto a given opponent with their ability ready.
 async function tavernAgainst(encounterIndex, name) {
-    const roomCode = `TVRN-${encounterIndex}${Date.now() % 1000}`;
+    // A table of its own (a code from the clock alone now and then matched an earlier test's table).
+    const roomCode = `TVRN-A${++tavernTables}`; // codes are cut to 10 characters
     const hero = await join(name, roomCode);
     await waitFor(hero, 'gameStateUpdate');
     const room = server.rooms[roomCode];
@@ -494,7 +495,9 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
     const won = waitFor(hero, 'offerShop', () => true, 5000);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]); // 20, no perfect-24 gold
     const offer = await won;
-    assert.deepEqual(offer.gold, { win: 100, hearts: 50 });
+    assert.deepEqual(offer.gold, { win: 100, hearts: 50, heartsLeft: 2, perHeart: 25, perPlace: 100 }, 'what the summary screen shows');
+    assert.equal(offer.place, 1);
+    assert.ok(offer.at > 0, 'a key, so the summary shows once');
     assert.equal(offer.nextEnemy, 'Frak');
     assert.equal(room.tavernRun.purse, 150);
     assert.deepEqual(room.tavernRun.lastWin, offer);
@@ -1089,10 +1092,10 @@ test("the run is nine fights: the Ghoul and Gourd, then the Yawning Portal", asy
     assert.equal(runOf(state).totalEncounters, 9);
 });
 
-test("Frak's Mind Control: your first throw, he makes you keep your worst die", async () => {
+test("Frak's Mind Whip: your first throw, he makes you keep your worst die", async () => {
     const hero = await tavernAgainst(1, 'Puppet');
     const room = roomOf(hero);
-    room.tavernRun.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindControl', as: null };
+    room.tavernRun.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindWhip', as: null };
     const move = waitFor(hero, 'signatureMove');
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
@@ -1103,7 +1106,7 @@ test("Frak's Mind Control: your first throw, he makes you keep your worst die", 
     const values = rolled.turn.dice.map(d => d.value), spare = values.filter(v => v !== 2 && v !== 4);
     assert.equal(forced[0].value, Math.min(...(spare.length ? spare : values)), 'the worst die');
     const shown = await move;
-    assert.equal(shown.ability, 'Mind Control');
+    assert.equal(shown.ability, 'Mind Whip');
     assert.match(shown.text, new RegExp(`keep your ${forced[0].value}`));
     await sleep(rolled.animationMs * 0.01 + 20);
     hero.emit('toggleDie', forced[0].id);
@@ -1144,8 +1147,9 @@ test("the Duke's Devil: once he holds a 2 and a 4, three 6s, and you can't score
     const move = waitFor(hero, 'signatureMove', m => m.ability === 'Sympathy for the Devil', 6000);
     const first = waitFor(hero, 'diceRolled', d => d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1, 6000);
     await playHand(hero, room, [2, 4, 6, 6, 6, 6]); // 24 ...
-    assert.equal((await first).devil, false, 'nothing on his first throw: no 2 and 4 kept yet');
-    assert.equal(room.tavernRun.roundEffect, null);
+    await first;
+    // (Not diceRolled.devil: that is any three 6s, and a natural first throw has them ~6% of the time.)
+    assert.equal(room.tavernRun.roundEffect, null, 'nothing on his first throw: no 2 and 4 kept yet');
     await move;
     const kept = room.turn.dice.filter(d => d.status !== 'active').map(d => d.value);
     assert.ok(kept.includes(2) && kept.includes(4), 'he held a 2 and a 4');

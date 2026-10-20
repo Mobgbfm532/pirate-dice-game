@@ -75,7 +75,7 @@ export function createDiceMaterials() {
     const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
     // The Loaded Die keepsake's die: the same faces, warmed to old gold so it stands out.
     const loaded = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps }));
-    // Frak's Mind Control: the die he made you keep glows his sickly green and violet.
+    // Frak's Mind Whip: the die he made you keep glows his sickly green and violet.
     const mind = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps }));
     loadPaintedFaces(faces, [loaded, mind]);
     return { faces, hidden, loaded, mind };
