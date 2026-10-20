@@ -511,11 +511,11 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
         assert.equal(interlude.steal, 37, 'a quarter of the purse');
         return;
     }
-    if (interlude.stage === 'stranger') return;
+    if (interlude.stage === 'stranger' || interlude.stage === 'darren') return;
     assert.equal(interlude.stage, 'choose');
     assert.equal(interlude.spots.length, 2);
     assert.equal(new Set(interlude.spots).size, 2, 'two different spots');
-    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen'].includes(id)));
+    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen', 'hotTub'].includes(id)));
 });
 
 // Puts the run between fights at the given stage, with the given purse.
@@ -766,6 +766,104 @@ test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away; then the
     assert.equal(rolled.room.tavernRun.purse, 150);
 });
 
+test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one and gold; then the next fight", async () => {
+    const seen = new Set();
+    for (let n = 0; n < 15; n++) {
+        const { hero, room } = await betweenFights(`Bumped${n}`, { stage: 'darren', smashOn: 2, giftOn: 4 }, 100);
+        room.tavernRun.shelf = ['healing'];
+        hero.emit('darren', 'on'); // not before the roll
+        await sleep(20);
+        assert.equal(room.tavernRun.interlude.stage, 'darren');
+        hero.emit('darren', 'roll');
+        await nextState(hero, s => runOf(s).interlude.roll);
+        const d = room.tavernRun.interlude;
+        seen.add(d.outcome);
+        if (d.roll <= 2) {
+            assert.equal(d.outcome, 'smash');
+            assert.equal(d.smashed.id, 'healing');
+            assert.deepEqual(room.tavernRun.shelf, [], 'the Thonic is gone');
+            assert.equal(room.tavernRun.purse, 100);
+        } else if (d.roll <= 4) {
+            assert.equal(d.outcome, 'gift');
+            assert.equal(room.tavernRun.shelf.length, 2, 'a free Thonic');
+            assert.equal(room.tavernRun.shelf[1], d.thonic.id);
+            assert.equal(room.tavernRun.purse, 100);
+        } else {
+            assert.equal(d.outcome, 'catch');
+            assert.equal(room.tavernRun.shelf.length, 2);
+            assert.equal(d.gold, 50);
+            assert.equal(room.tavernRun.purse, 150);
+        }
+        hero.emit('darren', 'roll'); // once only
+        hero.emit('darren', 'on');
+        await nextState(hero, s => !runOf(s).interlude); // the walk's one event
+        assert.equal(room.tavernRun.interlude, null);
+    }
+    assert.ok(seen.size >= 2, `outcomes seen: ${[...seen]}`);
+
+    // An empty shelf: you pay for the glass. A full one: the free Thonic comes as gold.
+    let paid = false, full = false;
+    for (let n = 0; n < 30 && !(paid && full); n++) {
+        const { hero, room } = await betweenFights(`Glass${n}`, { stage: 'darren', smashOn: 2, giftOn: 4 }, 100);
+        const empty = n % 2 === 0;
+        room.tavernRun.shelf = empty ? [] : ['healing', 'fizzy'];
+        hero.emit('darren', 'roll');
+        await nextState(hero, s => runOf(s).interlude.roll);
+        const d = room.tavernRun.interlude;
+        if (empty && d.outcome === 'smash') { paid = true; assert.equal(d.paid, 20); assert.equal(room.tavernRun.purse, 80); }
+        if (!empty && d.outcome === 'gift') { full = true; assert.equal(d.gold, 30); assert.equal(room.tavernRun.shelf.length, 2); assert.equal(room.tavernRun.purse, 130); }
+    }
+    assert.ok(paid && full, 'both seen');
+});
+
+test('the Wild Magic Hot Tub: a free soak and a wild surge, on one of your dice for the next fight', async () => {
+    const seen = new Set();
+    for (let n = 0; n < 25; n++) {
+        const { hero, room } = await betweenFights(`Soak${n}`, { stage: 'choose', spots: ['hotTub', 'thom'] }, 100);
+        hero.emit('chooseSpot', 'hotTub');
+        await nextState(hero, s => runOf(s).interlude.stage === 'hotTub');
+        hero.emit('hotTub', 'soak');
+        const done = await nextState(hero, s => runOf(s).interlude.stage === 'done');
+        const surge = runOf(done).interlude.surge;
+        seen.add(surge.id);
+        assert.ok(['noOnes', 'twin', 'lucky', 'scalding', 'soggy', 'pruney'].includes(surge.id));
+        assert.ok(surge.name && surge.text);
+        assert.equal(room.tavernRun.purse, 100, 'free');
+        if (surge.id === 'pruney') assert.equal(room.tavernRun.nextFightHearts, BALANCE.playerHearts - 1);
+        else assert.equal(room.tavernRun.nextFightSurge, surge.id);
+        hero.emit('moveOn');
+        const fight = await nextState(hero, s => !runOf(s).interlude);
+        assert.equal(room.tavernRun.nextFightSurge, null, 'taken up by the fight');
+        if (surge.id === 'pruney') {
+            assert.equal(fight.players[hero.id].lives, BALANCE.playerHearts - 1);
+            assert.equal(runOf(fight).tubSurge, null);
+        } else {
+            assert.equal(runOf(fight).tubSurge.id, surge.id);
+            assert.equal(runOf(fight).tubSurge.die, BALANCE.interlude.hotTubDie);
+        }
+    }
+    assert.ok(seen.size >= 3, `surges seen: ${[...seen]}`);
+});
+
+test("the hot tub's surges: the die never rolls a 1, never a 6, only 4-6, always 6, or keeps the better of two", () => {
+    const room = { mode: 'tavern-crawl', tavernRun: { keepsakes: [], tubSurge: null } };
+    const die = BALANCE.interlude.hotTubDie;
+    const faces = (surge, turn = { playerId: 'P', rollCount: 1, dice: [] }, id = die) => {
+        room.tavernRun.tubSurge = surge;
+        const face = server.rollFaceFor(room, turn);
+        return Array.from({ length: 600 }, () => face({ id }));
+    };
+    assert.ok(!faces('noOnes').includes(1));
+    assert.ok(!faces('soggy').includes(6));
+    assert.deepEqual([...new Set(faces('lucky'))].sort(), [4, 5, 6]);
+    assert.ok(faces('scalding').every(v => v === 6));
+    const twin = faces('twin', { playerId: 'P', rollCount: 2, dice: [{ id: 0, value: 2, status: Rules.STATUS.LOCKED }, { id: 2, value: 4, status: Rules.STATUS.LOCKED }] });
+    const mean = twin.reduce((a, b) => a + b, 0) / twin.length;
+    assert.ok(mean > 4.2, `the higher of two averages ~4.47: ${mean}`);
+    assert.equal(new Set(faces('noOnes', undefined, die === 0 ? 1 : 0)).size, 6, 'only that die');
+    assert.equal(new Set(faces('noOnes', { playerId: 'BOT_MOLAR', rollCount: 1, dice: [] })).size, 6, "not the opponent's dice");
+});
+
 test('the Dice Den only appears when the purse covers its smallest bet', async () => {
     const { room } = await betweenFights('Skint', { stage: 'choose', spots: ['thom', 'shrine'] }, 30);
     for (let i = 0; i < 20; i++) {
@@ -776,7 +874,7 @@ test('the Dice Den only appears when the purse covers its smallest bet', async (
 test('the Hooded Stranger finds you now and then, instead of the spots, until his keepsakes are yours', async () => {
     const { hero, room } = await betweenFights('Collector', { stage: 'choose', spots: ['shrine', 'thom'] });
     const walks = n => {
-        const seen = { pickpocket: 0, stranger: 0, choose: 0 };
+        const seen = { pickpocket: 0, stranger: 0, darren: 0, choose: 0 };
         for (let i = 0; i < n; i++) {
             server.startInterlude(room, null);
             seen[room.tavernRun.interlude.stage]++;
@@ -789,6 +887,8 @@ test('the Hooded Stranger finds you now and then, instead of the spots, until hi
     const share = k => seen[k] / 4000;
     assert.ok(Math.abs(share('pickpocket') - 0.25) < 0.04, `thief ${share('pickpocket')}`);
     assert.ok(Math.abs(share('stranger') - 0.15) < 0.04, `Stranger ${share('stranger')}`);
+    // Then, at the Ghoul and Gourd, Darren 15% of what is left (9%).
+    assert.ok(Math.abs(share('darren') - 0.09) < 0.03, `Darren ${share('darren')}`);
 
     // Take a keepsake from him six times: then they're all yours, and he stops coming.
     for (let i = 0; i < 6; i++) {
@@ -819,10 +919,10 @@ test('full runs through the spots between fights keep the books straight', async
             // Between fights: deal with the pickpocket (that's the walk), or go wherever comes
             // first. At Thom's, try to buy everything (the server refuses what the purse can't cover).
             const run = room.tavernRun;
-            if (run.interlude.stage === 'pickpocket') {
-                hero.emit('pickpocket', 'roll');
+            if (run.interlude.stage === 'pickpocket' || run.interlude.stage === 'darren') {
+                hero.emit(run.interlude.stage, 'roll');
                 await sleep(20);
-                hero.emit('pickpocket', 'on');
+                hero.emit(run.interlude.stage, 'on');
                 return;
             }
             if (run.interlude.stage === 'invitation') { // after Martha: on to the final
@@ -839,6 +939,7 @@ test('full runs through the spots between fights keep the books straight', async
             await sleep(20);
             if (spot === 'thom') run.shop.stock.forEach(id => hero.emit('buyThonic', id));
             if (spot === 'shrine') hero.emit('shrinePick', n % 2 ? 'gold' : 'healing');
+            if (spot === 'hotTub') hero.emit('hotTub', 'soak');
             if (spot === 'diceDen') {
                 hero.emit('diceBet', 50);
                 for (let i = 0; i < 20 && run.interlude.stage === 'diceDen'; i++) { hero.emit('diceRoll'); await sleep(10); }
@@ -866,7 +967,7 @@ test('full runs through the spots between fights keep the books straight', async
         assert.equal(progress + hearts + perfect + events - spent, t.gold, 'score = earned + events - spent');
         assert.equal(t.gold, Math.max(0, room.tavernRun.purse + (t.won ? 0 : (t.defeated + 1) * 25)));
         assert.ok(room.tavernRun.purse >= 0, 'the purse never goes negative');
-        assert.ok(room.tavernRun.shelf.length <= BALANCE.shelfSize);
+        assert.ok(room.tavernRun.shelf.length <= BALANCE.shelfSize, 'Darren never overfills the shelf');
         assert.equal(spent, room.tavernRun.stats.spent);
         return t;
     });

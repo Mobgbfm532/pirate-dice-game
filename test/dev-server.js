@@ -13,7 +13,7 @@
 //   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the final
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
-//        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen to go straight to a spot)
+//        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands)
 //
 // Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
 process.env.LEADERBOARD_READONLY = '1';
@@ -59,7 +59,8 @@ const COMMANDS = {
         run.lastWin = run.lastWin || { defeated: 'The Molar', nextEnemy: 'Klarg', gold: { win: 100, hearts: 75 } };
         if (q.get('purse')) run.purse = Number(q.get('purse'));
         if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), catchOn: 4 };
-        else if (stage === 'shrine') run.interlude = { stage };
+        else if (stage === 'shrine' || stage === 'hotTub') run.interlude = { stage };
+        else if (stage === 'darren') run.interlude = { stage, smashOn: 2, giftOn: 4 };
         else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100], bet: null, throws: [] };
         else if (stage === 'stranger') run.interlude = server.strangerOffer(r);
         else run.interlude = { stage: 'choose', spots };

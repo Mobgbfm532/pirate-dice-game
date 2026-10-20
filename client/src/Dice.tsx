@@ -96,6 +96,9 @@ export function Dice() {
     const turn = snap.turn;
     // The Loaded Die keepsake: one of the player's dice (LOADED_DIE) is gold on their turns.
     const loadedId = turn && turn.playerId !== 'BOT_MOLAR' && snap.state?.tavernRun?.keepsakes.some(k => k.id === 'loadedDie') ? LOADED_DIE : -1;
+    // The Wild Magic Hot Tub: the die its surge works on is aqua on the player's turns.
+    const surge = snap.state?.tavernRun?.tubSurge;
+    const tubId = turn && turn.playerId !== 'BOT_MOLAR' && surge && surge.id !== 'pruney' ? surge.die : -1;
     const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);
 
@@ -158,7 +161,7 @@ export function Dice() {
                 mesh.quaternion.slerp(targetQuat, ease);
             }
 
-            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === loadedId ? materials.loaded : materials.faces;
+            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : materials.faces;
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.

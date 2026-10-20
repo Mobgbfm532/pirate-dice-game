@@ -240,14 +240,16 @@ const PLACES = {
     ghoulAndGourd: {
         name: 'The Ghoul and Gourd',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        // Between fights two of these catch your eye, and you go to one, unless the pickpocket
-        // or the Hooded Stranger finds you first (startInterlude).
-        spots: ['thom', 'shrine', 'diceDen']
+        // Between fights two of these catch your eye, and you go to one, unless the pickpocket,
+        // the Hooded Stranger or one of the place's own events finds you first (startInterlude).
+        spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
+        events: ['darren'] // Darren Snakehands is the barman here
     },
     yawningPortal: {
         name: 'The Yawning Portal',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'diceDen']
+        spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
+        events: []
     }
 };
 
@@ -262,6 +264,24 @@ function placeOf(room) {
 // is the final score. The numbers live in shared/balance.js.
 const INTERLUDE = BALANCE.interlude;
 const GOLD = BALANCE.gold;
+
+// The Wild Magic Hot Tub's surges (weights in shared/balance.js). The dice ones work on
+// HOT_TUB_DIE, on the player's turns, for the next fight (tavernRun.tubSurge).
+const HOT_TUB_DIE = INTERLUDE.hotTubDie;
+const HOT_TUB_SURGES = {
+    noOnes: { name: 'Bubbly Die', text: 'One of your dice never rolls a 1 next fight.', good: true },
+    twin: { name: 'Double Bubble', text: 'One of your dice rolls twice and keeps the better next fight.', good: true },
+    lucky: { name: 'Lucky Splash', text: 'One of your dice only rolls 4, 5 or 6 next fight.', good: true },
+    scalding: { name: 'Scalding Die', text: 'One of your dice always lands on a 6 next fight.', good: true },
+    soggy: { name: 'Soggy Die', text: 'One of your dice never rolls a 6 next fight.', good: false },
+    pruney: { name: 'Pruney Fingers', text: 'You start the next fight a heart short.', good: false }
+};
+function pickHotTubSurge() {
+    let weights = Object.entries(INTERLUDE.hotTubSurges).filter(([id]) => HOT_TUB_SURGES[id]);
+    let roll = crypto.randomInt(0, weights.reduce((a, [, w]) => a + w, 0));
+    for (let [id, w] of weights) { if (roll < w) return id; roll -= w; }
+    return weights[0][0];
+}
 
 // What Thom has on his cart this visit: always Healing, plus others picked at random.
 function pickThomStock(place) {
@@ -280,8 +300,27 @@ function shelfSizeOf(room) {
 
 // How the dice land on this turn: the Loaded Die only rolls loadedDieLow or more.
 function rollFaceFor(room, turn) {
-    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID || !hasKeepsake(room, 'loadedDie')) return rollFace;
-    return d => (d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
+    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID) return rollFace;
+    let loaded = hasKeepsake(room, 'loadedDie');
+    let surge = room.tavernRun.tubSurge;
+    if (!loaded && !surge) return rollFace;
+    let base = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
+    if (!surge) return base;
+    return d => {
+        if (!d || d.id !== HOT_TUB_DIE) return base(d);
+        if (surge === 'noOnes') return crypto.randomInt(2, 7);
+        if (surge === 'soggy') return crypto.randomInt(1, 6);
+        if (surge === 'lucky') return crypto.randomInt(4, 7);
+        if (surge === 'scalding') return 6;
+        if (surge === 'twin') {
+            // The better of two: a 2 or 4 still needed, else the higher.
+            let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+            let a = base(d), b = base(d);
+            for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
+            return Math.max(a, b);
+        }
+        return base(d);
+    };
 }
 
 const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink });
@@ -324,6 +363,9 @@ function getTavernRunState(room) {
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
         ladysGrace: !!room.tavernRun.ladysGrace,
+        // The hot tub's surge on one of your dice, this fight (tubSurge) or the next (nextSurge).
+        tubSurge: room.tavernRun.tubSurge ? { id: room.tavernRun.tubSurge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[room.tavernRun.tubSurge] } : null,
+        nextSurge: room.tavernRun.nextFightSurge || null,
         abilityUsed: room.tavernRun.abilityUsed,
         abilityMax: encounter && encounter.ability ? BALANCE.abilityUses[encounter.ability] : 0, // uses a fight
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
@@ -833,6 +875,8 @@ function createTavernRun() {
         interlude: null,   // between fights: { stage, ... } (see startInterlude)
         lastWin: null,     // the fight just won: { defeated, nextEnemy, place, gold: { win, hearts, heartsLeft, perHeart, perPlace }, at }
         nextFightHearts: null, // the next fight starts on other than full hearts (the Stranger's price, the Lady's Favour)
+        nextFightSurge: null, // the hot tub's dice surge for the next fight, then tubSurge during it
+        tubSurge: null,
         ladysGrace: false,     // the Lady's Grace: the next dust that would cost a heart doesn't
         abilityUsed: {},
         abilityRound: 1,
@@ -940,6 +984,9 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
         // The Hooded Stranger's price: this one fight starts on fewer hearts.
         room.players[humanId].lives = room.tavernRun.nextFightHearts || room.startingLives;
         room.tavernRun.nextFightHearts = null;
+        // The hot tub's surge lasts this one fight.
+        room.tavernRun.tubSurge = room.tavernRun.nextFightSurge || null;
+        room.tavernRun.nextFightSurge = null;
         room.players[humanId].score = null;
         room.players[humanId].busted = false;
         room.playerOrder = [humanId, BOT_ID];
@@ -1110,6 +1157,8 @@ function startInterlude(room, won) {
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
     } else if (unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
         run.interlude = strangerOffer(room);
+    } else if ((placeOf(room).events || []).includes('darren') && crypto.randomInt(0, 100) < INTERLUDE.darrenChance) {
+        run.interlude = { stage: 'darren', smashOn: INTERLUDE.darrenSmash, giftOn: INTERLUDE.darrenGift };
     } else {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
     }
@@ -1121,6 +1170,28 @@ function changePurse(run, amount) {
     run.purse += applied;
     run.stats.eventGold += applied;
     return applied;
+}
+
+// Darren Snakehands knocks into you: one die. Low, a Thonic on your shelf smashes (or you pay
+// for the glass); middling, a free Thonic by way of sorry; high, a Thonic and gold.
+function darrenOutcome(room, roll) {
+    let run = room.tavernRun;
+    let freeThonic = () => {
+        if (run.shelf.length >= shelfSizeOf(room)) return { gold: changePurse(run, INTERLUDE.darrenFullShelfGold) };
+        let id = shuffled(placeOf(room).thomStock)[0];
+        run.shelf.push(id);
+        return { thonic: thonicView(id) };
+    };
+    if (roll <= INTERLUDE.darrenSmash) {
+        if (run.shelf.length) {
+            let [smashed] = run.shelf.splice(crypto.randomInt(0, run.shelf.length), 1);
+            return { outcome: 'smash', smashed: thonicView(smashed) };
+        }
+        return { outcome: 'smash', paid: -changePurse(run, -INTERLUDE.darrenGlass) };
+    }
+    if (roll <= INTERLUDE.darrenGift) return { outcome: 'gift', ...freeThonic() };
+    let gift = freeThonic();
+    return { outcome: 'catch', ...gift, gold: (gift.gold || 0) + changePurse(run, INTERLUDE.darrenCatchGold) };
 }
 
 // The Dice Den: one throw of two dice each. `won` is null on a tie (they throw again).
@@ -1672,6 +1743,35 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // The Wild Magic Hot Tub: 'soak' once, and the wild magic surges (free).
+    socket.on('hotTub', (action) => {
+        let room = interludeAt('hotTub');
+        if (!room || action !== 'soak') return;
+        let run = room.tavernRun;
+        let surge = pickHotTubSurge();
+        if (surge === 'pruney') run.nextFightHearts = Math.max(1, (run.nextFightHearts || BALANCE.playerHearts) - 1);
+        else run.nextFightSurge = surge;
+        run.interlude = { stage: 'done', spot: 'hotTub', surge: { id: surge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[surge] }, hearts: surge === 'pruney' ? run.nextFightHearts : undefined };
+        emitState(socket.roomCode);
+    });
+
+    // Darren Snakehands: 'roll' once; then 'on' to the next fight (he is the walk's one event).
+    socket.on('darren', (action) => {
+        let room = interludeAt('darren');
+        if (!room) return;
+        let interlude = room.tavernRun.interlude;
+        if (action === 'roll' && !interlude.roll) {
+            interlude.roll = rollFace();
+            Object.assign(interlude, darrenOutcome(room, interlude.roll));
+        } else if (action === 'on' && interlude.roll) {
+            moveOnToNextFight(socket.roomCode);
+            return;
+        } else {
+            return;
+        }
+        emitState(socket.roomCode);
+    });
+
     socket.on('chooseSpot', (spot) => {
         let room = interludeAt('choose');
         if (!room || typeof spot !== 'string' || !room.tavernRun.interlude.spots.includes(spot)) return;
@@ -1684,6 +1784,8 @@ io.on('connection', (socket) => {
             run.interlude = { stage: 'shrine' };
         } else if (spot === 'diceDen') {
             run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
+        } else if (spot === 'hotTub') {
+            run.interlude = { stage: 'hotTub' };
         }
         emitState(socket.roomCode);
     });

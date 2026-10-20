@@ -157,10 +157,20 @@ function cursed(state: GameState) {
     return state.tavernRun?.roundEffect?.kind === 'curse';
 }
 
+// The hot tub's surge on your aqua die, in a few words (the hint under Roll).
+const SURGE_HINTS: Record<string, string> = {
+    noOnes: 'the aqua die never rolls a 1',
+    twin: 'the aqua die keeps the better of two',
+    lucky: 'the aqua die only rolls 4, 5 or 6',
+    scalding: 'the aqua die always lands on a 6',
+    soggy: 'the aqua die never rolls a 6'
+};
+
 // What this round's ability means for you, in a line (shown under the Roll button).
 function roundEffectHint(state: GameState) {
     const effect = state.tavernRun?.roundEffect;
-    if (!effect) return '';
+    const surge = state.tavernRun?.tubSurge;
+    if (!effect) return surge && surge.id !== 'pruney' ? `${surge.name}: ${SURGE_HINTS[surge.id]}` : '';
     const cap = state.tavernRun?.devilCap ?? 18;
     if (effect.kind === 'curse') return 'Cursed round: the lowest valid score wins';
     if (effect.kind === 'mind') return effect.landed ? 'Mind Whip: that die stays kept' : 'Mind Whip: your worst die will be kept';
@@ -297,7 +307,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 onClick={actions.roll}
                 aria-hidden={!snap.isMyTurn}
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
-            <div className={`hint ${!hint.startsWith('Tap') && state?.tavernRun?.roundEffect ? `round-${state.tavernRun.roundEffect.kind}` : ''}`}>{hint}</div>
+            <div className={`hint ${!hint.startsWith('Tap') && state?.tavernRun?.roundEffect ? `round-${state.tavernRun.roundEffect.kind}` : !hint.startsWith('Tap') && hint && state?.tavernRun?.tubSurge ? 'round-tub' : ''}`}>{hint}</div>
         </div>
     );
 }
@@ -723,7 +733,8 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
 const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
     shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A blessing from the Lady' },
-    diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' }
+    diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
+    hotTub: { name: 'The Wild Magic Hot Tub', line: 'Bubbling, glowing, faintly humming.', offer: 'A wild surge on one of your dice' }
 };
 
 // Who (or what) is at the spot, in a lit round frame.
@@ -809,14 +820,16 @@ function PurseLine({ state }: { state: GameState }) {
 }
 
 // The spots, and the events that find you instead (the pickpocket, the Hooded Stranger).
-type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket' | 'stranger';
+type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket' | 'stranger' | 'darren';
 
 // Each scene's sign, and what its character says as things happen.
 const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
     pickpocket: { name: 'Stop, thief!', tag: 'A hand in your purse' },
     shrine: { name: 'Shrine to the Lady', tag: 'Goddess of sailors' },
     diceDen: { name: 'The Dice Den', tag: 'Two dice each. Highest wins.' },
-    stranger: { name: 'The Hooded Stranger', tag: 'Keepsakes, for a price' }
+    stranger: { name: 'The Hooded Stranger', tag: 'Keepsakes, for a price' },
+    hotTub: { name: 'The Wild Magic Hot Tub', tag: 'Soak at your own risk' },
+    darren: { name: 'Darren Snakehands', tag: 'The barman, and his snakes' }
 };
 
 function sceneLine(interlude: Interlude, revealed: boolean): string | null {
@@ -829,6 +842,11 @@ function sceneLine(interlude: Interlude, revealed: boolean): string | null {
             if (interlude.throws.length && revealed) return 'A tie! Again!';
             return 'Your throw. Make it count.';
         case 'stranger': return 'I have something for you… for a price.';
+        case 'darren':
+            if (interlude.roll === undefined || !revealed) return 'Whoa! Mind the snakes!';
+            return interlude.outcome === 'smash' ? 'Oops. That one was yours…'
+                : interlude.outcome === 'gift' ? 'Sorry, friend. Have this on the house.'
+                    : 'The lads caught the lot! Here, for your trouble.';
         case 'shrine': return null;
         case 'done':
             if (interlude.spot === 'diceDen') {
@@ -837,6 +855,7 @@ function sceneLine(interlude: Interlude, revealed: boolean): string | null {
                 return interlude.won ? "Beginner's luck…" : 'The house thanks you!';
             }
             if (interlude.spot === 'stranger') return interlude.keepsake ? 'A fine choice. Mind your heart.' : 'Another time, then.';
+            if (interlude.spot === 'hotTub') return interlude.surge.good ? '*bubble bubble* ✨' : '*glorp*';
             return null;
         default: return null;
     }
@@ -853,7 +872,9 @@ function SpotScene({ spot, state, next, leaving, onMoveOn }: { spot: SceneSpot; 
     const mood = interlude.stage === 'pickpocket' && interlude.roll !== undefined && revealed ? (interlude.caught ? 'caught' : 'escaped')
         : interlude.stage === 'done' && interlude.spot === 'diceDen' && interlude.bet && revealed ? (interlude.won ? 'lost' : 'won')
             : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'blessed'
-                : '';
+                : interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'blessed surged' : 'escaped surged')
+                    : interlude.stage === 'darren' && interlude.roll !== undefined && revealed ? (interlude.outcome === 'smash' ? 'escaped' : 'caught')
+                        : '';
     const portrait = SPOT_PORTRAITS[spot];
     return (
         <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
@@ -889,6 +910,18 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
     const challenge = <button className="primary onward" onClick={onMoveOn}>Challenge {next}</button>;
 
     if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} purse={run.purse} setRevealed={setRevealed} next={challenge} />;
+    if (interlude.stage === 'darren') return <DarrenRoll interlude={interlude} setRevealed={setRevealed} next={challenge} />;
+
+    if (interlude.stage === 'hotTub') {
+        return (
+            <>
+                <p className="scene-text">Climb in, and the wild magic surges: most likely one of your dice is blessed for the next fight. Most likely.</p>
+                <div className="event-choices">
+                    <button className="primary" onClick={actions.soak}>Climb in</button>
+                </div>
+            </>
+        );
+    }
 
     if (interlude.stage === 'shrine') {
         return (
@@ -949,8 +982,10 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
     }
     return (
         <>
-            <p className="outcome">
-                {interlude.spot === 'shrine'
+            <p className={`outcome ${interlude.spot === 'hotTub' ? (interlude.surge.good ? 'good' : 'bad') : ''}`}>
+                {interlude.spot === 'hotTub'
+                    ? <><span className="blessing-name">{interlude.surge.name}</span>{interlude.surge.id === 'pruney' ? <>You start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</> : interlude.surge.text.replace('next fight', `against ${next}`)}</>
+                    : interlude.spot === 'shrine'
                     ? (interlude.gift === 'favour'
                         ? <><span className="blessing-name">The Lady's Favour</span>You start the fight with {next} on <strong>{interlude.hearts} hearts</strong>.</>
                         : <><span className="blessing-name">The Lady's Grace</span>The next time you'd lose a heart to dust, she saves you.</>)
@@ -1025,6 +1060,56 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
             )}
             <div className="event-choices">
                 {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch the thief</button>}
+                {done && next}
+            </div>
+        </>
+    );
+}
+
+// Darren Snakehands knocks into you: one die decides whether a Thonic smashes, he gives you one
+// by way of sorry, or his snakes catch everything (a Thonic and gold). Then the next fight.
+function DarrenRoll({ interlude, setRevealed, next }: { interlude: Extract<Interlude, { stage: 'darren' }>; setRevealed: (v: boolean) => void; next: JSX.Element }) {
+    const rolled = interlude.roll !== undefined;
+    const [rolling, setRolling] = useState(false);
+    useLayoutEffect(() => {
+        if (!rolled) return;
+        setRolling(true);
+        setRevealed(false);
+        clatter([interlude.roll!]);
+        const timer = setTimeout(() => {
+            setRolling(false);
+            setRevealed(true);
+            playSound(interlude.outcome === 'smash' ? 'aww' : 'yay');
+            if (interlude.outcome === 'catch') playCoins(5);
+        }, DIE_ROLL_MS);
+        return () => clearTimeout(timer);
+    }, [rolled, interlude.roll, interlude.outcome, setRevealed]);
+    const done = rolled && !rolling;
+    const good = interlude.outcome !== 'smash';
+    return (
+        <>
+            {!rolled && (
+                <p className="scene-text">
+                    His snake-arms knock right into you. Roll: 1-{interlude.smashOn} something smashes, {interlude.smashOn + 1}-{interlude.giftOn} he makes it up to you, {interlude.giftOn + 1}-6 the snakes catch everything.
+                </p>
+            )}
+            {rolled && (
+                <div className={`dice-row single ${done ? (good ? 'good' : 'bad') : ''}`}>
+                    <Die value={interlude.roll!} rolling={rolling} />
+                </div>
+            )}
+            {done && (
+                <p className={`outcome ${good ? 'good' : 'bad'}`}>
+                    {interlude.outcome === 'smash'
+                        ? (interlude.smashed
+                            ? <>You rolled a {interlude.roll}: your <strong>{interlude.smashed.name}</strong> smashes on the floor.</>
+                            : <>You rolled a {interlude.roll}: a tray of glasses goes over. You pay <strong>{interlude.paid}</strong> gold for the glass.</>)
+                        : <>You rolled a {interlude.roll}: {interlude.thonic ? <>a free <strong>{interlude.thonic.name}</strong> for your shelf</> : <>your shelf is full, so <strong>{interlude.gold}</strong> gold instead</>}
+                            {interlude.outcome === 'catch' && interlude.thonic && <>, and <strong>+{interlude.gold}</strong> gold</>}.</>}
+                </p>
+            )}
+            <div className="event-choices">
+                {!rolled && <button className="primary" onClick={() => actions.darren('roll')}>Roll the die</button>}
                 {done && next}
             </div>
         </>

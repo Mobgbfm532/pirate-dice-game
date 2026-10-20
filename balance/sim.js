@@ -68,8 +68,10 @@ function fight(index, run, opts = {}) {
         clearEyeRound: 0,
         keepUsed: {},
         rounds: 0,
-        disguises: disguisesIn(order)
+        disguises: disguisesIn(order),
+        surge: run.nextSurge || null // the Wild Magic Hot Tub's, on one of your dice this fight
     };
+    run.nextSurge = null;
     const max = ability => N.abilityUses[ability];
     const canUse = ability => opp.ability === ability && f.clearEyeRound !== f.round && f.round >= f.abilityRound && f.uses < max(ability);
     // Using the ability: with Clear-Eye as "cancel the next" (opts.effects.clearEye ===
@@ -199,7 +201,8 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     // Vaelin's Inkfire Brand: 6 is burned into the table this round; your dice that land on it
     // roll again (so they land 1-5; the Loaded Die 4-5).
     const loaded = loadedFace(run, N);
-    const face = f.effect && f.effect.kind === 'ink' ? d => { let v; do v = loaded ? loaded(d) : d6(); while (v === 6); return v; } : loaded;
+    const inked = f.effect && f.effect.kind === 'ink' ? d => { let v; do v = loaded ? loaded(d) : d6(); while (v === 6); return v; } : loaded;
+    const face = f.surge ? surgeFace(f.surge, inked || (() => d6()), () => turn, N) : inked;
     const choose = () => {
         if (opts.player === 'casual') return Rules.planBotLocks(turn, 'molar', toBeat);
         return Strategy.bestKeeps(turn.dice, toBeat, round);
@@ -277,6 +280,26 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     return { busted, score };
 }
 
+
+// The Wild Magic Hot Tub's surge on its die (as server.js rollFaceFor): never a 1, never a 6,
+// only 4-6, always a 6, or the better of two.
+function surgeFace(surge, base, turnOf, N) {
+    const die = N.interlude.hotTubDie;
+    return d => {
+        if (d.id !== die) return base(d);
+        if (surge === 'noOnes') return 2 + Math.floor(Math.random() * 5);
+        if (surge === 'soggy') return 1 + Math.floor(Math.random() * 5);
+        if (surge === 'lucky') return 4 + Math.floor(Math.random() * 3);
+        if (surge === 'scalding') return 6;
+        if (surge === 'twin') {
+            const kept = turnOf().dice.filter(x => x.status === STATUS.LOCKED).map(x => x.value);
+            const a = base(d), b = base(d);
+            for (const need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
+            return Math.max(a, b);
+        }
+        return base(d);
+    };
+}
 
 // Second Thoughts: put back the lowest kept die that isn't the 2 or 4 in use.
 function putBackChoice(turn) {
@@ -427,8 +450,12 @@ function between(run, policy, N, nextIndex, log) {
     let spot;
     if (strangerEvent && unowned.length && Math.random() * 100 < I.strangerChance) {
         spot = 'stranger';
+    } else if (I.darrenChance && nextIndex < 5 && Math.random() * 100 < I.darrenChance) {
+        darren(run, N);
+        log.spots.push('darren');
+        return;
     } else {
-        const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger'].filter(s => (s !== 'stranger' || (!strangerEvent && unowned.length)) && (s !== 'diceDen' || canBet))).slice(0, 2);
+        const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger', ...(I.hotTubSurges ? ['hotTub'] : [])].filter(s => (s !== 'stranger' || (!strangerEvent && unowned.length)) && (s !== 'diceDen' || canBet))).slice(0, 2);
         if (run.keepsakes.includes('loyaltyCard') && !spots.includes('thom')) spots[Math.floor(Math.random() * 2)] = 'thom';
         spot = policy.choose(run, spots, N, nextIndex);
     }
@@ -445,6 +472,13 @@ function between(run, policy, N, nextIndex, log) {
                 run.shelf.push(id);
             }
         }
+    } else if (spot === 'hotTub') {
+        // A wild surge, by weight: the dice ones for the next fight, Pruney a heart short.
+        const surge = pickSurge(I.hotTubSurges);
+        run.stats.surges = run.stats.surges || {};
+        run.stats.surges[surge] = (run.stats.surges[surge] || 0) + 1;
+        if (surge === 'pruney') run.hearts = Math.max(1, (run.hearts ?? N.playerHearts) - 1);
+        else run.nextSurge = surge;
     } else if (spot === 'shrine') {
         if (I.shrineGifts) {
             // The Lady's blessing, at random: Favour (an extra heart next fight) or Grace (the
@@ -474,6 +508,32 @@ function between(run, policy, N, nextIndex, log) {
             run.hearts = I.strangerHearts;
             if (pick === 'potionBelt' && run.shelf.length < shelfSize(run, N)) run.shelf.push(N.keepsakes.beltThonic);
         }
+    }
+}
+
+function pickSurge(weights) {
+    const entries = Object.entries(weights);
+    let roll = Math.random() * entries.reduce((a, [, w]) => a + w, 0);
+    for (const [id, w] of entries) { if (roll < w) return id; roll -= w; }
+    return entries[0][0];
+}
+
+// Darren Snakehands (as server.js darrenOutcome): one die; a Thonic smashes (or you pay for the
+// glass), a free Thonic, or a Thonic and gold. A full shelf takes the Thonic as gold.
+function darren(run, N) {
+    const I = N.interlude, roll = d6();
+    const free = () => {
+        if (run.shelf.length >= shelfSize(run, N)) changePurse(run, I.darrenFullShelfGold);
+        else run.shelf.push(THONIC_IDS[Math.floor(Math.random() * THONIC_IDS.length)]);
+    };
+    if (roll <= I.darrenSmash) {
+        if (run.shelf.length) run.shelf.splice(Math.floor(Math.random() * run.shelf.length), 1);
+        else changePurse(run, -I.darrenGlass);
+    } else if (roll <= I.darrenGift) {
+        free();
+    } else {
+        free();
+        changePurse(run, I.darrenCatchGold);
     }
 }
 

@@ -77,8 +77,10 @@ export function createDiceMaterials() {
     const loaded = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps }));
     // Frak's Mind Whip: the die he made you keep glows his sickly green and violet.
     const mind = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps }));
-    loadPaintedFaces(faces, [loaded, mind]);
-    return { faces, hidden, loaded, mind };
+    // The Wild Magic Hot Tub: the die its surge works on, aqua with a soft glow.
+    const tub = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#86e3ee'), emissive: new THREE.Color('#00838f'), emissiveIntensity: 0.4, ...diceMaterialProps }));
+    loadPaintedFaces(faces, [loaded, mind, tub]);
+    return { faces, hidden, loaded, mind, tub };
 }
 
 // The painted dice sheet (docs/art-direction.md): six faces in a 3x2 grid, values 1-6

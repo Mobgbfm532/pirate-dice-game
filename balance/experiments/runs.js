@@ -35,6 +35,7 @@ const sensible = {
             thom: room && run.purse >= Math.min(...Object.values(N.thonicPrices)) ? 30 : -1,
             shrine: N.interlude.shrineGifts ? VALUE.blessing[at(next, N)] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[at(next, N)] : 0),
             diceDen: -1, // even odds: no gain for the score
+            hotTub: 15, // a soak adds ~1-2 points of the next fight on average (hot-tub.js)
             stranger: 60 // two offers; often one is worth the heart
         };
         const best = spots.slice().sort((a, b) => worth[b] - worth[a])[0];

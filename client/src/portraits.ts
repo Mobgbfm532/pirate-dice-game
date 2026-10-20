@@ -37,12 +37,15 @@ export const PORTRAITS: Record<string, Portrait> = {
 // The spots between fights (and the pickpocket), shown in a round frame. The Shrine is a
 // painted scene rather than a cut-out; it's framed on the statue and candles. Each is
 // framed to show the whole head and what they hold.
-export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket', Portrait> = {
+export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket' | 'hotTub' | 'darren', Portrait> = {
     thom: bust('thom.webp', [52, 6], 1.15),
     shrine: bust('shrine.webp', [50, 38], 1.2),
     diceDen: bust('dicer.webp', [52, 8], 1.75),
     stranger: bust('stranger.webp', [56, 10], 2.0),
-    pickpocket: bust('pickpocket.webp', [55, 12], 1.2)
+    pickpocket: bust('pickpocket.webp', [55, 12], 1.2),
+    // Drawn placeholders until the paintings arrive (docs/art-direction.md).
+    hotTub: bust('hot-tub.svg', [50, 50], 1.0),
+    darren: bust('darren.svg', [50, 40], 1.4)
 };
 
 export const AVATAR_IDS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];

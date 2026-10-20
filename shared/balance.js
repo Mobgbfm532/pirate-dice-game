@@ -46,7 +46,26 @@ module.exports = {
         diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
         strangerChance: 20,     // percent of walks the Hooded Stranger finds you (if the thief didn't)
         strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
-        strangerHearts: 2       // ...and you start the next fight on this many hearts if you take one (a heart short)
+        strangerHearts: 2,      // ...and you start the next fight on this many hearts if you take one (a heart short)
+        // The Wild Magic Hot Tub (a spot, free): a soak, and one wild surge at random, by these
+        // weights. Each dice surge works on one of your dice (hotTubDie) for the next fight.
+        //   noOnes  Bubbly Die: never rolls a 1        twin    Double Bubble: rolls twice, keeps the better
+        //   lucky   Lucky Splash: only rolls 4, 5 or 6  scalding  Scalding Die: always lands on a 6
+        //   soggy   Soggy Die: never rolls a 6         pruney  Pruney Fingers: the next fight a heart short
+        // Next-fight win chance (simulated, 20 Oct): noOnes +2, twin +3, lucky +5, scalding +8,
+        // soggy -8, pruney -20 points; a soak averages about +1 (balance/experiments/hot-tub.js).
+        hotTubSurges: { noOnes: 3, twin: 3, lucky: 3, scalding: 1, soggy: 1, pruney: 1 },
+        hotTubDie: 1,
+        // Darren Snakehands, the Ghoul and Gourd's barman (a random event there, if no thief or
+        // Stranger found you): his snake-arms knock into you; roll one die. Up to darrenSmash a
+        // Thonic on your shelf smashes (an empty shelf: pay for the glass); up to darrenGift he says
+        // sorry with a free Thonic; higher, the snakes catch everything: a Thonic and gold.
+        darrenChance: 15,
+        darrenSmash: 2,
+        darrenGift: 4,
+        darrenGlass: 20,
+        darrenCatchGold: 50,
+        darrenFullShelfGold: 30 // a free Thonic with a full shelf comes as gold instead
     },
 
     // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on

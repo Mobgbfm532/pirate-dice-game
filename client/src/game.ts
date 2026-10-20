@@ -52,11 +52,16 @@ export interface TavernRun {
     abilityMax?: number; // the opponent's uses a fight
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
+    tubSurge?: TubSurge | null; // the Wild Magic Hot Tub's surge on one of your dice, this fight
+    nextSurge?: string | null; // ...or waiting for the next fight
 }
+
+// The Wild Magic Hot Tub's surges (server.js HOT_TUB_SURGES); die: the die it works on.
+export interface TubSurge { id: 'noOnes' | 'twin' | 'lucky' | 'scalding' | 'soggy' | 'pruney'; name: string; text: string; good: boolean; die: number }
 
 // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots
 // catch your eye and you go to one.
-export type Spot = 'thom' | 'shrine' | 'diceDen';
+export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub';
 export interface DiceThrow { you: [number, number]; them: [number, number] }
 export type Interlude =
     | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }
@@ -64,6 +69,10 @@ export type Interlude =
     | { stage: 'shrine' }
     | { stage: 'diceDen'; bets: number[]; bet: number | null; throws: DiceThrow[] }
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
+    | { stage: 'hotTub' }
+    // Darren Snakehands: one die (up to smashOn a Thonic smashes, up to giftOn a free one, else a Thonic and gold).
+    | { stage: 'darren'; smashOn: number; giftOn: number; roll?: number; outcome?: 'smash' | 'gift' | 'catch'; smashed?: Thonic; paid?: number; thonic?: Thonic; gold?: number }
+    | { stage: 'done'; spot: 'hotTub'; surge: TubSurge; hearts?: number }
     | { stage: 'done'; spot: 'shrine'; gift: 'favour' | 'grace'; hearts?: number }
     | { stage: 'done'; spot: 'diceDen'; bet: number; throws?: DiceThrow[]; won?: boolean }
     | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number }
@@ -668,6 +677,15 @@ export const actions = {
     pickpocket(action: 'roll' | 'on') {
         playSound('click');
         socket.emit('pickpocket', action);
+    },
+    darren(action: 'roll' | 'on') {
+        playSound('click');
+        socket.emit('darren', action);
+    },
+    // The Wild Magic Hot Tub: climb in; the wild magic surges.
+    soak() {
+        playSound('click');
+        socket.emit('hotTub', 'soak');
     },
     // The Shrine: light a candle; the Lady grants a blessing at random.
     pray() {

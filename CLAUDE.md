@@ -116,7 +116,7 @@ read and follow the file):
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
 against opponent 0-8, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten), `/between?spots=thom,shrine` (add
-`&pickpocket=1`, or `&stage=shrine|diceDen|stranger`). The pane's launch entry for it is `dev-test-server`.
+`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Klarg … 8 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
@@ -299,6 +299,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
+  The **Wild Magic Hot Tub** (a spot in both pubs, free, since 20 Oct): climb in and a wild surge
+  is picked by weight (`hotTubSurges`): one of your dice (`hotTubDie`, aqua on the table,
+  `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
+  lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
+  (`nextFightSurge` → `tubSurge`, `rollFaceFor`; a badge under Roll). A soak averages about +1-2
+  points of the next fight (`balance/experiments/hot-tub.js`). **Darren Snakehands**, the Ghoul and
+  Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
+  Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 20 gold for
+  the glass), 3-4 a free Thonic, 5-6 a Thonic and 50 gold (a full shelf: gold instead,
+  `darrenOutcome`). Both have drawn placeholder art (`hot-tub.svg`, `darren.svg`) until the
+  user paints them.
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
   the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with
