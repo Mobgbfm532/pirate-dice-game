@@ -109,7 +109,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🦑',
         lives: BALANCE.opponentLives.frak,
         ability: 'mindWhip',
-        intro: 'Frak, a slimy half-elf sorcerer and lowly thief, his illithid side showing more and more. Mind Whip: on your first throw he makes you keep your worst die.'
+        intro: 'Frak, a repugnant ne’er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep your worst die.'
     },
     {
         id: 'danhausen',
@@ -118,7 +118,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🧛',
         lives: BALANCE.opponentLives.danhausen,
         ability: 'cursed',
-        intro: "Danhausen, dhampir warlock and a cartoon come to life, knows he's in a game. You are Cursed: for a round, the lowest valid score wins."
+        intro: 'Danhausen: Very Nice, Very Evil and Mayor of Waterdeep? You are Cursed: for a round, the lowest valid score wins.'
     },
     {
         id: 'duke',
@@ -127,7 +127,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '😈',
         lives: BALANCE.opponentLives.duke,
         ability: 'devil',
-        intro: "Duke Morrigan, noble rogue and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s, and that round you can't score above 18."
+        intro: "Duke Morrigan, noble, roguish and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s, and that round you can't score above 18."
     },
     {
         id: 'martha',
@@ -137,7 +137,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.martha,
         ability: 'disguises',
         boss: true, // beating her wins her mask and the invitation to the final
-        intro: "Martha Mystery, the table's boss, has watched you all night. Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
+        intro: 'Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick.'
     },
     {
         id: 'klarg',
@@ -155,7 +155,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
         ability: 'constellationBlur',
-        intro: 'Rokr reads the dice in the stars. Once per match, constellations can blur your active dice.'
+        intro: 'Rokr reads the dice in the stars. Twice per match, constellations can blur your active dice.'
     },
     {
         id: 'hangman',

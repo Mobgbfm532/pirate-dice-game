@@ -1731,3 +1731,7 @@ button.keepsake.used { opacity: 0.55; }
     25% { transform: translateX(-52%) rotate(-3deg); }
     75% { transform: translateX(-48%) rotate(3deg); }
 }
+
+@media (max-width: 480px) {
+    .hint.tub-fight { box-sizing: border-box; min-height: 3.2em; display: inline-flex; align-items: center; justify-content: center; }
+}

@@ -157,13 +157,13 @@ function cursed(state: GameState) {
     return state.tavernRun?.roundEffect?.kind === 'curse';
 }
 
-// The hot tub's surge on your aqua die, in a few words (the hint under Roll).
+// The hot tub's surge on your Wild Magic (aqua) die, in a few words (the hint under Roll; the user's wording, 20 Oct).
 const SURGE_HINTS: Record<string, string> = {
-    noOnes: 'the aqua die never rolls a 1',
-    twin: 'the aqua die keeps the better of two',
-    lucky: 'the aqua die only rolls 4, 5 or 6',
-    scalding: 'the aqua die always lands on a 6',
-    soggy: 'the aqua die never rolls a 6'
+    noOnes: 'the Wild Magic die never rolls a 1',
+    twin: 'the Wild Magic die rolls twice and keeps the better result.',
+    lucky: 'the Wild Magic die only rolls 4, 5 or 6',
+    scalding: 'the Wild Magic die always lands on a 6',
+    soggy: 'the Wild Magic die never rolls a 6'
 };
 
 // What this round's ability means for you, in a line (shown under the Roll button).
@@ -175,7 +175,7 @@ function roundEffectHint(state: GameState, myTurn: boolean): { text: string; kin
     const surge = state.tavernRun?.tubSurge;
     const cap = state.tavernRun?.devilCap ?? 18;
     if (effect?.kind === 'curse') return { text: 'Cursed round: the lowest valid score wins', kind: 'curse' };
-    if (effect?.kind === 'mind' && effect.landed && myTurn) return { text: 'Mind Whip: that die stays kept', kind: 'mind' };
+    if (effect?.kind === 'mind' && effect.landed && myTurn) return { text: 'Mind Whip: the selected die stays kept', kind: 'mind' };
     if (effect?.kind === 'devil') return { text: effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`, kind: 'devil' };
     if (surge && surge.id !== 'pruney') return { text: `${surge.name}: ${SURGE_HINTS[surge.id]}`, kind: 'tub' };
     return { text: '', kind: '' };
@@ -314,7 +314,8 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 onClick={actions.roll}
                 aria-hidden={!snap.isMyTurn}
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
-            <div className={`hint ${!tip && badge.kind ? `round-${badge.kind}` : ''}`}>{hint}</div>
+            {/* A hot tub fight: its badge can take two lines on small phones, so the space is kept the whole fight (the table doesn't jump when a tip replaces it). */}
+            <div className={`hint ${!tip && badge.kind ? `round-${badge.kind}` : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>{hint}</div>
         </div>
     );
 }
@@ -805,7 +806,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
                 <PurseLine state={state} />
-                <h2 className="interlude-title">You qualify for the final</h2>
+                <h2 className="interlude-title">You qualify for the Yawning Portal</h2>
                 <div className="invitation-card">
                     <span className="icon" aria-hidden="true">🎭</span>
                     <p>Martha Mystery lifts off her mask and presses it into your hand. "You've earned this. Show it at {interlude.place}."</p>
