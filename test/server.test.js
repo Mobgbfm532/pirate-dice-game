@@ -860,6 +860,12 @@ test("the hot tub's surges: the die never rolls a 1, never a 6, only 4-6, always
     const twin = faces('twin', { playerId: 'P', rollCount: 2, dice: [{ id: 0, value: 2, status: Rules.STATUS.LOCKED }, { id: 2, value: 4, status: Rules.STATUS.LOCKED }] });
     const mean = twin.reduce((a, b) => a + b, 0) / twin.length;
     assert.ok(mean > 4.2, `the higher of two averages ~4.47: ${mean}`);
+    // The roll that lost is kept for the ghost die (diceRolled.twin).
+    const turn = { playerId: 'P', rollCount: 2, dice: [] };
+    room.tavernRun.tubSurge = 'twin';
+    const face = server.rollFaceFor(room, turn);
+    for (let i = 0; i < 50 && !turn.twinRoll; i++) face({ id: die });
+    assert.ok(turn.twinRoll && turn.twinRoll.die === die && turn.twinRoll.kept !== turn.twinRoll.lost, 'the losing roll is recorded');
     assert.equal(new Set(faces('noOnes', undefined, die === 0 ? 1 : 0)).size, 6, 'only that die');
     assert.equal(new Set(faces('noOnes', { playerId: 'BOT_MOLAR', rollCount: 1, dice: [] })).size, 6, "not the opponent's dice");
 });

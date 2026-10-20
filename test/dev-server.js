@@ -7,6 +7,7 @@
 //        &stock=healing,fizzy,steady to choose what's on it; default: the longest names)
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/foe?lives=1"        the opponent's lives
+//   curl "http://localhost:3003/surge?id=twin"      a hot tub surge on this fight
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
 //   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
@@ -38,6 +39,8 @@ const COMMANDS = {
     // The opponent's lives (n=1: the next round you win ends the fight).
     '/foe': (r, q) => { if (r.players.BOT_MOLAR) r.players.BOT_MOLAR.lives = Number(q.get('lives') || 1); },
     '/shelf': (r, q) => { r.tavernRun.shelf = (q.get('ids') || '').split(',').filter(Boolean); },
+    // The hot tub's surge on this fight (id: noOnes, twin, lucky, scalding, soggy).
+    '/surge': (r, q) => { r.tavernRun.tubSurge = q.get('id') || 'twin'; },
     '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
     // A fight against opponent n (0 McGrath ... 4 Martha, 5 Klarg ... 8 Jaguar), its ability ready from round 1.
     '/fight': (r, q, code) => { r.tavernRun.encounterIndex = Number(q.get('n')); r.tavernRun.interlude = null; r.tavernRun.shop = null; server.resetTavernEncounter(code); r.tavernRun.abilityRound = 1; r.tavernRun.abilityUsed = {}; server.beginTavernRound(code, r); },

@@ -310,7 +310,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   is picked by weight (`hotTubSurges`): one of your dice (`hotTubDie`, aqua on the table,
   `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
   lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
-  (`nextFightSurge` → `tubSurge`, `rollFaceFor`; a badge under Roll). A soak averages about +1-2
+  (`nextFightSurge` → `tubSurge`, `rollFaceFor`; a badge under Roll). Double Bubble's losing roll
+  rises from the die as a fading ghost die (`turn.twinRoll` → `diceRolled.twin` → `TwinGhost`). A soak averages about +1-2
   points of the next fight (`balance/experiments/hot-tub.js`). **Darren Snakehands**, the Ghoul and
   Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
   Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 20 gold for

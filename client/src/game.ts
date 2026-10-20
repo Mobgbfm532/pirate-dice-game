@@ -149,6 +149,8 @@ export interface Snapshot {
     // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
     // fight's last roll to finish (BETWEEN_PAUSE_MS), and while they're up nobody sits at the table.
     betweenShown: boolean;
+    // Double Bubble (the hot tub): the roll that lost on the aqua die, shown as a ghost once the dice stop.
+    twinGhost: { die: number; kept: number; lost: number; at: number } | null;
     putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
 }
 
@@ -189,6 +191,7 @@ let snapshot: Snapshot = {
     ability: null,
     shopArrival: null,
     betweenShown: false,
+    twinGhost: null,
     putBackSlot: null
 };
 
@@ -332,7 +335,7 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
     });
 });
 
-socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[] }) => {
+socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; twin?: { die: number; kept: number; lost: number } }) => {
     enqueue(done => {
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
@@ -369,7 +372,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
             });
             table.roll = null;
             if (data.devil) { table.devilAt = performance.now(); playSound('devil'); }
-            update({ rolling: false });
+            update({ rolling: false, ...(data.twin ? { twinGhost: { ...data.twin, at: performance.now() } } : {}) });
             applyTurn(turn);
             done();
         }, durationMs + 120);

@@ -306,6 +306,8 @@ function rollFaceFor(room, turn) {
     if (!loaded && !surge) return rollFace;
     let base = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
     if (!surge) return base;
+    // Double Bubble: the roll that lost, this throw (sent with diceRolled as twin, for its ghost die).
+    turn.twinRoll = null;
     return d => {
         if (!d || d.id !== HOT_TUB_DIE) return base(d);
         if (surge === 'noOnes') return crypto.randomInt(2, 7);
@@ -316,8 +318,11 @@ function rollFaceFor(room, turn) {
             // The better of two: a 2 or 4 still needed, else the higher.
             let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
             let a = base(d), b = base(d);
-            for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
-            return Math.max(a, b);
+            let pick = Math.max(a, b);
+            for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
+            let lost = pick === a ? b : a;
+            if (lost !== pick) turn.twinRoll = { die: d.id, kept: pick, lost };
+            return pick;
         }
         return base(d);
     };
@@ -517,7 +522,7 @@ function performRoll(roomCode) {
     turn.busyUntil = Date.now() + delay(animationMs);
     // throwSeed lets every screen simulate the identical tumble (the values are already decided).
     let throwSeed = crypto.randomInt(0, 2 ** 31);
-    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed });
+    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed, twin: turn.twinRoll || undefined });
 
     let key = turn.key;
     if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, animationMs, () => sendBotReaction(roomCode, 'hood'));
@@ -1912,7 +1917,7 @@ io.on('connection', (socket) => {
             // The rerolled dice tumble like any roll (only those dice are thrown).
             let animationMs = 500;
             turn.busyUntil = Date.now() + delay(animationMs);
-            io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled });
+            io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, twin: turn.twinRoll || undefined });
         } else {
             emitTurn(roomCode, { type: 'toggle' });
         }

@@ -82,6 +82,41 @@ function Constellation({ index, meshes }: { index: number; meshes: MutableRefObj
     );
 }
 
+// Double Bubble (the hot tub): its die rolled twice and kept the better. Once the dice stop, the
+// roll that lost rises from that die as a translucent ghost, face up, and fades away.
+const GHOST_MS = 2200;
+const ghostQuat = new THREE.Quaternion();
+
+function TwinGhost({ geometry, materials, meshes }: { geometry: THREE.BufferGeometry; materials: ReturnType<typeof createDiceMaterials>; meshes: MutableRefObject<(THREE.Mesh | null)[]> }) {
+    const ghost = useSyncExternalStore(store.subscribe, () => store.get().twinGhost);
+    const mesh = useRef<THREE.Mesh>(null);
+    // Fresh see-through copies for each ghost (by then the painted faces have loaded).
+    const faces = useMemo(() => materials.tub.map(m => {
+        const copy = m.clone();
+        copy.transparent = true;
+        copy.depthWrite = false;
+        copy.opacity = 0;
+        return copy;
+    }), [materials, ghost?.at]); // eslint-disable-line react-hooks/exhaustive-deps
+    useFrame(() => {
+        const g = mesh.current;
+        if (!g) return;
+        const t = ghost ? (performance.now() - ghost.at) / GHOST_MS : 1;
+        const die = ghost ? meshes.current[ghost.die] : null;
+        if (!ghost || !die || t >= 1) { g.visible = false; return; }
+        g.visible = true;
+        const rise = 1 - Math.pow(1 - Math.min(1, t / 0.3), 3);
+        // Up and to one side, towards the middle of the table, so the kept die stays in view.
+        const side = die.position.x > 0 ? -1 : 1;
+        g.position.set(die.position.x + side * DIE_SIZE * 1.15 * rise, die.position.y + DIE_SIZE * (0.2 + 0.9 * rise), die.position.z);
+        g.quaternion.copy(ghostQuat.copy(faceUpQuaternion(ghost.lost, 0)));
+        g.scale.setScalar(0.8);
+        const opacity = 0.6 * (t < 0.15 ? t / 0.15 : t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1);
+        faces.forEach(f => { f.opacity = opacity; });
+    });
+    return <mesh ref={mesh} geometry={geometry} material={faces} visible={false} renderOrder={2} />;
+}
+
 export function Dice() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
     const geometry = useMemo(() => new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 4, 0.13), []);
@@ -210,6 +245,7 @@ export function Dice() {
                     <Constellation index={id} meshes={meshes} />
                 </group>
             ))}
+            <TwinGhost geometry={geometry} materials={materials} meshes={meshes} />
         </group>
     );
 }
