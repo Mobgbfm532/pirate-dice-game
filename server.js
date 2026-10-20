@@ -839,7 +839,9 @@ function canUseTavernAbility(room, encounter, abilityId) {
     return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < BALANCE.abilityUses[abilityId];
 }
 
-function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
+// ends: this round ended a Tavern Crawl fight (or the run); the browser skips the pop-up then,
+// since the fight summary (or the run-over screen) takes its place.
+function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false) {
     let message;
     let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
     let dustNames = lifeLosers
@@ -865,7 +867,7 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
     } else {
         message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
     }
-    io.to(roomCode).emit('roundResult', { message });
+    io.to(roomCode).emit('roundResult', { message, ends });
 }
 
 function getHumanPlayerId(room) {
@@ -1396,7 +1398,7 @@ function evaluateTavernRound(roomCode) {
         if (loser.id === humanId && room.tavernRun.stats) room.tavernRun.stats.livesLost++;
     });
 
-    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers);
+    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers, human.lives <= 0 || enemy.lives <= 0);
 
     roundPlayers.forEach(id => {
         if (!room.players[id]) return;

@@ -142,8 +142,9 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
 | The Ace of Spades (the Hangman's revolver) | Wanted, optional | His named revolver, for the moment he fires it; a CSS muzzle flash and bullet hole for now |
 | Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
-| The Wild Magic Hot Tub (a spot) | Wanted | A wooden tavern hot tub of glowing aqua-and-violet water, steam and sparkles of wild magic, seen from the front; on a plain flat solid magenta background, no checkerboard. Save as `art/hot-tub.jpg`. A drawn placeholder (`client/public/art/hot-tub.svg`) stands in |
-| Darren Snakehands (the Ghoul and Gourd's barman, an event) | Wanted | Head and shoulders of a cheerful, harried barman in an apron whose arms are two green snakes, one holding a tankard, one a bar cloth; on a plain flat solid magenta background, no checkerboard. Save as `art/bust-darren.jpg`. A drawn placeholder (`client/public/art/darren.svg`) stands in |
+| The Wild Magic Hot Tub (a spot) | Done | `art/hot-tub.jpg` → `hot-tub.webp` (raspberry background, `cutOutFlat`); a wide painting, sized by width in its scene |
+| Darren Snakehands (the Ghoul and Gourd's barman, an event) | Done | `art/bust-darren.jpg` → `darren.webp` |
+| The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS` for when they are built. **Wanted:** Brodor |
 
 ## Processing art
 

@@ -538,8 +538,14 @@ socket.on('keepsakeActivated', (data: { name: string; text: string }) => {
     showToast(`Keepsake: ${data.name}`, data.text, 'signature', 3600);
 });
 
-socket.on('roundResult', (data: { message: string }) => {
-    showToast('Round result', data.message, 'result', 4200);
+// After the round's last roll has played out. Not when the round ended a Tavern Crawl fight or
+// the run (ends): the fight summary (or the run-over screen) comes up instead.
+socket.on('roundResult', (data: { message: string; ends?: boolean }) => {
+    if (data.ends) return;
+    enqueue(done => {
+        showToast('Round result', data.message, 'result', 4200);
+        done();
+    });
 });
 
 socket.on('displayMessage', (data: { text: string }) => {

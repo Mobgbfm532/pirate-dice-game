@@ -402,4 +402,11 @@ await cutOutFlat('bust-mcgrath.jpg', 'mcgrath');
 await cutOutFlat('bust-danhausen.jpg', 'danhausen');
 await cutOutFlat('bust-duke.jpg', 'duke', { tolerance: 30, despillRadius: 2, holes: [[380, 280]] }); // purple coat and skin: only the flat background colour goes
 await cutOutFlat('bust-martha.jpg', 'martha', { tolerance: 10, smokeBox: [[60, 215, 700, 720], [700, 215, 990, 515]], smokeColour: 'own', holes: [[744, 790]] }); // her purple smoke stays purple and see-through
+// 20 Oct: the Yawning Portal's new opponents (not in the game yet), Darren Snakehands and the Wild Magic Hot Tub.
+await cutOutFlat('bust-ridgeler.jpg', 'ridgeler', { smokeBox: [630, 470, 1024, 790] }); // the hammer's glow over the background (above the leather grip)
+await cutOutFlat('bust-vaelin-inkhand.jpg', 'vaelin-inkhand', { smokeBox: [600, 70, 1010, 700] }); // his inky black flame
+await cutOutFlat('bust-stason.jpg', 'stason');
+await cutOutFlat('bust-sylvester.jpg', 'sylvester');
+await cutOutFlat('bust-darren.jpg', 'darren');
+await cutOutFlat('hot-tub.jpg', 'hot-tub');
 await spotScene('shrine.jpg', 'shrine');

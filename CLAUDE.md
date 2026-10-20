@@ -199,7 +199,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Flourish, the Ridgeler: Divine Smite, Brodor: Astral Flood, the boss, drops Brodor's Sunglasses,
   a 23 heals); Klarg's four move to a docked ship, the Salty Swallow (word comes its crew are
   top-tier players). Save after the Yawning Portal too. Vaelin Inkhand is the Vaelin
-  avatar (new art). Only in the simulator so far: `balance/sim.js` `TOURNAMENT`,
+  avatar (new art). Busts for four of the five are in `client/public/art` (all but Brodor), registered in `PORTRAITS`. Only in the simulator so far: `balance/sim.js` `TOURNAMENT`,
   `balance/experiments/tournament.js` and `tournament-lives.js` (README for how each ability is
   played). Spots per place, the ship's events and stronger late abilities: to workshop.
 - **Fights:** nine opponents in order (`TAVERN_ENCOUNTERS`, each with its `place`, a key of
@@ -316,8 +316,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
   Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 20 gold for
   the glass), 3-4 a free Thonic, 5-6 a Thonic and 50 gold (a full shelf: gold instead,
-  `darrenOutcome`). Both have drawn placeholder art (`hot-tub.svg`, `darren.svg`) until the
-  user paints them.
+  `darrenOutcome`). Both have the user's paintings (since 20 Oct; `hot-tub.webp` is wide, sized by width).
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
   the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with

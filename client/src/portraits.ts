@@ -30,6 +30,11 @@ export const PORTRAITS: Record<string, Portrait> = {
     Rokr: bust('rokr.webp', [48, 30], 3.0),
     'The Hangman': bust('hangman.webp', [51, 38], 2.8),
     'Jaguar Cantona': bust('jaguar.webp', [46, 27], 3.0),
+    // The Yawning Portal's new opponents (20 Oct; not in the game yet, framing to check when they are).
+    'Sylvester Stonefist': bust('sylvester.webp', [50, 30], 2.6),
+    'Vaelin Inkhand': bust('vaelin-inkhand.webp', [48, 28], 2.6),
+    'Stason Jatham': bust('stason.webp', [55, 22], 2.8),
+    'The Ridgeler': bust('ridgeler.webp', [45, 25], 2.6),
     Devil: classic('Devil.png'),
     Vaelin: classic('vaelin.png')
 };
@@ -43,9 +48,8 @@ export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' |
     diceDen: bust('dicer.webp', [52, 8], 1.75),
     stranger: bust('stranger.webp', [56, 10], 2.0),
     pickpocket: bust('pickpocket.webp', [55, 12], 1.2),
-    // Drawn placeholders until the paintings arrive (docs/art-direction.md).
-    hotTub: bust('hot-tub.svg', [50, 50], 1.0),
-    darren: bust('darren.svg', [50, 40], 1.4)
+    hotTub: bust('hot-tub.webp', [52, 45], 1.25),
+    darren: bust('darren.webp', [55, 12], 1.6)
 };
 
 export const AVATAR_IDS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
