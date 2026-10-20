@@ -194,12 +194,21 @@ which on the free tier is every sleep and deploy).
 Design doc (shared with the user, kept current):
 https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
+- **Planned (design doc, 20 Oct): 14 fights across three places.** The Yawning Portal gets five
+  new opponents (Sylvester Stonefist: Sucker Punch, Vaelin Inkhand: Inkfire Brand, Stason Jatham:
+  Flourish, the Ridgeler: Divine Smite, Brodor: Astral Flood, the boss, drops Brodor's Sunglasses,
+  a 23 heals); Klarg's four move to a docked ship, the Salty Swallow (word comes its crew are
+  top-tier players). Frak's Mind Control (1 use; he picks the die you must keep) replaces Psychic
+  Fog, and Martha copies it. Save after the Yawning Portal too. Vaelin Inkhand is the Vaelin
+  avatar (new art). Only in the simulator so far: `balance/sim.js` `TOURNAMENT`,
+  `balance/experiments/tournament.js` and `tournament-lives.js` (README for how each ability is
+  played). Spots per place, the ship's events and stronger late abilities: to workshop.
 - **Fights:** nine opponents in order (`TAVERN_ENCOUNTERS`, each with its `place`, a key of
   `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak, Danhausen, Duke Morrigan,
   Martha Mystery) then the Yawning Portal (Klarg, Rokr, the Hangman, Jaguar). McGrath is the
-  Molar renamed (keeps the id `molar`, plays simply). All nine have painted busts (the new five since 19 Oct). Hearts reset to 4 each fight; the
-  opponents have 2 | 2, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`, the user's starting
-  point). **Turns alternate**
+  Molar renamed (keeps the id `molar`, plays simply). All nine have painted busts (the new five since 19 Oct). Hearts reset to 3 each fight (20 Oct; 4 after the
+  Lady's Favour); the opponents have 2 | 2, 3, 3, 3 | 3, 3, 3, 4 lives (`shared/balance.js`,
+  the user's for now, balancing later). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a

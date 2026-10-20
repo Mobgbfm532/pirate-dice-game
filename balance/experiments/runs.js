@@ -6,8 +6,8 @@ const runs = Number(process.argv[2] || 20000);
 
 // What things are worth in gold from the next fight on (index 1 = Klarg ... 4 = Jaguar), from
 // thonic-gold.js, effects.js and keepsakes.js (plan A hearts/lives, the new effects).
-// Over nine fights: a fight with five or more still to come counts like Klarg's did (index 1).
-const at = next => Math.max(1, next - 4);
+// Over longer runs: a fight with five or more still to come counts like Klarg's did (index 1).
+const at = (next, N) => Math.min(4, Math.max(1, next - ((N && N.fights) || 9) + 5));
 const VALUE = {
     healing: [0, 157, 156, 124, 64],
     lastGasp: [0, 199, 174, 128, 62],
@@ -33,7 +33,7 @@ const sensible = {
         const room = run.shelf.length < N.shelfSize + (run.keepsakes.includes('potionBelt') ? 1 : 0);
         const worth = {
             thom: room && run.purse >= Math.min(...Object.values(N.thonicPrices)) ? 30 : -1,
-            shrine: N.interlude.shrineGifts ? VALUE.blessing[at(next)] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[at(next)] : 0),
+            shrine: N.interlude.shrineGifts ? VALUE.blessing[at(next, N)] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[at(next, N)] : 0),
             diceDen: -1, // even odds: no gain for the score
             stranger: 60 // two offers; often one is worth the heart
         };
@@ -41,14 +41,14 @@ const sensible = {
         return best && worth[best] > 0 ? best : null;
     },
     shop(run, stock, N, next) {
-        return stock.filter(t => VALUE[t][at(next)] > N.thonicPrices[t]).sort((a, b) => (VALUE[b][at(next)] - N.thonicPrices[b]) - (VALUE[a][at(next)] - N.thonicPrices[a]));
+        return stock.filter(t => VALUE[t][at(next, N)] > N.thonicPrices[t]).sort((a, b) => (VALUE[b][at(next, N)] - N.thonicPrices[b]) - (VALUE[a][at(next, N)] - N.thonicPrices[a]));
     },
-    shrine: (run, N, next) => (VALUE.healing[at(next)] > N.interlude.shrineGold ? 'healing' : 'gold'),
+    shrine: (run, N, next) => (VALUE.healing[at(next, N)] > N.interlude.shrineGold ? 'healing' : 'gold'),
     bet: () => 0,
     stranger(run, offers, N, next) {
-        const cost = VALUE.heartShort[at(next)] * (N.playerHearts - N.interlude.strangerHearts);
-        const best = offers.slice().sort((a, b) => VALUE[b][at(next)] - VALUE[a][at(next)])[0];
-        return VALUE[best][at(next)] > cost ? best : null;
+        const cost = VALUE.heartShort[at(next, N)] * (N.playerHearts - N.interlude.strangerHearts);
+        const best = offers.slice().sort((a, b) => VALUE[b][at(next, N)] - VALUE[a][at(next, N)])[0];
+        return VALUE[best][at(next, N)] > cost ? best : null;
     }
 };
 

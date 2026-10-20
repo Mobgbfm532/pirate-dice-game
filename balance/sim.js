@@ -24,10 +24,22 @@ const OPPONENTS = [
     { id: 'hangman', ability: 'deadeye24' },
     { id: 'jaguar', ability: 'smoothTalk' }
 ];
+// The 14-fight tournament (design doc, 20 Oct; not in the game yet): the Ghoul and Gourd with
+// Frak's Mind Control, the Yawning Portal's five (Brodor the boss, drops his Sunglasses), then
+// Klarg's four aboard the Salty Swallow. Pass it as opts.order.
+const TOURNAMENT = [
+    ...OPPONENTS.slice(0, 5).map(o => (o.id === 'frak' ? { ...o, ability: 'mindControl' } : o)),
+    { id: 'sylvester', ability: 'suckerPunch' },
+    { id: 'vaelin', ability: 'inkfire' },
+    { id: 'stason', ability: 'flourish' },
+    { id: 'ridgeler', ability: 'divineSmite' },
+    { id: 'brodor', ability: 'astralFlood', boss: true, drops: 'brodorsSunglasses' },
+    ...OPPONENTS.slice(5)
+];
 // Round abilities (decided as a round begins; server.js beginTavernRound). Martha's disguises
-// pick one of the three at random.
-const ROUND_KIND = { psychicFog: 'fog', cursed: 'curse', devil: 'devil' };
-const DISGUISES = ['psychicFog', 'cursed', 'devil'];
+// pick one of the three at random (Frak's, Danhausen's, the Duke's).
+const ROUND_KIND = { psychicFog: 'fog', cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
+const disguisesIn = order => [(order.find(o => o.id === 'frak') || {}).ability || 'psychicFog', 'cursed', 'devil'];
 // What the Hooded Stranger offers (since 19 Oct). blessedTankard (Brodor's Sunglasses) and
 // steadyHand (Steady Hand Wrap) left the game; the sim still knows them, for old experiments.
 const KEEPSAKES = ['bentCopper', 'luckySeat', 'velvetCushion', 'loadedDie', 'potionBelt', 'loyaltyCard'];
@@ -44,7 +56,8 @@ const active = turn => turn.dice.filter(d => d.status === STATUS.ACTIVE);
 // opts.player: 'sensible' (best play) or 'casual' (the Molar's simple habits)
 function fight(index, run, opts = {}) {
     const N = numbersFor(opts);
-    const opp = OPPONENTS[index];
+    const order = opts.order || OPPONENTS;
+    const opp = order[index];
     const f = {
         index, opp,
         player: run.hearts ?? N.playerHearts,
@@ -55,7 +68,8 @@ function fight(index, run, opts = {}) {
         uses: 0,
         clearEyeRound: 0,
         keepUsed: {},
-        rounds: 0
+        rounds: 0,
+        disguises: disguisesIn(order)
     };
     const max = ability => N.abilityUses[ability];
     const canUse = ability => opp.ability === ability && f.clearEyeRound !== f.round && f.round >= f.abilityRound && f.uses < max(ability);
@@ -93,11 +107,15 @@ function fight(index, run, opts = {}) {
 function beginRound(f, run, has) {
     f.effect = null;
     f.pendingDevil = false;
+    f.pendingMind = false;
     const a = f.opp.ability;
-    if (a && (ROUND_KIND[a] || a === 'disguises')) {
-        const as = a === 'disguises' ? DISGUISES[Math.floor(Math.random() * 3)] : a;
-        // The Devil waits for the Duke's 2 and 4 (botTurn).
+    // Brodor's Astral Flood: heals one of his lives, once he has lost one.
+    if (a === 'astralFlood' && f.bot < f.botMax && f.fire(a)) f.bot++;
+    if (a && (ROUND_KIND[a] || a === 'disguises' || a === 'mindControl')) {
+        const as = a === 'disguises' ? f.disguises[Math.floor(Math.random() * 3)] : a;
+        // The Devil waits for the Duke's 2 and 4 (botTurn); Mind Control for your first throw.
         if (as === 'devil') f.pendingDevil = true;
+        else if (as === 'mindControl') f.pendingMind = true;
         else if (f.fire(a)) f.effect = { kind: ROUND_KIND[as], by: 'opponent' };
     }
     if (!f.effect && has('marthasMask') && !f.keepUsed.marthasMask) {
@@ -120,8 +138,17 @@ function botTurn(f, run, toBeat, canUse) {
     const turn = Rules.createTurn('BOT');
     const low = cursed(f), cap = devilBy(f, 'player') ? DEFAULTS.devilCap : null;
     const aceAt16 = !low && f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
+    // Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or
+    // 4 he still needs, else the higher).
+    const flourish = f.opp.ability === 'flourish' && f.fire('flourish');
+    const rollFace = flourish ? d => {
+        const kept = turn.dice.filter(x => x.status === STATUS.LOCKED).map(x => x.value);
+        const a = d6(), b = d6();
+        for (const need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
+        return Math.max(a, b);
+    } : undefined;
     while (!turn.finalized) {
-        if (!Rules.rollTurn(turn, { onRolled: t => {
+        if (!Rules.rollTurn(turn, { rollFace, onRolled: t => {
             const kept = t.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
             if (f.pendingDevil && kept.includes(2) && kept.includes(4) && active(t).length >= 3) {
                 f.pendingDevil = false;
@@ -170,7 +197,11 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     // Duke's Devil, the hand counts as no more than the cap. Psychic Fog: one die unseen (the
     // choice is made without it, and it stays in play).
     const round = { low: cursed(f), cap: devilBy(f, 'opponent') ? DEFAULTS.devilCap : null };
-    let fogged = null;
+    let fogged = null, mind = false;
+    // Vaelin's Inkfire Brand: 6 is burned into the table this round; your dice that land on it
+    // roll again (so they land 1-5; the Loaded Die 4-5).
+    const loaded = loadedFace(run, N);
+    const face = f.effect && f.effect.kind === 'ink' ? d => { let v; do v = loaded ? loaded(d) : d6(); while (v === 6); return v; } : loaded;
     const choose = () => {
         if (opts.player === 'casual') return Rules.planBotLocks(turn, 'molar', toBeat);
         const seen = turn.dice.map(d => (d.id === fogged && d.status === STATUS.ACTIVE ? { ...d, status: STATUS.STOLEN } : d));
@@ -178,11 +209,14 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     };
     for (;;) {
         const rolled = Rules.rollTurn(turn, {
-            rollFace: loadedFace(run, N),
+            rollFace: face,
             onRolled: t => {
                 fogged = null;
+                mind = false;
                 if (t.rollCount !== 1) return;
                 if (devilBy(f, 'player')) devilThrow(t);
+                // Frak's Mind Control (or Martha's copy): he picks the die you must keep.
+                if (f.pendingMind && active(t).length > 1 && f.fire(f.opp.ability)) { f.pendingMind = false; mind = true; }
                 if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
                 if (f.fire('constellationBlur')) t.blurActive = true;
                 if (f.effect && f.effect.kind === 'fog' && active(t).length > 1) fogged = active(t)[Math.floor(Math.random() * active(t).length)].id;
@@ -199,10 +233,18 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         }
         if (!turn.finalized) {
             if (active(turn).length === 1) Rules.toggleDie(turn, active(turn)[0].id);
+            else if (mind) Rules.toggleDie(turn, mindControlPick(turn)); // that die is this roll's keep
             else if (turn.blurActive) Rules.toggleDie(turn, active(turn)[Math.floor(Math.random() * active(turn).length)].id); // blind
             else choose().forEach(id => Rules.toggleDie(turn, id));
         }
         if (!turn.finalized) continue;
+        // Sylvester's Sucker Punch: as you keep your last die, one kept die (at random) flies
+        // loose and you roll it again. He saves it for a hand that counts.
+        if (!turn.outcome.busted && f.opp.ability === 'suckerPunch' && f.fire('suckerPunch')) {
+            const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN);
+            Rules.putBackDie(turn, kept[Math.floor(Math.random() * kept.length)].id);
+            continue;
+        }
         // Finished on dust: Second Thoughts reopens the hand (a kept die back in play); else
         // Steady makes it a 0.
         // Second Thoughts: on dust, or (playing second) when the hand would lose the round.
@@ -232,7 +274,18 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
         run.stats.perfectGold += N.gold.perfect24;
         if (f.player < N.playerHearts) f.player = Math.min(N.playerHearts, f.player + (run.keepsakes.includes('blessedTankard') ? 2 : 1));
     }
+    // Brodor's Sunglasses (reworked, 20 Oct): a finished 23 restores a heart too.
+    if (score === 23 && !busted && run.keepsakes.includes('brodorsSunglasses') && f.player < N.playerHearts) f.player++;
     return { busted, score };
+}
+
+// Mind Control: Frak makes you keep your worst die: a 1 if there is one, else the lowest die
+// that isn't a 2 or 4 you still need, else the lowest.
+function mindControlPick(turn) {
+    const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
+    const dice = active(turn).slice().sort((a, b) => a.value - b.value);
+    const spare = dice.filter(d => !((d.value === 2 && !kept.includes(2)) || (d.value === 4 && !kept.includes(4))));
+    return (spare[0] || dice[0]).id;
 }
 
 // Second Thoughts: put back the lowest kept die that isn't the 2 or 4 in use.
@@ -293,6 +346,8 @@ function settleRound(f, run, p, b, has, N) {
         tied = false;
         losers.push('B');
     }
+    // The Ridgeler's Divine Smite: if he wins this round, you lose 2 hearts instead of 1.
+    if (f.effect && f.effect.kind === 'smite' && losers.length === 1 && losers[0] === 'P') losers.push('P');
     for (const who of losers) {
         if (who === 'B') { f.bot--; continue; }
         if (has('bentCopper') && !f.keepUsed.bentCopper) { f.keepUsed.bentCopper = true; continue; }
@@ -318,11 +373,16 @@ function newRun(N) {
 // so an experiment can change some).
 function numbersFor(opts) {
     const numbers = opts.numbers || {};
-    return { ...DEFAULTS, ...numbers, opponentLives: { ...DEFAULTS.opponentLives, ...(numbers.opponentLives || {}) } };
+    return {
+        ...DEFAULTS, ...numbers,
+        opponentLives: { ...DEFAULTS.opponentLives, ...(numbers.opponentLives || {}) },
+        abilityUses: { ...DEFAULTS.abilityUses, ...(numbers.abilityUses || {}) }
+    };
 }
 
 function playRun(policy, opts = {}) {
-    const N = numbersFor(opts);
+    const order = opts.order || OPPONENTS;
+    const N = { ...numbersFor(opts), fights: order.length };
     const run = newRun(N);
     // For experiments: start at a later opponent (as if the earlier ones were beaten, with no
     // gold from them) and/or with Thonics already on the shelf.
@@ -331,7 +391,7 @@ function playRun(policy, opts = {}) {
     if (opts.setup) opts.setup(run);
     const log = { fights: [], spots: [] };
     let defeated = startAt;
-    for (let i = startAt; i < OPPONENTS.length; i++) {
+    for (let i = startAt; i < order.length; i++) {
         const result = fight(i, run, { ...opts, numbers: N });
         run.hearts = N.playerHearts;
         log.fights.push(result);
@@ -341,11 +401,12 @@ function playRun(policy, opts = {}) {
         run.purse += win + hearts;
         run.stats.winGold += win;
         run.stats.heartGold += hearts;
-        // After Martha: her mask, and straight on to the final (no events on the way).
-        if (OPPONENTS[i].boss) run.keepsakes.push('marthasMask');
-        else if (i < OPPONENTS.length - 1) between(run, policy, N, i + 1, log);
+        // After a boss: their keepsake (Martha's mask), and straight on to the next place (no
+        // events on the way).
+        if (order[i].boss) run.keepsakes.push(order[i].drops || 'marthasMask');
+        else if (i < order.length - 1) between(run, policy, N, i + 1, log);
     }
-    const won = defeated === OPPONENTS.length;
+    const won = defeated === order.length;
     const consolation = won ? 0 : (defeated + 1) * N.gold.consolation;
     return { won, defeated, gold: Math.max(0, run.purse + consolation), run, log };
 }
@@ -426,4 +487,4 @@ function between(run, policy, N, nextIndex, log) {
     }
 }
 
-module.exports = { OPPONENTS, KEEPSAKES, THONIC_IDS, DEFAULTS, fight, playRun, newRun };
+module.exports = { OPPONENTS, TOURNAMENT, KEEPSAKES, THONIC_IDS, DEFAULTS, fight, playRun, newRun };

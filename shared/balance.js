@@ -4,12 +4,17 @@
 'use strict';
 
 module.exports = {
-    // Hearts at the start of every fight.
-    playerHearts: 4,
-    // The opponents' lives, in the order you meet them (19 Oct, the user's starting point): the
-    // Ghoul and Gourd (McGrath the bouncer, who is the Molar renamed and keeps the id 'molar',
-    // then the high-roller table), then the Yawning Portal.
-    opponentLives: { molar: 2, frak: 2, danhausen: 3, duke: 3, martha: 4, klarg: 3, rokr: 3, hangman: 3, jaguar: 4 },
+    // Hearts at the start of every fight (3, the user's call, 20 Oct; the Lady's Favour adds one).
+    playerHearts: 3,
+    // The opponents' lives, in the order you meet them (20 Oct, the user's, for now; balancing
+    // later): the Ghoul and Gourd (McGrath the bouncer, who is the Molar renamed and keeps the id
+    // 'molar', then the high-roller table), the Yawning Portal (the five new opponents, not in the
+    // game yet), then aboard the Salty Swallow (Klarg's four, at the Yawning Portal until then).
+    opponentLives: {
+        molar: 2, frak: 2, danhausen: 3, duke: 3, martha: 3,
+        sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
+        klarg: 3, rokr: 3, hangman: 3, jaguar: 4
+    },
     // How many times each opponent's ability can be used in a fight (from a random round 1-3).
     // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
     abilityUses: { psychicFog: 1, cursed: 2, devil: 1, disguises: 2, reachAround: 1, constellationBlur: 2, deadeye24: 1, smoothTalk: 1 },
@@ -41,7 +46,7 @@ module.exports = {
         diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
         strangerChance: 20,     // percent of walks the Hooded Stranger finds you (if the thief didn't)
         strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
-        strangerHearts: 3       // ...and you start the next fight on this many hearts if you take one (a heart short)
+        strangerHearts: 2       // ...and you start the next fight on this many hearts if you take one (a heart short)
     },
 
     // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on

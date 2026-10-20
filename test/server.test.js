@@ -1080,7 +1080,7 @@ const roomOf = socket => server.rooms[Object.keys(server.rooms).find(c => server
 test("the run is nine fights: the Ghoul and Gourd, then the Yawning Portal", async () => {
     const names = server.TAVERN_ENCOUNTERS.map(e => e.name);
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery', 'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [2, 2, 3, 3, 4, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [2, 2, 3, 3, 3, 3, 3, 3, 4]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);
     server.emitState(roomCode);

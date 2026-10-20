@@ -105,3 +105,58 @@ still to come: a fight with five or more after it counts like Klarg's did.
 - The Molar still ends about 1 run in 7 for a sensible player (1 in 5 casual). If that feels
   harsh for the teacher, give him 1 life (then ~95%, but a much shorter first fight).
 - Re-run `experiments/runs.js` after any change to `shared/balance.js`.
+
+## The 14-fight tournament (20 Oct, simulator only)
+
+`experiments/tournament.js` plays the design doc's 14 fights (`sim.TOURNAMENT`, passed as
+`opts.order`): the Ghoul and Gourd with Frak's Mind Control (Martha copies it), the Yawning
+Portal's five (lives 3, 3, 3, 3, 4, the user's), then Klarg's four aboard the Salty Swallow
+(3, 3, 3, 4). Uses a fight: Mind Control 1 (the user's); Sucker Punch, Inkfire, Flourish,
+Divine Smite and Astral Flood 1 each (first guesses; Inkfire at 2 cost 19 points).
+
+How the new abilities are played (the server will need the same choices): Mind Control makes
+you keep your worst die on your first throw (a 1, else the lowest you don't need) and that is
+the throw's only keep; Sucker Punch knocks a random kept die loose from a finished, valid hand;
+Inkfire burns the 6 for your round (your dice land 1-5); Flourish rolls each of Stason's dice
+twice for his turn (a needed 2 or 4, else the higher); Divine Smite is declared as a round
+begins; Astral Flood heals Brodor once he's lost a life. Brodor drops his Sunglasses (a 23
+heals).
+
+Fight win %, fresh on 4 hearts, no items (sensible, with the ability / without): McGrath 86,
+Frak 73 / 80, Danhausen 65, Duke 43 / 66, Martha 34 / 49, Sylvester 58 / 63, Vaelin 54 / 64,
+Stason 57 / 65, Ridgeler 55 / 65, Brodor 37 / 49, Klarg 53, Rokr 59, Hangman 53, Jaguar 38.
+
+Whole runs (20,000, sensible): finish 2.0%, reach the Yawning Portal 16%, the ship 4.6%,
+average gold 1,128. Casual: 0.1%. 84% of runs end in the Ghoul and Gourd.
+
+### Aiming for 1 in 6 (the user's aim, 20 Oct)
+
+`experiments/tournament-lives.js` screens hearts and lives (20,000 runs each, sensible):
+4 hearts as today 2.5%; 5 hearts 10%; 6 hearts 23%; 5 hearts with Martha, Brodor and Jaguar on
+3 lives 14%. **The proposal:** 5 hearts a fight (the Stranger's price 4), Danhausen 2, Duke 2,
+Martha 3, Jaguar 3, the Yawning Portal's five as the user set them (3, 3, 3, 3, 4): **16%**
+(casual 4%); half reach the Yawning Portal, a quarter the ship. Fight wins fresh on 5 hearts:
+McGrath 92, Frak 84, Danhausen 88, Duke 77, Martha 62, Sylvester 71, Vaelin 71, Stason 72,
+Ridgeler 69, Brodor 50, Klarg 69, Rokr 70, Hangman 67, Jaguar 69. Brodor is the one wall.
+Not in `shared/balance.js` yet: 5 hearts would make today's nine-fight game too easy, so it
+goes in with the 14-fight build.
+
+### 3 hearts a fight (the user's call, later on 20 Oct)
+
+The player stays on 3 hearts (the Stranger's price 2). Today's lives then finish 0.2%; all 2s
+4%; 1s and 2s are needed. **The proposal (T):** the Ghoul and Gourd 1, 1, 1, 1, Martha 2; the
+Yawning Portal Sylvester 1, Vaelin 1, Stason 2, Ridgeler 2, Brodor 2; the ship Klarg 1, Rokr 2,
+Hangman 2, Jaguar 2. Sensible **17%** (casual 4%); 44% reach the Yawning Portal, 26% the ship.
+Fight wins fresh on 3 hearts (with the ability / without): McGrath 90, Frak 79 / 88,
+Danhausen 86 / 87, Duke 76 / 88, Martha 49 / 68, Sylvester 81 / 87, Vaelin 79 / 88, Stason 58 /
+67, Ridgeler 56 / 69, Brodor 52 / 68, Klarg 77, Rokr 59, Hangman 54, Jaguar 56. A 1-life fight
+still lasts ~2 rounds (ties, both dusting), so abilities still fire; Danhausen's Curse then
+costs almost nothing. Others tried: all 1 with bosses 2, 26%; 1 1 1 1 2 | 1 1 1 2 2 | 1 1 2 2,
+21%; 1 1 2 2 2 | 1 1 1 1 2 | 1 1 1 2, 15%; 1 1 1 2 2 | 1 1 2 2 2 | 1 1 2 2, 14%.
+
+### For now (the user's, 20 Oct; balancing later)
+
+In `shared/balance.js` (and so in today's game): 3 hearts a fight (4 after the Lady's Favour;
+the Stranger's price 2), McGrath 2, Frak 2, Danhausen 3, Duke 3, Martha 3, Klarg 3, Rokr 3,
+Hangman 3, Jaguar 4; the Yawning Portal's five (not in the game yet) 3, 3, 3, 3, 4. Over 14
+fights a sensible player finishes 0.3% and reaches the Yawning Portal 6.7%.
