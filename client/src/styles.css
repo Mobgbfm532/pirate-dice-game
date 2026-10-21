@@ -1996,3 +1996,14 @@ button.keepsake.used { opacity: 0.55; }
     40% { opacity: 1; }
     100% { opacity: 1; transform: translateX(-50%); filter: brightness(0.82) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6)); }
 }
+
+/* A Clear-Eye cancelled the move: its banner fades to grey, struck through, with a stamp. */
+.ability-moment.cancelled .ability-banner { filter: grayscale(0.7) brightness(0.85); }
+.ability-moment.cancelled .ability-banner .what { text-decoration: line-through; text-decoration-thickness: 3px; }
+.ability-moment.cancelled.takeover::before { opacity: 0.4; }
+.cancelled-stamp {
+    margin-top: 4px; padding: 1px 10px; border: 2px solid #aed581; border-radius: 6px;
+    color: #dcedc8; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.85rem;
+    transform: rotate(-4deg); animation: stamp-in 0.4s 0.5s ease-out both;
+}
+@keyframes stamp-in { from { opacity: 0; transform: rotate(-4deg) scale(1.8); } to { opacity: 1; transform: rotate(-4deg) scale(1); } }

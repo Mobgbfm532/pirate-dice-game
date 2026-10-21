@@ -1175,8 +1175,11 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     const klarg = await tavernAgainst(fightOf('klarg'), 'ClearKlarg');
     const kroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[klarg.id])];
     kroom.tavernRun.shelf = ['clearEye', 'clearEye'];
-    let moves = 0;
-    klarg.on('signatureMove', () => moves++);
+    // In order (the user's call, 21 Oct): the roll, then Klarg's move (cancelled), then the Clear-Eye.
+    const order = [];
+    klarg.on('diceRolled', () => order.push('roll'));
+    klarg.on('signatureMove', m => order.push(m.cancelled ? `${m.ability} cancelled` : m.ability));
+    klarg.on('thonicUsed', u => { if (/is cancelled/.test(u.text)) order.push('clear-eye'); });
     const drunk = waitFor(klarg, 'thonicUsed', u => u.id === 'clearEye', 8000);
     klarg.emit('drinkThonic', 0);
     assert.match((await drunk).text, /Klarg's next Reach Around will be cancelled/);
@@ -1189,7 +1192,7 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     await cancelled;
     await sleep(60);
     assert.equal(rolled.turn.dice.filter(d => d.status === 'stolen').length, 0, 'no die stolen');
-    assert.equal(moves, 0);
+    assert.deepEqual(order.slice(0, 3), ['roll', 'Reach Around cancelled', 'clear-eye']);
     assert.equal(kroom.tavernRun.abilityUsed.reachAround, 1, 'the steal is spent');
     assert.equal(kroom.tavernRun.clearEyeArmed, false);
     // Nothing left to cancel this fight: a second one is refused.
@@ -1243,7 +1246,7 @@ test('Clear-Eye stops Jaguar\'s Smooth Talk and the Hangman\'s Ace of Spades', a
         hroom.players.BOT_MOLAR.lives = 1;
         if (clear) { hroom.tavernRun.shelf = ['clearEye']; hang.emit('drinkThonic', 0); await sleep(40); }
         let ace = false;
-        hang.on('signatureMove', m => { if (m.ability === 'The Ace of Spades') ace = true; });
+        hang.on('signatureMove', m => { if (m.ability === 'The Ace of Spades' && !m.cancelled) ace = true; });
         hang.on('diceRolled', d => { // his first roll: a 20 he will keep whole
             if (d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1) hroom.turn.dice.forEach((die, i) => { die.value = [2, 4, 5, 5, 5, 5][i]; });
         });
@@ -1280,7 +1283,7 @@ test("the run is fourteen fights: the Ghoul and Gourd, the Yawning Portal, then 
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
         'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4]);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(4).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);
@@ -1723,6 +1726,7 @@ test('the Yawning Portal and the ship play their best; every ability has a name 
 test('the next round, and its ability, wait until the round result has gone out', async () => {
     const { hero, room } = await roundAgainst('vaelin', 'Patient2');
     room.tavernRun.abilityUsed = {}; // Inkfire ready again for round 2
+    room.players.BOT_MOLAR.lives = 3; // (the table began with McGrath, on 1)
     room.tavernRun.abilityRound = 1;
     const events = [];
     hero.on('roundResult', () => events.push('result'));

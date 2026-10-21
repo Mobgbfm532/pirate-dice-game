@@ -200,3 +200,7 @@ lives 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4):
   (50), Ridgeler 42 (49), Brodor 23 (36), Klarg 35 (50), Rokr 40 (51), Hangman 35 (48), Jaguar 25 (34).
 - Whole runs, sensible: finish 1.1%, reach the Yawning Portal 27%, the ship 4.5%, average gold 898.
   Casual: 0.0%, 5% reach the Yawning Portal.
+
+McGrath on 1 life (the user, 21 Oct; same settings): a sensible player beats him 89% (was 73%);
+whole runs finish 1.4%, reach the Yawning Portal 34%, the ship 5.5%, average gold 1,108; runs
+ending at McGrath 10% (was 26%), Frak 19%, Danhausen 16%.

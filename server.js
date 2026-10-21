@@ -639,6 +639,7 @@ function performRoll(roomCode) {
 
     let signatureMoves = [];
     let preRollCallout = null;
+    room.rollMoments = []; // moments raised while the dice are thrown wait until they land
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let result = Rules.rollTurn(turn, {
         rollFace: rollFaceFor(room, turn),
@@ -647,8 +648,11 @@ function performRoll(roomCode) {
             signatureMoves = applyTavernRollAbilities(roomCode, room, t);
         }
     });
+    let moments = room.rollMoments;
+    room.rollMoments = null;
     if (!result) return 0;
     if (flourish) signatureMoves.unshift(flourish);
+    moments = [...signatureMoves.map(move => ['signatureMove', move]), ...moments];
 
     // Browsers show the pre-roll announcement while the dice tumble, then the final board.
     let animationMs = result.suspense !== Rules.SUSPENSE.NONE ? 2000 : 500;
@@ -659,10 +663,10 @@ function performRoll(roomCode) {
 
     let key = turn.key;
     if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, animationMs, () => sendBotReaction(roomCode, 'hood'));
-    if (signatureMoves.length) {
+    if (moments.length) {
         setTimeout(() => {
             if (!rooms[roomCode]) return;
-            signatureMoves.forEach(move => io.to(roomCode).emit('signatureMove', move));
+            moments.forEach(([event, data]) => io.to(roomCode).emit(event, data));
             io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
         }, delay(animationMs));
     }
@@ -965,13 +969,25 @@ function encounterAbilityLeft(room) {
 
 // The opponent uses their ability: one use is spent, and it happens unless a Clear-Eye Thonic
 // is waiting, which cancels it instead. Returns true if the ability goes ahead.
+// A cancelled ability still shows (its banner, marked cancelled, without its effect), then the
+// Clear-Eye clears it (the user's call, 21 Oct: they used to land at the same instant, often
+// while the dice were still in the air).
 function fireTavernAbility(roomCode, room, encounter, abilityId) {
     if (!canUseTavernAbility(room, encounter, abilityId)) return false;
     markAbilityUsed(room, abilityId);
     if (!room.tavernRun.clearEyeArmed) return true;
     room.tavernRun.clearEyeArmed = false;
-    io.to(roomCode).emit('thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${Rules.ABILITY_NAMES[abilityId]} is cancelled` });
+    let name = Rules.ABILITY_NAMES[abilityId];
+    emitMoment(roomCode, room, 'signatureMove', { name: encounter.name, ability: name, text: 'A Clear-Eye Thonic saw it coming.', cancelled: true });
+    emitMoment(roomCode, room, 'thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${name} is cancelled` });
     return false;
+}
+
+// A moment for the browsers. During a roll (room.rollMoments) it waits and goes out after the
+// dice have landed, with the roll's other moves (performRoll).
+function emitMoment(roomCode, room, event, data) {
+    if (room.rollMoments) room.rollMoments.push([event, data]);
+    else io.to(roomCode).emit(event, data);
 }
 
 function canUseTavernAbility(room, encounter, abilityId) {

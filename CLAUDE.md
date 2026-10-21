@@ -123,8 +123,8 @@ against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summa
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
-`SAVE_SECRET` (seals saved runs; **set it on Render**, or saves only last until the server restarts,
-which on the free tier is every sleep and deploy).
+`SAVE_SECRET` (seals saved runs; set on the Render test service since 21 Oct; the live service needs
+one too, or saves only last until the server restarts, which on the free tier is every sleep and deploy).
 
 ## Working here: lessons learned
 
@@ -221,7 +221,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). The ship has no
   backdrop of its own yet (the tavern's) and the same four spots and no events of its own (the
   ship's spots and events: to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
-  Lady's Favour); the opponents have 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
+  Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is still 100 x the fight's number (Jaguar 1,400). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
@@ -295,7 +295,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   round result) goes through `enqueueMoment`: at least `MOMENT_GAP_MS` (1.7 s) after the one before,
   in the server's order; a Tavern Crawl `gameStateUpdate` that arrives while the queue is busy
   waits behind it, so glows, ✦ marks and hearts change with the moment that explains them. The
-  Lady's Grace is checked before the Shield.
+  Lady's Grace is checked before the Shield. A Clear-Eye cancel shows the ability first (its
+  banner struck through, "Cancelled", none of its effect; `cancelled: true`), then the Thonic
+  (`fireTavernAbility`); moments raised while dice are thrown (`emitMoment`, `room.rollMoments`)
+  wait until they land.
 - **Keepsakes on screen (21 Oct):** small round icons beside your chip (`KeepsakeIcon`,
   `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
   it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
@@ -406,14 +409,15 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Difficulty** (the user: too hard, 21 Oct; hearts and lives are theirs to set): over the
-   fourteen fights a sensible player finishes ~1.1% (the nine: ~3.9%); a quarter of runs end at
-   McGrath; Brodor and Jaguar (~23-25% a fight) are the steepest steps. Measured options for the
+1. **Difficulty** (the user: too hard, 21 Oct; hearts and lives are theirs to set): McGrath is on
+   1 life since 21 Oct; over the fourteen fights a sensible player finishes ~1.4% (34% reach the
+   Yawning Portal, 5.5% the ship; McGrath now ends ~10% of runs, was ~26%); Frak, Danhausen and
+   the Duke end the most; Brodor and Jaguar (~24-25% a fight) are the steepest steps. Measured options for the
    nine (`balance/experiments/easier.js`): every opponent a life fewer → ~14%; the Shield from the
    start → ~7%; for the fourteen, `tournament-lives.js` (3 hearts with lives of 1-2 gave ~17%).
    **User plays the test site on the phone** and decides; change `shared/balance.js` and re-run
-   `node balance/experiments/tournament.js` first. **Set `SAVE_SECRET` on Render** (an env var,
-   any long random text) so saves survive sleeps and deploys.
+   `node balance/experiments/tournament.js` first. (`SAVE_SECRET` is set on the Render test
+   service, by the user, 21 Oct; the live service will need its own when we ship.)
 2. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots at the Ghoul and Gourd (about half the walks), one of three after it.
 3. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
    (only Back of the Head has one, the swoosh); the ship's own spots and events (to workshop: a card

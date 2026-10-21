@@ -11,7 +11,7 @@ module.exports = {
     // 'molar', then the high-roller table), the Yawning Portal (five more, Brodor the boss), then
     // aboard the Salty Swallow (Klarg's four).
     opponentLives: {
-        molar: 2, frak: 2, danhausen: 3, duke: 3, martha: 3,
+        molar: 1, frak: 2, danhausen: 3, duke: 3, martha: 3, // McGrath 1 since 21 Oct (the user)
         sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
         klarg: 3, rokr: 3, hangman: 3, jaguar: 4
     },

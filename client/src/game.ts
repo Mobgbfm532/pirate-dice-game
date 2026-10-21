@@ -106,7 +106,8 @@ export interface TavernSummary {
 }
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
-export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string }
+// cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
+export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; cancelled?: boolean }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -526,11 +527,11 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
 // so the name and sound land just as Klarg's hand lifts the die.
-socket.on('signatureMove', (data: { name: string; ability: string; text: string }) => {
+socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean }) => {
     const steal = data.ability === 'Reach Around';
     enqueueMoment(() => {
         const sound = ABILITY_SOUNDS[data.ability];
-        if (sound) playSound(sound);
+        if (sound && !data.cancelled) playSound(sound);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
     }, MOMENT_GAP_MS, () => (steal ? Math.max(0, ...table.stolenAt.values()) : 0));

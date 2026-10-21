@@ -693,28 +693,31 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     // Thonics and the Lady keep the small plaque on the table's edge.
     const takeover = moment.name !== "Thom's Thonics" && moment.name !== 'Shrine to the Lady';
     const keepsake = moment.keepsake;
+    // A Clear-Eye cancelled it: the banner, struck through, and none of the move's effect.
+    const fx = !moment.cancelled;
     return (
-        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''}`} aria-live="polite">
+        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''}`} aria-live="polite">
             <div className="ability-banner">
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
                 {takeover && moment.text && <span className="line">{moment.text}</span>}
-                {moment.ability === 'Smooth Talk' && <span className="minus">−3</span>}
+                {moment.ability === 'Smooth Talk' && fx && <span className="minus">−3</span>}
+                {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
-            {moment.ability === 'Reach Around' && (
+            {fx && moment.ability === 'Reach Around' && (
                 <div className="claw-marks" aria-hidden="true"><span /><span /><span /></div>
             )}
-            {moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
-            {moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
+            {fx && moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
+            {fx && moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
             {moment.ability === 'Disguises' && <div className="mask-flare" aria-hidden="true">🎭</div>}
             {keepsake && <div className="keepsake-flare" aria-hidden="true">{KEEPSAKE_ICONS[keepsake] ?? '✦'}</div>}
             {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
-            {moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
-            {moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
-            {moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
-            {moment.ability === 'Astral Flood' && <div className="flood-light" aria-hidden="true" />}
-            {moment.ability === 'The Ace of Spades' && (
+            {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
+            {fx && moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
+            {fx && moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
+            {fx && moment.ability === 'Astral Flood' && <div className="flood-light" aria-hidden="true" />}
+            {fx && moment.ability === 'The Ace of Spades' && (
                 <>
                     <div className="gun-flash" aria-hidden="true" />
                     <div className="bullet-24" aria-hidden="true"><span className="hole" /><span className="score">24</span></div>
