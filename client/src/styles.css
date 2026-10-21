@@ -1737,3 +1737,50 @@ button.keepsake.used { opacity: 0.55; }
 @media (max-width: 480px) {
     .hint.tub-fight { box-sizing: border-box; min-height: 3.2em; display: inline-flex; align-items: center; justify-content: center; }
 }
+
+/* An opponent's ability takes over the screen (the user asked for more flare, 21 Oct): a flash in
+   its colours over everything, then a banner sweeping across the middle of the screen with who,
+   what and what it did. About 3 seconds; taps go through it. */
+.ability-moment.takeover { --flare: rgba(255, 138, 101, 0.55); }
+.ability-moment.takeover::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 90% 70% at 50% 40%, var(--flare), transparent 75%);
+    animation: flare-flash 1s ease-out forwards;
+}
+@keyframes flare-flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+.takeover .ability-banner {
+    left: 0;
+    right: 0;
+    top: 38%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 16px 14px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    white-space: normal;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.75), 0 0 46px var(--flare);
+    animation: takeover-in 3.4s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+.takeover .ability-banner .who { font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--parchment); }
+.takeover .ability-banner .what { font-size: clamp(2rem, 10vw, 3.2rem); line-height: 1.05; text-shadow: 0 0 22px var(--flare), 0 2px 6px #000; }
+.takeover .ability-banner .line { margin-top: 4px; font-size: 0.95rem; color: var(--parchment); max-width: 30em; }
+@keyframes takeover-in {
+    0% { opacity: 0; transform: translateY(-50%) translateX(-100%) skewX(-14deg); }
+    11% { opacity: 1; transform: translateY(-50%) translateX(3%) skewX(-3deg); }
+    17% { transform: translateY(-50%) translateX(0) skewX(0); }
+    84% { opacity: 1; transform: translateY(-50%) scaleY(1); }
+    100% { opacity: 0; transform: translateY(-50%) scaleY(0.4); }
+}
+.takeover.mind-whip { --flare: rgba(156, 204, 101, 0.55); }
+.takeover.you-are-cursed { --flare: rgba(186, 104, 200, 0.6); }
+.takeover.sympathy-for-the-devil { --flare: rgba(255, 87, 34, 0.6); }
+.takeover.reach-around { --flare: rgba(255, 171, 64, 0.5); }
+.takeover.constellation-blur { --flare: rgba(130, 170, 255, 0.55); }
+.takeover.the-ace-of-spades { --flare: rgba(236, 239, 241, 0.6); }
+.takeover.smooth-talk { --flare: rgba(255, 213, 79, 0.55); }

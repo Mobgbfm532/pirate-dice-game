@@ -239,9 +239,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
   with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s and the devil effect
   plays; since 21 Oct no cap on your score (`devilCap: null`; a number brings the cap back, the
-  solver's `cap`); never fires if he doesn't get there);
+  solver's `cap`); never fires if he doesn't get there; while it waits, the simple-playing Duke keeps only the 2
+  and 4 he needs, `Rules.devilWaitLocks`, or it hardly ever fired);
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
-  shows a 3.6 s banner, a badge under the Roll button ("Cursed round: ..."), and in a cursed
+  shows a takeover (since 21 Oct: a flash in the ability's colours, `--flare`, and a banner across
+  the screen with who, what and the move's text; Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
   (`AbilityAura` + banner classes by ability name): Mind Whip a green-violet mist and a
   green-violet glow on the die he chose (`materials.mind`; Rokr's blur keeps the blue "?" and stars), the Devil
@@ -314,7 +316,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
   lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
   (`nextFightSurge` → `tubSurge`, `rollFaceFor`; a badge under Roll). Double Bubble's losing roll
-  rises from the die as a fading ghost die (`turn.twinRoll` → `diceRolled.twin` → `TwinGhost`). A soak averages about +1-2
+  rises from the die as a fading ghost die (in a cursed round it keeps the lower roll) (`turn.twinRoll` → `diceRolled.twin` → `TwinGhost`). A soak averages about +1-2
   points of the next fight (`balance/experiments/hot-tub.js`). **Darren Snakehands**, the Ghoul and
   Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
   Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 20 gold for

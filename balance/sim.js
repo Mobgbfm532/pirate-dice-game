@@ -102,7 +102,7 @@ function fight(index, run, opts = {}) {
         settleRound(f, run, p, b, has, N);
         f.round++;
     }
-    return { won: f.bot <= 0, heartsLeft: Math.max(0, f.player), rounds: f.rounds };
+    return { won: f.bot <= 0, heartsLeft: Math.max(0, f.player), rounds: f.rounds, abilityUses: f.uses };
 }
 
 // The round's ability, as it begins: { kind, by } or null. The opponent's (Martha's at random),
@@ -162,7 +162,8 @@ function botTurn(f, run, toBeat, canUse) {
         if (turn.finalized) break;
         if (active(turn).length === 1) { Rules.toggleDie(turn, active(turn)[0].id); break; }
         // opts.simpleBots: for experiments, these opponents play the Molar's simple way too.
-        const keep = f.opp.simple || (f.simpleBots || []).includes(f.opp.id) ? Rules.planBotLocks(turn, f.opp.id, toBeat, { low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, low, cap });
+        const simple = f.opp.simple || (f.simpleBots || []).includes(f.opp.id);
+        const keep = simple && f.pendingDevil ? Rules.devilWaitLocks(turn) : simple ? Rules.planBotLocks(turn, f.opp.id, toBeat, { low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, low, cap });
         keep.forEach(id => Rules.toggleDie(turn, id));
     }
     let { busted, score } = turn.outcome;
@@ -206,7 +207,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     // roll again (so they land 1-5; the Loaded Die 4-5).
     const loaded = loadedFace(run, N);
     const inked = f.effect && f.effect.kind === 'ink' ? d => { let v; do v = loaded ? loaded(d) : d6(); while (v === 6); return v; } : loaded;
-    const face = f.surge ? surgeFace(f.surge, inked || (() => d6()), () => turn, N) : inked;
+    const face = f.surge ? surgeFace(f.surge, inked || (() => d6()), () => turn, N, round.low) : inked;
     const choose = () => {
         if (opts.player === 'casual') return Rules.planBotLocks(turn, 'molar', toBeat);
         return Strategy.bestKeeps(turn.dice, toBeat, round);
@@ -287,7 +288,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
 
 // The Wild Magic Hot Tub's surge on its die (as server.js rollFaceFor): never a 1, never a 6,
 // only 4-6, always a 6, or the better of two.
-function surgeFace(surge, base, turnOf, N) {
+function surgeFace(surge, base, turnOf, N, low = false) {
     const die = N.interlude.hotTubDie;
     return d => {
         if (d.id !== die) return base(d);
@@ -299,7 +300,7 @@ function surgeFace(surge, base, turnOf, N) {
             const kept = turnOf().dice.filter(x => x.status === STATUS.LOCKED).map(x => x.value);
             const a = base(d), b = base(d);
             for (const need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
-            return Math.max(a, b);
+            return low ? Math.min(a, b) : Math.max(a, b); // cursed: the lower is the better
         }
         return base(d);
     };

@@ -318,7 +318,9 @@ function rollFaceFor(room, turn) {
             // The better of two: a 2 or 4 still needed, else the higher.
             let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
             let a = base(d), b = base(d);
-            let pick = Math.max(a, b);
+            // In a cursed round (the lowest valid score wins) the better is the lower.
+            let cursed = room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+            let pick = cursed ? Math.min(a, b) : Math.max(a, b);
             for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
             let lost = pick === a ? b : a;
             if (lost !== pick) turn.twinRoll = { die: d.id, kept: pick, lost };
@@ -743,6 +745,9 @@ function runBotDecision(roomCode) {
     let aceAt16 = !!encounter && !round.low && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
+    // The Duke (or Martha in his face) waiting on his Devil keeps only what he needs, so it has
+    // three dice to land on (with the simple habits he used to keep 5s and 6s too, and it never fired).
+    if (simple && room.mode === 'tavern-crawl' && room.tavernRun.pendingDevil) toLock = Rules.devilWaitLocks(turn);
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
     // keep everything left at once and end the turn.
     let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
@@ -1047,7 +1052,7 @@ function roundEffectMove(room, effect, text) {
 
 const ROUND_EFFECT_TEXT = {
     curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
-    devil: { opponent: 'Three 6s for them.', player: 'Three 6s for you.' }
+    devil: { opponent: 'Three 6s land on the table.', player: 'Three 6s for you.' }
 };
 
 function beginTavernRound(roomCode, room) {

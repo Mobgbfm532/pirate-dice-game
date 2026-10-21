@@ -899,6 +899,12 @@ test("the hot tub's surges: the die never rolls a 1, never a 6, only 4-6, always
     const twin = faces('twin', { playerId: 'P', rollCount: 2, dice: [{ id: 0, value: 2, status: Rules.STATUS.LOCKED }, { id: 2, value: 4, status: Rules.STATUS.LOCKED }] });
     const mean = twin.reduce((a, b) => a + b, 0) / twin.length;
     assert.ok(mean > 4.2, `the higher of two averages ~4.47: ${mean}`);
+    // In a cursed round the better is the lower.
+    room.tavernRun.roundEffect = { kind: 'curse', by: 'opponent' };
+    const low = faces('twin', { playerId: 'P', rollCount: 2, dice: [{ id: 0, value: 2, status: Rules.STATUS.LOCKED }, { id: 2, value: 4, status: Rules.STATUS.LOCKED }] });
+    const lowMean = low.reduce((a, b) => a + b, 0) / low.length;
+    assert.ok(lowMean < 2.8, `cursed: the lower of two averages ~2.53: ${lowMean}`);
+    room.tavernRun.roundEffect = null;
     // The roll that lost is kept for the ghost die (diceRolled.twin).
     const turn = { playerId: 'P', rollCount: 2, dice: [] };
     room.tavernRun.tubSurge = 'twin';

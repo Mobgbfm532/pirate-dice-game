@@ -317,3 +317,20 @@ test('planBotLocks, low: simple play in a cursed round grabs a 2 and a 4, then 1
     turn = rolled([6, 2, 5, 4, 1, 3]);
     assert.ok(Rules.planBotLocks(turn, 'danhausen', undefined).includes(0), 'not cursed: the 6 is kept as before');
 });
+
+test("devilWaitLocks: the Duke waiting on his Devil keeps only the 2 and 4 he needs, else one die", () => {
+    const rolled = (values, kept = []) => {
+        const turn = Rules.createTurn('BOT');
+        turn.hasRolled = true;
+        values.forEach((v, i) => { turn.dice[i].value = v; });
+        kept.forEach(i => { turn.dice[i].status = STATUS.LOCKED; });
+        return turn;
+    };
+    const values = (turn, ids) => ids.map(id => turn.dice[id].value).sort();
+    let turn = rolled([6, 2, 5, 4, 6, 3]);
+    assert.deepEqual(values(turn, Rules.devilWaitLocks(turn)), [2, 4], 'not the 5s and 6s: four dice stay for the three 6s');
+    turn = rolled([6, 2, 5, 4, 6, 3], [1]);
+    assert.deepEqual(values(turn, Rules.devilWaitLocks(turn)), [4], 'the 2 is kept already');
+    turn = rolled([6, 1, 5, 3, 6, 3]);
+    assert.deepEqual(values(turn, Rules.devilWaitLocks(turn)), [6], 'neither showing: one die (he must keep one)');
+});

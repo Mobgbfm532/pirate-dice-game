@@ -346,6 +346,20 @@
 
     // `toBeat` is optional (undefined = the bot doesn't know yet, e.g. it rolls first).
     // Once the bot already has a winning hand it stops rolling and keeps the lot.
+    // The Duke waiting on his Devil (simple play): he keeps only the 2 and 4 he still needs, or
+    // else his highest die, so three dice are left for the Devil's three 6s.
+    function devilWaitLocks(turn) {
+        const active = turn.dice.filter(isActive).sort((a, b) => b.value - a.value);
+        const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
+        const toLock = [];
+        for (const need of [2, 4]) {
+            const die = !kept.includes(need) && active.find(d => d.value === need && !toLock.includes(d.id));
+            if (die) toLock.push(die.id);
+        }
+        if (toLock.length === 0 && active.length > 0) toLock.push(active[0].id);
+        return toLock;
+    }
+
     // low: a cursed round (the lowest valid score wins): the same simple habits, turned round.
     function planBotLocks(turn, enemyId, toBeat, { low = false } = {}) {
         if (low) return planBotLocksLow(turn, toBeat);
@@ -377,6 +391,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, mindWhip, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

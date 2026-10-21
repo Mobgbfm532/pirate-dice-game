@@ -652,11 +652,16 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3600 : 3600);
     if (!visible || !moment) return null;
     const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
+    // An opponent's ability (or your mask) takes over the screen: a flash in its colours and a
+    // banner across it with what happened (the user asked for more flare, 21 Oct). Thonics and
+    // the Lady keep the small plaque on the table's edge.
+    const takeover = moment.name !== "Thom's Thonics" && moment.name !== 'Shrine to the Lady';
     return (
-        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''}`} aria-live="polite">
+        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${takeover ? 'takeover' : ''}`} aria-live="polite">
             <div className="ability-banner">
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
+                {takeover && moment.text && <span className="line">{moment.text}</span>}
                 {moment.ability === 'Smooth Talk' && <span className="minus">−3</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
