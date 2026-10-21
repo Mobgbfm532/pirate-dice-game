@@ -297,3 +297,23 @@ test("mindWhip: keeps one of your dice at random, and it can't be tapped back", 
     assert.equal(turn.mindDieId, null, 'cleared by the next throw');
     assert.equal(turn.dice[0].status, STATUS.LOCKED);
 });
+
+test('planBotLocks, low: simple play in a cursed round grabs a 2 and a 4, then 1s and 2s, and stops under the score to beat', () => {
+    const rolled = (values, kept = []) => {
+        const turn = Rules.createTurn('BOT');
+        turn.hasRolled = true;
+        turn.rollCount = 1;
+        values.forEach((v, i) => { turn.dice[i].value = v; });
+        kept.forEach(i => { turn.dice[i].status = STATUS.LOCKED; });
+        return turn;
+    };
+    const values = (turn, ids) => ids.map(id => turn.dice[id].value).sort();
+    let turn = rolled([6, 2, 5, 4, 1, 3]);
+    assert.deepEqual(values(turn, Rules.planBotLocks(turn, 'danhausen', undefined, { low: true })), [1, 2, 4], 'the 2, the 4 and the 1');
+    turn = rolled([6, 5, 5, 6, 3, 6]);
+    assert.deepEqual(values(turn, Rules.planBotLocks(turn, 'danhausen', undefined, { low: true })), [3], 'nothing low: the lowest die');
+    turn = rolled([2, 4, 1, 1, 3, 1]);
+    assert.equal(Rules.planBotLocks(turn, 'danhausen', 10, { low: true }).length, 6, 'keeping everything is 6, under 10: stop');
+    turn = rolled([6, 2, 5, 4, 1, 3]);
+    assert.ok(Rules.planBotLocks(turn, 'danhausen', undefined).includes(0), 'not cursed: the 6 is kept as before');
+});

@@ -733,15 +733,16 @@ function runBotDecision(roomCode) {
     let encounter = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] : null;
     let enemyId = encounter ? encounter.id : 'molar';
     let toBeat = getTavernScoreToBeat(room);
-    // The Molar (solo games, and the first Tavern Crawl fight) plays simply, as a teacher.
-    // From Klarg on, opponents play their best: Strategy works out the keep with the best
+    // The Molar (solo games) and the whole Ghoul and Gourd play simply (the qualifier, where you
+    // learn the game; the user's call, 21 Oct). From the Yawning Portal on, opponents play their best: Strategy works out the keep with the best
     // chance of winning the round (the Hangman counts on his revolver, The Ace of Spades, when he can fire it).
     // A cursed round is played for the fewest points; under the player's Devil the bot's
     // score counts as no more than the cap.
     let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
     let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null };
     let aceAt16 = !!encounter && !round.low && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
-    let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
+    let simple = !encounter || encounter.place === 'ghoulAndGourd';
+    let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
     // keep everything left at once and end the turn.
     let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);

@@ -346,10 +346,32 @@
 
     // `toBeat` is optional (undefined = the bot doesn't know yet, e.g. it rolls first).
     // Once the bot already has a winning hand it stops rolling and keeps the lot.
-    function planBotLocks(turn, enemyId, toBeat) {
+    // low: a cursed round (the lowest valid score wins): the same simple habits, turned round.
+    function planBotLocks(turn, enemyId, toBeat, { low = false } = {}) {
+        if (low) return planBotLocksLow(turn, toBeat);
         if (toBeat !== undefined && keepingAllWins(turn, toBeat)) return turn.dice.filter(isActive).map(d => d.id);
         const { has2, has4, score } = scoreDice(turn.dice);
         return chooseBotDiceToLock(turn.dice.filter(isActive), has2, has4, score, enemyId);
+    }
+
+    // Simple play in a cursed round: grab a 2 and a 4, then keep 1s and 2s, else the lowest die;
+    // playing second, stop as soon as keeping everything is a valid hand under the score to beat
+    // (or any valid hand, if the other player dusted).
+    function planBotLocksLow(turn, toBeat) {
+        const active = turn.dice.filter(isActive).sort((a, b) => a.value - b.value);
+        if (toBeat !== undefined) {
+            const kept = turn.dice.map(d => (isActive(d) ? { ...d, status: STATUS.LOCKED } : d));
+            const all = scoreDice(kept);
+            if (all.has2 && all.has4 && (toBeat === null || all.score < toBeat)) return active.map(d => d.id);
+        }
+        let { has2, has4 } = scoreDice(turn.dice);
+        const toLock = [];
+        const take = d => { if (d && !toLock.includes(d.id)) { toLock.push(d.id); return true; } return false; };
+        if (!has2 && take(active.find(d => d.value === 2))) has2 = true;
+        if (!has4 && take(active.find(d => d.value === 4 && !toLock.includes(d.id)))) has4 = true;
+        active.forEach(d => { if (d.value <= 2) take(d); });
+        if (toLock.length === 0 && active.length > 0) take(active[0]);
+        return toLock;
     }
 
     return {

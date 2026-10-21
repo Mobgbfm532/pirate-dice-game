@@ -14,11 +14,12 @@ const { STATUS } = Rules;
 // The Ghoul and Gourd (McGrath keeps the Molar's id; Martha is the boss: her mask, then the
 // final), then the Yawning Portal.
 const OPPONENTS = [
-    { id: 'molar', ability: null },
-    { id: 'frak', ability: 'mindWhip' },
-    { id: 'danhausen', ability: 'cursed' },
-    { id: 'duke', ability: 'devil' },
-    { id: 'martha', ability: 'disguises', boss: true },
+    // simple: plays the Molar's simple habits (the Ghoul and Gourd, since 21 Oct).
+    { id: 'molar', ability: null, simple: true },
+    { id: 'frak', ability: 'mindWhip', simple: true },
+    { id: 'danhausen', ability: 'cursed', simple: true },
+    { id: 'duke', ability: 'devil', simple: true },
+    { id: 'martha', ability: 'disguises', boss: true, simple: true },
     { id: 'klarg', ability: 'reachAround' },
     { id: 'rokr', ability: 'constellationBlur' },
     { id: 'hangman', ability: 'deadeye24' },
@@ -69,6 +70,7 @@ function fight(index, run, opts = {}) {
         keepUsed: {},
         rounds: 0,
         disguises: disguisesIn(order),
+        simpleBots: opts.simpleBots,
         surge: run.nextSurge || null // the Wild Magic Hot Tub's, on one of your dice this fight
     };
     run.nextSurge = null;
@@ -87,7 +89,8 @@ function fight(index, run, opts = {}) {
     while (f.player > 0 && f.bot > 0) {
         f.rounds++;
         beginRound(f, run, has);
-        const playerFirst = f.round % 2 === 1;
+        // opts.playerSecond: for experiments, the opponent always throws first (you know the score to beat).
+        const playerFirst = opts.playerSecond ? false : f.round % 2 === 1;
         let p, b;
         if (playerFirst) {
             p = playerTurn(f, run, opts, undefined, canUse, N);
@@ -158,7 +161,8 @@ function botTurn(f, run, toBeat, canUse) {
         } })) throw new Error('the opponent could not roll');
         if (turn.finalized) break;
         if (active(turn).length === 1) { Rules.toggleDie(turn, active(turn)[0].id); break; }
-        const keep = f.opp.id === 'molar' ? Rules.planBotLocks(turn, 'molar', toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, low, cap });
+        // opts.simpleBots: for experiments, these opponents play the Molar's simple way too.
+        const keep = f.opp.simple || (f.simpleBots || []).includes(f.opp.id) ? Rules.planBotLocks(turn, f.opp.id, toBeat, { low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, low, cap });
         keep.forEach(id => Rules.toggleDie(turn, id));
     }
     let { busted, score } = turn.outcome;

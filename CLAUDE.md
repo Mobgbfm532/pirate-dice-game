@@ -213,7 +213,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
   2 or 4 the player still needs, else the highest die. **The Ace of Spades is the Hangman's
   revolver** (not a card): his move is a muzzle flash and a bullet hole by a "24".
-- **Opponents' play:** the Molar plays simply (`planBotLocks`), as a teacher. From Klarg on
+- **Opponents' play:** the whole Ghoul and Gourd plays simply (`planBotLocks`; McGrath as a
+  teacher, and since 21 Oct Frak, Danhausen, the Duke and Martha too, the user's call; in a cursed
+  round the simple habits chase low dice, `low`). From the Yawning Portal (Klarg) on
   they play their best (`shared/strategy.js`): the keep with the best chance of beating the
   player's score (ties count half), of a valid hand if the player dusted, or, going first, of
   leaving a score a sensible player fails to beat; the Hangman counts on his Ace at one life.
