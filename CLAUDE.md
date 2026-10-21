@@ -187,7 +187,10 @@ which on the free tier is every sleep and deploy).
   Snakehands; the spots follow a random event; keepsakes on Thom's back shelf; the Shrine and
   the hot tub cost gold; the thief takes half. Later on 21 Oct: **the 14-fight tournament**
   (the Yawning Portal's five, Brodor's Sunglasses, Klarg's crew aboard the Salty Swallow, a save
-  after each place). 110 server/rules/strategy tests + 10 client tests.
+  after each place). Then the user's 15 fixes after playing it (21 Oct): one thing at a time
+  (see "Order of events"), Back of the Head, keepsakes as icons with a fanfare, the Devil mid-turn,
+  Flourish's ghost dice, the hot tub only at the Ghoul and Gourd. 117 server/rules/strategy tests
+  + 10 client tests.
   The user found the game too hard (21 Oct); with the nine fights a sensible player finished
   ~3.9% of the time (`node balance/experiments/runs.js`; options in `easier.js`); over the
   fourteen, ~1.1% (`node balance/experiments/tournament.js`): 27% reach the Yawning Portal, 4.5%
@@ -238,21 +241,25 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
   Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; Klarg 1, Rokr 2,
   Hangman 1, Jaguar 1). Each use costs the player ~10 points of fight win chance. **The Yawning
-  Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Sucker Punch** (as you
-  keep your last die on a hand that counts, a kept die at random goes back in play and you roll it
-  again; `suckerPunch` via `emitKept`, `Rules.putBackDie`); Vaelin's **Inkfire Brand** (a round effect
+  Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the
+  id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
+  hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it
+  again; `suckerPunch` via `emitKept`, `Rules.putBackDie`; its turnState event `punched` makes the
+  client drop taps it is still showing, which had left the Roll button dead); Vaelin's **Inkfire Brand** (a round effect
   `ink`: your dice that land on 6 roll again, in `rollFaceFor`; the Loaded Die lands 4-5; the hot
   tub's Scalding Die still lands 6); Stason's **Flourish** (`startFlourish` on his turn's first
-  throw: `turn.flourish`, each die rolls twice, a needed 2 or 4 else the higher, `flourishFace`);
+  throw: `turn.flourish`, each die rolls twice, a needed 2 or 4 else the higher, `flourishFace`;
+  the rolls that lost rise as ivory ghost dice, like Double Bubble's);
   the Ridgeler's **Divine Smite** (a round effect `smite`: if he wins the round you lose two
   hearts, each still caught by the Shield, the Lady's Grace or Last Gasp; the round result says
   "lost 2 lives"); Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he
   heals one). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
   (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
-  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Only Sucker Punch has a
+  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Only Back of the Head has a
   sound (the swoosh). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
-  **Mind Whip** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps one of your dice
+  **Mind Whip** (since 20 Oct, replacing Psychic Fog; like the Devil it waits, `pendingMind`, and is spent only as it
+  lands, so his ✦ flashes then (21 Oct): on your first throw he keeps one of your dice
   for you, at random since 21 Oct (it was your worst), `Rules.mindWhip(turn, pick)`;
   `turn.mindDieId`, `mind` in the view; it counts as the throw's keep, can't be tapped back, and you
   may keep others; the solver's `optional`; its mist and badge show only once it has landed on
@@ -274,9 +281,23 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after
   the banner.
 - **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
-  before you roll, in a round with no effect yet, wear Danhausen's Curse or the Duke's Devil
-  yourself (`wearMask`, `by: 'player'`; the Devil's three 6s are yours and the opponent is
-  capped). On the strip it lights up and shows two choices inline (never over the rail).
+  in a round with no effect yet, wear Danhausen's Curse (before you roll) or the Duke's Devil
+  (any time in your turn with 3+ dice to throw, since 21 Oct: the next throw lands three 6s)
+  yourself (`wearMask`, `by: 'player'`). On the strip it lights up and shows its choices inline
+  (never over the rail); when it can't be worn a tap is a reminder. Martha herself shows a
+  "Disguises" moment first, then the trick she copies (`disguiseMoves`).
+- **Order of events (21 Oct, the user's: "they should not all happen together"):** after a round
+  the server waits `ROUND_PAUSE_MS` (2 s) before the next round and its ability
+  (`evaluateTavernRound`). On the client every moment (abilities, keepsakes, Thonics, the Lady, the
+  round result) goes through `enqueueMoment`: at least `MOMENT_GAP_MS` (1.7 s) after the one before,
+  in the server's order; a Tavern Crawl `gameStateUpdate` that arrives while the queue is busy
+  waits behind it, so glows, ✦ marks and hearts change with the moment that explains them. The
+  Lady's Grace is checked before the Shield.
+- **Keepsakes on screen (21 Oct):** small round icons beside your chip (`KeepsakeIcon`,
+  `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
+  it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
+  and a synthesized chime (`playChime`); the Shield's is a force-field dome over the table
+  (`.forcefield`), its line "Shield protects a life."
 - **The invitations and saving:** beating a boss gives `interlude.stage = 'invitation'` instead of
   an event (`invitation(room, name)`: `place`, `from`, `boss`, `drop`, `save`): after Martha "You
   qualify for the Yawning Portal", after Brodor "Word from the docks" (the Salty Swallow has
@@ -339,12 +360,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   to whatever the next fight starts on (so it stacks with the Stranger's price). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
-  The **Wild Magic Hot Tub** (a spot in both pubs, since 20 Oct; 50 gold a soak since 21 Oct, `hotTubPrice`; the Shrine's candle 100, `shrinePrice`; neither is offered when the purse can't cover it): climb in and a wild surge
+  The **Wild Magic Hot Tub** (a spot at the Ghoul and Gourd only, the user's call 21 Oct; 50 gold a soak since 21 Oct, `hotTubPrice`; the Shrine's candle 100, `shrinePrice`; neither is offered when the purse can't cover it): climb in and a wild surge
   is picked by weight (`hotTubSurges`): one of your dice (`hotTubDie`, aqua on the table,
   `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
   lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
   (`nextFightSurge` → `tubSurge`, `rollFaceFor`; a badge under Roll). Double Bubble's losing roll
-  rises from the die as a fading ghost die (in a cursed round it keeps the lower roll) (`turn.twinRoll` → `diceRolled.twin` → `TwinGhost`). A soak averages about +1-2
+  rises from the die as a fading ghost die (in a cursed round it keeps the lower roll) (`turn.ghosts` → `diceRolled.ghosts` → `TwinGhost`, one per ghost; its glow animations keep the same filter list at every keyframe, or they snap: the "flash" the user saw). A soak averages about +1-2
   points of the next fight (`balance/experiments/hot-tub.js`). **Darren Snakehands**, the Ghoul and
   Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
   Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 20 gold for
@@ -390,10 +411,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    **User plays the test site on the phone** and decides; change `shared/balance.js` and re-run
    `node balance/experiments/tournament.js` first. **Set `SAVE_SECRET` on Render** (an env var,
    any long random text) so saves survive sleeps and deploys.
-2. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots, about half the walks.
+2. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots at the Ghoul and Gourd (about half the walks), one of three after it.
 3. **The tournament, finishing touches:** Brodor's painting (the user's; a silhouette stands in);
    a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
-   (only Sucker Punch has one, the swoosh); the ship's own spots and events (to workshop: a card
+   (only Back of the Head has one, the swoosh); the ship's own spots and events (to workshop: a card
    game below deck, a stowaway instead of the thief); uses per fight for the five (first guesses, 1
    each). Stronger late abilities: to workshop.
 4. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the

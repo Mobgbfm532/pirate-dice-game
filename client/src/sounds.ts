@@ -241,6 +241,29 @@ export function playCoins(count = 3) {
     for (let i = 0; i < count; i++) scheduleCoin(ctx, ctx.destination, ctx.currentTime + 0.02 + i * 0.075, 0.94 + ((i * 7) % 5) * 0.03);
 }
 
+// A keepsake works: a bright rising fanfare of bell tones (a major arpeggio, each note ringing on).
+export function playChime() {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.02;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const when = start + i * 0.09;
+        [[1, 0.16], [2.01, 0.05]].forEach(([partial, level]) => {
+            const tone = ctx.createOscillator();
+            tone.type = 'sine';
+            tone.frequency.setValueAtTime(freq * partial, when);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, when);
+            gain.gain.exponentialRampToValueAtTime(level, when + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.9);
+            tone.connect(gain).connect(ctx.destination);
+            tone.start(when);
+            tone.stop(when + 0.95);
+        });
+    });
+}
+
 // Development only: renders the cork pop offline to raw samples, for listening outside the game.
 export async function renderCorkPop(fizz = false, sampleRate = 22050) {
     const ctx = new OfflineAudioContext(1, Math.ceil(1.2 * sampleRate), sampleRate);
@@ -280,7 +303,7 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
     'Constellation Blur': 'constellation',
     'The Ace of Spades': 'gunshot',
-    'Sucker Punch': 'swoosh' // the Yawning Portal's five have no sounds of their own yet
+    'Back of the Head': 'swoosh' // the Yawning Portal's five have no sounds of their own yet
 };
 
 // Browsers only allow audio after the player has interacted with the page.

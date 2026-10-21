@@ -947,12 +947,13 @@ test("the hot tub's surges: the die never rolls a 1, never a 6, only 4-6, always
     const lowMean = low.reduce((a, b) => a + b, 0) / low.length;
     assert.ok(lowMean < 2.8, `cursed: the lower of two averages ~2.53: ${lowMean}`);
     room.tavernRun.roundEffect = null;
-    // The roll that lost is kept for the ghost die (diceRolled.twin).
+    // The roll that lost is kept for the ghost die (diceRolled.ghosts).
     const turn = { playerId: 'P', rollCount: 2, dice: [] };
     room.tavernRun.tubSurge = 'twin';
     const face = server.rollFaceFor(room, turn);
-    for (let i = 0; i < 50 && !turn.twinRoll; i++) face({ id: die });
-    assert.ok(turn.twinRoll && turn.twinRoll.die === die && turn.twinRoll.kept !== turn.twinRoll.lost, 'the losing roll is recorded');
+    for (let i = 0; i < 50 && !turn.ghosts.length; i++) face({ id: die });
+    const ghost = turn.ghosts[0];
+    assert.ok(ghost && ghost.die === die && ghost.kept !== ghost.lost && ghost.kind === 'tub', 'the losing roll is recorded');
     assert.equal(new Set(faces('noOnes', undefined, die === 0 ? 1 : 0)).size, 6, 'only that die');
     assert.equal(new Set(faces('noOnes', { playerId: 'BOT_MOLAR', rollCount: 1, dice: [] })).size, 6, "not the opponent's dice");
 });
@@ -1292,7 +1293,10 @@ test("the run is fourteen fights: the Ghoul and Gourd, the Yawning Portal, then 
 test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at random", async () => {
     const hero = await tavernAgainst(1, 'Puppet');
     const room = roomOf(hero);
-    room.tavernRun.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindWhip', as: null };
+    // It waits for your first throw, and is only spent (his mark lit) when it lands there.
+    server.beginTavernRound(Object.keys(server.rooms).find(c => server.rooms[c] === room), room);
+    assert.deepEqual(room.tavernRun.pendingMind, { as: null });
+    assert.equal(room.tavernRun.abilityUsed.mindWhip, undefined, 'not spent as the round begins');
     const move = waitFor(hero, 'signatureMove');
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
@@ -1302,6 +1306,8 @@ test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at 
     const shown = await move;
     assert.equal(shown.ability, 'Mind Whip');
     assert.match(shown.text, new RegExp(`keep your ${forced[0].value}`));
+    assert.equal(room.tavernRun.abilityUsed.mindWhip, 1, 'spent as it lands');
+    assert.equal(room.tavernRun.roundEffect.kind, 'mind');
     await sleep(rolled.animationMs * 0.01 + 20);
     hero.emit('toggleDie', forced[0].id);
     await sleep(30);
@@ -1375,6 +1381,8 @@ test("Martha's disguises: Frak's, Danhausen's or the Duke's trick at random, twi
         const effect = room.tavernRun.roundEffect;
         // The Devil waits for her 2 and 4 (in the Duke's face).
         if (room.tavernRun.pendingDevil) { assert.equal(room.tavernRun.pendingDevil.as, 'Duke Morrigan'); kinds.add('devil'); continue; }
+        // So does Mind Whip, for your first throw (in Frak's face).
+        if (room.tavernRun.pendingMind) { assert.equal(room.tavernRun.pendingMind.as, 'Frak'); kinds.add('mind'); continue; }
         assert.ok(effect && effect.by === 'opponent' && effect.as);
         kinds.add(effect.kind);
     }
@@ -1382,7 +1390,7 @@ test("Martha's disguises: Frak's, Danhausen's or the Duke's trick at random, twi
     room.tavernRun.abilityUsed = { disguises: 2 };
     for (let i = 0; i < 10; i++) {
         server.beginTavernRound(code, room);
-        assert.ok(!room.tavernRun.roundEffect && !room.tavernRun.pendingDevil, 'a third disguise is one too many');
+        assert.ok(!room.tavernRun.roundEffect && !room.tavernRun.pendingDevil && !room.tavernRun.pendingMind, 'a third disguise is one too many');
     }
 });
 
@@ -1545,16 +1553,20 @@ function opponentRollsBig(hero, room) {
     });
 }
 
-test("Sylvester's Sucker Punch knocks a kept die loose from a finished hand, once", async () => {
+test("Sylvester's Back of the Head knocks your best kept die loose from a finished hand, once", async () => {
     const hero = await tavernAgainst(fightOf('sylvester'), 'Punched');
     const room = roomOf(hero);
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
     room.turn.dice.forEach((d, i) => { d.value = [2, 4, 5, 5, 6, 6][i]; });
     await sleep(rolled.animationMs * 0.01 + 20);
-    const punch = waitFor(hero, 'signatureMove', m => m.ability === 'Sucker Punch');
+    const punched = waitFor(hero, 'turnState', d => d.event && d.event.type === 'punched');
+    const punch = waitFor(hero, 'signatureMove', m => m.ability === 'Back of the Head');
     room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
-    assert.match((await punch).text, /knocks your \d loose/);
+    assert.match((await punch).text, /knocks your 6 loose/);
+    const knocked = (await punched).event.die;
+    assert.equal(room.turn.dice[knocked].value, 6, 'his best die');
+    assert.equal(room.turn.dice[knocked].status, 'active');
     const turn = room.turn;
     assert.equal(turn.finalized, false, 'the hand is open again');
     assert.equal(turn.dice.filter(d => d.status === 'active').length, 1, 'one die back in play');
@@ -1566,7 +1578,7 @@ test("Sylvester's Sucker Punch knocks a kept die loose from a finished hand, onc
     assert.equal(room.tavernRun.abilityUsed.suckerPunch, 1);
 });
 
-test('Sucker Punch waits for a hand that counts (not dust)', async () => {
+test('Back of the Head waits for a hand that counts (not dust)', async () => {
     const hero = await tavernAgainst(fightOf('sylvester'), 'Dusty');
     const room = roomOf(hero);
     hero.emit('rollDice');
@@ -1705,4 +1717,95 @@ test('the Yawning Portal and the ship play their best; every ability has a name 
         assert.ok(Rules.ABILITY_NAMES[e.ability], `${e.ability} has a name`);
         assert.ok(BALANCE.abilityUses[e.ability] >= 1, `${e.ability} has uses`);
     }
+});
+// ---- One thing at a time; the user's fixes of 21 Oct ----
+
+test('the next round, and its ability, wait until the round result has gone out', async () => {
+    const { hero, room } = await roundAgainst('vaelin', 'Patient2');
+    room.tavernRun.abilityUsed = {}; // Inkfire ready again for round 2
+    room.tavernRun.abilityRound = 1;
+    const events = [];
+    hero.on('roundResult', () => events.push('result'));
+    hero.on('signatureMove', m => events.push(m.ability));
+    hero.on('gameStateUpdate', s => { if (s.tavernRun && s.tavernRun.encounterRound === 2 && !events.includes('round 2')) events.push('round 2'); });
+    opponentAlwaysDusts(hero, room);
+    const next = nextState(hero, s => s.tavernRun && s.tavernRun.encounterRound === 2);
+    await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
+    await next;
+    const result = events.indexOf('result'), ink = events.lastIndexOf('Inkfire Brand'), round2 = events.indexOf('round 2');
+    assert.ok(result >= 0 && ink > result && round2 > ink, `result, then the ability, then the new round: ${events.join(', ')}`);
+});
+
+test("Mind Whip in Martha's face: her disguise shows first, then Frak's trick", async () => {
+    const hero = await tavernAgainst(fightOf('martha'), 'Disguised');
+    const room = roomOf(hero);
+    room.tavernRun.pendingMind = { as: 'Frak' };
+    const moves = [];
+    hero.on('signatureMove', m => moves.push(m.ability));
+    hero.emit('rollDice');
+    await waitFor(hero, 'signatureMove', m => m.ability === 'Mind Whip');
+    assert.deepEqual(moves, ['Disguises', 'Mind Whip']);
+    assert.equal(room.tavernRun.abilityUsed.disguises, 1);
+});
+
+test("the Lady's Grace forgives a dust before the Shield is spent", async () => {
+    const { hero, room } = await tavernTable('Graced');
+    room.players.BOT_MOLAR.lives = 3;
+    room.tavernRun.ladysGrace = true;
+    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield', text: '' });
+    const result = waitFor(hero, 'roundResult', () => true, 8000);
+    const grace = waitFor(hero, 'blessingUsed');
+    await playHand(hero, room, [1, 1, 3, 3, 5, 5]); // dust
+    await grace;
+    await result;
+    assert.equal(room.tavernRun.ladysGrace, false);
+    assert.ok(!room.tavernRun.encounterKeepsakeUses.bentCopper, 'the Shield is still there');
+});
+
+test('the Shield says it protects a life', async () => {
+    const { hero, room } = await tavernTable('Shielded2');
+    room.players.BOT_MOLAR.lives = 3;
+    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield', text: '' });
+    const lit = waitFor(hero, 'keepsakeActivated', k => k.id === 'bentCopper', 8000);
+    await playHand(hero, room, [1, 1, 3, 3, 5, 5]); // dust
+    assert.equal((await lit).text, 'Shield protects a life.');
+});
+
+test("Martha's mask: the Devil can be worn mid-turn, and the next throw lands three 6s", async () => {
+    const hero = await tavernAgainst(fightOf('klarg'), 'MidMask');
+    const room = roomOf(hero);
+    room.tavernRun.abilityRound = 99;
+    room.tavernRun.roundEffect = null;
+    room.tavernRun.keepsakes.push({ id: 'marthasMask', name: "Martha's Mask", text: '' });
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    room.turn.dice.forEach((d, i) => { d.value = [2, 1, 1, 1, 1, 1][i]; });
+    await sleep(rolled.animationMs * 0.01 + 20);
+    hero.emit('wearMask', 'curse'); // the Curse only before you roll
+    await sleep(30);
+    assert.equal(room.tavernRun.roundEffect, null);
+    hero.emit('toggleDie', 0); // keep the 2: five to throw
+    await sleep(30);
+    hero.emit('wearMask', 'devil');
+    await waitFor(hero, 'keepsakeActivated', k => k.id === 'marthasMask');
+    hero.emit('rollDice');
+    const second = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === 2);
+    assert.ok(second.turn.dice.filter(d => d.status === 'active' && d.value === 6).length >= 3, 'three 6s on the throw after');
+});
+
+test("Stason's Flourish leaves ghost dice for the rolls that lost", async () => {
+    const hero = await tavernAgainst(fightOf('stason'), 'Ghosted');
+    const room = roomOf(hero);
+    const theirs = waitFor(hero, 'diceRolled', d => d.turn.playerId === 'BOT_MOLAR' && d.ghosts, 8000);
+    await playHand(hero, room, [2, 4, 3, 3, 3, 3]);
+    const rolled = await theirs;
+    assert.ok(rolled.ghosts.every(g => g.kind === 'plain' && g.kept !== g.lost));
+});
+
+test('the hot tub is only at the Ghoul and Gourd', async () => {
+    const { room } = await betweenFights('NoTub', { stage: 'choose', spots: ['thom', 'shrine'] }, 1000);
+    room.tavernRun.encounterIndex = fightOf('sylvester');
+    for (let i = 0; i < 30; i++) assert.ok(!server.pickSpots(room).includes('hotTub'));
+    room.tavernRun.encounterIndex = fightOf('frak');
+    assert.ok(Array.from({ length: 60 }, () => server.pickSpots(room)).some(s => s.includes('hotTub')));
 });

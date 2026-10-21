@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, readSavedRun, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
@@ -333,35 +333,62 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
         <div className="tavern-strip">
             <span className="purse" aria-label={`${run.purse} gold`}><span aria-hidden="true">🪙</span> {run.purse}</span>
             <Shelf snap={snap} state={state} />
-            {run.keepsakes.map(k => k.id === 'marthasMask'
-                ? <MaskKeepsake key={k.id} snap={snap} state={state} />
-                : <span key={k.id} className="keepsake" title={k.text}>{k.name}</span>)}
-            {run.ladysGrace && <span className="keepsake blessing" title="The next time you'd lose a heart to dust, the Lady saves you.">The Lady's Grace</span>}
+            {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
+                (the user, 21 Oct). Tap one for a reminder of what it does; it dims once spent this fight. */}
+            {(run.keepsakes.length > 0 || run.ladysGrace) && (
+                <span className="keepsake-row">
+                    {run.keepsakes.map(k => k.id === 'marthasMask'
+                        ? <MaskKeepsake key={k.id} snap={snap} state={state} />
+                        : <KeepsakeIcon key={k.id} icon={KEEPSAKE_ICONS[k.id] ?? '✦'} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
+                    {run.ladysGrace && <KeepsakeIcon icon="🕯️" name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." blessing />}
+                </span>
+            )}
         </div>
     );
 }
 
-// Martha's mask: lit when it can be worn (your turn, before you roll, once a fight, in a
-// round no one has played a trick in yet). Tap, then pick Danhausen's Curse or the Duke's Devil.
+// Keepsakes that work once a fight (dimmed once they have).
+const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask']);
+
+function KeepsakeIcon({ icon, name, text, spent = false, blessing = false }: { icon: string; name: string; text: string; spent?: boolean; blessing?: boolean }) {
+    const remind = () => { playSound('click'); showToast(`${icon} ${name}`, spent ? `${text} (Used this fight.)` : text, 'info', 4200); };
+    return (
+        <button className={`keepsake-icon ${spent ? 'spent' : ''} ${blessing ? 'blessing' : ''}`} aria-label={`${name}: ${text}`} onClick={remind}>
+            <span aria-hidden="true">{icon}</span>
+        </button>
+    );
+}
+
+// Martha's mask: lit when it can be worn (your turn, once a fight, in a round no one has played
+// a trick in yet). Danhausen's Curse before you roll; the Duke's Devil any time in your turn
+// with three or more dice to throw (the user's call, 21 Oct): the next throw lands three 6s.
+// Tap, then pick; when it can't be worn, a tap is a reminder of what it does.
+const MASK_TEXT = "Once a fight: wear Danhausen's Curse before you roll (lowest valid score wins the round), or the Duke's Devil any time in your turn with three or more dice to throw (your next throw lands three 6s).";
+
 function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const turn = snap.turn;
     const [open, setOpen] = useState(false);
-    const usable = !!run.maskReady && snap.isMyTurn && !!turn && !turn.hasRolled && !run.roundEffect && !snap.rolling;
+    const ready = !!run.maskReady && snap.isMyTurn && !!turn && !turn.finalized && !run.roundEffect && !snap.rolling;
+    const curse = ready && !turn!.hasRolled;
+    const devil = ready && turn!.dice.filter(d => d.status === 'active').length >= 3;
+    const usable = curse || devil;
     useEffect(() => { if (!usable) setOpen(false); }, [usable]);
     const wear = (kind: 'curse' | 'devil') => { setOpen(false); actions.wearMask(kind); };
+    const tap = () => {
+        playSound('click');
+        if (usable) setOpen(!open);
+        else showToast("🎭 Martha's Mask", run.maskReady ? MASK_TEXT : `${MASK_TEXT} (Used this fight.)`, 'info', 5200);
+    };
     return (
         <span className="mask-keepsake">
-            <button
-                className={`keepsake ${usable ? 'usable' : ''} ${run.maskReady ? '' : 'used'}`}
-                disabled={!usable}
-                title="Martha's Mask: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round."
-                onClick={() => { setOpen(!open); playSound('click'); }}
-            >🎭 Martha's Mask</button>
+            <button className={`keepsake-icon ${usable ? 'usable' : ''} ${run.maskReady ? '' : 'spent'}`} aria-label={`Martha's Mask: ${MASK_TEXT}`} onClick={tap}>
+                <span aria-hidden="true">🎭</span>
+            </button>
             {open && (
                 <span className="mask-choice" role="group" aria-label="Wear a disguise for this round">
-                    <button onClick={() => wear('curse')}>Curse<small>lowest wins</small></button>
-                    <button onClick={() => wear('devil')}>Devil<small>{state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : 'three 6s for you'}</small></button>
+                    {curse && <button onClick={() => wear('curse')}>Curse<small>lowest wins</small></button>}
+                    {devil && <button onClick={() => wear('devil')}>Devil<small>{state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : turn!.hasRolled ? 'next throw: three 6s' : 'three 6s for you'}</small></button>}
                 </span>
             )}
         </span>
@@ -661,11 +688,13 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     if (!visible || !moment) return null;
     const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
     // An opponent's ability (or your mask) takes over the screen: a flash in its colours and a
-    // banner across it with what happened (the user asked for more flare, 21 Oct). Thonics and
-    // the Lady keep the small plaque on the table's edge.
+    // banner across it with what happened (the user asked for more flare, 21 Oct). So does a
+    // keepsake as it works, with its picture in a burst of gold (the Shield: a force field).
+    // Thonics and the Lady keep the small plaque on the table's edge.
     const takeover = moment.name !== "Thom's Thonics" && moment.name !== 'Shrine to the Lady';
+    const keepsake = moment.keepsake;
     return (
-        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${takeover ? 'takeover' : ''}`} aria-live="polite">
+        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''}`} aria-live="polite">
             <div className="ability-banner">
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
@@ -677,7 +706,10 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <div className="claw-marks" aria-hidden="true"><span /><span /><span /></div>
             )}
             {moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
-            {moment.ability === 'Sucker Punch' && <div className="punch-burst" aria-hidden="true" />}
+            {moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
+            {moment.ability === 'Disguises' && <div className="mask-flare" aria-hidden="true">🎭</div>}
+            {keepsake && <div className="keepsake-flare" aria-hidden="true">{KEEPSAKE_ICONS[keepsake] ?? '✦'}</div>}
+            {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
             {moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
             {moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
             {moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
@@ -878,7 +910,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
                     <p className="mask-text"><strong>{drop.name}</strong> {story.gift}</p>
                 </div>
                 <div className="event-choices">
-                    <button className="primary onward" onClick={onMoveOn} disabled={leaving}>On to {inSentence(interlude.place)}: challenge {next}</button>
+                    <button className="primary onward" onClick={onMoveOn} disabled={leaving}>On to {inSentence(interlude.place)}</button>
                     <button className="secondary" onClick={save}>Save and continue later</button>
                 </div>
                 <p className="fine">The save stays on this device. Pick it up from the start screen.</p>
@@ -982,11 +1014,13 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
     const [picked, setPicked] = useState<string | null>(null);
     const challenge = <button className="primary onward" onClick={onMoveOn}>Challenge {next}</button>;
     // A random event (the thief, the Hooded Stranger, Darren) isn't the whole walk: then the two spots.
+    // Stacked: the button across the counter, the challenge under it (side by side, a small
+    // phone squeezed the button's words onto four lines).
     const afterEvent = (
-        <>
-            <button className="primary onward" onClick={onLookAround}>Look around the tavern</button>
+        <span className="after-event">
+            <button className="primary onward wraps" onClick={onLookAround}>Look around the tavern</button>
             <button className="link-button" onClick={onMoveOn}>Or challenge {next} right away</button>
-        </>
+        </span>
     );
 
     if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} purse={run.purse} setRevealed={setRevealed} next={afterEvent} />;
@@ -1295,11 +1329,11 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
         setTimeout(onNext, LEAVE_MS);
     };
     return (
-        <div className={`interlude-scene fight-won ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${won.defeated} is beaten`}
+        <div className={`interlude-scene fight-won ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${won.defeated} is defeated`}
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
                 <span className="won-portrait" style={avatarStyle(portraitFor(won.defeated))} aria-hidden="true" />
-                <h2 className="interlude-title">{won.defeated} is beaten!</h2>
+                <h2 className="interlude-title">{won.defeated} is defeated!</h2>
                 {won.place && <p className="won-fight">Fight {won.place} of {run.totalEncounters}</p>}
                 <ul className="won-rows">
                     {rows.map((row, i) => (

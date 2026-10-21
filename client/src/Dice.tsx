@@ -82,22 +82,25 @@ function Constellation({ index, meshes }: { index: number; meshes: MutableRefObj
     );
 }
 
-// Double Bubble (the hot tub): its die rolled twice and kept the better. Once the dice stop, the
-// roll that lost rises from that die as a translucent ghost, face up, and fades away.
+// A die that rolled twice and kept the better (Double Bubble from the hot tub, Stason's
+// Flourish): once the dice stop, the roll that lost rises from that die as a translucent ghost,
+// face up, and fades away. One TwinGhost per possible ghost (`index` into the throw's list).
 const GHOST_MS = 2200;
 const ghostQuat = new THREE.Quaternion();
 
-function TwinGhost({ geometry, materials, meshes }: { geometry: THREE.BufferGeometry; materials: ReturnType<typeof createDiceMaterials>; meshes: MutableRefObject<(THREE.Mesh | null)[]> }) {
-    const ghost = useSyncExternalStore(store.subscribe, () => store.get().twinGhost);
+function TwinGhost({ index, geometry, materials, meshes }: { index: number; geometry: THREE.BufferGeometry; materials: ReturnType<typeof createDiceMaterials>; meshes: MutableRefObject<(THREE.Mesh | null)[]> }) {
+    const ghosts = useSyncExternalStore(store.subscribe, () => store.get().ghosts);
+    const ghost = ghosts && ghosts.dice[index] ? { ...ghosts.dice[index], at: ghosts.at } : null;
     const mesh = useRef<THREE.Mesh>(null);
-    // Fresh see-through copies for each ghost (by then the painted faces have loaded).
-    const faces = useMemo(() => materials.tub.map(m => {
+    // Fresh see-through copies for each ghost (by then the painted faces have loaded): aqua for
+    // the hot tub's die, plain ivory for Stason's.
+    const faces = useMemo(() => (ghost?.kind === 'plain' ? materials.faces : materials.tub).map(m => {
         const copy = m.clone();
         copy.transparent = true;
         copy.depthWrite = false;
         copy.opacity = 0;
         return copy;
-    }), [materials, ghost?.at]); // eslint-disable-line react-hooks/exhaustive-deps
+    }), [materials, ghosts?.at, ghost?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
     useFrame(() => {
         const g = mesh.current;
         if (!g) return;
@@ -245,7 +248,7 @@ export function Dice() {
                     <Constellation index={id} meshes={meshes} />
                 </group>
             ))}
-            <TwinGhost geometry={geometry} materials={materials} meshes={meshes} />
+            {[0, 1, 2, 3, 4, 5].map(i => <TwinGhost key={i} index={i} geometry={geometry} materials={materials} meshes={meshes} />)}
         </group>
     );
 }

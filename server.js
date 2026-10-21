@@ -149,7 +149,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '👊',
         lives: BALANCE.opponentLives.sylvester,
         ability: 'suckerPunch',
-        intro: 'Sylvester Stonefist, a brawling monk, never hits you from the front. Sucker Punch: as you keep your last die, he knocks a kept die loose and you roll it again.'
+        intro: 'Sylvester Stonefist, a brawling monk, never hits you from the front. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again.'
     },
     {
         id: 'vaelin',
@@ -294,8 +294,8 @@ const SHELF_SIZE = BALANCE.shelfSize;
 const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
 
 // The places in the run: what Thom sells there and the spots between fights. (Each opponent
-// names its place.) All three have the same spots for now; a split is a later choice (the
-// ship's own spots and events are still to workshop).
+// names its place.) The hot tub is only at the Ghoul and Gourd (the user's call, 21 Oct); the
+// ship's own spots and events are still to workshop.
 const PLACES = {
     ghoulAndGourd: {
         name: 'The Ghoul and Gourd',
@@ -308,14 +308,14 @@ const PLACES = {
     yawningPortal: {
         name: 'The Yawning Portal',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
+        spots: ['thom', 'shrine', 'diceDen'], // the hot tub is the Ghoul and Gourd's (the user's call, 21 Oct)
         events: []
     },
     // A ship docked after the Yawning Portal: Klarg's crew, top-tier players.
     saltySwallow: {
         name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
+        spots: ['thom', 'shrine', 'diceDen'],
         events: []
     }
 };
@@ -369,6 +369,8 @@ function shelfSizeOf(room) {
 // Inkfire round your dice that land on 6 roll again; Stason's Flourish rolls his twice.
 function rollFaceFor(room, turn) {
     if (room.mode !== 'tavern-crawl') return rollFace;
+    // The rolls that lost, this throw (Double Bubble, Flourish): sent with diceRolled as ghosts.
+    turn.ghosts = [];
     if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn) : rollFace;
     let loaded = hasKeepsake(room, 'loadedDie');
     let surge = room.tavernRun.tubSurge;
@@ -378,8 +380,6 @@ function rollFaceFor(room, turn) {
     let plain = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
     let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
     if (!surge) return base;
-    // Double Bubble: the roll that lost, this throw (sent with diceRolled as twin, for its ghost die).
-    turn.twinRoll = null;
     return d => {
         if (!d || d.id !== HOT_TUB_DIE) return base(d);
         if (surge === 'noOnes') return crypto.randomInt(2, 7);
@@ -395,7 +395,7 @@ function rollFaceFor(room, turn) {
             let pick = cursed ? Math.min(a, b) : Math.max(a, b);
             for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
             let lost = pick === a ? b : a;
-            if (lost !== pick) turn.twinRoll = { die: d.id, kept: pick, lost };
+            if (lost !== pick) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'tub' });
             return pick;
         }
         return base(d);
@@ -405,11 +405,15 @@ function rollFaceFor(room, turn) {
 // Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or 4
 // he still needs, else the higher).
 function flourishFace(turn) {
-    return () => {
+    return d => {
         let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
         let a = rollFace(), b = rollFace();
-        for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
-        return Math.max(a, b);
+        let pick = Math.max(a, b);
+        for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
+        // The other roll rises from the die as a ghost (like Double Bubble's; the user's call, 21 Oct).
+        let lost = pick === a ? b : a;
+        if (d && lost !== pick && turn.ghosts) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        return pick;
     };
 }
 
@@ -548,29 +552,37 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     // and a 4 with three dice still to throw; that throw comes up three 6s, and the player can't
     // score above devilCap this round (capped when the round is judged if they played first).
     let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
-    if (!mine && run.pendingDevil && kept.includes(2) && kept.includes(4) && active.length >= 3) {
+    // (Not in a round the player's mask already claimed.)
+    if (!mine && run.pendingDevil && !run.roundEffect && kept.includes(2) && kept.includes(4) && active.length >= 3) {
         let as = run.pendingDevil.as;
         run.pendingDevil = null;
         if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
             sixes();
             run.roundEffect = { kind: 'devil', by: 'opponent', ability: 'devil', as, landed: true };
+            moves.push(...disguiseMoves(room, run.roundEffect));
             moves.push(roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT.devil.opponent));
         }
     }
-    if (turn.rollCount !== 1) return moves;
 
-    // Martha's mask: the player's Devil comes up three 6s on their first throw.
-    if (mine && effect && effect.kind === 'devil' && effect.by === 'player' && !effect.landed) {
+    // Martha's mask: the player's Devil comes up three 6s on the next throw after it's worn
+    // (before the first roll, or mid-turn with three or more dice to throw).
+    if (mine && effect && effect.kind === 'devil' && effect.by === 'player' && !effect.landed && active.length >= 3) {
         effect.landed = true;
         sixes();
     }
-    if (!mine) return moves;
+    if (turn.rollCount !== 1 || !mine) return moves;
 
     // Frak's Mind Whip: he makes the player keep one of their dice, at random (Rules.mindWhip).
-    if (effect && effect.kind === 'mind' && !effect.landed) {
-        effect.landed = true;
-        let die = Rules.mindWhip(turn, n => crypto.randomInt(0, n));
-        if (die) moves.push(roundEffectMove(room, effect, `You must keep your ${die.value}. You may keep others too.`));
+    // Spent only now, as it lands, so his mark flashes with it (not as the round began).
+    if (run.pendingMind && !run.roundEffect && active.length > 1) {
+        let as = run.pendingMind.as;
+        run.pendingMind = null;
+        if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
+            run.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindWhip', as, landed: true };
+            let die = Rules.mindWhip(turn, n => crypto.randomInt(0, n));
+            moves.push(...disguiseMoves(room, run.roundEffect));
+            if (die) moves.push(roundEffectMove(room, run.roundEffect, `You must keep your ${die.value}. You may keep others too.`));
+        }
     }
 
     let inPlay = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length;
@@ -595,19 +607,19 @@ function startFlourish(roomCode, room, turn) {
     return { name: encounter.name, ability: Rules.ABILITY_NAMES.flourish, text: 'This turn every die he throws rolls twice, and he keeps the better.' };
 }
 
-// Sylvester's Sucker Punch: as you keep your last die on a hand that counts, he knocks one of
-// your kept dice loose (at random) and you roll it again (Rules.putBackDie). Returns true if
-// he did.
+// Sylvester's Back of the Head (id suckerPunch, as in the simulator): as you keep your last die
+// on a hand that counts, he knocks your best kept die loose and you roll it again
+// (Rules.putBackDie). The event 'punched' tells browsers to drop taps they're still showing.
+// Returns true if he did.
 function suckerPunch(roomCode, room) {
     let turn = room.turn;
     if (room.mode !== 'tavern-crawl' || !turn || turn.playerId === BOT_ID || !turn.finalized || turn.outcome.busted) return false;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     if (!fireTavernAbility(roomCode, room, encounter, 'suckerPunch')) return false;
-    let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN);
-    let die = kept[crypto.randomInt(0, kept.length)];
+    let die = Rules.bestKeptDie(turn);
     Rules.putBackDie(turn, die.id);
-    emitTurn(roomCode, { type: 'toggle' });
-    io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch from behind knocks your ${die.value} loose. Roll it again.` });
+    emitTurn(roomCode, { type: 'punched', die: die.id });
+    io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch to the back of the head knocks your ${die.value} loose. Roll it again.` });
     return true;
 }
 
@@ -643,7 +655,7 @@ function performRoll(roomCode) {
     turn.busyUntil = Date.now() + delay(animationMs);
     // throwSeed lets every screen simulate the identical tumble (the values are already decided).
     let throwSeed = crypto.randomInt(0, 2 ** 31);
-    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed, twin: turn.twinRoll || undefined });
+    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined });
 
     let key = turn.key;
     if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, animationMs, () => sendBotReaction(roomCode, 'hood'));
@@ -1177,7 +1189,7 @@ const DISGUISES = [
 function roundEffectMove(room, effect, text) {
     let humanId = getHumanPlayerId(room);
     let name = effect.by === 'player' ? (humanId ? room.players[humanId].name : 'You') : TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name;
-    return { name, ability: Rules.ABILITY_NAMES[effect.ability], text: effect.as && effect.by === 'opponent' ? `In ${effect.as}'s face. ${text}` : text, disguise: effect.as || null };
+    return { name, ability: Rules.ABILITY_NAMES[effect.ability], text, disguise: effect.as || null };
 }
 
 const ROUND_EFFECT_TEXT = {
@@ -1191,6 +1203,7 @@ function beginTavernRound(roomCode, room) {
     let run = room.tavernRun;
     run.roundEffect = null;
     run.pendingDevil = null;
+    run.pendingMind = null;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     if (!encounter || !encounter.ability) return;
     // Brodor's Astral Flood: once he has lost a life, he heals one as a round begins.
@@ -1205,12 +1218,21 @@ function beginTavernRound(roomCode, room) {
     let disguise = encounter.ability === 'disguises' ? DISGUISES[crypto.randomInt(0, DISGUISES.length)] : null;
     let ability = disguise ? disguise.ability : encounter.ability;
     if (!ROUND_ABILITIES[ability] || !canUseTavernAbility(room, encounter, encounter.ability)) return;
-    // The Devil waits for the Duke's 2 and 4 (applyTavernRollAbilities); it's spent only then.
+    // The Devil waits for the Duke's 2 and 4, Mind Whip for the player's first throw
+    // (applyTavernRollAbilities); each is spent, and shown, only then.
     if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
+    if (ability === 'mindWhip') { run.pendingMind = { as: disguise ? disguise.as : null }; return; }
     if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
-    // Mind Whip shows when it lands; the Curse and the Devil now.
-    if (run.roundEffect.kind !== 'mind') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+    disguiseMoves(room, run.roundEffect).forEach(move => io.to(roomCode).emit('signatureMove', move));
+    io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+}
+
+// Martha's disguise shows first, then the trick she copies (the user's call, 21 Oct).
+function disguiseMoves(room, effect) {
+    if (!effect.as || effect.by !== 'opponent') return [];
+    let martha = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    return [{ name: martha.name, ability: Rules.ABILITY_NAMES.disguises, text: `She takes ${effect.as}'s face.`, disguise: effect.as }];
 }
 
 // ---- Saving after each place ----
@@ -1547,15 +1569,17 @@ function evaluateTavernRound(roomCode) {
         let player = room.players[loser.id];
         if (!player) return;
 
-        if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
-            room.tavernRun.encounterKeepsakeUses.bentCopper = true;
-            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield catches the loss.');
-            return;
-        }
-
+        // The Lady's Grace comes before the Shield (the user's call, 21 Oct): a dust she forgives
+        // leaves the Shield for later in the fight.
         if (loser.id === humanId && human.busted && room.tavernRun.ladysGrace) {
             room.tavernRun.ladysGrace = false;
             io.to(roomCode).emit('blessingUsed', { id: 'grace', name: "The Lady's Grace", text: 'The Lady saves you from the dust' });
+            return;
+        }
+
+        if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
+            room.tavernRun.encounterKeepsakeUses.bentCopper = true;
+            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield protects a life.');
             return;
         }
 
@@ -1633,15 +1657,24 @@ function evaluateTavernRound(roomCode) {
         return;
     }
 
-    room.roundNumber++;
-    room.tavernRun.encounterRound++;
-    room.isTieBreaker = tiedPlayers.length > 1;
-    // Turns alternate: the player goes first in a fight's odd rounds, the opponent in even ones.
-    room.roundPlayers = room.tavernRun.encounterRound % 2 === 1 ? [humanId, enemyId] : [enemyId, humanId];
-    room.currentTurnIndex = 0;
-    beginTavernRound(roomCode, room);
-    emitState(roomCode);
+    // The next round waits a moment, so what this round did (its result, the keepsakes that
+    // fired) shows before the next round's ability (the user's call, 21 Oct: one thing at a time).
+    let epoch = room.turnEpoch;
+    setTimeout(() => {
+        if (rooms[roomCode] !== room || room.turnEpoch !== epoch) return;
+        let humanId = getHumanPlayerId(room); // (a reconnect in the pause gives a new id)
+        if (!humanId) return;
+        room.roundNumber++;
+        room.tavernRun.encounterRound++;
+        room.isTieBreaker = tiedPlayers.length > 1;
+        // Turns alternate: the player goes first in a fight's odd rounds, the opponent in even ones.
+        room.roundPlayers = room.tavernRun.encounterRound % 2 === 1 ? [humanId, enemyId] : [enemyId, humanId];
+        room.currentTurnIndex = 0;
+        beginTavernRound(roomCode, room);
+        emitState(roomCode);
+    }, delay(ROUND_PAUSE_MS));
 }
+const ROUND_PAUSE_MS = 2000;
 
 // ---- Sockets ----
 
@@ -1865,13 +1898,16 @@ io.on('connection', (socket) => {
         return room;
     };
 
-    // Martha's mask: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil
-    // for the round (not in a round that already has one).
+    // Martha's mask: once a fight, wear Danhausen's Curse (before you roll) or the Duke's Devil
+    // (any time in your turn with three or more dice to throw: the next throw lands three 6s;
+    // the user's call, 21 Oct) for the round (not in a round that already has one).
     socket.on('wearMask', (kind) => {
         let room = tavernPlayer();
         if (!room || (kind !== 'curse' && kind !== 'devil') || !isMyTurn() || !isTurnPlayable(socket.roomCode)) return;
         let run = room.tavernRun;
-        if (!hasKeepsake(room, MARTHAS_MASK.id) || run.encounterKeepsakeUses.marthasMask || room.turn.hasRolled || run.roundEffect) return;
+        let turn = room.turn;
+        if (!hasKeepsake(room, MARTHAS_MASK.id) || run.encounterKeepsakeUses.marthasMask || run.roundEffect || turn.finalized || Date.now() < turn.busyUntil) return;
+        if (kind === 'curse' ? turn.hasRolled : turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length < 3) return;
         run.roundEffect = kind === 'curse'
             ? { kind, by: 'player', ability: 'cursed', as: 'Danhausen' }
             : { kind, by: 'player', ability: 'devil', as: 'Duke Morrigan' };
@@ -2133,7 +2169,7 @@ io.on('connection', (socket) => {
             // The rerolled dice tumble like any roll (only those dice are thrown).
             let animationMs = 500;
             turn.busyUntil = Date.now() + delay(animationMs);
-            io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, twin: turn.twinRoll || undefined });
+            io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined });
         } else {
             emitTurn(roomCode, { type: 'toggle' });
         }

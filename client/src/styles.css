@@ -1719,13 +1719,18 @@ button.keepsake.used { opacity: 0.55; }
 .spot-scene.hotTub { --glow: rgba(128, 222, 234, 0.45); }
 /* The tub is a wide painting: sized by the width, standing on the counter. */
 .spot-scene.hotTub .thom-figure { height: auto; width: min(118%, 760px); top: auto; bottom: 3%; animation: thom-rise 0.9s 0.1s ease-out both, tub-bubble 2.4s 1s ease-in-out infinite; }
-@keyframes tub-bubble { 50% { transform: translateX(-50%) translateY(-1.5%) scale(1.01); filter: drop-shadow(0 0 18px rgba(128, 222, 234, 0.7)); } }
+/* Both ends name the same filters as the middle, so the glow breathes smoothly (a filter list
+   that changes shape can't be blended: the glow used to snap on and off, 21 Oct). */
+@keyframes tub-bubble {
+    0%, 100% { transform: translateX(-50%); filter: drop-shadow(0 0 6px rgba(128, 222, 234, 0.3)) hue-rotate(0deg); }
+    50% { transform: translateX(-50%) translateY(-1.5%) scale(1.01); filter: drop-shadow(0 0 18px rgba(128, 222, 234, 0.7)) hue-rotate(0deg); }
+}
 .spot-scene.hotTub .thom-bust { width: 100%; height: auto; }
 .spot-scene.hotTub.surged .thom-figure { animation: tub-surge 0.9s ease-out both, tub-bubble 2.4s 0.9s ease-in-out infinite; }
 @keyframes tub-surge {
-    0% { filter: drop-shadow(0 0 0 rgba(225, 190, 231, 0)); }
+    0% { filter: drop-shadow(0 0 6px rgba(128, 222, 234, 0.3)) hue-rotate(0deg); }
     30% { transform: translateX(-50%) translateY(-4%) scale(1.04); filter: drop-shadow(0 0 40px rgba(225, 190, 231, 1)) hue-rotate(60deg); }
-    100% { transform: translateX(-50%); }
+    100% { transform: translateX(-50%); filter: drop-shadow(0 0 6px rgba(128, 222, 234, 0.3)) hue-rotate(0deg); }
 }
 .spot-scene.hotTub.escaped .thom-figure { filter: saturate(0.6) brightness(0.85); }
 
@@ -1828,10 +1833,10 @@ button.keepsake.used { opacity: 0.55; }
 .hint.round-ink { background: rgba(20, 14, 40, 0.92); border: 1px solid #9575cd; box-shadow: 0 0 14px rgba(126, 87, 194, 0.75); }
 .hint.round-smite { background: rgba(110, 76, 10, 0.9); border: 1px solid #ffe082; box-shadow: 0 0 14px rgba(255, 213, 79, 0.8); }
 
-/* Sylvester: Sucker Punch. A shock ring where the punch lands; a stone-and-leather banner. */
-.sucker-punch .ability-banner { background: linear-gradient(#5d4037, #26170f); border-color: #ffb74d; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(255, 183, 77, 0.55); }
-.sucker-punch .ability-banner .what { color: #ffe0b2; }
-.takeover.sucker-punch { --flare: rgba(255, 183, 77, 0.55); }
+/* Sylvester: Back of the Head. A shock ring where the punch lands; a stone-and-leather banner. */
+.back-of-the-head .ability-banner { background: linear-gradient(#5d4037, #26170f); border-color: #ffb74d; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(255, 183, 77, 0.55); }
+.back-of-the-head .ability-banner .what { color: #ffe0b2; }
+.takeover.back-of-the-head { --flare: rgba(255, 183, 77, 0.55); }
 .punch-burst {
     position: fixed; left: 50%; top: 62%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
     border: 6px solid rgba(255, 224, 178, 0.95); box-shadow: 0 0 24px rgba(255, 183, 77, 0.9);
@@ -1909,3 +1914,77 @@ button.keepsake.used { opacity: 0.55; }
     animation: flood 2s ease-out forwards;
 }
 @keyframes flood { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+
+/* ---- Keepsakes (21 Oct): small round pictures beside your chip; a fanfare when one works ---- */
+.keepsake-row { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
+.keepsake-icon {
+    width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1rem; line-height: 1; cursor: pointer;
+    background: radial-gradient(circle at 50% 40%, rgba(255, 224, 130, 0.28), rgba(60, 36, 14, 0.9) 70%);
+    border: 1px solid var(--gold-bright); border-radius: 50%;
+    box-shadow: 0 0 6px rgba(255, 213, 79, 0.35);
+}
+.keepsake-icon.spent { filter: grayscale(0.8); opacity: 0.5; box-shadow: none; }
+.keepsake-icon.blessing { border-color: #ffe082; box-shadow: 0 0 8px rgba(255, 224, 130, 0.6); }
+.keepsake-icon.usable { box-shadow: 0 0 12px rgba(255, 213, 79, 0.9); animation: round-pulse 1.8s ease-in-out infinite; }
+
+/* A keepsake works: a gold flash, the banner, and its picture bursting out of a ring of light. */
+.takeover.keepsake-moment { --flare: rgba(255, 213, 79, 0.6); }
+.keepsake-moment .ability-banner { background: linear-gradient(#5d4300, #1f1600); border-color: #ffe082; }
+.keepsake-moment .ability-banner .what { color: #fff8e1; }
+.keepsake-flare {
+    position: fixed; left: 50%; top: 11%; width: 84px; height: 84px; margin-left: -42px;
+    display: flex; align-items: center; justify-content: center; font-size: 3rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 248, 225, 0.9), rgba(255, 213, 79, 0.35) 55%, transparent 72%);
+    animation: keepsake-burst 3.2s ease-out forwards;
+}
+@keyframes keepsake-burst {
+    0% { opacity: 0; transform: scale(0.2) rotate(-20deg); }
+    14% { opacity: 1; transform: scale(1.25) rotate(6deg); }
+    24% { transform: scale(1) rotate(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.1); }
+}
+/* The Shield: a force field, like the spell. A dome of blue light snaps up over the table,
+   shimmers with hexagons, and fades. */
+.forcefield {
+    position: fixed; left: 50%; top: var(--horizon, 30%); width: min(92vw, 560px); aspect-ratio: 1.6;
+    transform: translate(-50%, -18%);
+    border-radius: 50% 50% 46% 46% / 62% 62% 38% 38%;
+    border: 2px solid rgba(179, 229, 252, 0.85);
+    background:
+        radial-gradient(ellipse at 50% 30%, rgba(225, 245, 254, 0.35), rgba(41, 182, 246, 0.18) 55%, rgba(2, 136, 209, 0.05) 75%),
+        repeating-linear-gradient(60deg, rgba(179, 229, 252, 0.16) 0 2px, transparent 2px 22px),
+        repeating-linear-gradient(-60deg, rgba(179, 229, 252, 0.16) 0 2px, transparent 2px 22px);
+    box-shadow: 0 0 40px rgba(79, 195, 247, 0.7), inset 0 0 50px rgba(129, 212, 250, 0.55);
+    animation: forcefield 2.8s ease-out forwards;
+}
+@keyframes forcefield {
+    0% { opacity: 0; transform: translate(-50%, -18%) scale(0.3); }
+    12% { opacity: 1; transform: translate(-50%, -18%) scale(1.06); }
+    20% { transform: translate(-50%, -18%) scale(1); }
+    30%, 50% { filter: brightness(1.4); }
+    40% { filter: brightness(0.9); }
+    75% { opacity: 0.9; }
+    100% { opacity: 0; transform: translate(-50%, -18%) scale(1.04); }
+}
+.takeover.shield { --flare: rgba(79, 195, 247, 0.55); }
+.shield .ability-banner { background: linear-gradient(#0d3c61, #061a2b); border-color: #81d4fa; }
+.shield .ability-banner .what { color: #e1f5fe; }
+
+/* Martha: Disguises. Her mask flares before the trick she copies. */
+.takeover.disguises { --flare: rgba(206, 147, 216, 0.55); }
+.disguises .ability-banner { background: linear-gradient(#4a148c, #1a0630); border-color: #ce93d8; }
+.disguises .ability-banner .what { color: #f3e5f5; }
+.mask-flare {
+    position: fixed; left: 50%; top: 10%; transform: translateX(-50%); font-size: 4rem;
+    filter: drop-shadow(0 0 18px rgba(206, 147, 216, 0.9));
+    animation: keepsake-burst 3.2s ease-out forwards;
+}
+
+/* A button whose words may need two lines on a small phone (never cut off). */
+.thom-scene .onward.wraps { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.15; }
+.after-event { display: flex; flex-direction: column; align-items: stretch; gap: 2px; flex: 1 1 100%; width: 100%; }
+.after-event button { flex: none; }
+.after-event .onward { width: 100%; }

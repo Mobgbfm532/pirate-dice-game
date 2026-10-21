@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { calloutText, isLocked, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, trackDuration, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
-import { playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
+import { playChime, playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -57,12 +57,16 @@ export interface TavernRun {
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
     abilityUsed?: Record<string, number | boolean>; // uses of each ability this fight
+    encounterKeepsakeUses?: Record<string, boolean>; // keepsakes that have worked this fight
     abilityMax?: number; // the opponent's uses a fight
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
     tubSurge?: TubSurge | null; // the Wild Magic Hot Tub's surge on one of your dice, this fight
     nextSurge?: string | null; // ...or waiting for the next fight
 }
+
+// A roll that lost, risen from its die as a ghost: kind 'tub' (aqua, Double Bubble) or 'plain'.
+export interface Ghost { die: number; kept: number; lost: number; kind: 'tub' | 'plain' }
 
 // The Wild Magic Hot Tub's surges (server.js HOT_TUB_SURGES); die: the die it works on.
 export interface TubSurge { id: 'noOnes' | 'twin' | 'lucky' | 'scalding' | 'soggy' | 'pruney'; name: string; text: string; good: boolean; die: number }
@@ -102,7 +106,7 @@ export interface TavernSummary {
 }
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
-export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string }
+export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -152,8 +156,9 @@ export interface Snapshot {
     // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
     // fight's last roll to finish (BETWEEN_PAUSE_MS), and while they're up nobody sits at the table.
     betweenShown: boolean;
-    // Double Bubble (the hot tub): the roll that lost on the aqua die, shown as a ghost once the dice stop.
-    twinGhost: { die: number; kept: number; lost: number; at: number } | null;
+    // The rolls that lost (Double Bubble on the hot tub's aqua die, Stason's Flourish on all of
+    // his), shown as ghost dice once the dice stop.
+    ghosts: { dice: Ghost[]; at: number } | null;
     putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
 }
 
@@ -194,7 +199,7 @@ let snapshot: Snapshot = {
     ability: null,
     shopArrival: null,
     betweenShown: false,
-    twinGhost: null,
+    ghosts: null,
     putBackSlot: null
 };
 
@@ -237,6 +242,20 @@ function runNext() {
     if (!task) { taskRunning = false; return; }
     taskRunning = true;
     task(runNext);
+}
+
+// One moment at a time (the user's call, 21 Oct: an ability, a keepsake, a Thonic and the
+// round's result used to land all at once). Each waits in the queue until the one before has
+// had MOMENT_GAP_MS on screen; anything queued behind it (a roll, the next state) waits too.
+const MOMENT_GAP_MS = 1700;
+let momentFreeAt = 0;
+// earliest: when it may show at the soonest, apart from the gap (Klarg's steal waits for his hand).
+function enqueueMoment(show: () => void, gap = MOMENT_GAP_MS, earliest = () => 0) {
+    enqueue(done => setTimeout(() => {
+        show();
+        momentFreeAt = performance.now() + gap;
+        done();
+    }, Math.max(0, momentFreeAt - performance.now(), earliest() - performance.now())));
 }
 
 // A classic table needs a second player before anyone can roll.
@@ -308,6 +327,7 @@ function applyTurn(serverView: TurnView | null) {
     if (isNewTurn) resetTrayForNewTurn();
     if (isNewTurn && snapshot.putBackSlot !== null) update({ putBackSlot: null });
     if (turn) recordLockOrder(turn);
+    if (pendingTaps.size) setTimeout(() => { if (serverTurn === serverView) applyTurn(serverView); }, PENDING_MS + 50);
     const isMyTurn = computeIsMyTurn(snapshot.state, turn);
     update({
         turn,
@@ -332,13 +352,15 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
 
 socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; outcome?: TurnOutcome } | null }) => {
     enqueue(done => {
+        // Sylvester knocked a kept die loose: the server's hand wins over taps still showing.
+        if (data.event?.type === 'punched') pendingTaps.clear();
         applyTurn(data.turn);
         playOutcomeSounds(data.event);
         done();
     });
 });
 
-socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; twin?: { die: number; kept: number; lost: number } }) => {
+socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; ghosts?: Ghost[] }) => {
     enqueue(done => {
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
@@ -375,7 +397,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
             });
             table.roll = null;
             if (data.devil) { table.devilAt = performance.now(); playSound('devil'); }
-            update({ rolling: false, ...(data.twin ? { twinGhost: { ...data.twin, at: performance.now() } } : {}) });
+            update({ rolling: false, ...(data.ghosts ? { ghosts: { dice: data.ghosts, at: performance.now() } } : {}) });
             applyTurn(turn);
             done();
         }, durationMs + 120);
@@ -441,7 +463,15 @@ socket.on('connect', () => {
 const BETWEEN_PAUSE_MS = 1400;
 let betweenPending = false;
 
+// In a Tavern Crawl, a state that arrives while rolls or moments are still playing out waits
+// behind them, so a round's glow, an ability's mark or a lost heart don't show before the moment
+// that explains them.
 socket.on('gameStateUpdate', (state: GameState) => {
+    if (state.mode === 'tavern-crawl' && taskRunning) enqueue(done => { applyState(state); done(); });
+    else applyState(state);
+});
+
+function applyState(state: GameState) {
     const waiting = isWaiting(state);
     const isMyTurn = computeIsMyTurn(state, snapshot.turn);
     // The second player arriving starts play; if it starts with you, say so.
@@ -465,7 +495,7 @@ socket.on('gameStateUpdate', (state: GameState) => {
     }
     if (nowYourTurn) announceYourTurn();
     introduceOpponent(state);
-});
+}
 
 // Each Tavern Crawl opponent gets an entrance (name card, bust sliding in) when they sit
 // down. Remembered for this tab, so a refresh or reconnect doesn't replay it.
@@ -491,22 +521,19 @@ socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
 const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
-    'Sucker Punch', 'Inkfire Brand', 'Flourish', 'Divine Smite', 'Astral Flood']);
+    'Disguises', 'Back of the Head', 'Inkfire Brand', 'Flourish', 'Divine Smite', 'Astral Flood']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
 // so the name and sound land just as Klarg's hand lifts the die.
 socket.on('signatureMove', (data: { name: string; ability: string; text: string }) => {
-    enqueue(done => {
-        const steal = data.ability === 'Reach Around' ? Math.max(0, ...table.stolenAt.values()) - performance.now() : 0;
-        setTimeout(() => {
-            const sound = ABILITY_SOUNDS[data.ability];
-            if (sound) playSound(sound);
-            if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
-            else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
-            done();
-        }, Math.max(0, steal));
-    });
+    const steal = data.ability === 'Reach Around';
+    enqueueMoment(() => {
+        const sound = ABILITY_SOUNDS[data.ability];
+        if (sound) playSound(sound);
+        if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
+        else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
+    }, MOMENT_GAP_MS, () => (steal ? Math.max(0, ...table.stolenAt.values()) : 0));
 });
 
 // A saved run the server wouldn't open (changed, or opened already): this is a fresh crawl.
@@ -522,34 +549,33 @@ socket.on('offerShop', (data: ShopArrival) => {
 
 // A Thonic was drunk, or worked by itself (Last Gasp): shown like an opponent's move.
 socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
-    enqueue(done => {
+    enqueueMoment(() => {
         playCorkPop(data.id === 'fizzy');
         update({ ability: { name: "Thom's Thonics", ability: data.name, text: data.text, extra: data.id === 'healing' ? '+1 ♥' : undefined, at: performance.now() } });
-        done();
     });
 });
 
 // The Lady's Grace saves a dust: her moment on the table, like a Thonic's (no cork).
 socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => {
-    enqueue(done => {
+    enqueueMoment(() => {
         playSound('yay');
         update({ ability: { name: 'Shrine to the Lady', ability: data.name, text: data.text, extra: '♥ saved', at: performance.now() } });
-        done();
     });
 });
 
-socket.on('keepsakeActivated', (data: { name: string; text: string }) => {
-    showToast(`Keepsake: ${data.name}`, data.text, 'signature', 3600);
+// A keepsake works: its own moment with a fanfare (the user's call, 21 Oct; it was a toast).
+socket.on('keepsakeActivated', (data: { id: string; name: string; text: string }) => {
+    enqueueMoment(() => {
+        playChime();
+        update({ ability: { name: 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
+    });
 });
 
 // After the round's last roll has played out. Not when the round ended a Tavern Crawl fight or
 // the run (ends): the fight summary (or the run-over screen) comes up instead.
 socket.on('roundResult', (data: { message: string; ends?: boolean }) => {
     if (data.ends) return;
-    enqueue(done => {
-        showToast('Round result', data.message, 'result', 4200);
-        done();
-    });
+    enqueueMoment(() => showToast('Round result', data.message, 'result', 4200), 1200);
 });
 
 socket.on('displayMessage', (data: { text: string }) => {
@@ -787,7 +813,8 @@ export const actions = {
 // Development only (see main.tsx): play an opponent's signature moment or entrance on
 // demand, to check how it looks without waiting for it to happen in a game.
 export const preview = {
-    ability(name: string, ability: string) { update({ ability: { name, ability, text: '', at: performance.now() } }); },
+    // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
+    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}) { update({ ability: { name, ability, text: '', ...more, at: performance.now() } }); },
     intro() { update({ introAt: performance.now() }); }
 };
 

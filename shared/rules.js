@@ -47,7 +47,7 @@
         cursed: 'You are Cursed',
         devil: 'Sympathy for the Devil',
         disguises: 'Disguises',
-        suckerPunch: 'Sucker Punch',
+        suckerPunch: 'Back of the Head', // Sylvester's (the id is the simulator's)
         inkfire: 'Inkfire Brand',
         flourish: 'Flourish',
         divineSmite: 'Divine Smite',
@@ -256,6 +256,13 @@
         return true;
     }
 
+    // Sylvester's Back of the Head: the best die the player has kept (the highest value).
+    function bestKeptDie(turn) {
+        const kept = turn.dice.filter(isLocked);
+        if (kept.length === 0) return null;
+        return kept.reduce((best, d) => (d.value > best.value ? d : best));
+    }
+
     // Klarg's Reach Around: takes an active die out of play. He goes for a 2 or a 4 the player
     // still needs (neither kept yet); failing that, the highest die. Needs 2+ active dice.
     function stealHighestActiveDie(turn) {
@@ -396,6 +403,6 @@
     return {
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

@@ -244,11 +244,11 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
             else choose().forEach(id => Rules.toggleDie(turn, id));
         }
         if (!turn.finalized) continue;
-        // Sylvester's Sucker Punch: as you keep your last die, one kept die (at random) flies
-        // loose and you roll it again. He saves it for a hand that counts.
+        // Sylvester's Back of the Head (id suckerPunch): as you keep your last die, your best kept
+        // die (21 Oct; it was one at random) flies loose and you roll it again. He saves it for a
+        // hand that counts.
         if (!turn.outcome.busted && f.opp.ability === 'suckerPunch' && f.fire('suckerPunch')) {
-            const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN);
-            Rules.putBackDie(turn, kept[Math.floor(Math.random() * kept.length)].id);
+            Rules.putBackDie(turn, Rules.bestKeptDie(turn).id);
             continue;
         }
         // Finished on dust: Second Thoughts reopens the hand (a kept die back in play); else
