@@ -17,7 +17,8 @@ Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN
 Crawl (since 19 Oct a tournament of nine fights across two pubs: the Ghoul and Gourd, a
 qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), then the final at
 the Yawning Portal (Klarg, Rokr, The Hangman, Jaguar Cantona); each from Frak on has an
-ability; between fights one event; gold and a global leaderboard; the run can be saved after
+ability; between fights a random event now and then, then a choice of two spots; gold to spend
+(Thonics, keepsakes, the Shrine, the hot tub) and a global leaderboard; the run can be saved after
 the Ghoul and Gourd). See "Tavern Crawl now" below.
 
 ## The person
@@ -38,8 +39,9 @@ the Ghoul and Gourd). See "Tavern Crawl now" below.
 The **server is authoritative**: it rolls (crypto RNG), validates every action, scores from
 the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`rollDice`,
 `toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `drinkThonic(slot, dieId?)`
-and, between fights, `pickpocket`, `chooseSpot`, `shrinePick`, `diceBet`, `strangerPick`,
-`diceRoll`, `moveOn` (`leaveShop` is its older name); `wearMask(curse|devil)` for Martha's mask;
+and, between fights, `pickpocket`, `darren`, `strangerPick`, `lookAround` (after a random event,
+on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePick`, `hotTub`,
+`diceBet`, `diceRoll`, `moveOn` (`leaveShop` is its older name); `wearMask(curse|devil)` for Martha's mask;
 `joinTavern` may carry `resume`, a saved run) and render what comes back. Two clients share one server:
 
 | Path | What |
@@ -169,18 +171,22 @@ which on the free tier is every sleep and deploy).
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (19 October 2026)
+## Status (21 October 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
 - **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed):** the 3D table at
   `/next`: physics dice, all painted art, tavern backdrop and opponent busts, multiplayer with
-  invites and reconnection, phone and desktop layouts, turn banner, separate music / sound
-  switches, synthesized dice sound, and the Tavern Crawl with Thonics, events between fights,
-  best-play opponents and a balance pass set by simulation (below); since 19 Oct the two
-  pubs and nine fights (Phase two of the design doc). 88 server/rules/strategy tests + 10
-  client tests. A sensible player finishes the nine fights ~6.5% of the time with the user's
-  starting lives (`node balance/experiments/runs.js`; see the next steps).
+  invites and reconnection, phone and desktop layouts, separate music / sound switches,
+  synthesized dice sound, and the Tavern Crawl: two pubs and nine fights, Thonics, events
+  between fights, keepsakes, gold to spend. Since 20-21 Oct (the user's calls after playing):
+  3 hearts a fight; Frak's Mind Whip (a random die kept for you); the Duke's Devil without the
+  18 cap; the whole Ghoul and Gourd plays simply; abilities take over the screen; a gold
+  summary after each win and a smooth flow between fights; the Wild Magic Hot Tub and Darren
+  Snakehands; the spots follow a random event; keepsakes on Thom's back shelf; the Shrine and
+  the hot tub cost gold; the thief takes half. 99 server/rules/strategy tests + 10 client tests.
+  The user found the game too hard (21 Oct); a sensible player now finishes the nine fights
+  ~3.9% of the time (`node balance/experiments/runs.js`; options in `easier.js`).
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
@@ -306,12 +312,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
-  brings the two spots, or "Or challenge X right away" skips them. The random events: about 1 walk in 4 a **pickpocket** strikes instead of the spots: roll one die, a
-  4+ catches him (`pickpocketCatch`), else he takes half the purse (a quarter until 21 Oct); then straight on
-  to the next fight. Else, 20% of the time (`strangerChance`, ~1 walk in 7), the **Hooded
-  Stranger** finds you instead (a random event since 19 Oct, as the design doc decided; no
-  longer a spot): one of two keepsakes, the next fight a heart short (on 3), or turn him
-  down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The choice screen
+  brings the two spots, or "Or challenge X right away" skips them. The random events: about 1
+  walk in 4 a **pickpocket** strikes first: roll one die, a 4+ catches the thief
+  (`pickpocketCatch`), else they take half the purse (a quarter until 21 Oct). Else, 20% of the
+  time (`strangerChance`), the **Hooded Stranger** finds you (a random event since 19 Oct, no
+  longer a spot): one of two keepsakes, the next fight a heart short (on 2), or turn him
+  down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The Lady's Favour adds
+  to whatever the next fight starts on (so it stacks with the Stranger's price). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
   The **Wild Magic Hot Tub** (a spot in both pubs, since 20 Oct; 50 gold a soak since 21 Oct, `hotTubPrice`; the Shrine's candle 100, `shrinePrice`; neither is offered when the purse can't cover it): climb in and a wild surge
@@ -332,20 +339,23 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `stats.eventGold` ("Between fights" on the run-over screen). Numbers set by simulation.
   Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
   sailors. Game text calls the pickpocket "the thief" (no assumed gender).
-- **Keepsakes:** only from the Hooded Stranger now (a random event, for a heart). Six since 19 Oct
-  (the user picked the new three; Steady Hand Wrap and Brodor's Sunglasses were dropped). Gold
-  each adds to a run from Klarg on (`balance/experiments/new-keepsakes.js`):
+- **Keepsakes:** from the Hooded Stranger (a random event, for a heart) and, since 21 Oct, for gold
+  on Thom's back shelf (two you don't have each visit). Six (the user picked the new three on
+  19 Oct). Gold each adds to a run when bought before fight 3, and its price
+  (`balance/experiments/keepsake-when.js`; bought later each is worth less, as most runs end in
+  the Ghoul and Gourd):
 
-  | Keepsake (id) | Effect | Worth |
-  |---|---|---|
-  | Shield (`bentCopper`) | once a fight, the first life you'd lose isn't | ~275 |
-  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~165 |
-  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~135 |
-  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~175 (mostly the Healing) |
-  | Loaded Die | die 0 (`LOADED_DIE`) rolls 4-6 (`loadedDieLow`); old gold on your turns | ~105 |
-  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~25 (a fun one: Thonics are priced near their worth) |
+  | Keepsake (id) | Effect | Worth at fight 3 | Price |
+  |---|---|---|---|
+  | Shield (`bentCopper`) | once a fight, the first life you'd lose isn't | ~310 | 300 |
+  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~160 | 150 |
+  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~160 | 150 |
+  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~140 | 125 |
+  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~155 (mostly the Healing) | 125 |
+  | Loaded Die | die 0 (`LOADED_DIE`) rolls 4-6 (`loadedDieLow`); old gold on your turns | ~40 | 75 |
 
-  Numbers in `shared/balance.js` `keepsakes`. Jaguar's drop waits for a second place.
+  Numbers in `shared/balance.js` (`keepsakes`, `keepsakePrices`, `thomKeepsakes`). Jaguar's drop
+  waits for a second place.
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
   at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
   with that until the switch-over.
@@ -354,37 +364,38 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Lives for nine fights** (the user's call): with the user's starting lives a sensible
-   player qualifies ~23% and wins the final ~6.5% (per fight: McGrath 85, Frak 78, Danhausen
-   65, Duke 56, Martha 42, Klarg 62, Rokr 66, Hangman 64, Jaguar 49%). Simulated options: Martha
-   3 → 8.8%; Martha and Jaguar 3 → 10.8%; Danhausen 2, Duke 2, Martha 3 → 12.8%
-   (`balance/README.md`). **Set `SAVE_SECRET` on Render** (an env var, any long random text) so
-   saves survive sleeps and deploys.
-   **User plays the test site on the phone** (needs the user): a full Tavern Crawl, then two
-   phones over mobile data. Collect what feels off; change `shared/balance.js` and re-run
-   `node balance/experiments/runs.js` to see the effect before pushing.
-2. **Keepsakes, more** (the first rework is done, 19 Oct): ideas left from the shortlist, if the
-   user wants more: Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's Glove, Gold
-   Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt. Simulate each in `balance/sim.js`
-   (~120-180 gold), show the user the numbers, then build. Keepsake icons on the strip with a
-   flash when one triggers.
-3. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur (it removes your
-   choice and is the weakest: e.g. "reading the stars" hides his score until you finish, or a
-   partial blur), and give every ability a warning on the nameplate before it fires (it
-   starts in a random round 1-3, and Clear-Eye now waits for it). Re-simulate and adjust
-   lives after any change. Klarg, the Hangman and Jaguar are fine as they are.
-4. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+1. **Difficulty** (the user: too hard, 21 Oct; hearts and lives are theirs to set): with 3 hearts
+   a sensible player finishes ~3.9%; a quarter of runs end at McGrath, and the Duke (~50% a
+   fight) and Martha (~47%) are the steep steps. Measured options (`balance/experiments/easier.js`):
+   every opponent a life fewer → ~14%; the Shield from the start → ~7% (with the simple Ghoul and
+   Gourd ~14%); you always roll second → ~4%. **User plays the test site on the phone** and
+   decides; change `shared/balance.js` and re-run `node balance/experiments/runs.js` first.
+   **Set `SAVE_SECRET` on Render** (an env var, any long random text) so saves survive sleeps
+   and deploys.
+2. **Thom's visits** (asked 21 Oct, not decided): with four spots Thom is offered about half the
+   time; options: always one of the two spots, more likely than the others, or a third choice.
+3. **The 14-fight tournament** (design doc): the Salty Swallow as a third place (Klarg's four move
+   there; a story beat and a save after the Yawning Portal), then the Yawning Portal's five new
+   opponents one at a time (abilities already in the simulator; busts for four are in), Brodor's
+   Sunglasses. Spots per place and the ship's events: to workshop.
+4. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the
+   nameplate before an ability fires. Re-simulate after any change.
+5. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
+   Glove, Gold Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt); keepsake icons on the
+   strip with a flash when one triggers. The Dice Den is still even odds (the user asked whether
+   it makes sense, 21 Oct; with gold now worth spending it's a way to grow a purse).
+6. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build`; the user merges (that deploys the live game);
    then delete the test service. Fix anything Render-specific as it appears.
-5. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
+7. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
    (more important now that gold is the score).
-6. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+8. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
    classic page reachable for a while; until then it skips Thom and the events, which the
    user accepted), update the PWA manifest/service worker, retire the old client code in
    `public/index.html`.
-7. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
+9. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
    perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
-8. **Later / nice to have:** Jaguar's keepsake drop (once there is a second place to carry it
+10. **Later / nice to have:** Jaguar's keepsake drop (once there is a second place to carry it
    into); new places with tougher opponents (the roguelite); possibly the Molar at 1 life if
    he ends too many runs (~1 in 7 for a careful player); optional art (`docs/art-direction.md`
    "Wanted": keepsake pictures, Klarg's hand, the Hangman's revolver); delete the unused

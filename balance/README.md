@@ -160,3 +160,30 @@ In `shared/balance.js` (and so in today's game): 3 hearts a fight (4 after the L
 the Stranger's price 2), McGrath 2, Frak 2, Danhausen 3, Duke 3, Martha 3, Klarg 3, Rokr 3,
 Hangman 3, Jaguar 4; the Yawning Portal's five (not in the game yet) 3, 3, 3, 3, 4. Over 14
 fights a sensible player finishes 0.3% and reaches the Yawning Portal 6.7%.
+
+## 21 Oct: easier, and gold worth spending
+
+The user found the game too hard. Changes (finishing the nine fights, sensible, 10,000 runs):
+
+| Change | Finish |
+|---|---|
+| 3 hearts, the user's lives (start of the day) | 0.7% |
+| The spots follow a random event; the Duke's Devil without the 18 cap; Mind Whip keeps a random die | 1.9% |
+| The whole Ghoul and Gourd plays simply (in a cursed round the simple habits chase low dice) | 3.2% |
+| The Duke waiting on his Devil keeps only his 2 and 4 (it hardly fired before); fight win vs him 39% → 50% | 3.5% |
+| Keepsakes on Thom's back shelf; the Shrine 100 and the hot tub 50 gold; the thief takes half | 3.9% |
+
+`experiments/easier.js` compares other levers against the game of the moment (no more hearts):
+every opponent a life fewer ~14%; the Shield from the start ~7% (~14% with the simple Ghoul and
+Gourd); every opponent plays simply ~6%; no abilities ~5%; you always roll second ~4%; a free
+Healing, a shelf of 3, half-price Thonics or a 24 healing 2 hearts barely move it (2-2.5%).
+
+**Keepsake prices** (`experiments/keepsake-when.js`): what a keepsake adds to a run's gold depends
+on when it's bought, since most runs end in the Ghoul and Gourd: the Shield ~310 before fight 3,
+~175 before fight 4, ~40 before Klarg (held from the start ~730, `prices.js`). Prices sit a little
+under the fight-3 worth, when a purse first reaches a few hundred: Shield 300, Trap Card and
+Velvet Cushion 150, Loyalty Card and Potion Belt 125, Loaded Die 75 (worth ~40; the user may lower
+it). The sensible player buys only clear bargains (~1 run in 8); real players will buy more.
+
+**The Shrine and the hot tub** (`experiments/prices.js`): a Shrine visit is worth ~110 gold over
+the other spot; the hot tub comes out below the alternatives (a gamble), so it stays cheap.
