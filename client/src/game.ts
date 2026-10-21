@@ -41,7 +41,7 @@ export interface TavernRun {
     totalEncounters: number;
     place: string; // The Ghoul and Gourd, then the Yawning Portal
     roundEffect?: RoundEffect | null;
-    devilCap?: number;
+    devilCap?: number | null; // null: no cap (since 21 Oct)
     maskReady?: boolean; // Martha's mask can be worn this fight
     enemy: Enemy;
     keepsakes: Keepsake[];
@@ -71,7 +71,7 @@ export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub';
 export interface DiceThrow { you: [number, number]; them: [number, number] }
 export type Interlude =
     | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }
-    | { stage: 'choose'; spots: Spot[] }
+    | { stage: 'choose'; spots: Spot[]; after?: 'pickpocket' | 'stranger' | 'darren' } // after: a random event came first
     | { stage: 'shrine' }
     | { stage: 'diceDen'; bets: number[]; bet: number | null; throws: DiceThrow[] }
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
@@ -716,6 +716,11 @@ export const actions = {
     pickpocket(action: 'roll' | 'on') {
         playSound('click');
         socket.emit('pickpocket', action);
+    },
+    // After a random event, on to the two spots (server lookAround).
+    lookAround() {
+        playSound('click');
+        socket.emit('lookAround');
     },
     darren(action: 'roll' | 'on') {
         playSound('click');

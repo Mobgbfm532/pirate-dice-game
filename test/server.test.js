@@ -766,6 +766,45 @@ test('the Pickpocket: roll a 4, 5 or 6 to catch him, else he gets away; then the
     assert.equal(rolled.room.tavernRun.purse, 150);
 });
 
+test('after a random event, Look around: the two spots follow (the thief, the Stranger, Darren)', async () => {
+    const steps = [
+        ['pickpocket', { stage: 'pickpocket', steal: 50, catchOn: 4 }, hero => hero.emit('pickpocket', 'roll')],
+        ['darren', { stage: 'darren', smashOn: 2, giftOn: 4 }, hero => hero.emit('darren', 'roll')],
+        ['stranger', null, (hero, room) => hero.emit('strangerPick', null)]
+    ];
+    for (const [name, interlude, finish] of steps) {
+        const { hero, room } = await betweenFights(`Wander-${name}`, interlude || { stage: 'choose', spots: [] }, 200);
+        if (!interlude) room.tavernRun.interlude = server.strangerOffer(room);
+        hero.emit('lookAround'); // not before the event is over
+        await sleep(30);
+        assert.notEqual(room.tavernRun.interlude.stage, 'choose');
+        finish(hero, room);
+        await sleep(40);
+        hero.emit('lookAround');
+        const looked = await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.stage === 'choose');
+        const choose = runOf(looked).interlude;
+        assert.equal(choose.spots.length, 2, `${name}: two spots`);
+        assert.equal(choose.after, name);
+        hero.emit('lookAround'); // once only
+        await sleep(30);
+        assert.equal(room.tavernRun.interlude.after, name);
+    }
+});
+
+test("the Lady's Favour adds a heart to what the next fight starts on, even after the Stranger's price", async () => {
+    const { hero, room } = await betweenFights('Blessed', { stage: 'shrine' }, 100);
+    room.tavernRun.nextFightHearts = BALANCE.interlude.strangerHearts;
+    for (let i = 0; i < 40; i++) {
+        room.tavernRun.interlude = { stage: 'shrine' };
+        room.tavernRun.ladysGrace = true; // so it's always her Favour
+        room.tavernRun.nextFightHearts = BALANCE.interlude.strangerHearts;
+        hero.emit('shrinePick', 'pray');
+        await nextState(hero, s => runOf(s).interlude.stage === 'done');
+        if (room.tavernRun.interlude.gift === 'favour') break;
+    }
+    assert.equal(room.tavernRun.nextFightHearts, BALANCE.interlude.strangerHearts + BALANCE.interlude.favourHearts);
+});
+
 test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one and gold; then the next fight", async () => {
     const seen = new Set();
     for (let n = 0; n < 15; n++) {
@@ -1199,7 +1238,7 @@ test("the run is nine fights: the Ghoul and Gourd, then the Yawning Portal", asy
     assert.equal(runOf(state).totalEncounters, 9);
 });
 
-test("Frak's Mind Whip: your first throw, he makes you keep your worst die", async () => {
+test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at random", async () => {
     const hero = await tavernAgainst(1, 'Puppet');
     const room = roomOf(hero);
     room.tavernRun.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindWhip', as: null };
@@ -1209,9 +1248,6 @@ test("Frak's Mind Whip: your first throw, he makes you keep your worst die", asy
     const forced = rolled.turn.dice.filter(d => d.mind);
     assert.equal(forced.length, 1, 'one die is his pick');
     assert.equal(forced[0].status, 'lockedThisTurn', 'already kept');
-    // Nothing kept yet: the lowest die that isn't a 2 or a 4, else the lowest.
-    const values = rolled.turn.dice.map(d => d.value), spare = values.filter(v => v !== 2 && v !== 4);
-    assert.equal(forced[0].value, Math.min(...(spare.length ? spare : values)), 'the worst die');
     const shown = await move;
     assert.equal(shown.ability, 'Mind Whip');
     assert.match(shown.text, new RegExp(`keep your ${forced[0].value}`));
@@ -1267,14 +1303,14 @@ test("the Duke's Devil: once he holds a 2 and a 4, three 6s, and you can't score
     assert.equal(room.tavernRun.abilityUsed.devil, 1);
 });
 
-test("the Duke's Devil caps your score at 18, even when you played first", async () => {
-    const hero = await tavernAgainst(3, 'Capped');
+test("the Duke's Devil doesn't cap your score (since 21 Oct): his three 6s are the whole of it", async () => {
+    const hero = await tavernAgainst(3, 'Uncapped');
     const room = roomOf(hero);
     room.tavernRun.roundEffect = { kind: 'devil', by: 'opponent', ability: 'devil', as: null, landed: true };
     const ended = nextState(hero, s => s.currentTurnId !== hero.id);
     await playHand(hero, room, [2, 4, 6, 6, 6, 6]); // 24 ...
     await ended;
-    assert.equal(room.players[hero.id].score, 18, '... counts as 18');
+    assert.equal(room.players[hero.id].score, 24, '... counts as 24');
 });
 
 test("Martha's disguises: Frak's, Danhausen's or the Duke's trick at random, twice a fight", async () => {

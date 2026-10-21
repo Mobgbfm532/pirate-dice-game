@@ -137,7 +137,7 @@ function botToBeat(p, run, f) {
 
 function botTurn(f, run, toBeat, canUse) {
     const turn = Rules.createTurn('BOT');
-    const low = cursed(f), cap = devilBy(f, 'player') ? DEFAULTS.devilCap : null;
+    const low = cursed(f), cap = devilBy(f, 'player') ? DEFAULTS.devilCap ?? null : null;
     const aceAt16 = !low && f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
     // Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or
     // 4 he still needs, else the higher).
@@ -196,7 +196,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     let steady = false;
     // A cursed round: play for the fewest points (a casual player doesn't adjust). Under the
     // Duke's Devil, the hand counts as no more than the cap.
-    const round = { low: cursed(f), cap: devilBy(f, 'opponent') ? DEFAULTS.devilCap : null };
+    const round = { low: cursed(f), cap: devilBy(f, 'opponent') ? DEFAULTS.devilCap ?? null : null };
     let mind = false;
     // Vaelin's Inkfire Brand: 6 is burned into the table this round; your dice that land on it
     // roll again (so they land 1-5; the Loaded Die 4-5).
@@ -337,7 +337,7 @@ function settleRound(f, run, p, b, has, N) {
         f.keepUsed.steadyHand = true;
     }
     // The Devil's cap, for a side that played before it landed.
-    if (devilBy(f, 'opponent') && !p.busted) p = { ...p, score: Math.min(p.score, DEFAULTS.devilCap) };
+    if (DEFAULTS.devilCap != null && devilBy(f, 'opponent') && !p.busted) p = { ...p, score: Math.min(p.score, DEFAULTS.devilCap) };
     if (p.busted) losers.push('P');
     if (b.busted) losers.push('B');
     if (!p.busted && !b.busted) {
@@ -432,15 +432,18 @@ const shelfSize = (run, N) => N.shelfSize + (run.keepsakes.includes('potionBelt'
 
 const changePurse = (run, amount) => { const a = Math.max(amount, -run.purse); run.purse += a; run.stats.eventGold += a; return a; };
 
-function between(run, policy, N, nextIndex, log) {
+// eventDone: a random event (thief, Stranger, Darren) already happened this walk; since 21 Oct
+// the two spots follow it (I.spotsAfterEvent === false plays the old one-event walk).
+function between(run, policy, N, nextIndex, log, eventDone = false) {
     const I = N.interlude;
-    // Now and then the pickpocket strikes: roll one die to catch them. That's the walk's one
-    // event (the server only sends them with something to steal).
+    const thenSpots = () => (I.spotsAfterEvent === false ? undefined : between(run, policy, N, nextIndex, log, true));
+    // Now and then the pickpocket strikes: roll one die to catch them (the server only sends
+    // them with something to steal).
     const steal = Math.floor(run.purse * I.pickpocketShare);
-    if (steal > 0 && Math.random() * 100 < I.pickpocketChance) {
+    if (!eventDone && steal > 0 && Math.random() * 100 < I.pickpocketChance) {
         if (d6() < I.pickpocketCatch) changePurse(run, -steal);
         log.spots.push('pickpocket');
-        return;
+        return thenSpots();
     }
     const canBet = run.purse >= Math.min(...I.diceDenBets);
     const unowned = KEEPSAKES.filter(k => !run.keepsakes.includes(k));
@@ -448,12 +451,12 @@ function between(run, policy, N, nextIndex, log) {
     // the walk. (strangerChance null: he's one of the spots, as before 19 Oct.)
     const strangerEvent = I.strangerChance != null;
     let spot;
-    if (strangerEvent && unowned.length && Math.random() * 100 < I.strangerChance) {
+    if (!eventDone && strangerEvent && unowned.length && Math.random() * 100 < I.strangerChance) {
         spot = 'stranger';
-    } else if (I.darrenChance && nextIndex < 5 && Math.random() * 100 < I.darrenChance) {
+    } else if (!eventDone && I.darrenChance && nextIndex < 5 && Math.random() * 100 < I.darrenChance) {
         darren(run, N);
         log.spots.push('darren');
-        return;
+        return thenSpots();
     } else {
         const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger', ...(I.hotTubSurges ? ['hotTub'] : [])].filter(s => (s !== 'stranger' || (!strangerEvent && unowned.length)) && (s !== 'diceDen' || canBet))).slice(0, 2);
         if (run.keepsakes.includes('loyaltyCard') && !spots.includes('thom')) spots[Math.floor(Math.random() * 2)] = 'thom';
@@ -485,7 +488,7 @@ function between(run, policy, N, nextIndex, log) {
             // next dust that would cost a heart doesn't; not given twice).
             let gift = I.shrineGifts[Math.floor(Math.random() * I.shrineGifts.length)];
             if (gift === 'grace' && run.grace) gift = 'favour';
-            if (gift === 'favour') run.hearts = N.playerHearts + I.favourHearts;
+            if (gift === 'favour') run.hearts = (run.hearts ?? N.playerHearts) + I.favourHearts;
             else run.grace = true;
             run.stats.blessings = (run.stats.blessings || 0) + 1;
         } else if (policy.shrine(run, N, nextIndex) === 'healing' && run.shelf.length < shelfSize(run, N)) run.shelf.push('healing'); // before 19 Oct
@@ -509,6 +512,7 @@ function between(run, policy, N, nextIndex, log) {
             if (pick === 'potionBelt' && run.shelf.length < shelfSize(run, N)) run.shelf.push(N.keepsakes.beltThonic);
         }
     }
+    if (spot === 'stranger' && strangerEvent && !eventDone) thenSpots();
 }
 
 function pickSurge(weights) {

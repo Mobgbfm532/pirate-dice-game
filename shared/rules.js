@@ -263,17 +263,15 @@
         return stolen;
     }
 
-    // Frak's Mind Whip: on your first throw he makes you keep your worst die: a 1 if there is
-    // one, else the lowest that isn't a 2 or 4 you still need, else the lowest. It counts as this
-    // throw's keep and can't be tapped back; you may keep others too. Returns the die, or null
-    // (it needs two or more dice in play).
-    function mindWhip(turn) {
+    // Frak's Mind Whip: on your first throw he makes you keep one of your dice, at random (since
+    // 21 Oct, the user's call; it was your worst). It counts as this throw's keep and can't be
+    // tapped back; you may keep others too. pick(n) chooses 0..n-1 (the server passes its crypto
+    // RNG). Returns the die, or null (it needs two or more dice in play).
+    function mindWhip(turn, pick = n => Math.floor(Math.random() * n)) {
         if (!turn.hasRolled || turn.finalized) return null;
-        const dice = turn.dice.filter(isActive).sort((a, b) => a.value - b.value || a.id - b.id);
+        const dice = turn.dice.filter(isActive);
         if (dice.length < 2) return null;
-        const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
-        const needed = d => (d.value === 2 && !kept.includes(2)) || (d.value === 4 && !kept.includes(4));
-        const die = dice.find(d => !needed(d)) || dice[0];
+        const die = dice[pick(dice.length)];
         toggleDie(turn, die.id);
         turn.mindDieId = die.id;
         return die;

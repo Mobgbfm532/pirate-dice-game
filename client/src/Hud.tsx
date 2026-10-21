@@ -173,10 +173,13 @@ const SURGE_HINTS: Record<string, string> = {
 function roundEffectHint(state: GameState, myTurn: boolean): { text: string; kind: string } {
     const effect = state.tavernRun?.roundEffect;
     const surge = state.tavernRun?.tubSurge;
-    const cap = state.tavernRun?.devilCap ?? 18;
+    const cap = state.tavernRun?.devilCap ?? null;
     if (effect?.kind === 'curse') return { text: 'Cursed round: the lowest valid score wins', kind: 'curse' };
     if (effect?.kind === 'mind' && effect.landed && myTurn) return { text: 'Mind Whip: the selected die stays kept', kind: 'mind' };
-    if (effect?.kind === 'devil') return { text: effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`, kind: 'devil' };
+    // The Devil: three 6s for whoever plays it (no cap on the other side since 21 Oct unless devilCap is set).
+    if (effect?.kind === 'devil') return cap != null
+        ? { text: effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`, kind: 'devil' }
+        : effect.by === 'player' ? { text: "Devil's round: three 6s for you", kind: 'devil' } : { text: '', kind: '' };
     if (surge && surge.id !== 'pruney') return { text: `${surge.name}: ${SURGE_HINTS[surge.id]}`, kind: 'tub' };
     return { text: '', kind: '' };
 }
@@ -356,7 +359,7 @@ function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
             {open && (
                 <span className="mask-choice" role="group" aria-label="Wear a disguise for this round">
                     <button onClick={() => wear('curse')}>Curse<small>lowest wins</small></button>
-                    <button onClick={() => wear('devil')}>Devil<small>three 6s; they max {state.tavernRun?.devilCap ?? 18}</small></button>
+                    <button onClick={() => wear('devil')}>Devil<small>{state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : 'three 6s for you'}</small></button>
                 </span>
             )}
         </span>
@@ -768,10 +771,17 @@ function Interlude({ state }: { state: GameState }) {
         setLeaving(true);
         setTimeout(actions.moveOn, LEAVE_MS);
     };
+    // After a random event: its scene fades, then the two spots come up.
+    const lookAround = () => {
+        if (leaving) return;
+        setLeaving(true);
+        setTimeout(actions.lookAround, LEAVE_MS);
+    };
+    useEffect(() => setLeaving(false), [interlude.stage]);
     if (interlude.stage === 'invitation') return <Invitation state={state} interlude={interlude} next={next} leaving={leaving} onMoveOn={moveOn} />;
     if (interlude.stage !== 'choose') {
         const spot = interlude.stage === 'done' ? interlude.spot : interlude.stage;
-        return <SpotScene key={spot} spot={spot} state={state} next={next} leaving={leaving} onMoveOn={moveOn} />;
+        return <SpotScene key={spot} spot={spot} state={state} next={next} leaving={leaving} onMoveOn={moveOn} onLookAround={lookAround} />;
     }
     return (
         <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
@@ -869,7 +879,7 @@ function sceneLine(interlude: Interlude, revealed: boolean): string | null {
     }
 }
 
-function SpotScene({ spot, state, next, leaving, onMoveOn }: { spot: SceneSpot; state: GameState; next: string; leaving: boolean; onMoveOn: () => void }) {
+function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spot: SceneSpot; state: GameState; next: string; leaving: boolean; onMoveOn: () => void; onLookAround: () => void }) {
     const run = state.tavernRun!;
     const interlude = run.interlude!;
     // Dice rolled here tumble first; the character answers once they land.
@@ -904,21 +914,28 @@ function SpotScene({ spot, state, next, leaving, onMoveOn }: { spot: SceneSpot; 
                     <p className="thom-tag">{SCENES[spot].tag}</p>
                 </div>
                 <PurseLine state={state} />
-                <SceneCounter state={state} next={next} onMoveOn={onMoveOn} setRevealed={setRevealed} />
+                <SceneCounter state={state} next={next} onMoveOn={onMoveOn} onLookAround={onLookAround} setRevealed={setRevealed} />
             </div>
         </div>
     );
 }
 
 // What you can do at the spot, on its counter.
-function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState; next: string; onMoveOn: () => void; setRevealed: (v: boolean) => void }) {
+function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { state: GameState; next: string; onMoveOn: () => void; onLookAround: () => void; setRevealed: (v: boolean) => void }) {
     const run = state.tavernRun!;
     const interlude = run.interlude!;
     const [picked, setPicked] = useState<string | null>(null);
     const challenge = <button className="primary onward" onClick={onMoveOn}>Challenge {next}</button>;
+    // A random event (the thief, the Hooded Stranger, Darren) isn't the whole walk: then the two spots.
+    const afterEvent = (
+        <>
+            <button className="primary onward" onClick={onLookAround}>Look around the tavern</button>
+            <button className="link-button" onClick={onMoveOn}>Or challenge {next} right away</button>
+        </>
+    );
 
-    if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} purse={run.purse} setRevealed={setRevealed} next={challenge} />;
-    if (interlude.stage === 'darren') return <DarrenRoll interlude={interlude} setRevealed={setRevealed} next={challenge} />;
+    if (interlude.stage === 'pickpocket') return <PickpocketRoll interlude={interlude} purse={run.purse} setRevealed={setRevealed} next={afterEvent} />;
+    if (interlude.stage === 'darren') return <DarrenRoll interlude={interlude} setRevealed={setRevealed} next={afterEvent} />;
 
     if (interlude.stage === 'hotTub') {
         return (
@@ -1001,7 +1018,7 @@ function SceneCounter({ state, next, onMoveOn, setRevealed }: { state: GameState
                         ? (interlude.keepsake ? <><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</> : 'You leave the Stranger to the shadows.')
                         : 'You leave the dice to others.'}
             </p>
-            <div className="event-choices">{challenge}</div>
+            <div className="event-choices">{interlude.spot === 'stranger' ? afterEvent : challenge}</div>
         </>
     );
 }

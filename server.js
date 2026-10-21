@@ -109,7 +109,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🦑',
         lives: BALANCE.opponentLives.frak,
         ability: 'mindWhip',
-        intro: 'Frak, a repugnant ne’er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep your worst die.'
+        intro: 'Frak, a repugnant ne’er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep one of your dice, at random.'
     },
     {
         id: 'danhausen',
@@ -127,7 +127,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '😈',
         lives: BALANCE.opponentLives.duke,
         ability: 'devil',
-        intro: "Duke Morrigan, noble, roguish and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s, and that round you can't score above 18."
+        intro: 'Duke Morrigan, noble, roguish and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s.'
     },
     {
         id: 'martha',
@@ -216,7 +216,7 @@ const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
 const MARTHAS_MASK = {
     id: 'marthasMask',
     name: "Martha's Mask",
-    text: "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you; your opponent can't score above 18)."
+    text: "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you)."
 };
 const LOADED_DIE = 0; // the die the Loaded Die keepsake loads (marked on the table)
 
@@ -480,10 +480,10 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     }
     if (!mine) return moves;
 
-    // Frak's Mind Whip: he makes the player keep their worst die (Rules.mindWhip).
+    // Frak's Mind Whip: he makes the player keep one of their dice, at random (Rules.mindWhip).
     if (effect && effect.kind === 'mind' && !effect.landed) {
         effect.landed = true;
-        let die = Rules.mindWhip(turn);
+        let die = Rules.mindWhip(turn, n => crypto.randomInt(0, n));
         if (die) moves.push(roundEffectMove(room, effect, `You must keep your ${die.value}. You may keep others too.`));
     }
 
@@ -574,7 +574,7 @@ function performEndTurn(roomCode) {
         let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
         let effect = room.tavernRun.roundEffect;
         let cursed = !!effect && effect.kind === 'curse';
-        if (effect && effect.kind === 'devil' && (effect.by === 'player') === (currentId === BOT_ID) && !busted && score > BALANCE.devilCap) {
+        if (BALANCE.devilCap != null && effect && effect.kind === 'devil' && (effect.by === 'player') === (currentId === BOT_ID) && !busted && score > BALANCE.devilCap) {
             score = BALANCE.devilCap;
             room.players[currentId].score = score;
         }
@@ -706,7 +706,7 @@ function getTavernScoreToBeat(room) {
     let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
     let effect = room.tavernRun.roundEffect;
     let cursed = effect && effect.kind === 'curse';
-    let score = effect && effect.kind === 'devil' && effect.by === 'opponent' ? Math.min(human.score, BALANCE.devilCap) : human.score;
+    let score = BALANCE.devilCap != null && effect && effect.kind === 'devil' && effect.by === 'opponent' ? Math.min(human.score, BALANCE.devilCap) : human.score;
     return score + (cushion ? (cursed ? -1 : 1) : 0);
 }
 
@@ -739,7 +739,7 @@ function runBotDecision(roomCode) {
     // A cursed round is played for the fewest points; under the player's Devil the bot's
     // score counts as no more than the cap.
     let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
-    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap : null };
+    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null };
     let aceAt16 = !!encounter && !round.low && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let toLock = enemyId === 'molar' ? Rules.planBotLocks(turn, enemyId, toBeat) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
@@ -1026,9 +1026,9 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 // ---- Round effects ----
 // Some abilities change a whole round. They're decided as the round begins (beginTavernRound)
 // and kept in tavernRun.roundEffect = { kind, by, ability, as?, landed? }:
-//   mind   Mind Whip: on the player's first throw Frak makes them keep their worst die (Rules.mindWhip)
+//   mind   Mind Whip: on the player's first throw Frak makes them keep a random die (Rules.mindWhip)
 //   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
-//   devil  Sympathy for the Devil: `by` throws three 6s first; the other side can't score above devilCap
+//   devil  Sympathy for the Devil: `by` throws three 6s first (and, if devilCap is set, the other side can't score above it)
 // `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
 // Martha (or the mask) wears.
 const ROUND_ABILITIES = { mindWhip: 'mind', cursed: 'curse', devil: 'devil' };
@@ -1046,7 +1046,7 @@ function roundEffectMove(room, effect, text) {
 
 const ROUND_EFFECT_TEXT = {
     curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
-    devil: { opponent: "Three 6s for them, and you can't score above 18 this round.", player: "Three 6s for you, and your opponent can't score above 18 this round." }
+    devil: { opponent: 'Three 6s for them.', player: 'Three 6s for you.' }
 };
 
 function beginTavernRound(roomCode, room) {
@@ -1338,7 +1338,7 @@ function evaluateTavernRound(roomCode) {
     // the mask was worn after the opponent had already played). A cursed round: the highest
     // valid score loses.
     let effect = room.tavernRun.roundEffect;
-    if (effect && effect.kind === 'devil') {
+    if (BALANCE.devilCap != null && effect && effect.kind === 'devil') {
         let capped = room.players[effect.by === 'player' ? enemyId : humanId];
         if (!capped.busted) capped.score = Math.min(capped.score, BALANCE.devilCap);
     }
@@ -1785,6 +1785,20 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // After a random event (the thief, the Hooded Stranger, Darren) the walk goes on: two spots
+    // catch your eye (the user's call, 21 Oct; before, the event was the whole walk). 'on' at the
+    // event still goes straight to the next fight.
+    socket.on('lookAround', () => {
+        let room = tavernPlayer();
+        let interlude = room && room.tavernRun.interlude;
+        if (!interlude) return;
+        let finished = ((interlude.stage === 'pickpocket' || interlude.stage === 'darren') && interlude.roll)
+            || (interlude.stage === 'done' && interlude.spot === 'stranger');
+        if (!finished) return;
+        room.tavernRun.interlude = { stage: 'choose', spots: pickSpots(room), after: interlude.stage === 'done' ? 'stranger' : interlude.stage };
+        emitState(socket.roomCode);
+    });
+
     socket.on('chooseSpot', (spot) => {
         let room = interludeAt('choose');
         if (!room || typeof spot !== 'string' || !room.tavernRun.interlude.spots.includes(spot)) return;
@@ -1813,7 +1827,8 @@ io.on('connection', (socket) => {
         let run = room.tavernRun;
         let gift = INTERLUDE.shrineGifts[crypto.randomInt(0, INTERLUDE.shrineGifts.length)];
         if (gift === 'grace' && run.ladysGrace) gift = 'favour';
-        if (gift === 'favour') run.nextFightHearts = BALANCE.playerHearts + INTERLUDE.favourHearts;
+        // Her Favour adds to what the next fight would start on (after the Stranger's price, too).
+        if (gift === 'favour') run.nextFightHearts = (run.nextFightHearts || BALANCE.playerHearts) + INTERLUDE.favourHearts;
         else run.ladysGrace = true;
         run.interlude = { stage: 'done', spot: 'shrine', gift, hearts: gift === 'favour' ? run.nextFightHearts : undefined };
         emitState(socket.roomCode);

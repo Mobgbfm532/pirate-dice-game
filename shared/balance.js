@@ -19,7 +19,8 @@ module.exports = {
     // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
     abilityUses: { mindWhip: 1, cursed: 2, devil: 1, disguises: 2, reachAround: 1, constellationBlur: 2, deadeye24: 1, smoothTalk: 1 },
     // The Duke's Sympathy for the Devil (and the mask's): the other side can't score above this.
-    devilCap: 18,
+    // null: no cap, the three 6s are the whole of it (the user's call, 21 Oct; it was 18).
+    devilCap: null,
 
     // Gold during a run: it goes into the purse as it is won, and the purse is the final score.
     gold: {

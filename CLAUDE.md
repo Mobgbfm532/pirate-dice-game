@@ -228,16 +228,16 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Danhausen 2, Duke 1, Martha 2, Klarg 1, Rokr 2, Hangman 1, Jaguar 1). Each use costs the
   player ~10 points of fight win chance. The new ones are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
-  **Mind Whip** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps your worst
-  die for you, `Rules.mindWhip`: a 1, else the lowest you don't need, else the lowest;
+  **Mind Whip** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps one of your dice
+  for you, at random since 21 Oct (it was your worst), `Rules.mindWhip(turn, pick)`;
   `turn.mindDieId`, `mind` in the view; it counts as the throw's keep, can't be tapped back, and you
   may keep others; the solver's `optional`; its mist and badge show only once it has landed on
   your throw, and only while it's still your turn: the user's call, 20 Oct); Danhausen's **You are Cursed** (the lowest valid
   score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
   with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
-  with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s, the devil effect
-  plays, and you can't score above `devilCap` 18 that round, capped when the round is judged if
-  you played first; never fires if he doesn't get there; the solver's `cap`);
+  with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s and the devil effect
+  plays; since 21 Oct no cap on your score (`devilCap: null`; a number brings the cap back, the
+  solver's `cap`); never fires if he doesn't get there);
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
   shows a 3.6 s banner, a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
@@ -297,8 +297,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
   the Dice Den (bet 50/100, only the bets the purse covers are offered, and below 50 gold the
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
-  higher total doubles the bet, a tie rolls again). **One event per walk** (the user asked for
-  this, 18 Oct): about 1 walk in 4 a **pickpocket** strikes instead of the spots: roll one die, a
+  higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
+  whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
+  brings the two spots, or "Or challenge X right away" skips them. The random events: about 1 walk in 4 a **pickpocket** strikes instead of the spots: roll one die, a
   4+ catches him (`pickpocketCatch`), else he takes a quarter of the purse; then straight on
   to the next fight. Else, 20% of the time (`strangerChance`, ~1 walk in 7), the **Hooded
   Stranger** finds you instead (a random event since 19 Oct, as the design doc decided; no
