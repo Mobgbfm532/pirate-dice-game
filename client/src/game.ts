@@ -26,9 +26,10 @@ export interface Keepsake { id: string; name: string; text: string }
 export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean }
 
 // A round changed by an ability (server.js beginTavernRound): Mind Whip, the Curse (lowest valid
-// score wins) or the Devil (`by` throws three 6s; the other side can't score above devilCap).
-// `by` is 'player' when Martha's mask was worn.
-export interface RoundEffect { kind: 'mind' | 'curse' | 'devil'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean }
+// score wins), the Devil (`by` throws three 6s; the other side can't score above devilCap),
+// Vaelin's Inkfire (your dice can't land on 6) or the Ridgeler's Divine Smite (lose the round,
+// lose two hearts). `by` is 'player' when Martha's mask was worn.
+export interface RoundEffect { kind: 'mind' | 'curse' | 'devil' | 'ink' | 'smite'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean }
 
 // A Tavern Crawl opponent (server.js TAVERN_ENCOUNTERS).
 export interface Enemy { id: string; name: string; intro: string; ability: string | null; lives: number }
@@ -39,7 +40,7 @@ export interface TavernRun {
     // (enemy is already the next one then). number: their place in the run.
     seated?: Enemy & { number: number };
     totalEncounters: number;
-    place: string; // The Ghoul and Gourd, then the Yawning Portal
+    place: string; // The Ghoul and Gourd, the Yawning Portal, then the Salty Swallow
     roundEffect?: RoundEffect | null;
     devilCap?: number | null; // null: no cap (since 21 Oct)
     maskReady?: boolean; // Martha's mask can be worn this fight
@@ -83,8 +84,9 @@ export type Interlude =
     | { stage: 'done'; spot: 'shrine'; gift: 'favour' | 'grace'; hearts?: number }
     | { stage: 'done'; spot: 'diceDen'; bet: number; throws?: DiceThrow[]; won?: boolean }
     | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number }
-    // After Martha: her mask is the invitation to the final. `save` is sealed by the server.
-    | { stage: 'invitation'; place: string; save: string };
+    // After a boss (Martha, Brodor): their keepsake (`drop`) and the invitation on to `place`,
+    // from `from`. `save` is sealed by the server.
+    | { stage: 'invitation'; place: string; from?: string | null; boss?: string | null; drop?: Keepsake | null; save: string };
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
 export interface TavernSummary {
@@ -105,7 +107,7 @@ export interface AbilityMoment { name: string; ability: string; text: string; at
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
 export interface ShopArrival {
-    defeated: string; nextEnemy: string; place?: number; at?: number; resumed?: boolean; mask?: Keepsake;
+    defeated: string; nextEnemy: string; place?: number; at?: number; resumed?: boolean; drop?: Keepsake | null; // drop: a boss's keepsake
     gold: { win: number; hearts: number; heartsLeft?: number; perHeart?: number; perPlace?: number };
 }
 
@@ -488,7 +490,8 @@ socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
 });
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
-const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil']);
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
+    'Sucker Punch', 'Inkfire Brand', 'Flourish', 'Divine Smite', 'Astral Flood']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,

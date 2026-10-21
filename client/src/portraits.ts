@@ -30,11 +30,13 @@ export const PORTRAITS: Record<string, Portrait> = {
     Rokr: bust('rokr.webp', [48, 30], 3.0),
     'The Hangman': bust('hangman.webp', [51, 38], 2.8),
     'Jaguar Cantona': bust('jaguar.webp', [46, 27], 3.0),
-    // The Yawning Portal's new opponents (20 Oct; not in the game yet, framing to check when they are).
+    // The Yawning Portal's five (painted 20 Oct, in the game since 21 Oct).
     'Sylvester Stonefist': bust('sylvester.webp', [50, 30], 2.6),
     'Vaelin Inkhand': bust('vaelin-inkhand.webp', [48, 28], 2.6),
     'Stason Jatham': bust('stason.webp', [55, 22], 2.8),
     'The Ridgeler': bust('ridgeler.webp', [45, 25], 2.6),
+    // A silhouette stands in until Brodor's painting arrives.
+    Brodor: { ...bust('brodor-standin.svg', [50, 24], 2.4), seat: 1.15 },
     Devil: classic('Devil.png'),
     Vaelin: classic('vaelin.png')
 };

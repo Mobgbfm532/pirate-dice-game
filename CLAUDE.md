@@ -14,12 +14,13 @@ A 24 restores a life (Tavern Crawl opponents too, since 18 Oct: a rolled 24, up 
 the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with lives wins.
 
 Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN` = Tavern
-Crawl (since 19 Oct a tournament of nine fights across two pubs: the Ghoul and Gourd, a
-qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), then the final at
-the Yawning Portal (Klarg, Rokr, The Hangman, Jaguar Cantona); each from Frak on has an
-ability; between fights a random event now and then, then a choice of two spots; gold to spend
+Crawl (since 21 Oct a tournament of fourteen fights across three places: the Ghoul and Gourd, a
+qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal
+(Sylvester Stonefist, Vaelin Inkhand, Stason Jatham, The Ridgeler, Brodor), then the final aboard
+the Salty Swallow, a docked ship (Klarg, Rokr, The Hangman, Jaguar Cantona); each from Frak on has
+an ability; between fights a random event now and then, then a choice of two spots; gold to spend
 (Thonics, keepsakes, the Shrine, the hot tub) and a global leaderboard; the run can be saved after
-the Ghoul and Gourd). See "Tavern Crawl now" below.
+each place). See "Tavern Crawl now" below.
 
 ## The person
 
@@ -48,7 +49,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 |---|---|
 | `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, the events between fights, `fireTavernAbility`; its numbers come from `shared/balance.js`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
 | `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
-| `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from Klarg on (exact solution over all dice outcomes, `bestKeeps`). |
+| `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
 | `client/` | The 3D client (Vite + React + React Three Fiber + cannon-es), built to `client/dist`, served at **`/next`**. |
 | `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks. |
@@ -117,11 +118,11 @@ read and follow the file):
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
-against opponent 0-8, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten), `/between?spots=thom,shrine` (add
+against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
-`TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Klarg … 8 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
+`TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
 `SAVE_SECRET` (seals saved runs; **set it on Render**, or saves only last until the server restarts,
 which on the free tier is every sleep and deploy).
 
@@ -184,9 +185,13 @@ which on the free tier is every sleep and deploy).
   18 cap; the whole Ghoul and Gourd plays simply; abilities take over the screen; a gold
   summary after each win and a smooth flow between fights; the Wild Magic Hot Tub and Darren
   Snakehands; the spots follow a random event; keepsakes on Thom's back shelf; the Shrine and
-  the hot tub cost gold; the thief takes half. 99 server/rules/strategy tests + 10 client tests.
-  The user found the game too hard (21 Oct); a sensible player now finishes the nine fights
-  ~3.9% of the time (`node balance/experiments/runs.js`; options in `easier.js`).
+  the hot tub cost gold; the thief takes half. Later on 21 Oct: **the 14-fight tournament**
+  (the Yawning Portal's five, Brodor's Sunglasses, Klarg's crew aboard the Salty Swallow, a save
+  after each place). 110 server/rules/strategy tests + 10 client tests.
+  The user found the game too hard (21 Oct); with the nine fights a sensible player finished
+  ~3.9% of the time (`node balance/experiments/runs.js`; options in `easier.js`); over the
+  fourteen, ~1.1% (`node balance/experiments/tournament.js`): 27% reach the Yawning Portal, 4.5%
+  the ship; Brodor (23% a fight fresh on 3 hearts) and Jaguar (25%) are the steepest steps.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
@@ -200,20 +205,18 @@ which on the free tier is every sleep and deploy).
 Design doc (shared with the user, kept current):
 https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
-- **Planned (design doc, 20 Oct): 14 fights across three places.** The Yawning Portal gets five
-  new opponents (Sylvester Stonefist: Sucker Punch, Vaelin Inkhand: Inkfire Brand, Stason Jatham:
-  Flourish, the Ridgeler: Divine Smite, Brodor: Astral Flood, the boss, drops Brodor's Sunglasses,
-  a 23 heals); Klarg's four move to a docked ship, the Salty Swallow (word comes its crew are
-  top-tier players). Save after the Yawning Portal too. Vaelin Inkhand is the Vaelin
-  avatar (new art). Busts for four of the five are in `client/public/art` (all but Brodor), registered in `PORTRAITS`. Only in the simulator so far: `balance/sim.js` `TOURNAMENT`,
-  `balance/experiments/tournament.js` and `tournament-lives.js` (README for how each ability is
-  played). Spots per place, the ship's events and stronger late abilities: to workshop.
-- **Fights:** nine opponents in order (`TAVERN_ENCOUNTERS`, each with its `place`, a key of
-  `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak, Danhausen, Duke Morrigan,
-  Martha Mystery) then the Yawning Portal (Klarg, Rokr, the Hangman, Jaguar). McGrath is the
-  Molar renamed (keeps the id `molar`, plays simply). All nine have painted busts (the new five since 19 Oct). Hearts reset to 3 each fight (20 Oct; 4 after the
-  Lady's Favour); the opponents have 2 | 2, 3, 3, 3 | 3, 3, 3, 4 lives (`shared/balance.js`,
-  the user's for now, balancing later). **Turns alternate**
+- **Fights (14 since 21 Oct, the design doc's tournament):** in order (`TAVERN_ENCOUNTERS`, each
+  with its `place`, a key of `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak,
+  Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal (Sylvester Stonefist, Vaelin
+  Inkhand, Stason Jatham, The Ridgeler, Brodor), then aboard the Salty Swallow, a docked ship
+  (Klarg, Rokr, the Hangman, Jaguar). McGrath is the Molar renamed (keeps the id `molar`, plays
+  simply). A boss (`boss`, `drops`: Martha, Brodor) drops a keepsake (`BOSS_DROPS`) and leads to an
+  invitation on to the next place. Painted busts for all but Brodor, who has a silhouette stand-in
+  (`client/public/art/brodor-standin.svg`, `seat: 1.25`) until his painting comes. The ship has no
+  backdrop of its own yet (the tavern's) and the same four spots and no events of its own (the
+  ship's spots and events: to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
+  Lady's Favour); the opponents have 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
+  the user's for now, balancing later). Gold for a win is still 100 x the fight's number (Jaguar 1,400). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
@@ -221,7 +224,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   revolver** (not a card): his move is a muzzle flash and a bullet hole by a "24".
 - **Opponents' play:** the whole Ghoul and Gourd plays simply (`planBotLocks`; McGrath as a
   teacher, and since 21 Oct Frak, Danhausen, the Duke and Martha too, the user's call; in a cursed
-  round the simple habits chase low dice, `low`). From the Yawning Portal (Klarg) on
+  round the simple habits chase low dice, `low`). From the Yawning Portal (Sylvester) on
   they play their best (`shared/strategy.js`): the keep with the best chance of beating the
   player's score (ties count half), of a valid hand if the player dusted, or, going first, of
   leaving a score a sensible player fails to beat; the Hangman counts on his Ace at one life.
@@ -233,8 +236,21 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   looked like mistakes). That costs up to 5 points of win chance at high targets: to beat 20
   they win 48% (pure best 53%, the old fixed habits 35%).
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
-  Danhausen 2, Duke 1, Martha 2, Klarg 1, Rokr 2, Hangman 1, Jaguar 1). Each use costs the
-  player ~10 points of fight win chance. The new ones are **round effects**, decided as a round
+  Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; Klarg 1, Rokr 2,
+  Hangman 1, Jaguar 1). Each use costs the player ~10 points of fight win chance. **The Yawning
+  Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Sucker Punch** (as you
+  keep your last die on a hand that counts, a kept die at random goes back in play and you roll it
+  again; `suckerPunch` via `emitKept`, `Rules.putBackDie`); Vaelin's **Inkfire Brand** (a round effect
+  `ink`: your dice that land on 6 roll again, in `rollFaceFor`; the Loaded Die lands 4-5; the hot
+  tub's Scalding Die still lands 6); Stason's **Flourish** (`startFlourish` on his turn's first
+  throw: `turn.flourish`, each die rolls twice, a needed 2 or 4 else the higher, `flourishFace`);
+  the Ridgeler's **Divine Smite** (a round effect `smite`: if he wins the round you lose two
+  hearts, each still caught by the Shield, the Lady's Grace or Last Gasp; the round result says
+  "lost 2 lives"); Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he
+  heals one). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
+  (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
+  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Only Sucker Punch has a
+  sound (the swoosh). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
   **Mind Whip** (since 20 Oct, replacing Psychic Fog: on your first throw he keeps one of your dice
   for you, at random since 21 Oct (it was your worst), `Rules.mindWhip(turn, pick)`;
@@ -261,8 +277,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   before you roll, in a round with no effect yet, wear Danhausen's Curse or the Duke's Devil
   yourself (`wearMask`, `by: 'player'`; the Devil's three 6s are yours and the opponent is
   capped). On the strip it lights up and shows two choices inline (never over the rail).
-- **The invitation and saving:** beating Martha gives `interlude.stage = 'invitation'` instead of
-  an event (no events on the way to the final). "On to the Yawning Portal" or "Save and continue
+- **The invitations and saving:** beating a boss gives `interlude.stage = 'invitation'` instead of
+  an event (`invitation(room, name)`: `place`, `from`, `boss`, `drop`, `save`): after Martha "You
+  qualify for the Yawning Portal", after Brodor "Word from the docks" (the Salty Swallow has
+  docked; `INVITATIONS` in Hud). "On to ..." or "Save and continue
   later": the server seals the run (`sealSave`, HMAC with `SAVE_SECRET`); the client keeps it in
   `localStorage.tavernSave` and the start screen offers "Continue your crawl" (`actions.resume`,
   `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the
@@ -364,20 +382,20 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Difficulty** (the user: too hard, 21 Oct; hearts and lives are theirs to set): with 3 hearts
-   a sensible player finishes ~3.9%; a quarter of runs end at McGrath, and the Duke (~50% a
-   fight) and Martha (~47%) are the steep steps. Measured options (`balance/experiments/easier.js`):
-   every opponent a life fewer → ~14%; the Shield from the start → ~7% (with the simple Ghoul and
-   Gourd ~14%); you always roll second → ~4%. **User plays the test site on the phone** and
-   decides; change `shared/balance.js` and re-run `node balance/experiments/runs.js` first.
-   **Set `SAVE_SECRET` on Render** (an env var, any long random text) so saves survive sleeps
-   and deploys.
-2. **Thom's visits** (asked 21 Oct, not decided): with four spots Thom is offered about half the
-   time; options: always one of the two spots, more likely than the others, or a third choice.
-3. **The 14-fight tournament** (design doc): the Salty Swallow as a third place (Klarg's four move
-   there; a story beat and a save after the Yawning Portal), then the Yawning Portal's five new
-   opponents one at a time (abilities already in the simulator; busts for four are in), Brodor's
-   Sunglasses. Spots per place and the ship's events: to workshop.
+1. **Difficulty** (the user: too hard, 21 Oct; hearts and lives are theirs to set): over the
+   fourteen fights a sensible player finishes ~1.1% (the nine: ~3.9%); a quarter of runs end at
+   McGrath; Brodor and Jaguar (~23-25% a fight) are the steepest steps. Measured options for the
+   nine (`balance/experiments/easier.js`): every opponent a life fewer → ~14%; the Shield from the
+   start → ~7%; for the fourteen, `tournament-lives.js` (3 hearts with lives of 1-2 gave ~17%).
+   **User plays the test site on the phone** and decides; change `shared/balance.js` and re-run
+   `node balance/experiments/tournament.js` first. **Set `SAVE_SECRET` on Render** (an env var,
+   any long random text) so saves survive sleeps and deploys.
+2. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots, about half the walks.
+3. **The tournament, finishing touches:** Brodor's painting (the user's; a silhouette stands in);
+   a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
+   (only Sucker Punch has one, the swoosh); the ship's own spots and events (to workshop: a card
+   game below deck, a stowaway instead of the thief); uses per fight for the five (first guesses, 1
+   each). Stronger late abilities: to workshop.
 4. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the
    nameplate before an ability fires. Re-simulate after any change.
 5. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
@@ -395,8 +413,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    `public/index.html`.
 9. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
    perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
-10. **Later / nice to have:** Jaguar's keepsake drop (once there is a second place to carry it
-   into); new places with tougher opponents (the roguelite); possibly the Molar at 1 life if
+10. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship to
+   carry it into); new places with tougher opponents (the roguelite); possibly the Molar at 1 life if
    he ends too many runs (~1 in 7 for a careful player); optional art (`docs/art-direction.md`
    "Wanted": keepsake pictures, Klarg's hand, the Hangman's revolver); delete the unused
    keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) and `Rules.getAbilityMaxUses`

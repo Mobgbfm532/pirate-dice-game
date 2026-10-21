@@ -2,7 +2,7 @@
 // small control port on :3003 (or CONTROL_PORT, this machine only) that sets up Tavern
 // Crawl situations without playing whole fights. It applies to every Tavern Crawl table.
 //
-//   npm run dev:test-server                  (TAVERN_START_ENCOUNTER=1 starts at Klarg, etc.)
+//   npm run dev:test-server                  (TAVERN_START_ENCOUNTER=5 starts at Sylvester, 10 at Klarg, etc.)
 //   curl "http://localhost:3003/shop?purse=200"     Thom's cart opens with 200 gold (add
 //        &stock=healing,fizzy,steady to choose what's on it; default: the longest names)
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
@@ -12,7 +12,8 @@
 //   curl "http://localhost:3003/purse?n=150"
 //   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
 //   curl "http://localhost:3003/won?hearts=2"        the fight is won: the gold summary, then the event
-//   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the final
+//   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the Yawning Portal
+//   curl "http://localhost:3003/invitation?boss=brodor"   Brodor beaten: on to the Salty Swallow
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
 //        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands)
@@ -42,7 +43,7 @@ const COMMANDS = {
     // The hot tub's surge on this fight (id: noOnes, twin, lucky, scalding, soggy).
     '/surge': (r, q) => { r.tavernRun.tubSurge = q.get('id') || 'twin'; },
     '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
-    // A fight against opponent n (0 McGrath ... 4 Martha, 5 Klarg ... 8 Jaguar), its ability ready from round 1.
+    // A fight against opponent n (0 McGrath ... 4 Martha, 5 Sylvester ... 9 Brodor, 10 Klarg ... 13 Jaguar), its ability ready from round 1.
     '/fight': (r, q, code) => { r.tavernRun.encounterIndex = Number(q.get('n')); r.tavernRun.interlude = null; r.tavernRun.shop = null; server.resetTavernEncounter(code); r.tavernRun.abilityRound = 1; r.tavernRun.abilityUsed = {}; server.beginTavernRound(code, r); },
     // A fight just won (the current opponent, &hearts=2 left): its gold summary, then the event between fights.
     '/won': (r, q) => {
@@ -54,9 +55,17 @@ const COMMANDS = {
         server.startInterlude(r, { defeated: enemy.name, nextEnemy: next.name, place, gold, at: Date.now() });
         r.roundPlayers = [];
     },
-    // Martha just beaten: her mask and the invitation to the Yawning Portal.
-    '/invitation': (r) => { r.tavernRun.encounterIndex = 5; r.tavernRun.keepsakes = [...r.tavernRun.keepsakes.filter(k => k.id !== 'marthasMask'), { id: 'marthasMask', name: "Martha's Mask", text: '' }]; r.tavernRun.lastWin = { defeated: 'Martha Mystery', nextEnemy: 'Klarg', gold: { win: 500, hearts: 50 } }; r.tavernRun.interlude = { stage: 'invitation', place: 'The Yawning Portal', save: server.sealSave(r, (Object.values(r.players).find(p => p.id !== 'BOT_MOLAR') || {}).name || 'Tester') }; r.roundPlayers = []; },
-    // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard).
+    // A boss just beaten (boss=martha, the default, or brodor): their keepsake and the invitation on.
+    '/invitation': (r, q) => {
+        const boss = server.TAVERN_ENCOUNTERS.findIndex(e => e.id === (q.get('boss') || 'martha'));
+        const run = r.tavernRun, drop = server.BOSS_DROPS[server.TAVERN_ENCOUNTERS[boss].drops];
+        run.encounterIndex = boss + 1;
+        run.keepsakes = [...run.keepsakes.filter(k => k.id !== drop.id), drop];
+        run.lastWin = { defeated: server.TAVERN_ENCOUNTERS[boss].name, nextEnemy: server.TAVERN_ENCOUNTERS[boss + 1].name, place: boss + 1, drop, gold: { win: 100 * (boss + 1), hearts: 50 } };
+        run.interlude = server.invitation(r, (human(r) || {}).name || 'Tester');
+        r.roundPlayers = [];
+    },
+    // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard, marthasMask, brodorsSunglasses).
     '/keepsakes': (r, q) => { r.tavernRun.keepsakes = (q.get('ids') || '').split(',').filter(Boolean).map(id => ({ id, name: id, text: '' })); },
     '/between': (r, q) => {
         const run = r.tavernRun;

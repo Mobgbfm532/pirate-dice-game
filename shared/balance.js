@@ -8,8 +8,8 @@ module.exports = {
     playerHearts: 3,
     // The opponents' lives, in the order you meet them (20 Oct, the user's, for now; balancing
     // later): the Ghoul and Gourd (McGrath the bouncer, who is the Molar renamed and keeps the id
-    // 'molar', then the high-roller table), the Yawning Portal (the five new opponents, not in the
-    // game yet), then aboard the Salty Swallow (Klarg's four, at the Yawning Portal until then).
+    // 'molar', then the high-roller table), the Yawning Portal (five more, Brodor the boss), then
+    // aboard the Salty Swallow (Klarg's four).
     opponentLives: {
         molar: 2, frak: 2, danhausen: 3, duke: 3, martha: 3,
         sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
@@ -17,14 +17,19 @@ module.exports = {
     },
     // How many times each opponent's ability can be used in a fight (from a random round 1-3).
     // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
-    abilityUses: { mindWhip: 1, cursed: 2, devil: 1, disguises: 2, reachAround: 1, constellationBlur: 2, deadeye24: 1, smoothTalk: 1 },
+    // The Yawning Portal's five: 1 each (first guesses, 20 Oct; Inkfire at 2 cost Vaelin's fight 19 points).
+    abilityUses: {
+        mindWhip: 1, cursed: 2, devil: 1, disguises: 2,
+        suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1,
+        reachAround: 1, constellationBlur: 2, deadeye24: 1, smoothTalk: 1
+    },
     // The Duke's Sympathy for the Devil (and the mask's): the other side can't score above this.
     // null: no cap, the three 6s are the whole of it (the user's call, 21 Oct; it was 18).
     devilCap: null,
 
     // Gold during a run: it goes into the purse as it is won, and the purse is the final score.
     gold: {
-        winPerPlace: 100,   // beating an opponent: 100 x their place in the run (Molar 100 ... Jaguar 500)
+        winPerPlace: 100,   // beating an opponent: 100 x their place in the run (McGrath 100 ... Jaguar 1400)
         perHeartLeft: 25,   // for each heart still standing when you win a fight
         perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct; it was 75); it still restores a heart
         consolation: 25     // losing the run: 25 x the place of the opponent you fell to

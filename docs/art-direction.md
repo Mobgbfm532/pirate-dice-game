@@ -55,7 +55,7 @@ baked shadows** (the game lights them). Generate at 2048 and downscale to 1024 f
 | Brass slot plates | 512², transparent PNG | Two plates engraved "2" and "4", one plain |
 | Dice faces | 6 × 256², or one 3×2 sheet | Aged ivory, inked pips; the 1 in wax-seal red, the 6 in green |
 | Backdrop | 2048×1024 | Blurred tavern interior behind the table: fireplace, shelves, lanterns |
-| Character busts | 512², transparent PNG | Molar, Klarg, Rokr, Hangman, Jaguar, plus player avatars, in one matching style |
+| Character busts | 512², transparent PNG | Every opponent, Thom, the characters between fights, plus player avatars, in one matching style (see Status) |
 | UI parchment | 1024², seamless | For panels and dialogs |
 
 ## Prompt pack
@@ -138,13 +138,14 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Martha Mystery | Done | `art/bust-martha.jpg` (flat magenta, `cutOutFlat` with `smokeBox` + `smokeColour: 'own'`: her vape smoke stays purple and see-through) → `martha.webp`; `seat: 1.15` |
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
-| Keepsake card pictures | Wanted, optional | One small painting per keepsake (Shield, Brodor's Sunglasses, Trap Card, Velvet Cushion, Steady Hand Wrap); the cards use emoji until then |
+| Keepsake pictures | Wanted, optional | One small painting per keepsake: Shield, Velvet Cushion, Trap Card, Thom's Loyalty Card, Potion Belt, Loaded Die, Martha's mask (and Brodor's Sunglasses once Brodor is built). The Stranger's offer, Thom's back shelf and the strip use emoji until then (`KEEPSAKE_ICONS` in `client/src/Hud.tsx`) |
 | Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
 | The Ace of Spades (the Hangman's revolver) | Wanted, optional | His named revolver, for the moment he fires it; a CSS muzzle flash and bullet hole for now |
 | Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
 | The Wild Magic Hot Tub (a spot) | Done | `art/hot-tub.jpg` → `hot-tub.webp` (raspberry background, `cutOutFlat`); a wide painting, sized by width in its scene |
 | Darren Snakehands (the Ghoul and Gourd's barman, an event) | Done | `art/bust-darren.jpg` → `darren.webp` |
-| The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS` for when they are built. **Wanted:** Brodor |
+| The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS`, in the game since 21 Oct. **Wanted:** Brodor (a silhouette, `client/public/art/brodor-standin.svg`, stands in until then) |
+| A backdrop for the Salty Swallow | Wanted | The ship's four fights use the tavern backdrop for now; a ship's deck or cabin, same format as `tavern.webp`, would go in `SCENES` in `client/src/Backdrop.tsx` |
 
 ## Processing art
 

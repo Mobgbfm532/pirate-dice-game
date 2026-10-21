@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480">
+  <!-- Brodor's stand-in until his painting arrives: a broad silhouette in a cleric's glow, his
+       sunglasses catching the light. The head sits high and the shoulders start right below it,
+       like the painted busts, so more than a head shows above the table. Not in art/: nothing
+       to process. -->
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="30%" r="55%">
+      <stop offset="0" stop-color="#ffe9a8" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#ffc857" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffc857" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2a1e"/>
+      <stop offset="1" stop-color="#1e1510"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b3940"/>
+      <stop offset="1" stop-color="#0f1518"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="200" cy="150" rx="200" ry="170" fill="url(#halo)"/>
+  <g fill="url(#body)" stroke="#e8b04a" stroke-width="3" stroke-opacity="0.75">
+    <!-- shoulders and chest: a wrestler's build -->
+    <path d="M0 480 C 4 330 38 270 110 250 C 148 240 164 232 172 220 L 228 220 C 236 232 252 240 290 250 C 362 270 396 330 400 480 Z"/>
+    <!-- neck -->
+    <path d="M164 236 L 170 176 L 230 176 L 236 236 Z"/>
+    <!-- head, shaved -->
+    <ellipse cx="200" cy="118" rx="72" ry="84"/>
+  </g>
+  <!-- ears -->
+  <ellipse cx="128" cy="126" rx="10" ry="17" fill="#2c2017"/>
+  <ellipse cx="272" cy="126" rx="10" ry="17" fill="#2c2017"/>
+  <!-- a cleric's holy symbol, a little sun, on his chest -->
+  <g stroke="#e8b04a" stroke-width="3" fill="none" opacity="0.85">
+    <circle cx="200" cy="330" r="14" fill="#c9973a"/>
+    <path d="M200 304 V 296 M200 356 V 364 M174 330 H 166 M226 330 H 234 M182 312 L 176 306 M218 312 L 224 306 M182 348 L 176 354 M218 348 L 224 354"/>
+  </g>
+  <!-- the sunglasses -->
+  <g>
+    <rect x="140" y="104" width="54" height="29" rx="10" fill="url(#lens)" stroke="#c9973a" stroke-width="3"/>
+    <rect x="206" y="104" width="54" height="29" rx="10" fill="url(#lens)" stroke="#c9973a" stroke-width="3"/>
+    <path d="M194 114 Q 200 108 206 114" fill="none" stroke="#c9973a" stroke-width="3"/>
+    <path d="M152 110 L 170 110" stroke="#fff6dc" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <path d="M218 110 L 236 110" stroke="#fff6dc" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  </g>
+</svg>

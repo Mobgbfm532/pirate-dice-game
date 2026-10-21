@@ -187,3 +187,16 @@ it). The sensible player buys only clear bargains (~1 run in 8); real players wi
 
 **The Shrine and the hot tub** (`experiments/prices.js`): a Shrine visit is worth ~110 gold over
 the other spot; the hot tub comes out below the alternatives (a gamble), so it stays cheap.
+
+## 21 Oct: the 14-fight tournament in the game
+
+The server now plays the design doc's fourteen fights (`TAVERN_ENCOUNTERS`), with the five new
+abilities played as `sim.js` plays them (one use each) and Brodor's Sunglasses as his drop.
+`experiments/tournament.js` (10,000 runs, 4,000 fights each, the numbers of the moment: 3 hearts,
+lives 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4):
+
+- Fight wins fresh on 3 hearts, sensible, with the ability (without): McGrath 73, Frak 70 (74),
+  Danhausen 59 (57), Duke 49 (56), Martha 47 (55), Sylvester 43 (51), Vaelin 37 (51), Stason 41
+  (50), Ridgeler 42 (49), Brodor 23 (36), Klarg 35 (50), Rokr 40 (51), Hangman 35 (48), Jaguar 25 (34).
+- Whole runs, sensible: finish 1.1%, reach the Yawning Portal 27%, the ship 4.5%, average gold 898.
+  Casual: 0.0%, 5% reach the Yawning Portal.

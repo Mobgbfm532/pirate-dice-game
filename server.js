@@ -90,8 +90,10 @@ function submitTavernLeaderboardScore(name, gold) {
 }
 
 // The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
-// the high-roller table), then the final at the Yawning Portal. `place` is a key of PLACES.
-// McGrath is the Molar renamed and keeps his id ('molar'): he plays simply, as a teacher.
+// the high-roller table), the Yawning Portal (five more, Brodor the boss), then the final aboard
+// the Salty Swallow (Klarg's crew). `place` is a key of PLACES. A boss drops a keepsake (`drops`)
+// and sends you on to the next place (the invitation). McGrath is the Molar renamed and keeps
+// his id ('molar'): he plays simply, as a teacher.
 const TAVERN_ENCOUNTERS = [
     {
         id: 'molar',
@@ -136,12 +138,60 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🎭',
         lives: BALANCE.opponentLives.martha,
         ability: 'disguises',
-        boss: true, // beating her wins her mask and the invitation to the final
+        boss: true, // beating her wins her mask and the invitation to the Yawning Portal
+        drops: 'marthasMask',
         intro: 'Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick.'
     },
     {
-        id: 'klarg',
+        id: 'sylvester',
         place: 'yawningPortal',
+        name: 'Sylvester Stonefist',
+        avatar: '👊',
+        lives: BALANCE.opponentLives.sylvester,
+        ability: 'suckerPunch',
+        intro: 'Sylvester Stonefist, a brawling monk, never hits you from the front. Sucker Punch: as you keep your last die, he knocks a kept die loose and you roll it again.'
+    },
+    {
+        id: 'vaelin',
+        place: 'yawningPortal',
+        name: 'Vaelin Inkhand',
+        avatar: '🖋️',
+        lives: BALANCE.opponentLives.vaelin,
+        ability: 'inkfire',
+        intro: 'Vaelin Inkhand, wizard of the inky flame. Inkfire Brand: for a round he burns the 6 into the table, and your dice that land on it roll again.'
+    },
+    {
+        id: 'stason',
+        place: 'yawningPortal',
+        name: 'Stason Jatham',
+        avatar: '🤺',
+        lives: BALANCE.opponentLives.stason,
+        ability: 'flourish',
+        intro: 'Stason Jatham rushes in, rapier first. Flourish: for one whole turn, each of his dice rolls twice and he keeps the better.'
+    },
+    {
+        id: 'ridgeler',
+        place: 'yawningPortal',
+        name: 'The Ridgeler',
+        avatar: '🐉',
+        lives: BALANCE.opponentLives.ridgeler,
+        ability: 'divineSmite',
+        intro: 'The Ridgeler, dragonborn paladin, and Beakbreaker, his warhammer. Divine Smite: for a round, if he wins it, you lose two hearts.'
+    },
+    {
+        id: 'brodor',
+        place: 'yawningPortal',
+        name: 'Brodor',
+        avatar: '🕶️',
+        lives: BALANCE.opponentLives.brodor,
+        ability: 'astralFlood',
+        boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
+        drops: 'brodorsSunglasses',
+        intro: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light and heals one."
+    },
+    {
+        id: 'klarg',
+        place: 'saltySwallow',
         name: 'Klarg',
         avatar: '🐻',
         lives: BALANCE.opponentLives.klarg,
@@ -150,7 +200,7 @@ const TAVERN_ENCOUNTERS = [
     },
     {
         id: 'rokr',
-        place: 'yawningPortal',
+        place: 'saltySwallow',
         name: 'Rokr',
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
@@ -159,7 +209,7 @@ const TAVERN_ENCOUNTERS = [
     },
     {
         id: 'hangman',
-        place: 'yawningPortal',
+        place: 'saltySwallow',
         name: 'The Hangman',
         avatar: '🤠',
         lives: BALANCE.opponentLives.hangman,
@@ -168,7 +218,7 @@ const TAVERN_ENCOUNTERS = [
     },
     {
         id: 'jaguar',
-        place: 'yawningPortal',
+        place: 'saltySwallow',
         name: 'Jaguar Cantona',
         avatar: '😎',
         lives: BALANCE.opponentLives.jaguar,
@@ -218,6 +268,15 @@ const MARTHAS_MASK = {
     name: "Martha's Mask",
     text: "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you)."
 };
+// Brodor's Sunglasses: dropped by Brodor (never offered by the Stranger or Thom). A finished 23
+// restores a heart too, like a 24 (performEndTurn).
+const BRODORS_SUNGLASSES = {
+    id: 'brodorsSunglasses',
+    name: "Brodor's Sunglasses",
+    text: 'A finished 23 restores a heart, like a 24.'
+};
+// What each boss drops (TAVERN_ENCOUNTERS `drops`).
+const BOSS_DROPS = { marthasMask: MARTHAS_MASK, brodorsSunglasses: BRODORS_SUNGLASSES };
 const LOADED_DIE = 0; // the die the Loaded Die keepsake loads (marked on the table)
 
 // Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
@@ -235,7 +294,8 @@ const SHELF_SIZE = BALANCE.shelfSize;
 const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
 
 // The places in the run: what Thom sells there and the spots between fights. (Each opponent
-// names its place.) Both have the same spots for now; a split is a later choice.
+// names its place.) All three have the same spots for now; a split is a later choice (the
+// ship's own spots and events are still to workshop).
 const PLACES = {
     ghoulAndGourd: {
         name: 'The Ghoul and Gourd',
@@ -247,6 +307,13 @@ const PLACES = {
     },
     yawningPortal: {
         name: 'The Yawning Portal',
+        thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
+        spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
+        events: []
+    },
+    // A ship docked after the Yawning Portal: Klarg's crew, top-tier players.
+    saltySwallow: {
+        name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
         spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
         events: []
@@ -298,13 +365,18 @@ function shelfSizeOf(room) {
     return SHELF_SIZE + (hasKeepsake(room, 'potionBelt') ? KEEPSAKE_NUMBERS.beltSlots : 0);
 }
 
-// How the dice land on this turn: the Loaded Die only rolls loadedDieLow or more.
+// How the dice land on this turn: the Loaded Die only rolls loadedDieLow or more; in Vaelin's
+// Inkfire round your dice that land on 6 roll again; Stason's Flourish rolls his twice.
 function rollFaceFor(room, turn) {
-    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID) return rollFace;
+    if (room.mode !== 'tavern-crawl') return rollFace;
+    if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn) : rollFace;
     let loaded = hasKeepsake(room, 'loadedDie');
     let surge = room.tavernRun.tubSurge;
-    if (!loaded && !surge) return rollFace;
-    let base = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
+    let effect = room.tavernRun.roundEffect;
+    let ink = !!effect && effect.kind === 'ink';
+    if (!loaded && !surge && !ink) return rollFace;
+    let plain = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
+    let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
     if (!surge) return base;
     // Double Bubble: the roll that lost, this throw (sent with diceRolled as twin, for its ghost die).
     turn.twinRoll = null;
@@ -327,6 +399,17 @@ function rollFaceFor(room, turn) {
             return pick;
         }
         return base(d);
+    };
+}
+
+// Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or 4
+// he still needs, else the higher).
+function flourishFace(turn) {
+    return () => {
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let a = rollFace(), b = rollFace();
+        for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) return need;
+        return Math.max(a, b);
     };
 }
 
@@ -502,6 +585,39 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     return moves;
 }
 
+// Stason's Flourish, as his turn's first throw begins: the whole turn, each die rolls twice
+// (flourishFace). Returns the move to show, or null.
+function startFlourish(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || turn.playerId !== BOT_ID || turn.rollCount !== 0) return null;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!fireTavernAbility(roomCode, room, encounter, 'flourish')) return null;
+    turn.flourish = true;
+    return { name: encounter.name, ability: Rules.ABILITY_NAMES.flourish, text: 'This turn every die he throws rolls twice, and he keeps the better.' };
+}
+
+// Sylvester's Sucker Punch: as you keep your last die on a hand that counts, he knocks one of
+// your kept dice loose (at random) and you roll it again (Rules.putBackDie). Returns true if
+// he did.
+function suckerPunch(roomCode, room) {
+    let turn = room.turn;
+    if (room.mode !== 'tavern-crawl' || !turn || turn.playerId === BOT_ID || !turn.finalized || turn.outcome.busted) return false;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!fireTavernAbility(roomCode, room, encounter, 'suckerPunch')) return false;
+    let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN);
+    let die = kept[crypto.randomInt(0, kept.length)];
+    Rules.putBackDie(turn, die.id);
+    emitTurn(roomCode, { type: 'toggle' });
+    io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch from behind knocks your ${die.value} loose. Roll it again.` });
+    return true;
+}
+
+// A die kept: the server's answer to everyone, after Sylvester has had his chance.
+function emitKept(roomCode, result) {
+    let room = rooms[roomCode];
+    if (result.finalizedNow && suckerPunch(roomCode, room)) return;
+    emitTurn(roomCode, result.finalizedNow ? { type: 'finalized', outcome: room.turn.outcome } : { type: 'toggle' });
+}
+
 // Returns the roll's animation length in ms, or 0 if the roll wasn't allowed.
 function performRoll(roomCode) {
     let room = rooms[roomCode];
@@ -511,6 +627,7 @@ function performRoll(roomCode) {
 
     let signatureMoves = [];
     let preRollCallout = null;
+    let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let result = Rules.rollTurn(turn, {
         rollFace: rollFaceFor(room, turn),
         onRolled: t => {
@@ -519,6 +636,7 @@ function performRoll(roomCode) {
         }
     });
     if (!result) return 0;
+    if (flourish) signatureMoves.unshift(flourish);
 
     // Browsers show the pre-roll announcement while the dice tumble, then the final board.
     let animationMs = result.suspense !== Rules.SUSPENSE.NONE ? 2000 : 500;
@@ -545,7 +663,7 @@ function performRoll(roomCode) {
         setTimeout(() => {
             if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
             let result = Rules.toggleDie(room.turn, lastDieId);
-            if (result) emitTurn(roomCode, result.finalizedNow ? { type: 'finalized', outcome: room.turn.outcome } : { type: 'toggle' });
+            if (result) emitKept(roomCode, result);
         }, delay(animationMs));
     }
     return animationMs;
@@ -559,7 +677,7 @@ function performToggle(roomCode, dieId) {
 
     let result = Rules.toggleDie(turn, dieId);
     if (!result) return;
-    emitTurn(roomCode, result.finalizedNow ? { type: 'finalized', outcome: turn.outcome } : { type: 'toggle' });
+    emitKept(roomCode, result);
 }
 
 function performEndTurn(roomCode) {
@@ -605,8 +723,11 @@ function performEndTurn(roomCode) {
     // Spades makes one that doesn't heal him (`score` is the hand before the Ace).
     let maxLives = room.mode === 'tavern-crawl' && currentId === BOT_ID ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].lives : room.startingLives;
     let natural = currentId !== BOT_ID || score === 24;
-    if (natural && room.players[currentId].score === 24 && room.players[currentId].lives < maxLives) {
+    // Brodor's Sunglasses: your finished 23 heals too.
+    let shades = currentId !== BOT_ID && room.players[currentId].score === 23 && !busted && hasKeepsake(room, BRODORS_SUNGLASSES.id);
+    if (natural && (room.players[currentId].score === 24 || shades) && room.players[currentId].lives < maxLives) {
         room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + 1);
+        if (shades) emitKeepsakeActivated(roomCode, room, BRODORS_SUNGLASSES.id, 'A 23 restores a heart.');
         io.to(roomCode).emit('displayMessage', { text: '+1 Life Restored!', color: "#aed581" });
     }
 
@@ -796,7 +917,7 @@ function hasKeepsake(room, keepsakeId) {
 
 function getKeepsake(room, keepsakeId) {
     if (!room || room.mode !== 'tavern-crawl') return null;
-    return room.tavernRun.keepsakes.find(k => k.id === keepsakeId) || TAVERN_KEEPSAKES.find(k => k.id === keepsakeId) || null;
+    return room.tavernRun.keepsakes.find(k => k.id === keepsakeId) || keepsakeById(keepsakeId) || null;
 }
 
 function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
@@ -851,6 +972,10 @@ function canUseTavernAbility(room, encounter, abilityId) {
 function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false) {
     let message;
     let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
+    // A player can lose two lives in one round (the Ridgeler's Divine Smite): named once.
+    let lost = {};
+    lifeLosers.forEach(id => { lost[id] = (lost[id] || 0) + 1; });
+    lifeLosers = Object.keys(lost);
     let dustNames = lifeLosers
         .map(id => room.players[id] ? room.players[id].name : 'A player');
     let safeNames = activeIds
@@ -865,7 +990,8 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
         let names = lifeLosers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
             .join(', ');
-        message = `${resultLines}\n${names} lost ${lifeLosers.length === 1 ? 'a life' : 'lives'}.\nThe round is over.`;
+        let count = lifeLosers.length === 1 ? lost[lifeLosers[0]] : 0;
+        message = `${resultLines}\n${names} lost ${count === 1 ? 'a life' : count > 1 ? `${count} lives` : 'lives'}.\nThe round is over.`;
     } else if (tiedPlayers.length > 1) {
         let names = tiedPlayers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
@@ -881,8 +1007,9 @@ function getHumanPlayerId(room) {
     return room.playerOrder.find(id => id !== BOT_ID && room.players[id]);
 }
 
-// For testing a particular opponent: TAVERN_START_ENCOUNTER=1 starts runs at Frak, 5 at Klarg, etc.
-const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(8, parseInt(process.env.TAVERN_START_ENCOUNTER, 10) || 0));
+// For testing a particular opponent: TAVERN_START_ENCOUNTER=1 starts runs at Frak, 5 at
+// Sylvester, 10 at Klarg, etc.
+const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(TAVERN_ENCOUNTERS.length - 1, parseInt(process.env.TAVERN_START_ENCOUNTER, 10) || 0));
 
 function createTavernRun() {
     return {
@@ -1036,9 +1163,11 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
 //   mind   Mind Whip: on the player's first throw Frak makes them keep a random die (Rules.mindWhip)
 //   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
 //   devil  Sympathy for the Devil: `by` throws three 6s first (and, if devilCap is set, the other side can't score above it)
+//   ink    Vaelin's Inkfire Brand: the 6 is burned into the table; the player's dice that land on it roll again (rollFaceFor)
+//   smite  The Ridgeler's Divine Smite: if he wins the round, the player loses two hearts (evaluateTavernRound)
 // `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
 // Martha (or the mask) wears.
-const ROUND_ABILITIES = { mindWhip: 'mind', cursed: 'curse', devil: 'devil' };
+const ROUND_ABILITIES = { mindWhip: 'mind', cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
 const DISGUISES = [
     { ability: 'mindWhip', as: 'Frak' },
     { ability: 'cursed', as: 'Danhausen' },
@@ -1053,7 +1182,9 @@ function roundEffectMove(room, effect, text) {
 
 const ROUND_EFFECT_TEXT = {
     curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
-    devil: { opponent: 'Three 6s land on the table.', player: 'Three 6s for you.' }
+    devil: { opponent: 'Three 6s land on the table.', player: 'Three 6s for you.' },
+    ink: { opponent: 'The 6 burns into the table. This round your dice that land on it roll again.' },
+    smite: { opponent: 'If he wins this round, you lose two hearts.' }
 };
 
 function beginTavernRound(roomCode, room) {
@@ -1062,6 +1193,15 @@ function beginTavernRound(roomCode, room) {
     run.pendingDevil = null;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     if (!encounter || !encounter.ability) return;
+    // Brodor's Astral Flood: once he has lost a life, he heals one as a round begins.
+    let bot = room.players[BOT_ID];
+    if (encounter.ability === 'astralFlood') {
+        if (bot && bot.lives < encounter.lives && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
+            bot.lives++;
+            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light and heals a life.' });
+        }
+        return;
+    }
     let disguise = encounter.ability === 'disguises' ? DISGUISES[crypto.randomInt(0, DISGUISES.length)] : null;
     let ability = disguise ? disguise.ability : encounter.ability;
     if (!ROUND_ABILITIES[ability] || !canUseTavernAbility(room, encounter, encounter.ability)) return;
@@ -1073,15 +1213,16 @@ function beginTavernRound(roomCode, room) {
     if (run.roundEffect.kind !== 'mind') io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
 }
 
-// ---- Saving after the Ghoul and Gourd ----
-// The run can be saved at the invitation to the Yawning Portal. The save lives on the player's
+// ---- Saving after each place ----
+// The run can be saved at each invitation on to the next place (after Martha, the Yawning
+// Portal; after Brodor, the Salty Swallow). The save lives on the player's
 // phone, sealed with SAVE_SECRET so it can't be edited; each one opens once (while the server
 // runs). Without SAVE_SECRET, saves last only until the server restarts.
 const SAVE_SECRET = process.env.SAVE_SECRET || crypto.randomBytes(32).toString('hex');
 if (!process.env.SAVE_SECRET && !process.env.GAME_TIME_SCALE) console.log('SAVE_SECRET is not set: saved Tavern Crawl runs last only until the server restarts.');
 const SAVE_VERSION = 1;
 const openedSaves = new Set();
-const keepsakeById = id => (id === MARTHAS_MASK.id ? MARTHAS_MASK : TAVERN_KEEPSAKES.find(k => k.id === id));
+const keepsakeById = id => BOSS_DROPS[id] || TAVERN_KEEPSAKES.find(k => k.id === id);
 
 function sealSave(room, name) {
     let run = room.tavernRun;
@@ -1121,9 +1262,15 @@ function restoreRun(room, data) {
     run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
 }
 
-// The invitation to the final: Martha's mask is yours; go on now, or save and come back.
+// After a boss, the invitation on to the next place: their keepsake is yours (Martha's mask,
+// Brodor's Sunglasses); go on now, or save and come back. `boss`: who was just beaten.
 function invitation(room, name) {
-    return { stage: 'invitation', place: placeOf(room).name, save: sealSave(room, name) };
+    let boss = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
+    let drop = boss && BOSS_DROPS[boss.drops];
+    return {
+        stage: 'invitation', place: placeOf(room).name, from: boss ? PLACES[boss.place].name : null,
+        boss: boss ? boss.name : null, drop: drop || null, save: sealSave(room, name)
+    };
 }
 
 // ---- Between fights ----
@@ -1390,6 +1537,12 @@ function evaluateTavernRound(roomCode) {
         io.to(roomCode).emit('displayMessage', { text: 'Trap Card breaks the tie your way.', color: '#ffd54f' });
     }
 
+    // The Ridgeler's Divine Smite: if he wins the round, you lose two hearts (each can still be
+    // caught by the Shield, the Lady's Grace or Last Gasp).
+    if (effect && effect.kind === 'smite' && losersThisRound.length === 1 && losersThisRound[0].id === humanId) {
+        losersThisRound.push({ id: humanId, reason: 'Divine Smite.' });
+    }
+
     losersThisRound.forEach(loser => {
         let player = room.players[loser.id];
         if (!player) return;
@@ -1450,7 +1603,7 @@ function evaluateTavernRound(roomCode) {
             room.tavernRun.runComplete = true;
             io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
             emitState(roomCode);
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final at the Yawning Portal! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
+            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final aboard the Salty Swallow! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
         }
 
@@ -1462,10 +1615,12 @@ function evaluateTavernRound(roomCode) {
             gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, perPlace: GOLD.winPerPlace },
             at: Date.now()
         };
-        if (TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1].boss) {
-            // Martha's mask is the invitation to the final (no events on the way there).
-            if (!hasKeepsake(room, MARTHAS_MASK.id)) room.tavernRun.keepsakes.push(MARTHAS_MASK);
-            won.mask = MARTHAS_MASK;
+        let beaten = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
+        if (beaten.boss) {
+            // A boss's keepsake is the invitation on to the next place (no events on the way there).
+            let drop = BOSS_DROPS[beaten.drops];
+            if (drop && !hasKeepsake(room, drop.id)) room.tavernRun.keepsakes.push(drop);
+            won.drop = drop || null;
             room.tavernRun.lastWin = won;
             room.tavernRun.interlude = invitation(room, human.name);
         } else {
@@ -1602,7 +1757,7 @@ io.on('connection', (socket) => {
             room.currentTurnIndex = 0;
         }
 
-        // A saved run (from the invitation to the final) carries on at a fresh table: back at the
+        // A saved run (from an invitation to the next place) carries on at a fresh table: back at the
         // invitation, with a fresh save in case they leave again.
         let fresh = room.mode === 'tavern-crawl' && !room.tavernRun.started;
         let resumed = fresh && data.resume ? openSave(data.resume) : null;
@@ -2033,4 +2188,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, pickSpots, startInterlude, strangerOffer, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, TAVERN_ENCOUNTERS };
+module.exports = { start, http, io, rooms, emitState, pickSpots, startInterlude, strangerOffer, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };

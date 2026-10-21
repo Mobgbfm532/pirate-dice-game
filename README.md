@@ -46,7 +46,7 @@ Art: originals are in `art/`; `npm --prefix client run art` regenerates the game
 |---|---|
 | blank or any code | Classic multiplayer. Share the code with friends. |
 | `COMP` | Solo against The Molar |
-| `TAVERN` | Tavern Crawl: five opponents in a row, keepsakes, gold and a global leaderboard |
+| `TAVERN` | Tavern Crawl: fourteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold and a global leaderboard. A run can be saved after each place. |
 
 ## Project layout
 
@@ -54,9 +54,13 @@ Art: originals are in `art/`; `npm --prefix client run art` regenerates the game
 |---|---|
 | `server.js` | Node server (Express + Socket.IO). Owns rooms, turns, dice rolls, the bot and scoring. |
 | `shared/rules.js` | The game rules as pure functions, used by both the server and the browser. |
-| `public/` | Everything the browser loads: `index.html`, art, audio, service worker, app manifest. |
-| `client/` | The 3D table prototype, served at `/next` once built. |
-| `test/` | `rules.test.js` (rules) and `server.test.js` (real server driven by socket clients). |
+| `shared/strategy.js` | Server only: best play for Tavern Crawl opponents from the Yawning Portal on. |
+| `shared/balance.js` | The Tavern Crawl's numbers: hearts, opponents' lives, gold, prices, events. |
+| `public/` | The classic page: `index.html`, art, audio, service worker, app manifest. |
+| `client/` | The 3D table, served at `/next` once built. |
+| `test/` | `rules.test.js`, `strategy.test.js` and `server.test.js` (real server driven by socket clients); `dev-server.js` sets up Tavern Crawl situations for browser checks (`npm run dev:test-server`). |
+| `balance/` | The balance simulator, its experiments and findings (`balance/README.md`). |
+| `art/`, `docs/` | Original AI art and the art direction (`docs/art-direction.md`). |
 | `leaderboard.json` | Tavern Crawl high scores, written by the server. |
 
 ## How a turn works
@@ -79,4 +83,6 @@ npm test
 | `PORT` | Port to listen on (default 3000) |
 | `GAME_TIME_SCALE` | Multiplies all server delays, e.g. `0.01` in tests |
 | `LEADERBOARD_READONLY` | Set to anything to stop writing `leaderboard.json` (local testing) |
-| `TAVERN_START_ENCOUNTER` | Start Tavern Crawl runs at a later opponent, for testing (1 = Klarg … 4 = Jaguar) |
+| `TAVERN_START_ENCOUNTER` | Start Tavern Crawl runs at a later opponent, for testing (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar) |
+| `GAME_SERVER` | Game server the client's dev server proxies to (default `http://localhost:3000`) |
+| `SAVE_SECRET` | Seals saved Tavern Crawl runs. Set it in production, or saves only last until the server restarts |

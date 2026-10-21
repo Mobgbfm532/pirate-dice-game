@@ -279,7 +279,8 @@ export function playSound(name: SoundName, playbackRate = 1) {
 export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
     'Constellation Blur': 'constellation',
-    'The Ace of Spades': 'gunshot'
+    'The Ace of Spades': 'gunshot',
+    'Sucker Punch': 'swoosh' // the Yawning Portal's five have no sounds of their own yet
 };
 
 // Browsers only allow audio after the player has interacted with the page.

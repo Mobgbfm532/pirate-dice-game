@@ -46,7 +46,12 @@
         mindWhip: 'Mind Whip',
         cursed: 'You are Cursed',
         devil: 'Sympathy for the Devil',
-        disguises: 'Disguises'
+        disguises: 'Disguises',
+        suckerPunch: 'Sucker Punch',
+        inkfire: 'Inkfire Brand',
+        flourish: 'Flourish',
+        divineSmite: 'Divine Smite',
+        astralFlood: 'Astral Flood'
     };
 
     function getAbilityMaxUses(abilityId) {

@@ -50,7 +50,7 @@ function JoinScreen() {
         savePrefs(name, avatar, tableCode);
         actions.join(name, avatar, tableCode, lives);
     };
-    // A Tavern Crawl saved at the invitation to the final.
+    // A Tavern Crawl saved at an invitation on to the next place.
     const [saved, setSaved] = useState(readSavedRun);
 
     return (
@@ -175,6 +175,8 @@ function roundEffectHint(state: GameState, myTurn: boolean): { text: string; kin
     const surge = state.tavernRun?.tubSurge;
     const cap = state.tavernRun?.devilCap ?? null;
     if (effect?.kind === 'curse') return { text: 'Cursed round: the lowest valid score wins', kind: 'curse' };
+    if (effect?.kind === 'ink') return { text: "Inkfire round: your dice can't land on 6", kind: 'ink' };
+    if (effect?.kind === 'smite') return { text: 'Divine Smite: lose this round, lose two hearts', kind: 'smite' };
     if (effect?.kind === 'mind' && effect.landed && myTurn) return { text: 'Mind Whip: the selected die stays kept', kind: 'mind' };
     // The Devil: three 6s for whoever plays it (no cap on the other side since 21 Oct unless devilCap is set).
     if (effect?.kind === 'devil') return cap != null
@@ -463,7 +465,9 @@ const KEEPSAKE_ICONS: Record<string, string> = {
     velvetCushion: '🪶',
     loadedDie: '🎲',
     potionBelt: '🧪',
-    loyaltyCard: '🎫'
+    loyaltyCard: '🎫',
+    marthasMask: '🎭',
+    brodorsSunglasses: '🕶️'
 };
 
 // After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then
@@ -538,7 +542,7 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
             <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
                 <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
                 <p className="subtitle">
-                    {summary.won ? 'You won the final at the Yawning Portal.' : `${summary.fellTo} ended your run.`}
+                    {summary.won ? 'You won the final aboard the Salty Swallow.' : `${summary.fellTo} ended your run.`}
                 </p>
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
@@ -628,18 +632,22 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
 //   the Devil        embers rising, red edges   (the Duke's round, once his three 6s land)
 //   Mind Whip        green-violet mist          (once it lands on your throw, until Frak's turn)
 //   Rokr's blur      twinkling stars            (while your dice are blurred)
+//   Inkfire          inky flames licking up     (Vaelin's round)
+//   Divine Smite     a holy gold glow           (the Ridgeler's round)
 function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
     const effect = state.tavernRun?.roundEffect;
     const turn = snap.turn;
-    const kind = effect?.kind === 'curse' ? 'curse'
-        : effect?.kind === 'devil' ? 'devil'
-            : effect?.kind === 'mind' && effect.landed && !!turn && turn.playerId === snap.myId ? 'mind'
-                : turn?.blurActive ? 'stars'
-                    : null;
+    // The Curse, the Devil, Inkfire and Divine Smite glow for the whole round.
+    const kind = effect && effect.kind !== 'mind' ? effect.kind
+        : effect?.kind === 'mind' && effect.landed && !!turn && turn.playerId === snap.myId ? 'mind'
+            : turn?.blurActive ? 'stars'
+                : null;
     if (!kind) return null;
     return (
         <div className={`aura ${kind === 'curse' ? 'curse-veil' : `${kind}-veil`}`} aria-hidden="true">
             {kind === 'devil' && Array.from({ length: 14 }, (_, i) => <span key={i} className="ember" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.53) % 4}s` }} />)}
+            {/* Inkfire's flames keep to the outer tenth of each bottom corner, clear of the badge under Roll and the slot rail. */}
+            {kind === 'ink' && Array.from({ length: 10 }, (_, i) => <span key={i} className={`ink-flame ${i % 2 ? 'left' : 'right'}`} style={{ left: i % 2 ? `${(i * 3) % 8}%` : `calc(${92 + (i * 3) % 8}% - 22px)`, animationDelay: `${(i * 0.47) % 2.2}s` }} />)}
             {kind === 'stars' && Array.from({ length: 18 }, (_, i) => <span key={i} className="star" style={{ left: `${(i * 53) % 100}%`, top: `${i % 2 ? (i * 29) % 22 : 78 + (i * 17) % 20}%`, animationDelay: `${(i * 0.37) % 2.4}s` }} />)}
         </div>
     );
@@ -669,6 +677,11 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <div className="claw-marks" aria-hidden="true"><span /><span /><span /></div>
             )}
             {moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
+            {moment.ability === 'Sucker Punch' && <div className="punch-burst" aria-hidden="true" />}
+            {moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
+            {moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
+            {moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
+            {moment.ability === 'Astral Flood' && <div className="flood-light" aria-hidden="true" />}
             {moment.ability === 'The Ace of Spades' && (
                 <>
                     <div className="gun-flash" aria-hidden="true" />
@@ -829,25 +842,43 @@ function Interlude({ state }: { state: GameState }) {
     );
 }
 
-// After Martha: her mask is yours, and it is the invitation to the final. Go on now, or keep
+// After a boss, the story moves on: their keepsake is yours and you're invited on to the next
+// place (after Martha the Yawning Portal; after Brodor the Salty Swallow). Go on now, or keep
 // the run on this phone and come back to it (the lobby's "Continue your crawl").
+const INVITATIONS: Record<string, { title: string; line: (place: string) => string; gift: string }> = {
+    'Martha Mystery': {
+        title: 'You qualify for the Yawning Portal',
+        line: place => `Martha Mystery lifts off her mask and presses it into your hand. "You've earned this. Show it at ${inSentence(place)}."`,
+        gift: "is yours: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round."
+    },
+    Brodor: {
+        title: 'Word from the docks',
+        line: () => `Brodor flips you his sunglasses. "Keep 'em, champ." Then word reaches the Portal: the Salty Swallow has docked, and her crew are the finest players on the coast.`,
+        gift: 'are yours: a finished 23 restores a heart, like a 24.'
+    }
+};
+// A place's name inside a sentence: "on to the Salty Swallow".
+const inSentence = (place: string) => place.replace(/^The /, 'the ');
+
 function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: GameState; interlude: Extract<Interlude, { stage: 'invitation' }>; next: string; leaving: boolean; onMoveOn: () => void }) {
     const run = state.tavernRun!;
     const me = Object.values(state.players).find(p => p.id !== BOT_ID);
+    const story = INVITATIONS[interlude.boss ?? ''] ?? INVITATIONS['Martha Mystery'];
+    const drop = interlude.drop ?? { id: 'marthasMask', name: "Martha's Mask", text: '' };
     const save = () => actions.saveAndLeave(interlude.save, { name: me?.name ?? 'Traveller', place: interlude.place, next, purse: run.purse });
     return (
-        <div className={`interlude-scene invitation ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="An invitation to the final"
+        <div className={`interlude-scene invitation ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={story.title}
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
             <div className="interlude-body">
                 <PurseLine state={state} />
-                <h2 className="interlude-title">You qualify for the Yawning Portal</h2>
+                <h2 className="interlude-title">{story.title}</h2>
                 <div className="invitation-card">
-                    <span className="icon" aria-hidden="true">🎭</span>
-                    <p>Martha Mystery lifts off her mask and presses it into your hand. "You've earned this. Show it at {interlude.place}."</p>
-                    <p className="mask-text"><strong>Martha's Mask</strong> is yours: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round.</p>
+                    <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[drop.id] ?? '✦'}</span>
+                    <p>{story.line(interlude.place)}</p>
+                    <p className="mask-text"><strong>{drop.name}</strong> {story.gift}</p>
                 </div>
                 <div className="event-choices">
-                    <button className="primary onward" onClick={onMoveOn} disabled={leaving}>On to {interlude.place}: challenge {next}</button>
+                    <button className="primary onward" onClick={onMoveOn} disabled={leaving}>On to {inSentence(interlude.place)}: challenge {next}</button>
                     <button className="secondary" onClick={save}>Save and continue later</button>
                 </div>
                 <p className="fine">The save stays on this device. Pick it up from the start screen.</p>

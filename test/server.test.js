@@ -116,6 +116,9 @@ test('a browser cannot report its own score', async () => {
     assert.equal(after.players[current.id].busted, expected.busted);
 });
 
+// Where an opponent sits in the run (TAVERN_ENCOUNTERS), by id.
+const fightOf = id => server.TAVERN_ENCOUNTERS.findIndex(e => e.id === id);
+
 // Puts a fresh Tavern Crawl table straight onto a given opponent with their ability ready.
 async function tavernAgainst(encounterIndex, name) {
     // A table of its own (a code from the clock alone now and then matched an earlier test's table).
@@ -129,7 +132,7 @@ async function tavernAgainst(encounterIndex, name) {
 }
 
 test('Klarg steals a die on the server', async () => {
-    const hero = await tavernAgainst(5, 'KlargTest');
+    const hero = await tavernAgainst(fightOf('klarg'), 'KlargTest');
     const move = waitFor(hero, 'signatureMove');
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled');
@@ -138,7 +141,7 @@ test('Klarg steals a die on the server', async () => {
 });
 
 test('Rokr blur hides dice values from the browser itself', async () => {
-    const hero = await tavernAgainst(6, 'RokrTest');
+    const hero = await tavernAgainst(fightOf('rokr'), 'RokrTest');
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled');
     assert.ok(rolled.turn.dice.every(d => d.hidden && d.value === 0), 'no real values are sent while blurred');
@@ -169,8 +172,8 @@ test('a Tavern Crawl run plays through to the end', async () => {
     // The 3D client's end-of-run screen reads this summary.
     const t = over.tavern;
     assert.equal(t.name, 'Hero');
-    assert.equal(t.encounters.length, 9);
-    assert.equal(t.won, t.defeated === 9);
+    assert.equal(t.encounters.length, server.TAVERN_ENCOUNTERS.length);
+    assert.equal(t.won, t.defeated === server.TAVERN_ENCOUNTERS.length);
     assert.equal(t.fellTo, t.won ? null : t.encounters[t.defeated]);
     // (Walking straight on lets a pickpocket keep what they took: that's in `events`.)
     const { progress, hearts, perfect, events, spent } = t.breakdown;
@@ -386,7 +389,7 @@ test('the shelf holds three Thonics at most', async () => {
 
 test('nothing can be bought once the cart has gone, and leaving starts the next fight', async () => {
     const { hero, room } = await atThoms('Leaver', 500);
-    room.tavernRun.encounterIndex = 5;
+    room.tavernRun.encounterIndex = fightOf('klarg');
     const next = nextState(hero, s => !runOf(s).shop);
     hero.emit('leaveShop');
     const state = await next;
@@ -396,7 +399,7 @@ test('nothing can be bought once the cart has gone, and leaving starts the next 
     hero.emit('leaveShop');
     await sleep(80);
     assert.equal(room.tavernRun.purse, 500);
-    assert.equal(room.tavernRun.encounterIndex, 5, 'leaving twice does not skip an opponent');
+    assert.equal(room.tavernRun.encounterIndex, fightOf('klarg'), 'leaving twice does not skip an opponent');
 });
 
 test('play again cannot restart a run while Thom\'s cart is open', async () => {
@@ -1168,7 +1171,7 @@ test('Steady Thonic: a dust hand scores its dice as they lie, drunk before or af
 });
 
 test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, Rokr\'s blur', async () => {
-    const klarg = await tavernAgainst(5, 'ClearKlarg');
+    const klarg = await tavernAgainst(fightOf('klarg'), 'ClearKlarg');
     const kroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[klarg.id])];
     kroom.tavernRun.shelf = ['clearEye', 'clearEye'];
     let moves = 0;
@@ -1195,7 +1198,7 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     assert.equal(kroom.tavernRun.shelf.length, 1);
     assert.equal(kroom.tavernRun.clearEyeArmed, false);
 
-    const rokr = await tavernAgainst(6, 'ClearRokr');
+    const rokr = await tavernAgainst(fightOf('rokr'), 'ClearRokr');
     const rroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[rokr.id])];
     rroom.tavernRun.shelf = ['clearEye'];
     rroom.tavernRun.abilityRound = 99; // not yet: it waits
@@ -1214,7 +1217,7 @@ test('Clear-Eye is refused against The Molar (no ability) and after rolling', as
     await sleep(50);
     assert.deepEqual(shelfOf(room), ['clearEye'], 'The Molar has no ability to block');
 
-    room.tavernRun.encounterIndex = 5; // pretend it's Klarg now
+    room.tavernRun.encounterIndex = fightOf('klarg'); // pretend it's Klarg now
     await rollWith(hero, room, [2, 4, 6, 6, 6, 6]);
     hero.emit('drinkThonic', 0);
     await sleep(50);
@@ -1223,7 +1226,7 @@ test('Clear-Eye is refused against The Molar (no ability) and after rolling', as
 
 test('Clear-Eye stops Jaguar\'s Smooth Talk and the Hangman\'s Ace of Spades', async () => {
     // Jaguar: Smooth Talk would knock 3 off a finished hand.
-    const jag = await tavernAgainst(8, 'ClearJaguar');
+    const jag = await tavernAgainst(fightOf('jaguar'), 'ClearJaguar');
     const jroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[jag.id])];
     jroom.tavernRun.shelf = ['clearEye'];
     jag.emit('drinkThonic', 0);
@@ -1234,7 +1237,7 @@ test('Clear-Eye stops Jaguar\'s Smooth Talk and the Hangman\'s Ace of Spades', a
 
     // The Hangman at one life turns 16+ into 24, unless Clear-Eye was drunk this round.
     for (const clear of [true, false]) {
-        const hang = await tavernAgainst(7, `Hang-${clear}`);
+        const hang = await tavernAgainst(fightOf('hangman'), `Hang-${clear}`);
         const hroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hang.id])];
         hroom.players.BOT_MOLAR.lives = 1;
         if (clear) { hroom.tavernRun.shelf = ['clearEye']; hang.emit('drinkThonic', 0); await sleep(40); }
@@ -1253,7 +1256,7 @@ test('Clear-Eye stops Jaguar\'s Smooth Talk and the Hangman\'s Ace of Spades', a
 
 test('a rolled 24 from an opponent restores a life, up to their lives for the fight', async () => {
     for (const [lives, after] of [[1, 2], [3, 3]]) {
-        const hang = await tavernAgainst(7, `Hang24-${lives}`);
+        const hang = await tavernAgainst(fightOf('hangman'), `Hang24-${lives}`);
         const room = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hang.id])];
         room.tavernRun.abilityRound = 99; // no Ace: a 24 of his own
         room.players.BOT_MOLAR.lives = lives;
@@ -1271,16 +1274,19 @@ test('a rolled 24 from an opponent restores a life, up to their lives for the fi
 
 const roomOf = socket => server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[socket.id])];
 
-test("the run is nine fights: the Ghoul and Gourd, then the Yawning Portal", async () => {
+test("the run is fourteen fights: the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow", async () => {
     const names = server.TAVERN_ENCOUNTERS.map(e => e.name);
-    assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery', 'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [2, 2, 3, 3, 3, 3, 3, 3, 4]);
+    assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery',
+        'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
+        'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(4).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);
     server.emitState(roomCode);
     const state = await next;
     assert.equal(runOf(state).place, 'The Ghoul and Gourd');
-    assert.equal(runOf(state).totalEncounters, 9);
+    assert.equal(runOf(state).totalEncounters, 14);
 });
 
 test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at random", async () => {
@@ -1390,22 +1396,24 @@ test("beating Martha wins her mask and the invitation to the Yawning Portal", as
     const won = waitFor(hero, 'offerShop', () => true, 6000);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     const offer = await won;
-    assert.equal(offer.nextEnemy, 'Klarg');
-    assert.equal(offer.mask.id, 'marthasMask');
+    assert.equal(offer.nextEnemy, 'Sylvester Stonefist');
+    assert.equal(offer.drop.id, 'marthasMask');
     const run = room.tavernRun;
     assert.equal(run.interlude.stage, 'invitation');
     assert.equal(run.interlude.place, 'The Yawning Portal');
+    assert.equal(run.interlude.boss, 'Martha Mystery');
+    assert.equal(run.interlude.drop.id, 'marthasMask');
     assert.ok(run.keepsakes.some(k => k.id === 'marthasMask'));
     assert.equal(typeof run.interlude.save, 'string');
     hero.emit('moveOn');
     const fight = await nextState(hero, s => !runOf(s).interlude);
-    assert.equal(runOf(fight).enemy.name, 'Klarg');
+    assert.equal(runOf(fight).enemy.name, 'Sylvester Stonefist');
     assert.equal(runOf(fight).place, 'The Yawning Portal');
     assert.equal(runOf(fight).maskReady, true);
 });
 
 test("Martha's mask: once a fight, before you roll, the Devil (or the Curse) is yours", async () => {
-    const hero = await tavernAgainst(5, 'Mask');
+    const hero = await tavernAgainst(fightOf('klarg'), 'Mask');
     const room = roomOf(hero);
     room.tavernRun.abilityRound = 99; // no steal from Klarg this time
     room.tavernRun.roundEffect = null;
@@ -1450,7 +1458,7 @@ test('a saved run carries on at the invitation to the Yawning Portal', async () 
     const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).interlude);
     const run = runOf(state);
     assert.equal(run.interlude.stage, 'invitation');
-    assert.equal(run.enemy.name, 'Klarg');
+    assert.equal(run.enemy.name, 'Sylvester Stonefist');
     assert.equal(run.purse, 1234);
     assert.deepEqual(run.keepsakes.map(k => k.id), ['marthasMask', 'bentCopper']);
     assert.deepEqual(run.shelf.map(t => t.id), ['healing']);
@@ -1499,7 +1507,7 @@ test('in a Tavern Crawl the first turn alternates: player, opponent, player', as
 test('from Klarg on, opponents keep what the best-play brain chooses', async () => {
     // The Hangman (no Ace: he has lives to spare). The player scores 22; he then rolls
     // 2, 4, 6, 6, 4, 5. Keeping everything makes 21 and loses; the brain keeps the two 6s.
-    const hero = await tavernAgainst(7, 'BestPlay');
+    const hero = await tavernAgainst(fightOf('hangman'), 'BestPlay');
     const room = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hero.id])];
     room.tavernRun.abilityRound = 99;
     let keptIds = null;
@@ -1514,4 +1522,187 @@ test('from Klarg on, opponents keep what the best-play brain chooses', async () 
     const best = Strategy.bestKeeps([2, 4, 6, 6, 4, 5].map((value, id) => ({ id, value, status: 'active' })), 22);
     assert.deepEqual(keptIds, best, 'the server kept what the brain chose');
     assert.ok(best.length < 6, 'not everything (21 would lose)');
+});
+
+// ---- The Yawning Portal's five, Brodor's Sunglasses and the Salty Swallow ----
+
+const codeOf = socket => Object.keys(server.rooms).find(c => server.rooms[c].players[socket.id]);
+
+// A table against an opponent whose round ability has been decided for round 1.
+async function roundAgainst(id, name) {
+    const hero = await tavernAgainst(fightOf(id), name);
+    const room = roomOf(hero);
+    server.beginTavernRound(codeOf(hero), room);
+    return { hero, room };
+}
+
+// The opponent's first throw: a 2, a 4 and four 6s (24), so they beat any hand.
+function opponentRollsBig(hero, room) {
+    hero.on('diceRolled', d => {
+        if (d.turn.playerId !== 'BOT_MOLAR' || !room.turn) return;
+        room.turn.dice.forEach(die => { if (die.status === 'active') die.value = 6; });
+        if (d.turn.rollCount === 1) { room.turn.dice[0].value = 2; room.turn.dice[1].value = 4; }
+    });
+}
+
+test("Sylvester's Sucker Punch knocks a kept die loose from a finished hand, once", async () => {
+    const hero = await tavernAgainst(fightOf('sylvester'), 'Punched');
+    const room = roomOf(hero);
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    room.turn.dice.forEach((d, i) => { d.value = [2, 4, 5, 5, 6, 6][i]; });
+    await sleep(rolled.animationMs * 0.01 + 20);
+    const punch = waitFor(hero, 'signatureMove', m => m.ability === 'Sucker Punch');
+    room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
+    assert.match((await punch).text, /knocks your \d loose/);
+    const turn = room.turn;
+    assert.equal(turn.finalized, false, 'the hand is open again');
+    assert.equal(turn.dice.filter(d => d.status === 'active').length, 1, 'one die back in play');
+    assert.ok(Rules.canRoll(turn), 'and you may roll it');
+    // Rolled again, the last die goes back in by itself: no second punch.
+    hero.emit('rollDice');
+    const done = await waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 3000);
+    assert.equal(done.turn.finalized, true);
+    assert.equal(room.tavernRun.abilityUsed.suckerPunch, 1);
+});
+
+test('Sucker Punch waits for a hand that counts (not dust)', async () => {
+    const hero = await tavernAgainst(fightOf('sylvester'), 'Dusty');
+    const room = roomOf(hero);
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    room.turn.dice.forEach(d => { d.value = 1; });
+    await sleep(rolled.animationMs * 0.01 + 20);
+    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.finalized);
+    room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
+    assert.equal((await finished).turn.outcome.busted, true);
+    assert.equal(room.tavernRun.abilityUsed.suckerPunch, undefined, 'still in his pocket');
+});
+
+test("Vaelin's Inkfire Brand: in his round your dice never land on 6", async () => {
+    const { hero, room } = await roundAgainst('vaelin', 'Inked');
+    assert.equal(room.tavernRun.roundEffect.kind, 'ink');
+    const face = server.rollFaceFor(room, room.turn);
+    const faces = new Set(Array.from({ length: 600 }, () => face({ id: 0 })));
+    assert.deepEqual([...faces].sort(), [1, 2, 3, 4, 5], 'never a 6');
+    // The Loaded Die lands 4 or 5.
+    room.tavernRun.keepsakes.push({ id: 'loadedDie', name: 'Loaded Die', text: '' });
+    const loaded = server.rollFaceFor(room, room.turn);
+    assert.deepEqual([...new Set(Array.from({ length: 200 }, () => loaded({ id: 0 })))].sort(), [4, 5]);
+    // The opponent's dice are not burned.
+    const theirs = server.rollFaceFor(room, { playerId: 'BOT_MOLAR', dice: [] });
+    assert.ok(Array.from({ length: 300 }, () => theirs({ id: 0 })).includes(6));
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    assert.ok(rolled.turn.dice.every(d => d.value !== 6));
+});
+
+test("Stason's Flourish: for his whole turn each die rolls twice and he keeps the better", async () => {
+    const hero = await tavernAgainst(fightOf('stason'), 'Flourished');
+    const room = roomOf(hero);
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Flourish', 6000);
+    await playHand(hero, room, [2, 4, 3, 3, 3, 3]);
+    assert.match((await move).text, /rolls twice/);
+    assert.equal(room.tavernRun.abilityUsed.flourish, 1);
+    // With his 2 and 4 kept, the better of two d6 averages about 4.47 (one d6: 3.5).
+    const turn = { playerId: 'BOT_MOLAR', flourish: true, dice: [{ value: 2, status: 'permanentlyLocked' }, { value: 4, status: 'permanentlyLocked' }] };
+    const face = server.rollFaceFor(room, turn);
+    const mean = Array.from({ length: 3000 }, () => face({ id: 2 })).reduce((a, b) => a + b, 0) / 3000;
+    assert.ok(mean > 4.2, `mean ${mean}`);
+});
+
+test("the Ridgeler's Divine Smite: if he wins the round, you lose two hearts", async () => {
+    const { hero, room } = await roundAgainst('ridgeler', 'Smitten');
+    assert.equal(room.tavernRun.roundEffect.kind, 'smite');
+    room.players[hero.id].lives = 3;
+    opponentRollsBig(hero, room);
+    const result = waitFor(hero, 'roundResult', () => true, 8000);
+    await playHand(hero, room, [2, 4, 1, 1, 1, 1]); // 4: he beats it
+    assert.match((await result).message, /lost 2 lives/);
+    assert.equal(room.players[hero.id].lives, 1);
+});
+
+test('Divine Smite: the Shield catches one of the two hearts', async () => {
+    const { hero, room } = await roundAgainst('ridgeler', 'Shielded');
+    room.players[hero.id].lives = 3;
+    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield', text: '' });
+    opponentRollsBig(hero, room);
+    const result = waitFor(hero, 'roundResult', () => true, 8000);
+    await playHand(hero, room, [2, 4, 1, 1, 1, 1]);
+    await result;
+    assert.equal(room.players[hero.id].lives, 2);
+});
+
+test("Brodor's Astral Flood heals one of his lives once he has lost one", async () => {
+    const hero = await tavernAgainst(fightOf('brodor'), 'Flooded');
+    const room = roomOf(hero);
+    const code = codeOf(hero);
+    room.players.BOT_MOLAR.lives = 4; // his lives for the fight
+    server.beginTavernRound(code, room);
+    assert.equal(room.tavernRun.abilityUsed.astralFlood, undefined, 'nothing to heal yet');
+    room.players.BOT_MOLAR.lives = 2;
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Astral Flood');
+    server.beginTavernRound(code, room);
+    await move;
+    assert.equal(room.players.BOT_MOLAR.lives, 3);
+    server.beginTavernRound(code, room);
+    assert.equal(room.players.BOT_MOLAR.lives, 3, 'once a fight');
+});
+
+test("Brodor's Sunglasses: a finished 23 restores a heart", async () => {
+    const { hero, room } = await tavernTable('Shades');
+    room.tavernRun.keepsakes.push({ id: 'brodorsSunglasses', name: "Brodor's Sunglasses", text: '' });
+    room.players[hero.id].lives = 2;
+    const lit = waitFor(hero, 'keepsakeActivated', k => k.id === 'brodorsSunglasses');
+    await playHand(hero, room, [2, 4, 6, 6, 6, 5]); // 23
+    await lit;
+    assert.equal(room.players[hero.id].lives, 3);
+});
+
+test('beating Brodor wins his Sunglasses and word of the Salty Swallow', async () => {
+    const hero = await tavernAgainst(fightOf('brodor'), 'Champion');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.lives = 1;
+    room.tavernRun.abilityRound = 99;
+    room.tavernRun.roundEffect = null;
+    opponentAlwaysDusts(hero, room);
+    const won = waitFor(hero, 'offerShop', () => true, 6000);
+    await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
+    const offer = await won;
+    assert.equal(offer.nextEnemy, 'Klarg');
+    assert.equal(offer.drop.id, 'brodorsSunglasses');
+    const run = room.tavernRun;
+    assert.deepEqual({ stage: run.interlude.stage, place: run.interlude.place, from: run.interlude.from, drop: run.interlude.drop.id },
+        { stage: 'invitation', place: 'The Salty Swallow', from: 'The Yawning Portal', drop: 'brodorsSunglasses' });
+    assert.ok(run.keepsakes.some(k => k.id === 'brodorsSunglasses'));
+    assert.equal(typeof run.interlude.save, 'string');
+    hero.emit('moveOn');
+    const fight = await nextState(hero, s => !runOf(s).interlude);
+    assert.equal(runOf(fight).enemy.name, 'Klarg');
+    assert.equal(runOf(fight).place, 'The Salty Swallow');
+});
+
+test('a run saved after the Yawning Portal carries on at the Salty Swallow', async () => {
+    const { room } = await tavernTable('Sailor');
+    room.tavernRun.encounterIndex = fightOf('klarg');
+    room.tavernRun.purse = 2500;
+    room.tavernRun.keepsakes = [{ id: 'marthasMask', name: "Martha's Mask", text: '' }, { id: 'brodorsSunglasses', name: "Brodor's Sunglasses", text: '' }];
+    const save = server.sealSave(room, 'Sailor');
+    const back = await join('Someone', 'TVRN-SV3', { resume: save });
+    const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).interlude);
+    const run = runOf(state);
+    assert.equal(run.interlude.place, 'The Salty Swallow');
+    assert.equal(run.interlude.drop.id, 'brodorsSunglasses');
+    assert.equal(run.enemy.name, 'Klarg');
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['marthasMask', 'brodorsSunglasses']);
+});
+
+test('the Yawning Portal and the ship play their best; every ability has a name and uses', () => {
+    const places = Object.fromEntries(server.TAVERN_ENCOUNTERS.map(e => [e.id, e.place]));
+    for (const id of ['sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor']) assert.equal(places[id], 'yawningPortal');
+    for (const id of ['klarg', 'rokr', 'hangman', 'jaguar']) assert.equal(places[id], 'saltySwallow');
+    for (const e of server.TAVERN_ENCOUNTERS) if (e.ability) {
+        assert.ok(Rules.ABILITY_NAMES[e.ability], `${e.ability} has a name`);
+        assert.ok(BALANCE.abilityUses[e.ability] >= 1, `${e.ability} has uses`);
+    }
 });
