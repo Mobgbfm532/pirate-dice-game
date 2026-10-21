@@ -410,6 +410,8 @@ function playRun(policy, opts = {}) {
     const log = { fights: [], spots: [] };
     let defeated = startAt;
     for (let i = startAt; i < order.length; i++) {
+        // For experiments: a keepsake handed over before fight grantAt.index (as if bought then).
+        if (opts.grantAt && opts.grantAt.index === i && !run.keepsakes.includes(opts.grantAt.id)) run.keepsakes.push(opts.grantAt.id);
         const result = fight(i, run, { ...opts, numbers: N });
         run.hearts = N.playerHearts;
         log.fights.push(result);
@@ -451,6 +453,8 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
         return thenSpots();
     }
     const canBet = run.purse >= Math.min(...I.diceDenBets);
+    // The Shrine and the hot tub cost gold since 21 Oct: not offered if the purse can't cover it.
+    const affords = sp => (sp !== 'shrine' || run.purse >= (I.shrinePrice || 0)) && (sp !== 'hotTub' || run.purse >= (I.hotTubPrice || 0));
     const unowned = KEEPSAKES.filter(k => !run.keepsakes.includes(k));
     // Else, now and then, the Hooded Stranger finds you (while he has keepsakes left): that's
     // the walk. (strangerChance null: he's one of the spots, as before 19 Oct.)
@@ -463,7 +467,7 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
         log.spots.push('darren');
         return thenSpots();
     } else {
-        const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger', ...(I.hotTubSurges ? ['hotTub'] : [])].filter(s => (s !== 'stranger' || (!strangerEvent && unowned.length)) && (s !== 'diceDen' || canBet))).slice(0, 2);
+        const spots = shuffle(['thom', 'shrine', 'diceDen', 'stranger', ...(I.hotTubSurges ? ['hotTub'] : [])].filter(s => (s !== 'stranger' || (!strangerEvent && unowned.length)) && (s !== 'diceDen' || canBet) && affords(s))).slice(0, 2);
         if (run.keepsakes.includes('loyaltyCard') && !spots.includes('thom')) spots[Math.floor(Math.random() * 2)] = 'thom';
         spot = policy.choose(run, spots, N, nextIndex);
     }
@@ -480,7 +484,20 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
                 run.shelf.push(id);
             }
         }
+        // Thom's back shelf (since 21 Oct): keepsakes for gold.
+        const wares = shuffle(KEEPSAKES.filter(k => !run.keepsakes.includes(k) && (N.keepsakePrices || {})[k])).slice(0, N.thomKeepsakes || 0);
+        for (const id of (policy.buyKeepsakes ? policy.buyKeepsakes(run, wares, N, nextIndex) : [])) {
+            const price = N.keepsakePrices[id];
+            if (run.purse < price || run.keepsakes.includes(id)) continue;
+            run.purse -= price;
+            run.stats.spent += price;
+            run.keepsakes.push(id);
+            run.stats.boughtKeepsakes = (run.stats.boughtKeepsakes || 0) + 1;
+            if (id === 'potionBelt' && run.shelf.length < shelfSize(run, N)) run.shelf.push(N.keepsakes.beltThonic);
+        }
     } else if (spot === 'hotTub') {
+        run.purse -= I.hotTubPrice || 0;
+        run.stats.spent += I.hotTubPrice || 0;
         // A wild surge, by weight: the dice ones for the next fight, Pruney a heart short.
         const surge = pickSurge(I.hotTubSurges);
         run.stats.surges = run.stats.surges || {};
@@ -488,6 +505,8 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
         if (surge === 'pruney') run.hearts = Math.max(1, (run.hearts ?? N.playerHearts) - 1);
         else run.nextSurge = surge;
     } else if (spot === 'shrine') {
+        run.purse -= I.shrinePrice || 0;
+        run.stats.spent += I.shrinePrice || 0;
         if (I.shrineGifts) {
             // The Lady's blessing, at random: Favour (an extra heart next fight) or Grace (the
             // next dust that would cost a heart doesn't; not given twice).

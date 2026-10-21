@@ -1784,3 +1784,34 @@ button.keepsake.used { opacity: 0.55; }
 .takeover.constellation-blur { --flare: rgba(130, 170, 255, 0.55); }
 .takeover.the-ace-of-spades { --flare: rgba(236, 239, 241, 0.6); }
 .takeover.smooth-talk { --flare: rgba(255, 213, 79, 0.55); }
+
+/* Thom's back shelf (since 21 Oct): two keepsakes for gold, under the Thonics. Compact rows,
+   so the counter still fits a small phone. */
+.back-shelf { width: 100%; }
+.back-shelf h3 { margin: 4px 0 4px; font-size: 0.95rem; color: var(--gold-bright); text-align: center; text-shadow: 0 1px 4px #000; }
+.keepsake-wares { display: flex; flex-direction: column; gap: 6px; }
+.keepsake-ware {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(29, 18, 10, 0.9);
+    border: 1px solid rgba(184, 134, 11, 0.6);
+    color: var(--parchment);
+    animation: fade-up 0.4s both;
+}
+.keepsake-ware .icon { font-size: 1.5rem; }
+.keepsake-ware .about { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.keepsake-ware .about strong { font-size: 0.95rem; }
+.keepsake-ware .about .text { font-size: 0.75rem; opacity: 0.85; line-height: 1.2; }
+.keepsake-ware .buy { white-space: nowrap; }
+@media (max-height: 700px) {
+    /* Short phones: Thom keeps some room above his counter; the back shelf shows names and prices. */
+    .keepsake-ware .about .text { display: none; }
+    .keepsake-ware { padding: 4px 8px; }
+    .back-shelf h3 { margin: 2px 0; }
+}
+.keepsake-ware .buy { padding: 6px 10px; font-size: 0.95rem; font-weight: 700; border-radius: 9px; border: 2px solid #6d4c2a; color: #fff8e1; background: linear-gradient(#388e3c, #1b5e20); cursor: pointer; }
+.keepsake-ware .buy:disabled { background: #b8a888; color: #5a4a35; border-color: #8d7a5a; cursor: default; }

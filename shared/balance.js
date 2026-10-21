@@ -40,9 +40,11 @@ module.exports = {
     // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots catch your eye.
     interlude: {
         pickpocketChance: 25,   // percent of walks across the room
-        pickpocketShare: 0.25,  // of the purse, if they get away
+        pickpocketShare: 0.5,   // of the purse, if they get away (half since 21 Oct, the user's call; it was a quarter)
         pickpocketCatch: 4,     // roll this or higher on one die to catch them
         shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
+        shrinePrice: 100,       // a candle for the Lady (since 21 Oct; a visit is worth ~110 gold to a run)
+        hotTubPrice: 50,        // a soak (since 21 Oct; a gamble, kept cheap)
         favourHearts: 1,        // the Lady's Favour: the next fight starts with this many extra hearts
         diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
         strangerChance: 20,     // percent of walks the Hooded Stranger finds you (if the thief didn't)
@@ -71,6 +73,13 @@ module.exports = {
 
     // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on
     // 19 Oct to add ~100-170 gold to a run from Klarg on (balance/experiments/new-keepsakes.js).
+    // Keepsakes for sale on Thom's back shelf (since 21 Oct, the user's call: something worth
+    // saving gold for). Two at random each visit, from those you don't have. Each priced a little
+    // under what it adds to a run's gold when bought around fight 3, when a purse first reaches a
+    // few hundred (balance/experiments/keepsake-when.js; bought later, each is worth less).
+    thomKeepsakes: 2,
+    keepsakePrices: { bentCopper: 300, velvetCushion: 150, luckySeat: 150, loyaltyCard: 125, potionBelt: 125, loadedDie: 75 },
+
     keepsakes: {
         loadedDieLow: 4,        // the Loaded Die: one of your dice only rolls this or higher
         beltSlots: 1,           // the Potion Belt: extra shelf slots...

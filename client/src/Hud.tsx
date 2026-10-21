@@ -528,7 +528,7 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
         ['Hearts spared', String(b.hearts)],
         ...(b.perfect ? [['Perfect 24s', String(b.perfect)] as [string, string]] : []), // no gold for 24s since 19 Oct
         ['Between fights', b.events ? (b.events > 0 ? `+${b.events}` : `−${-b.events}`) : '0'],
-        ["Spent at Thom's", b.spent ? `−${b.spent}` : '0']
+        ['Spent', b.spent ? `−${b.spent}` : '0']
     ];
     // Your best on the board (the board keeps each name's best run).
     const mine = leaderboard.findIndex(e => e.name === summary.name);
@@ -730,6 +730,25 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                         );
                     })}
                 </div>
+                {!!shop.keepsakes?.length && (
+                    <div className="back-shelf">
+                        <h3>Thom's back shelf</h3>
+                        <div className="keepsake-wares">
+                            {shop.keepsakes.map((k, i) => {
+                                const short = run.purse < k.price;
+                                return (
+                                    <div key={k.id} className="keepsake-ware" style={{ animationDelay: `${1.3 + i * 0.15}s` }}>
+                                        <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[k.id] ?? '✦'}</span>
+                                        <span className="about"><strong>{k.name}</strong><span className="text">{k.text}</span></span>
+                                        <button className="buy" disabled={short} onClick={() => actions.buyKeepsake(k.id)}>
+                                            {short ? `${k.price} gold` : `Buy · ${k.price}`}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
                 <div className="shop-footer">
                     <div className="shop-shelf" aria-label="Your shelf">
                         {Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
@@ -800,7 +819,7 @@ function Interlude({ state }: { state: GameState }) {
                             <SpotPicture spot={spot} />
                             <strong>{SPOTS[spot].name}</strong>
                             <span className="line">{SPOTS[spot].line}</span>
-                            <span className="offer">{SPOTS[spot].offer}</span>
+                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${run.prices.shrine} gold` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${run.prices.hotTub} gold` : ''}</span>
                         </button>
                     ))}
                 </div>
@@ -947,7 +966,8 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
             <>
                 <p className="scene-text">Climb in, and the wild magic surges: most likely one of your dice is blessed for the next fight. Most likely.</p>
                 <div className="event-choices">
-                    <button className="primary" onClick={actions.soak}>Climb in</button>
+                    <button className="primary" disabled={run.purse < (run.prices?.hotTub ?? 0)} onClick={actions.soak}>Climb in{run.prices?.hotTub ? ` · ${run.prices.hotTub} gold` : ''}</button>
+                    <button className="secondary" onClick={onMoveOn}>No thanks: challenge {next}</button>
                 </div>
             </>
         );
@@ -958,7 +978,8 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
             <>
                 <p className="scene-text">Light a candle, and the Lady who keeps sailors safe grants a blessing: an extra heart for your next fight, or her Grace against the dust.</p>
                 <div className="event-choices">
-                    <button className="primary" onClick={actions.pray}>Light a candle</button>
+                    <button className="primary" disabled={run.purse < (run.prices?.shrine ?? 0)} onClick={actions.pray}>Light a candle{run.prices?.shrine ? ` · ${run.prices.shrine} gold` : ''}</button>
+                    <button className="secondary" onClick={onMoveOn}>No thanks: challenge {next}</button>
                 </div>
             </>
         );

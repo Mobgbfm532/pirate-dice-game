@@ -371,7 +371,8 @@ function getTavernRunState(room) {
         purse: room.tavernRun.purse,
         shelf: room.tavernRun.shelf.map(thonicView),
         shelfSize: shelfSizeOf(room),
-        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView), free: !!room.tavernRun.shop.free } : null,
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView), free: !!room.tavernRun.shop.free, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
+        prices: { shrine: INTERLUDE.shrinePrice || 0, hotTub: INTERLUDE.hotTubPrice || 0 },
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
@@ -940,7 +941,7 @@ function getTavernScoreSummary(room, completedRun = false) {
             `Progress: ${progressGold}`,
             `Hearts spared: ${stats.heartGold}`,
             `Between fights: ${stats.eventGold}`,
-            `Spent at Thom's: ${stats.spent}`
+            `Spent: ${stats.spent}`
         ]
     };
 }
@@ -1156,10 +1157,21 @@ function unownedKeepsakes(room) {
 // Two different spots; the Dice Den only if the purse covers its smallest bet. With Thom's
 // Loyalty Card, his cart is always one of them.
 function pickSpots(room) {
-    let canBet = room.tavernRun.purse >= Math.min(...INTERLUDE.diceDenBets);
-    let spots = shuffled(placeOf(room).spots.filter(id => id !== 'diceDen' || canBet)).slice(0, 2);
+    let purse = room.tavernRun.purse;
+    let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
+    // A spot that costs more than the purse holds isn't offered (the Shrine and the hot tub cost
+    // gold since 21 Oct).
+    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= (INTERLUDE.shrinePrice || 0)) && (id !== 'hotTub' || purse >= (INTERLUDE.hotTubPrice || 0));
+    let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
     if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
+}
+
+// Thom's back shelf (since 21 Oct): keepsakes for gold, two at random from those you don't have.
+const KEEPSAKE_PRICES = BALANCE.keepsakePrices || {};
+const keepsakeForSale = k => ({ ...k, price: KEEPSAKE_PRICES[k.id] });
+function pickThomKeepsakes(room) {
+    return shuffled(unownedKeepsakes(room).filter(k => KEEPSAKE_PRICES[k.id])).slice(0, BALANCE.thomKeepsakes || 0);
 }
 
 // The Hooded Stranger, with keepsakes you don't have yet.
@@ -1727,6 +1739,24 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // A keepsake from Thom's back shelf. Spent gold counts with the Thonics (stats.spent).
+    socket.on('buyKeepsake', (keepsakeId) => {
+        let room = tavernPlayer();
+        if (!room || !room.tavernRun.shop) return;
+        let run = room.tavernRun;
+        let shelf = run.shop.keepsakes || [];
+        let keepsake = shelf.find(k => k.id === keepsakeId);
+        let price = keepsake && KEEPSAKE_PRICES[keepsake.id];
+        if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id)) return;
+        run.purse -= price;
+        run.stats.spent += price;
+        run.keepsakes.push(keepsake);
+        run.shop.keepsakes = shelf.filter(k => k.id !== keepsake.id);
+        // The Potion Belt comes with a Thonic, in its new slot.
+        if (keepsake.id === 'potionBelt' && run.shelf.length < shelfSizeOf(room)) run.shelf.push(KEEPSAKE_NUMBERS.beltThonic);
+        emitState(socket.roomCode);
+    });
+
     // On to the next fight, from Thom's cart or any point between fights. (`leaveShop` is
     // the older name; the classic page and the tests still send it.)
     const moveOn = () => {
@@ -1767,6 +1797,10 @@ io.on('connection', (socket) => {
         let room = interludeAt('hotTub');
         if (!room || action !== 'soak') return;
         let run = room.tavernRun;
+        let price = INTERLUDE.hotTubPrice || 0;
+        if (run.purse < price) return;
+        run.purse -= price;
+        run.stats.spent += price;
         let surge = pickHotTubSurge();
         if (surge === 'pruney') run.nextFightHearts = Math.max(1, (run.nextFightHearts || BALANCE.playerHearts) - 1);
         else run.nextFightSurge = surge;
@@ -1812,7 +1846,7 @@ io.on('connection', (socket) => {
         if (spot === 'thom') {
             run.interlude = null;
             // Thom's Loyalty Card: the first Thonic of the visit is free.
-            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard') };
+            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room) };
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine' };
         } else if (spot === 'diceDen') {
@@ -1831,6 +1865,10 @@ io.on('connection', (socket) => {
         let room = interludeAt('shrine');
         if (!room || action !== 'pray') return;
         let run = room.tavernRun;
+        let price = INTERLUDE.shrinePrice || 0;
+        if (run.purse < price) return;
+        run.purse -= price;
+        run.stats.spent += price;
         let gift = INTERLUDE.shrineGifts[crypto.randomInt(0, INTERLUDE.shrineGifts.length)];
         if (gift === 'grace' && run.ladysGrace) gift = 'favour';
         // Her Favour adds to what the next fight would start on (after the Stranger's price, too).

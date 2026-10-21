@@ -508,7 +508,7 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
     await sleep(60);
     assert.equal(room.turn ? room.turn.hasRolled : false, false);
     if (interlude.stage === 'pickpocket') {
-        assert.equal(interlude.steal, 37, 'a quarter of the purse');
+        assert.equal(interlude.steal, Math.floor(150 * BALANCE.interlude.pickpocketShare), 'a share of the purse (half since 21 Oct)');
         return;
     }
     if (interlude.stage === 'stranger' || interlude.stage === 'darren') return;
@@ -549,7 +549,7 @@ test('going to Thom opens his cart: Healing and two others', async () => {
 test('the Shrine to the Lady: light a candle, and she grants a blessing at random', async () => {
     const seen = new Set();
     for (let n = 0; n < 24; n++) {
-        const { hero, room } = await betweenFights(`Pilgrim${n}`, { stage: 'choose', spots: ['shrine', 'thom'] }, 50);
+        const { hero, room } = await betweenFights(`Pilgrim${n}`, { stage: 'choose', spots: ['shrine', 'thom'] }, 50 + BALANCE.interlude.shrinePrice);
         hero.emit('chooseSpot', 'shrine');
         await nextState(hero, s => runOf(s).interlude.stage === 'shrine');
         hero.emit('shrinePick', 'gold'); // the old choices are gone
@@ -559,7 +559,7 @@ test('the Shrine to the Lady: light a candle, and she grants a blessing at rando
         const after = await nextState(hero, s => runOf(s).interlude.stage === 'done');
         const { gift } = runOf(after).interlude;
         seen.add(gift);
-        assert.equal(room.tavernRun.purse, 50, 'a blessing, not gold');
+        assert.equal(room.tavernRun.purse, 50, 'a candle costs shrinePrice; a blessing, not gold');
         if (gift === 'favour') {
             hero.emit('moveOn');
             const fight = await nextState(hero, s => !runOf(s).interlude);
@@ -805,6 +805,45 @@ test("the Lady's Favour adds a heart to what the next fight starts on, even afte
     assert.equal(room.tavernRun.nextFightHearts, BALANCE.interlude.strangerHearts + BALANCE.interlude.favourHearts);
 });
 
+test("Thom's back shelf: two keepsakes for gold; buy one and it's yours, the gold spent", async () => {
+    const { hero, room } = await betweenFights('Collector', { stage: 'choose', spots: ['thom', 'shrine'] }, 1000);
+    hero.emit('chooseSpot', 'thom');
+    const open = await nextState(hero, s => runOf(s).shop);
+    const wares = runOf(open).shop.keepsakes;
+    assert.equal(wares.length, BALANCE.thomKeepsakes, 'two on the back shelf');
+    wares.forEach(k => assert.equal(k.price, BALANCE.keepsakePrices[k.id]));
+    const k = wares[0];
+    hero.emit('buyKeepsake', k.id);
+    const after = await nextState(hero, s => runOf(s).keepsakes.some(x => x.id === k.id));
+    assert.equal(runOf(after).purse, 1000 - k.price);
+    assert.equal(room.tavernRun.stats.spent, k.price);
+    assert.ok(!runOf(after).shop.keepsakes.some(x => x.id === k.id), 'off the shelf');
+    hero.emit('buyKeepsake', k.id); // once only
+    await sleep(30);
+    assert.equal(room.tavernRun.purse, 1000 - k.price);
+
+    // Too dear: nothing changes.
+    const poor = await betweenFights('Skint2', { stage: 'choose', spots: ['thom', 'shrine'] }, 10);
+    poor.hero.emit('chooseSpot', 'thom');
+    const poorOpen = await nextState(poor.hero, s => runOf(s).shop);
+    poor.hero.emit('buyKeepsake', runOf(poorOpen).shop.keepsakes[0].id);
+    await sleep(30);
+    assert.equal(poor.room.tavernRun.purse, 10);
+    assert.equal(poor.room.tavernRun.keepsakes.length, 0);
+});
+
+test('the Shrine and the hot tub cost gold: not offered when the purse is short, and not for free', async () => {
+    const { hero, room } = await betweenFights('Penniless', { stage: 'shrine' }, BALANCE.interlude.shrinePrice - 1);
+    hero.emit('shrinePick', 'pray');
+    await sleep(30);
+    assert.equal(room.tavernRun.interlude.stage, 'shrine', 'no candle without the gold');
+    room.tavernRun.purse = 0;
+    for (let i = 0; i < 30; i++) {
+        const spots = server.pickSpots(room);
+        assert.ok(!spots.includes('shrine') && !spots.includes('hotTub'), 'not offered with an empty purse');
+    }
+});
+
 test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one and gold; then the next fight", async () => {
     const seen = new Set();
     for (let n = 0; n < 15; n++) {
@@ -855,7 +894,7 @@ test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one an
     assert.ok(paid && full, 'both seen');
 });
 
-test('the Wild Magic Hot Tub: a free soak and a wild surge, on one of your dice for the next fight', async () => {
+test('the Wild Magic Hot Tub: a soak (hotTubPrice) and a wild surge, on one of your dice for the next fight', async () => {
     const seen = new Set();
     for (let n = 0; n < 25; n++) {
         const { hero, room } = await betweenFights(`Soak${n}`, { stage: 'choose', spots: ['hotTub', 'thom'] }, 100);
@@ -867,7 +906,7 @@ test('the Wild Magic Hot Tub: a free soak and a wild surge, on one of your dice 
         seen.add(surge.id);
         assert.ok(['noOnes', 'twin', 'lucky', 'scalding', 'soggy', 'pruney'].includes(surge.id));
         assert.ok(surge.name && surge.text);
-        assert.equal(room.tavernRun.purse, 100, 'free');
+        assert.equal(room.tavernRun.purse, 100 - BALANCE.interlude.hotTubPrice, 'a soak costs hotTubPrice');
         if (surge.id === 'pruney') assert.equal(room.tavernRun.nextFightHearts, BALANCE.playerHearts - 1);
         else assert.equal(room.tavernRun.nextFightSurge, surge.id);
         hero.emit('moveOn');

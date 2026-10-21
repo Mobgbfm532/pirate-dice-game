@@ -50,7 +50,8 @@ export interface TavernRun {
     purse: number;
     shelf: Thonic[];
     shelfSize: number;
-    shop: { stock: Thonic[]; free?: boolean } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take)
+    shop: { stock: Thonic[]; free?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
+    prices?: { shrine: number; hotTub: number }; // what a candle at the Shrine and a soak in the hot tub cost
     interlude: Interlude | null; // between fights (see server.js startInterlude)
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
@@ -708,6 +709,11 @@ export const actions = {
         playSound('swoosh');
         socket.emit('moveOn');
         update({ shopArrival: null });
+    },
+    // A keepsake from Thom's back shelf.
+    buyKeepsake(id: string) {
+        playSound('click');
+        socket.emit('buyKeepsake', id);
     },
     chooseSpot(spot: Spot) {
         playSound('click');

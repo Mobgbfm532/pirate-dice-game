@@ -33,9 +33,9 @@ const sensible = {
         const room = run.shelf.length < N.shelfSize + (run.keepsakes.includes('potionBelt') ? 1 : 0);
         const worth = {
             thom: room && run.purse >= Math.min(...Object.values(N.thonicPrices)) ? 30 : -1,
-            shrine: N.interlude.shrineGifts ? VALUE.blessing[at(next, N)] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[at(next, N)] : 0),
+            shrine: (N.interlude.shrineGifts ? VALUE.blessing[at(next, N)] : Math.max(N.interlude.shrineGold, room ? VALUE.healing[at(next, N)] : 0)) - (N.interlude.shrinePrice || 0) + 15,
             diceDen: -1, // even odds: no gain for the score
-            hotTub: 15, // a soak adds ~1-2 points of the next fight on average (hot-tub.js)
+            hotTub: 15 - (N.interlude.hotTubPrice || 0), // a soak adds ~1-2 points of the next fight (hot-tub.js), less its price
             stranger: 60 // two offers; often one is worth the heart
         };
         const best = spots.slice().sort((a, b) => worth[b] - worth[a])[0];
@@ -46,6 +46,14 @@ const sensible = {
     },
     shrine: (run, N, next) => (VALUE.healing[at(next, N)] > N.interlude.shrineGold ? 'healing' : 'gold'),
     bet: () => 0,
+    // Thom's back shelf: what each keepsake adds to a run when bought before fight 3
+    // (keepsake-when.js, 21 Oct), less later on; buy the best bargain the purse covers.
+    buyKeepsakes(run, wares, N, next) {
+        const worth = { bentCopper: 310, velvetCushion: 160, luckySeat: 160, loyaltyCard: 140, potionBelt: 155, loadedDie: 40 };
+        const later = next <= 2 ? 1 : next === 3 ? 0.55 : next === 4 ? 0.35 : 0.12;
+        const gain = id => (worth[id] || 0) * later - N.keepsakePrices[id];
+        return wares.filter(id => gain(id) > 0 && run.purse >= N.keepsakePrices[id]).sort((a, b) => gain(b) - gain(a)).slice(0, 1);
+    },
     stranger(run, offers, N, next) {
         const cost = VALUE.heartShort[at(next, N)] * (N.playerHearts - N.interlude.strangerHearts);
         const best = offers.slice().sort((a, b) => VALUE[b][at(next, N)] - VALUE[a][at(next, N)])[0];

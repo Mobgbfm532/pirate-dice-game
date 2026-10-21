@@ -277,7 +277,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   goes on the leaderboard. The run-over screen shows the breakdown.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
-  shows 3 Thonics (Healing + 2 random, `pickThomStock`). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
+  shows 3 Thonics (Healing + 2 random, `pickThomStock`) and, since 21 Oct, **his back shelf**: two
+  keepsakes you don't have, for gold (`keepsakePrices`: Shield 300, Trap Card and Velvet Cushion
+  150, Loyalty Card and Potion Belt 125, Loaded Die 75; priced under what each adds when bought
+  around fight 3, `balance/experiments/keepsake-when.js`; `buyKeepsake`, `pickThomKeepsakes`). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
   between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
   handler; the client's `drinkable()` mirrors it), with a cork pop:
 
@@ -304,14 +307,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
   brings the two spots, or "Or challenge X right away" skips them. The random events: about 1 walk in 4 a **pickpocket** strikes instead of the spots: roll one die, a
-  4+ catches him (`pickpocketCatch`), else he takes a quarter of the purse; then straight on
+  4+ catches him (`pickpocketCatch`), else he takes half the purse (a quarter until 21 Oct); then straight on
   to the next fight. Else, 20% of the time (`strangerChance`, ~1 walk in 7), the **Hooded
   Stranger** finds you instead (a random event since 19 Oct, as the design doc decided; no
   longer a spot): one of two keepsakes, the next fight a heart short (on 3), or turn him
   down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
-  The **Wild Magic Hot Tub** (a spot in both pubs, free, since 20 Oct): climb in and a wild surge
+  The **Wild Magic Hot Tub** (a spot in both pubs, since 20 Oct; 50 gold a soak since 21 Oct, `hotTubPrice`; the Shrine's candle 100, `shrinePrice`; neither is offered when the purse can't cover it): climb in and a wild surge
   is picked by weight (`hotTubSurges`): one of your dice (`hotTubDie`, aqua on the table,
   `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
   lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
