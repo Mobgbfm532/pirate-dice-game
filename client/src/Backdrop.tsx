@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { BOT_ID, store } from './game';
 import { PORTRAITS, type Portrait } from './portraits';
 
@@ -78,6 +78,15 @@ export function opponentName(): string | null {
     return state.players[BOT_ID].name;
 }
 
+// Martha in disguise: while she plays Frak's, Danhausen's or the Duke's trick (the round's effect
+// is hers, `as` whose face), her picture is the one holding up that face (the user's paintings,
+// 21 Oct): 'Martha as Frak' and so on in PORTRAITS. Otherwise the opponent's own name.
+export function opponentPortraitKey(name: string): string {
+    const effect = store.get().state?.tavernRun?.roundEffect;
+    const disguised = name === 'Martha Mystery' && effect?.by === 'opponent' && effect.as ? `Martha as ${effect.as}` : null;
+    return disguised && PORTRAITS[disguised] ? disguised : name;
+}
+
 // Who sits across the table: only a bot opponent (The Molar, or the current Tavern Crawl
 // encounter). At a multiplayer table nobody does; the players' nameplates show whose turn it is.
 // Only characters with a painted bust can sit there.
@@ -85,7 +94,8 @@ export function acrossTheTable(): { key: string; portrait: Portrait; isBot: bool
     const { state, joined } = store.get();
     if (!joined || !state) return null;
     const bot = opponentName();
-    return bot && PORTRAITS[bot]?.bust ? { key: bot, portrait: PORTRAITS[bot], isBot: true } : null;
+    const key = bot && opponentPortraitKey(bot);
+    return key && PORTRAITS[key]?.bust ? { key, portrait: PORTRAITS[key], isBot: true } : null;
 }
 
 export function Backdrop() {
@@ -95,12 +105,21 @@ export function Backdrop() {
     const name = across?.key;
     // The bot brightens on its turn.
     const theirTurn = !!across && snap.state?.currentTurnId === BOT_ID;
+    // Martha changing faces (into a disguise, or back) swaps her bust with a shimmer, rather than
+    // the entrance a new opponent makes.
+    // (Decided once per face, so later re-renders don't cut the shimmer short.)
+    const seen = useRef<{ name?: string; swapped: boolean }>({ swapped: false });
+    if (seen.current.name !== name) {
+        const before = seen.current.name;
+        seen.current = { name, swapped: !!name && !!before && name.startsWith('Martha') && before.startsWith('Martha') };
+    }
+    const swapped = seen.current.swapped;
 
     return (
         <div className="backdrop" aria-hidden="true">
             <div className="tavern-room" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${currentScene().file}")` }} />
             {portrait?.bust && (
-                <img key={name} className={`opponent ${theirTurn ? 'active' : ''}`} src={portrait.src} alt=""
+                <img key={name} className={`opponent ${theirTurn ? 'active' : ''} ${swapped ? 'disguise-swap' : ''}`} src={portrait.src} alt=""
                     style={portrait.seat ? { height: `calc(var(--bust-h, 0px) * ${portrait.seat})` } : undefined} />
             )}
         </div>

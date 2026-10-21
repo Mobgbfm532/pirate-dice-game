@@ -26,6 +26,10 @@ export const PORTRAITS: Record<string, Portrait> = {
     Danhausen: { ...bust('danhausen.webp', [50, 15], 3.2), seat: 1.6 },
     'Duke Morrigan': bust('duke.webp', [67, 34], 2.6),
     'Martha Mystery': { ...bust('martha.webp', [57, 25], 3.0), seat: 1.15 },
+    // Her Disguises: the same pose holding up each face as a mask. Behind the table they sit like her own bust (seat); a round avatar shows her face and the mask.
+    'Martha as Frak': { ...bust('martha-frak.webp', [70, 30], 2.0), seat: 1.15 },
+    'Martha as Danhausen': { ...bust('martha-danhausen.webp', [70, 30], 2.0), seat: 1.15 },
+    'Martha as Duke Morrigan': { ...bust('martha-duke.webp', [70, 30], 2.0), seat: 1.15 },
     Klarg: bust('klarg.webp', [58, 30], 3.0),
     Rokr: bust('rokr.webp', [48, 30], 3.0),
     'The Hangman': bust('hangman.webp', [51, 38], 2.8),
@@ -35,8 +39,7 @@ export const PORTRAITS: Record<string, Portrait> = {
     'Vaelin Inkhand': bust('vaelin-inkhand.webp', [48, 28], 2.6),
     'Stason Jatham': bust('stason.webp', [55, 22], 2.8),
     'The Ridgeler': bust('ridgeler.webp', [45, 25], 2.6),
-    // A silhouette stands in until Brodor's painting arrives.
-    Brodor: { ...bust('brodor-standin.svg', [50, 24], 2.4), seat: 1.15 },
+    Brodor: { ...bust('brodor.webp', [52, 10], 2.3), seat: 1.3 },
     Devil: classic('Devil.png'),
     Vaelin: classic('vaelin.png')
 };

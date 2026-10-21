@@ -115,6 +115,8 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | Danhausen | Wiry showman in white face paint with black markings, small curled horns, a high-collared black cape, white gloves | huge manic grin | a small purple gourd |
 | Duke Morrigan | Elegant purple-skinned tiefling with big curled ram's horns, a purple high-collared coat over a yellow shirt | sly smile | none (head and shoulders) |
 | Martha Mystery | Red-haired tavern regular in an apron over a brown jumper | knowing half-smile | an ornate brass vape, purple smoke curling round her |
+| Martha in disguise (x3) | Martha as above, holding up another opponent's face as a mask with cut-out eye holes: Frak, Danhausen or Duke Morrigan | sly, knowing | the mask, held in both hands beside her face |
+| Brodor | Huge bearded wrestler in a straw cowboy hat and gold sunglasses, a fringed yellow tank top | big laughing grin | a Slim Jim |
 
 Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's Thonics" itself.
 
@@ -136,15 +138,17 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Danhausen | Done | `art/bust-danhausen.jpg` (flat magenta, `cutOutFlat`) → `danhausen.webp`; `seat: 1.6` behind the table (he shows more body) |
 | Duke Morrigan | Done | `art/bust-duke.jpg` (flat magenta, `cutOutFlat` with a low `tolerance` so his purple coat and skin stay, and `holes` for the background inside his curled horn) → `duke.webp` |
 | Martha Mystery | Done | `art/bust-martha.jpg` (flat magenta, `cutOutFlat` with `smokeBox` + `smokeColour: 'own'`: her vape smoke stays purple and see-through) → `martha.webp`; `seat: 1.15` |
+| Martha's disguises | Done, 21 Oct | `art/bust-martha-frak.jpg`, `bust-martha-danhausen.jpg`, `bust-martha-duke.jpg` (flat magenta, `cutOutFlat` with `holes` seeds for the mask's eye holes and the gap under her wrist; the Duke's with `tolerance: 30` so the purple mask stays) → `martha-frak.webp`, `martha-danhausen.webp`, `martha-duke.webp`; `PORTRAITS` 'Martha as Frak' / 'Martha as Danhausen' / 'Martha as Duke Morrigan', `seat: 1.15` like her own bust |
+| Brodor | Done, 21 Oct | `art/bust-brodor.webp` (flat magenta, `cutOutFlat`, default settings) → `brodor.webp` (702 px, the painting's own size); `seat: 1.4`. The silhouette stand-in is gone |
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
-| Keepsake pictures | Wanted, optional | One small painting per keepsake: Shield, Velvet Cushion, Trap Card, Thom's Loyalty Card, Potion Belt, Loaded Die, Martha's mask (and Brodor's Sunglasses once Brodor is built). The Stranger's offer, Thom's back shelf and the strip use emoji until then (`KEEPSAKE_ICONS` in `client/src/Hud.tsx`) |
+| Keepsake pictures | Wanted, optional | One small painting per keepsake: Shield, Velvet Cushion, Trap Card, Thom's Loyalty Card, Potion Belt, Loaded Die, Martha's mask Brodor's Sunglasses. The Stranger's offer, Thom's back shelf and the strip use emoji until then (`KEEPSAKE_ICONS` in `client/src/Hud.tsx`) |
 | Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
 | The Ace of Spades (the Hangman's revolver) | Wanted, optional | His named revolver, for the moment he fires it; a CSS muzzle flash and bullet hole for now |
 | Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
 | The Wild Magic Hot Tub (a spot) | Done | `art/hot-tub.jpg` → `hot-tub.webp` (raspberry background, `cutOutFlat`); a wide painting, sized by width in its scene |
 | Darren Snakehands (the Ghoul and Gourd's barman, an event) | Done | `art/bust-darren.jpg` → `darren.webp` |
-| The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS`, in the game since 21 Oct. **Wanted:** Brodor (a silhouette, `client/public/art/brodor-standin.svg`, stands in until then) |
+| The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS`, in the game since 21 Oct. Brodor: see his own row |
 | A backdrop for the Salty Swallow | Wanted | The ship's four fights use the tavern backdrop for now; a ship's deck or cabin, same format as `tavern.webp`, would go in `SCENES` in `client/src/Backdrop.tsx` |
 
 ## Processing art

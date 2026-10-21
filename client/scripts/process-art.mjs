@@ -410,3 +410,8 @@ await cutOutFlat('bust-sylvester.jpg', 'sylvester');
 await cutOutFlat('bust-darren.jpg', 'darren');
 await cutOutFlat('hot-tub.jpg', 'hot-tub');
 await spotScene('shrine.jpg', 'shrine');
+// 21 Oct: Martha's three disguises, each face held up as a mask (the eye holes and the gap under her wrist go), and Brodor.
+await cutOutFlat('bust-martha-frak.jpg', 'martha-frak', { holes: [[772, 576], [873, 607], [760, 830]] });
+await cutOutFlat('bust-martha-duke.jpg', 'martha-duke', { tolerance: 30, holes: [[771, 579], [871, 611], [760, 829]] }); // the purple mask stays
+await cutOutFlat('bust-martha-danhausen.jpg', 'martha-danhausen', { holes: [[768, 572], [886, 606], [761, 833]] });
+await cutOutFlat('bust-brodor.webp', 'brodor');

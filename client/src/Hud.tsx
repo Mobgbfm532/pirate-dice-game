@@ -5,12 +5,12 @@ import { Rules } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
 import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
-import { acrossTheTable, opponentName } from './Backdrop';
+import { acrossTheTable, opponentName, opponentPortraitKey } from './Backdrop';
 
 const REACTIONS = ['😀', '😂', '😮', '😎', '😭'];
 
 // The bot's portrait is its name (one per Tavern Crawl encounter); players pick an avatar.
-const playerPortrait = (id: string, name: string, avatar: string) => portraitFor(id === BOT_ID ? name : avatar);
+const playerPortrait = (id: string, name: string, avatar: string) => portraitFor(id === BOT_ID ? opponentPortraitKey(name) : avatar);
 
 function readPrefs() {
     try {

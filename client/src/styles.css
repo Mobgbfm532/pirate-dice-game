@@ -1988,3 +1988,11 @@ button.keepsake.used { opacity: 0.55; }
 .after-event { display: flex; flex-direction: column; align-items: stretch; gap: 2px; flex: 1 1 100%; width: 100%; }
 .after-event button { flex: none; }
 .after-event .onward { width: 100%; }
+
+/* Martha changes faces: a quick flash of her violet as the masked bust takes her place. */
+.backdrop .opponent.disguise-swap { animation: disguise-swap 0.7s ease-out both; }
+@keyframes disguise-swap {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.96); filter: brightness(1.6) drop-shadow(0 0 30px rgba(206, 147, 216, 1)); }
+    40% { opacity: 1; }
+    100% { opacity: 1; transform: translateX(-50%); filter: brightness(0.82) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6)); }
+}

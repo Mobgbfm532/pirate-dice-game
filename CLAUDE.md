@@ -118,7 +118,7 @@ read and follow the file):
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
-against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/between?spots=thom,shrine` (add
+against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
@@ -214,8 +214,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Inkhand, Stason Jatham, The Ridgeler, Brodor), then aboard the Salty Swallow, a docked ship
   (Klarg, Rokr, the Hangman, Jaguar). McGrath is the Molar renamed (keeps the id `molar`, plays
   simply). A boss (`boss`, `drops`: Martha, Brodor) drops a keepsake (`BOSS_DROPS`) and leads to an
-  invitation on to the next place. Painted busts for all but Brodor, who has a silhouette stand-in
-  (`client/public/art/brodor-standin.svg`, `seat: 1.25`) until his painting comes. The ship has no
+  invitation on to the next place. All fourteen have painted busts (Brodor's since 21 Oct, `seat: 1.3`). Martha has three
+  more, holding up Frak's, Danhausen's or the Duke's face as a mask: while one of her disguises
+  is the round's effect, her bust and chip show that painting (`opponentPortraitKey` in
+  Backdrop, PORTRAITS `'Martha as Frak'` etc.; a violet shimmer as she swaps,
+  `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). The ship has no
   backdrop of its own yet (the tavern's) and the same four spots and no events of its own (the
   ship's spots and events: to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
   Lady's Favour); the opponents have 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
@@ -412,8 +415,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    `node balance/experiments/tournament.js` first. **Set `SAVE_SECRET` on Render** (an env var,
    any long random text) so saves survive sleeps and deploys.
 2. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots at the Ghoul and Gourd (about half the walks), one of three after it.
-3. **The tournament, finishing touches:** Brodor's painting (the user's; a silhouette stands in);
-   a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
+3. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
    (only Back of the Head has one, the swoosh); the ship's own spots and events (to workshop: a card
    game below deck, a stowaway instead of the thief); uses per fight for the five (first guesses, 1
    each). Stronger late abilities: to workshop.

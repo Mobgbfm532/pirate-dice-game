@@ -12,6 +12,7 @@
 //   curl "http://localhost:3003/purse?n=150"
 //   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
 //   curl "http://localhost:3003/won?hearts=2"        the fight is won: the gold summary, then the event
+//   curl "http://localhost:3003/disguise?as=Danhausen"   Martha wears that face this round (fight n=4 first)
 //   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the Yawning Portal
 //   curl "http://localhost:3003/invitation?boss=brodor"   Brodor beaten: on to the Salty Swallow
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
@@ -55,6 +56,8 @@ const COMMANDS = {
         server.startInterlude(r, { defeated: enemy.name, nextEnemy: next.name, place, gold, at: Date.now() });
         r.roundPlayers = [];
     },
+    // Martha in a disguise for this round (as=Frak, Danhausen or Duke Morrigan): her mask shows behind the table.
+    '/disguise': (r, q) => { const as = q.get('as') || 'Frak'; const kind = { Frak: 'mind', Danhausen: 'curse', 'Duke Morrigan': 'devil' }[as]; r.tavernRun.roundEffect = { kind, by: 'opponent', ability: { mind: 'mindWhip', curse: 'cursed', devil: 'devil' }[kind], as, landed: true }; },
     // A boss just beaten (boss=martha, the default, or brodor): their keepsake and the invitation on.
     '/invitation': (r, q) => {
         const boss = server.TAVERN_ENCOUNTERS.findIndex(e => e.id === (q.get('boss') || 'martha'));
