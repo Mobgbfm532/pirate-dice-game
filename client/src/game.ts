@@ -362,7 +362,7 @@ function applyTurn(serverView: TurnView | null) {
 export const CELEBRATION_MS = 2800;
 // Three 6s land (since 23 Oct, the user's): fire up the screen, the devil with her three 6s and
 // "Devil's titties" (Hud's DevilSixes). Taps still reach the dice; what comes next waits.
-export const DEVIL_MS = 2800;
+export const DEVIL_MS = 1500;
 
 function showDevil(turn: TurnView) {
     table.devilAt = performance.now();

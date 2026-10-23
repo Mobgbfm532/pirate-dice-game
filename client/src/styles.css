@@ -2073,13 +2073,13 @@ button.keepsake.used { opacity: 0.55; }
 @keyframes huh-tilt { 0%, 30% { transform: rotate(0deg); } 45% { transform: rotate(-16deg) translateY(-4px); } 60% { transform: rotate(10deg); } 75%, 100% { transform: rotate(-6deg); } }
 
 /* ---- Three 6s: fire up the screen, the devil with her three 6s, "Devil's titties" ----
-   A moment over everything for 2.8 s; taps go through to the dice. */
+   A moment over everything for 1.5 s; taps go through to the dice. */
 .devil-sixes { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
 /* A sheet of fire sweeps from the bottom to the top and burns off. */
 .devil-surge {
     position: absolute; left: 0; right: 0; bottom: 0; height: 160%;
     background: linear-gradient(to top, rgba(255, 214, 90, 0.95), rgba(255, 112, 30, 0.85) 25%, rgba(200, 30, 10, 0.6) 55%, rgba(120, 0, 0, 0) 85%);
-    mix-blend-mode: screen; animation: devil-surge 2.8s ease-out both;
+    mix-blend-mode: screen; animation: devil-surge 1.5s ease-out both;
 }
 @keyframes devil-surge {
     0% { transform: translateY(100%); opacity: 1; }
@@ -2094,7 +2094,7 @@ button.keepsake.used { opacity: 0.55; }
     border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
     background: radial-gradient(ellipse at 50% 85%, #fff3b0, #ffb300 25%, #ff5722 50%, rgba(183, 28, 28, 0.6) 70%, rgba(120, 0, 0, 0) 80%);
     filter: blur(3px); mix-blend-mode: screen; transform-origin: 50% 100%;
-    animation: devil-lick 0.7s ease-in-out infinite alternate, devil-burn 2.8s ease-out both;
+    animation: devil-lick 0.7s ease-in-out infinite alternate, devil-burn 1.5s ease-out both;
 }
 @keyframes devil-lick { from { transform: scale(0.85, 0.8) skewX(-6deg); } to { transform: scale(1.1, 1.15) skewX(6deg); } }
 @keyframes devil-burn { 0% { opacity: 0; } 8% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; } }
@@ -2102,7 +2102,7 @@ button.keepsake.used { opacity: 0.55; }
 .devil-picture {
     position: absolute; left: 50%; top: 50%; height: min(64vh, 560px); max-width: 92vw; object-fit: contain;
     filter: drop-shadow(0 0 24px rgba(255, 87, 34, 0.75));
-    animation: devil-rise 2.8s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+    animation: devil-rise 1.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
 @keyframes devil-rise {
     0% { opacity: 0; transform: translate(-50%, 10%) scale(0.85); }
@@ -2114,7 +2114,7 @@ button.keepsake.used { opacity: 0.55; }
 .devil-banner {
     position: absolute; left: 50%; top: calc(50% + min(26vh, 230px));
     transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
-    white-space: nowrap; animation: devil-banner 2.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    white-space: nowrap; animation: devil-banner 1.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 .devil-banner .who { font-size: 1rem; color: #ffe0b2; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); letter-spacing: 1px; }
 .devil-banner .what {

@@ -224,8 +224,9 @@ one too, or saves only last until the server restarts, which on the free tier is
   - **G (tune and prove):** the tuning panel (`?tune=1`, the ⚙ in the header; `tuning.ts`):
     sliders for the feel (multipliers saved per device), the frame rate, quality levels (Auto steps
     down from High when frames stay under ~45 a second), "Copy settings"; its Portraits tab (drag
-    and zoom every round portrait, "Copy portraits"). **Still to do:** the user's tuning and frame
-    rate on their phone; then whether the look preview becomes the default.
+    and zoom every round portrait, "Copy portraits"). On 23 Oct the user found the built-in
+    settings on High "look great" (no slider changes). **Still to do:** whether the look preview
+    becomes the default.
   - Before/after: `test/shots.mjs` + `test/shots-base.mjs` + `test/compare.mjs` and the
     `visual-shots` subagent; `previews/frozen.mjs` (gitignored) stops the page clock for moments.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
@@ -334,7 +335,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   table, anyone's throw) fire surges up the screen, the user's painting of the devil holding three
   6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`) and a banner says "Devil's titties" (the
   sound is `DevilsTeets.wav`). `DevilSixes` in Hud, `showDevil` / `snapshot.devil` in game.ts,
-  `DEVIL_MS` 2.8 s; taps go through to the dice, the next moment waits. Dev:
+  `DEVIL_MS` 1.5 s (the user's, was 2.8); taps go through to the dice, the next moment waits. Dev:
   `preview.devil(who, hold)` (hold keeps it up, for stills).
 - **An opponent's entrance (23 Oct):** the name card shows 4.5 s (`INTRO_MS`; 6 s, then 1.5 s shorter, the user's); at a fight's start the
   server sends the new opponent before the round's abilities and puts the entrance on its moment
@@ -477,9 +478,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **The user tunes the look on their phone** (`/next?look=next&tune=1`, the ⚙): sliders, the
-   frame rate, "Copy settings" pasted back → those values become the defaults in `tuning.ts` /
-   the effects. Then the user's call: make the look preview the default (or keep the switch).
+1. **The look preview** (the user liked the built-in settings on High, 23 Oct): the user's call
+   whether `?look=next` becomes the default (or keep the switch).
    If Auto quality drops a good phone to Low, tune its threshold (`noteFrame`).
 2. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
    0.3% and reaches the ship 2.3% (`node balance/experiments/tournament.js`), but it never wears
