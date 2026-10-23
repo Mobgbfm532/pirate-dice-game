@@ -93,14 +93,18 @@ export type Interlude =
     | { stage: 'invitation'; place: string; from?: string | null; boss?: string | null; drop?: Keepsake | null; save: string };
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
+// Each name's best run: its points, and the gold (silver pieces) it ended with.
+export interface LeaderboardEntry { name: string; points: number; gold: number }
+
 export interface TavernSummary {
     won: boolean;
     name: string;
     defeated: number;
     encounters: string[];
     fellTo: string | null;
-    gold: number;
-    breakdown: { progress: number; hearts: number; perfect: number; events?: number; spent: number };
+    points: number; // the leaderboard's score (since 23 Oct)
+    gold: number;    // the purse at the end, in silver pieces
+    breakdown: { fights: number; hearts: number; perfect: number; reached: number; gold: number; purse: number; events: number; spent: number };
     stats: { encountersDefeated: number; livesLost: number; keepsakesActivated: number; perfect24s: number };
     keepsakes: string[];
 }
@@ -147,7 +151,7 @@ export interface Snapshot {
     callout: { text: string; color: string; key: string } | null;
     toasts: Toast[];
     modal: Modal | null;
-    leaderboard: { name: string; gold: number }[];
+    leaderboard: LeaderboardEntry[];
     roomCode: string;
     waiting: boolean; // a classic table with nobody to play yet
     yourTurnAt: number; // when play last came round to you (for the banner)
@@ -524,7 +528,7 @@ export function inviteLink(code: string) {
     return `${location.origin}${import.meta.env.BASE_URL}?table=${encodeURIComponent(code)}`;
 }
 
-socket.on('leaderboardUpdate', (entries: { name: string; gold: number }[]) => {
+socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
     update({ leaderboard: Array.isArray(entries) ? entries : [] });
 });
 

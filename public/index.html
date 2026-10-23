@@ -1065,13 +1065,13 @@
         function renderLeaderboard() {
             if (!crawlLeaderboard) return;
             if (!tavernLeaderboard || tavernLeaderboard.length === 0) {
-                crawlLeaderboard.innerHTML = '<div class="leaderboard-row"><strong>No scores yet</strong><span class="leaderboard-gold">0 gold</span></div>';
+                crawlLeaderboard.innerHTML = '<div class="leaderboard-row"><strong>No scores yet</strong><span class="leaderboard-gold"></span></div>';
                 return;
             }
             crawlLeaderboard.innerHTML = tavernLeaderboard.slice(0, 10).map((entry, index) => {
                 let name = escapeHTML(entry.name || 'Traveler');
-                let gold = Number(entry.gold || 0);
-                return `<div class="leaderboard-row"><strong>${index + 1}. ${name}</strong><span class="leaderboard-gold">${gold} gold</span></div>`;
+                let points = Number(entry.points ?? entry.gold ?? 0); // the Tavern Crawl's points (since 23 Oct)
+                return `<div class="leaderboard-row"><strong>${index + 1}. ${name}</strong><span class="leaderboard-gold">${points.toLocaleString()} points</span></div>`;
             }).join('');
         }
 

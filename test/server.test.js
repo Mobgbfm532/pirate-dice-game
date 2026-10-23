@@ -168,7 +168,7 @@ test('a Tavern Crawl run plays through to the end', async () => {
     const hero = await join('Hero', 'TVRN-1');
     autoPlay(hero, () => hero.emit('leaveShop'));
     const over = await waitFor(hero, 'gameOver', () => true, 60000);
-    assert.match(over.message, /Gold earned: \d+/);
+    assert.match(over.message, /Points: \d+/);
     // The 3D client's end-of-run screen reads this summary.
     const t = over.tavern;
     assert.equal(t.name, 'Hero');
@@ -176,8 +176,10 @@ test('a Tavern Crawl run plays through to the end', async () => {
     assert.equal(t.won, t.defeated === server.TAVERN_ENCOUNTERS.length);
     assert.equal(t.fellTo, t.won ? null : t.encounters[t.defeated]);
     // (Walking straight on lets a pickpocket keep what they took: that's in `events`.)
-    const { progress, hearts, perfect, events, spent } = t.breakdown;
-    assert.equal(progress + hearts + perfect + events - spent, t.gold);
+    const { fights, hearts, perfect, reached, gold, purse, events, spent } = t.breakdown;
+    assert.equal(t.stats.winGold + t.stats.heartGold + t.stats.perfectGold + events - spent, purse);
+    assert.equal(purse, t.gold);
+    assert.equal(fights + hearts + perfect + reached + gold, t.points, 'the leaderboard ranks by these points');
 });
 
 // Times in the server are scaled by GAME_TIME_SCALE (0.01): the 30s turn grace is 0.3s
@@ -371,10 +373,10 @@ test('Thom sells a Thonic for its price and puts it on the shelf', async () => {
 });
 
 test('Thom refuses what you cannot afford, unknown Thonics and bad input', async () => {
-    const { hero, room } = await atThoms('Broke', 100);
+    const { hero, room } = await atThoms('Broke', 1);
     for (const bad of ['healing', 'lastGasp', 'fizzy', 'elixir', 'toString', '__proto__', 42, null, { id: 'healing' }, ['healing']]) hero.emit('buyThonic', bad);
     await sleep(80);
-    assert.equal(room.tavernRun.purse, 100, 'nothing was charged');
+    assert.equal(room.tavernRun.purse, 1, 'nothing was charged');
     assert.deepEqual(room.tavernRun.shelf, []);
     assert.equal(room.tavernRun.stats.spent, 0);
 });
@@ -384,7 +386,22 @@ test('the shelf holds three Thonics at most', async () => {
     for (let i = 0; i < 5; i++) hero.emit('buyThonic', 'healing');
     await sleep(100);
     assert.equal(room.tavernRun.shelf.length, BALANCE.shelfSize);
-    assert.equal(room.tavernRun.purse, 1000 - BALANCE.shelfSize * PRICE.healing);
+    // Each one costs half its first price more than the one before (BALANCE.priceRise).
+    const paid = Array.from({ length: BALANCE.shelfSize }, (_, i) => Math.ceil(PRICE.healing * (1 + BALANCE.priceRise * i))).reduce((a, b) => a + b, 0);
+    assert.equal(room.tavernRun.purse, 1000 - paid);
+});
+
+test('the Shrine, the hot tub and each kind of Thonic cost more every time (priceRise)', async () => {
+    const { hero, room } = await atThoms('Regular', 1000);
+    const priceOf = id => runOf(server.getRoomState(Object.keys(server.rooms).find(c => server.rooms[c] === room))).shop.stock.find(t => t.id === id).price;
+    assert.equal(priceOf('healing'), PRICE.healing);
+    hero.emit('buyThonic', 'healing');
+    await sleep(40);
+    assert.equal(priceOf('healing'), Math.ceil(PRICE.healing * (1 + BALANCE.priceRise)), 'the second Healing costs more');
+    room.tavernRun.bought = { shrine: 2, hotTub: 1 };
+    const prices = runOf(server.getRoomState(Object.keys(server.rooms).find(c => server.rooms[c] === room))).prices;
+    assert.equal(prices.shrine, Math.ceil(BALANCE.interlude.shrinePrice * (1 + BALANCE.priceRise * 2)));
+    assert.equal(prices.hotTub, Math.ceil(BALANCE.interlude.hotTubPrice * (1 + BALANCE.priceRise)));
 });
 
 test('nothing can be bought once the cart has gone, and leaving starts the next fight', async () => {
@@ -498,11 +515,13 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
     const won = waitFor(hero, 'offerShop', () => true, 5000);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]); // 20, no perfect-24 gold
     const offer = await won;
-    assert.deepEqual(offer.gold, { win: 100, hearts: 50, heartsLeft: 2, perHeart: 25, perPlace: 100 }, 'what the summary screen shows');
+    const G = BALANCE.gold;
+    assert.deepEqual(offer.gold, { win: G.winPerPlace, hearts: 2 * G.perHeartLeft, heartsLeft: 2, perHeart: G.perHeartLeft, perPlace: G.winPerPlace }, 'what the summary screen shows');
     assert.equal(offer.place, 1);
     assert.ok(offer.at > 0, 'a key, so the summary shows once');
     assert.equal(offer.nextEnemy, 'Frak');
-    assert.equal(room.tavernRun.purse, 150);
+    assert.equal(room.tavernRun.purse, G.winPerPlace + 2 * G.perHeartLeft);
+    assert.equal(room.tavernRun.stats.heartsSpared, 2, 'for the points');
     assert.deepEqual(room.tavernRun.lastWin, offer);
     assert.equal(room.tavernRun.shop, null, 'no cart until you go to Thom');
     assert.equal(room.tavernRun.pendingKeepsakeChoices, null, 'no keepsake after a win any more');
@@ -511,7 +530,7 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
     await sleep(60);
     assert.equal(room.turn ? room.turn.hasRolled : false, false);
     if (interlude.stage === 'pickpocket') {
-        assert.equal(interlude.steal, Math.floor(150 * BALANCE.interlude.pickpocketShare), 'a share of the purse (half since 21 Oct)');
+        assert.equal(interlude.steal, Math.floor(room.tavernRun.purse * BALANCE.interlude.pickpocketShare), 'a share of the purse (half since 21 Oct)');
         return;
     }
     if (interlude.stage === 'stranger' || interlude.stage === 'darren') return;
@@ -598,19 +617,19 @@ test("the Lady's Grace saves a dust once, then is gone", async () => {
 
 test('the Dice Den: bet, then roll two dice against the gambler until someone wins', async () => {
     for (let n = 0; n < 6; n++) {
-        const { hero, room } = await betweenFights(`Gambler${n}`, { stage: 'diceDen', bets: [50, 100], bet: null, throws: [] }, 80);
+        const { hero, room } = await betweenFights(`Gambler${n}`, { stage: 'diceDen', bets: [5, 10], bet: null, throws: [] }, 8);
         hero.emit('diceRoll'); // no bet yet
-        for (const bad of [100, 75, -50, '50', null, 1e9]) hero.emit('diceBet', bad); // 100: the purse is short
+        for (const bad of [10, 7, -5, '5', null, 1e9]) hero.emit('diceBet', bad); // 10: the purse is short
         await sleep(40);
         assert.equal(room.tavernRun.interlude.stage, 'diceDen');
         assert.equal(room.tavernRun.interlude.bet, null);
         assert.equal(room.tavernRun.interlude.throws.length, 0);
-        hero.emit('diceBet', 50);
-        await nextState(hero, s => runOf(s).interlude.bet === 50);
+        hero.emit('diceBet', 5);
+        await nextState(hero, s => runOf(s).interlude.bet === 5);
         hero.emit('diceBet', 0); // the bet stands once placed
         await sleep(30);
         assert.equal(room.tavernRun.interlude.stage, 'diceDen');
-        assert.equal(room.tavernRun.purse, 80, 'nothing paid until a throw is won or lost');
+        assert.equal(room.tavernRun.purse, 8, 'nothing paid until a throw is won or lost');
         // Throw until someone wins (a tie throws again).
         for (let i = 0; i < 30 && room.tavernRun.interlude.stage === 'diceDen'; i++) {
             const before = room.tavernRun.interlude.throws.length;
@@ -618,22 +637,22 @@ test('the Dice Den: bet, then roll two dice against the gambler until someone wi
             await nextState(hero, s => runOf(s).interlude.stage === 'done' || runOf(s).interlude.throws.length > before);
         }
         const { throws, won, bet } = room.tavernRun.interlude;
-        assert.equal(bet, 50);
+        assert.equal(bet, 5);
         const sum = d => d[0] + d[1];
         throws.slice(0, -1).forEach(t => assert.equal(sum(t.you), sum(t.them), 'earlier throws were ties'));
         const last = throws.at(-1);
         assert.equal(won, sum(last.you) > sum(last.them));
         assert.notEqual(sum(last.you), sum(last.them));
-        assert.equal(room.tavernRun.purse, won ? 130 : 30);
-        assert.equal(room.tavernRun.stats.eventGold, won ? 50 : -50);
+        assert.equal(room.tavernRun.purse, won ? 13 : 3);
+        assert.equal(room.tavernRun.stats.eventGold, won ? 5 : -5);
         hero.emit('diceRoll'); // over: no more throws
         await sleep(30);
-        assert.equal(room.tavernRun.purse, won ? 130 : 30);
+        assert.equal(room.tavernRun.purse, won ? 13 : 3);
     }
-    const { hero, room } = await betweenFights('Walker', { stage: 'diceDen', bets: [50, 100], bet: null, throws: [] }, 80);
+    const { hero, room } = await betweenFights('Walker', { stage: 'diceDen', bets: [5, 10], bet: null, throws: [] }, 8);
     hero.emit('diceBet', 0);
     await nextState(hero, s => runOf(s).interlude.stage === 'done');
-    assert.equal(room.tavernRun.purse, 80, 'declining costs nothing');
+    assert.equal(room.tavernRun.purse, 8, 'declining costs nothing');
 });
 
 test('the Hooded Stranger: a keepsake, and the next fight starts a heart short', async () => {
@@ -850,7 +869,7 @@ test('the Shrine and the hot tub cost gold: not offered when the purse is short,
 test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one and gold; then the next fight", async () => {
     const seen = new Set();
     for (let n = 0; n < 15; n++) {
-        const { hero, room } = await betweenFights(`Bumped${n}`, { stage: 'darren', smashOn: 2, giftOn: 4 }, 100);
+        const { hero, room } = await betweenFights(`Bumped${n}`, { stage: 'darren', smashOn: 2, giftOn: 4 }, 10);
         room.tavernRun.shelf = ['healing'];
         hero.emit('darren', 'on'); // not before the roll
         await sleep(20);
@@ -863,17 +882,17 @@ test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one an
             assert.equal(d.outcome, 'smash');
             assert.equal(d.smashed.id, 'healing');
             assert.deepEqual(room.tavernRun.shelf, [], 'the Thonic is gone');
-            assert.equal(room.tavernRun.purse, 100);
+            assert.equal(room.tavernRun.purse, 10);
         } else if (d.roll <= 4) {
             assert.equal(d.outcome, 'gift');
             assert.equal(room.tavernRun.shelf.length, 2, 'a free Thonic');
             assert.equal(room.tavernRun.shelf[1], d.thonic.id);
-            assert.equal(room.tavernRun.purse, 100);
+            assert.equal(room.tavernRun.purse, 10);
         } else {
             assert.equal(d.outcome, 'catch');
             assert.equal(room.tavernRun.shelf.length, 2);
-            assert.equal(d.gold, 50);
-            assert.equal(room.tavernRun.purse, 150);
+            assert.equal(d.gold, BALANCE.interlude.darrenCatchGold);
+            assert.equal(room.tavernRun.purse, 10 + BALANCE.interlude.darrenCatchGold);
         }
         hero.emit('darren', 'roll'); // once only
         hero.emit('darren', 'on');
@@ -885,14 +904,14 @@ test("Darren Snakehands: one die: a Thonic smashes, a free one, or a free one an
     // An empty shelf: you pay for the glass. A full one: the free Thonic comes as gold.
     let paid = false, full = false;
     for (let n = 0; n < 30 && !(paid && full); n++) {
-        const { hero, room } = await betweenFights(`Glass${n}`, { stage: 'darren', smashOn: 2, giftOn: 4 }, 100);
+        const { hero, room } = await betweenFights(`Glass${n}`, { stage: 'darren', smashOn: 2, giftOn: 4 }, 10);
         const empty = n % 2 === 0;
         room.tavernRun.shelf = empty ? [] : ['healing', 'fizzy'];
         hero.emit('darren', 'roll');
         await nextState(hero, s => runOf(s).interlude.roll);
         const d = room.tavernRun.interlude;
-        if (empty && d.outcome === 'smash') { paid = true; assert.equal(d.paid, 20); assert.equal(room.tavernRun.purse, 80); }
-        if (!empty && d.outcome === 'gift') { full = true; assert.equal(d.gold, 30); assert.equal(room.tavernRun.shelf.length, 2); assert.equal(room.tavernRun.purse, 130); }
+        if (empty && d.outcome === 'smash') { paid = true; assert.equal(d.paid, BALANCE.interlude.darrenGlass); assert.equal(room.tavernRun.purse, 10 - BALANCE.interlude.darrenGlass); }
+        if (!empty && d.outcome === 'gift') { full = true; assert.equal(d.gold, BALANCE.interlude.darrenFullShelfGold); assert.equal(room.tavernRun.shelf.length, 2); assert.equal(room.tavernRun.purse, 10 + BALANCE.interlude.darrenFullShelfGold); }
     }
     assert.ok(paid && full, 'both seen');
 });
@@ -959,9 +978,9 @@ test("the hot tub's surges: the die never rolls a 1, never a 6, only 4-6, always
 });
 
 test('the Dice Den only appears when the purse covers its smallest bet', async () => {
-    const { room } = await betweenFights('Skint', { stage: 'choose', spots: ['thom', 'shrine'] }, 30);
+    const { room } = await betweenFights('Skint', { stage: 'choose', spots: ['thom', 'shrine'] }, 3);
     for (let i = 0; i < 20; i++) {
-        assert.ok(!server.pickSpots(room).includes('diceDen'), 'not with 30 gold');
+        assert.ok(!server.pickSpots(room).includes('diceDen'), 'not with 3 sp');
     }
 });
 
@@ -1035,7 +1054,7 @@ test('full runs through the spots between fights keep the books straight', async
             if (spot === 'shrine') hero.emit('shrinePick', n % 2 ? 'gold' : 'healing');
             if (spot === 'hotTub') hero.emit('hotTub', 'soak');
             if (spot === 'diceDen') {
-                hero.emit('diceBet', 50);
+                hero.emit('diceBet', 5);
                 for (let i = 0; i < 20 && run.interlude.stage === 'diceDen'; i++) { hero.emit('diceRoll'); await sleep(10); }
             }
             setTimeout(() => hero.emit('moveOn'), 20);
@@ -1057,9 +1076,13 @@ test('full runs through the spots between fights keep the books straight', async
             const r = room, turn = r.turn;
             throw new Error(`${err.message}: opponent ${r.tavernRun.encounterIndex}, lives ${JSON.stringify(r.roundPlayers.map(id => r.players[id].lives))}, turn ${turn && JSON.stringify({ player: turn.playerId === hero.id ? 'hero' : turn.playerId, rolled: turn.hasRolled, finalized: turn.finalized, ended: turn.ended, dice: turn.dice.map(d => d.status + ':' + d.value) })}, shop ${!!r.tavernRun.shop}, shelf ${r.tavernRun.shelf}, paused ${r.botPaused}, index ${r.currentTurnIndex}, round ${r.roundNumber}/${r.tavernRun.encounterRound}, scores ${JSON.stringify(r.roundPlayers.map(id => [r.players[id].score, r.players[id].busted, r.players[id].connected]))}, key ${turn && turn.key}, epoch ${r.turnEpoch}`);
         })).tavern;
-        const { progress, hearts, perfect, events, spent } = t.breakdown;
-        assert.equal(progress + hearts + perfect + events - spent, t.gold, 'score = earned + events - spent');
-        assert.equal(t.gold, Math.max(0, room.tavernRun.purse + (t.won ? 0 : (t.defeated + 1) * 25)));
+        const { fights, hearts, perfect, reached, gold, events, spent } = t.breakdown;
+        const st = room.tavernRun.stats;
+        assert.equal(st.winGold + st.heartGold + st.perfectGold + events - spent, t.gold, 'purse = earned + events - spent');
+        assert.equal(t.gold, room.tavernRun.purse);
+        assert.equal(fights + hearts + perfect + reached + gold, t.points, 'the points add up');
+        assert.equal(gold, t.gold * BALANCE.points.perSilver, 'gold left, converted');
+        assert.equal(reached, t.won ? 0 : (t.defeated + 1) * BALANCE.points.reachedPerPlace);
         assert.ok(room.tavernRun.purse >= 0, 'the purse never goes negative');
         assert.ok(room.tavernRun.shelf.length <= BALANCE.shelfSize, 'Darren never overfills the shelf');
         assert.equal(spent, room.tavernRun.stats.spent);

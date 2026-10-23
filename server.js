@@ -42,22 +42,22 @@ app.get('/leaderboard', (req, res) => {
 
 let rooms = {};
 
+// The Tavern Crawl's leaderboard: each name's best run by points (since 23 Oct; it was gold), with
+// the gold that run ended with. It starts empty (no made-up names) and lives in leaderboard.json
+// (not in git). An older entry with only gold counts that gold as its points.
 const LEADERBOARD_PATH = path.join(__dirname, 'leaderboard.json');
-const DEFAULT_TAVERN_LEADERBOARD = [
-    { name: 'Dr. Dice', gold: 1900 },
-    { name: 'SlyVestWearer', gold: 1800 }
-];
 
 function normalizeLeaderboard(entries) {
     let bestByName = new Map();
     entries.forEach(entry => {
         let name = String(entry.name || '').trim().substring(0, 20);
+        let points = Math.max(0, parseInt(entry.points ?? entry.gold, 10) || 0);
         let gold = Math.max(0, parseInt(entry.gold, 10) || 0);
         if (!name) return;
         let existing = bestByName.get(name);
-        if (!existing || gold > existing.gold) bestByName.set(name, { name, gold });
+        if (!existing || points > existing.points) bestByName.set(name, { name, points, gold });
     });
-    return Array.from(bestByName.values()).sort((a, b) => b.gold - a.gold).slice(0, 20);
+    return Array.from(bestByName.values()).sort((a, b) => b.points - a.points).slice(0, 20);
 }
 
 function loadTavernLeaderboard() {
@@ -69,7 +69,7 @@ function loadTavernLeaderboard() {
     } catch (error) {
         console.warn('Could not load leaderboard:', error.message);
     }
-    return normalizeLeaderboard(DEFAULT_TAVERN_LEADERBOARD);
+    return [];
 }
 
 let tavernLeaderboard = loadTavernLeaderboard();
@@ -83,8 +83,8 @@ function saveTavernLeaderboard() {
     }
 }
 
-function submitTavernLeaderboardScore(name, gold) {
-    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, gold }]);
+function submitTavernLeaderboardScore(name, points, gold) {
+    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, points, gold }]);
     saveTavernLeaderboard();
     return tavernLeaderboard;
 }
@@ -331,6 +331,23 @@ function placeOf(room) {
 // is the final score. The numbers live in shared/balance.js.
 const INTERLUDE = BALANCE.interlude;
 const GOLD = BALANCE.gold;
+const POINTS = BALANCE.points;
+const coins = Rules.formatCoins;
+
+// What something costs this time: its first price, and half as much again (BALANCE.priceRise)
+// for each one already bought this run (the user's call, 23 Oct: the Shrine, the hot tub and each
+// kind of Thonic cost more every purchase). bought: counts by id ('healing', 'shrine', 'hotTub').
+function risingPrice(run, id, base) {
+    let times = (run.bought && run.bought[id]) || 0;
+    return Math.ceil(base * (1 + (BALANCE.priceRise || 0) * times));
+}
+function noteBought(run, id) {
+    run.bought = run.bought || {};
+    run.bought[id] = (run.bought[id] || 0) + 1;
+}
+const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
+const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
+const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
 
 // The Wild Magic Hot Tub's surges (weights in shared/balance.js). The dice ones work on
 // HOT_TUB_DIE, on the player's turns, for the next fight (tavernRun.tubSurge).
@@ -458,8 +475,8 @@ function getTavernRunState(room) {
         purse: room.tavernRun.purse,
         shelf: room.tavernRun.shelf.map(thonicView),
         shelfSize: shelfSizeOf(room),
-        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(thonicView), free: !!room.tavernRun.shop.free, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
-        prices: { shrine: INTERLUDE.shrinePrice || 0, hotTub: INTERLUDE.hotTubPrice || 0 },
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
+        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun) },
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
@@ -1077,7 +1094,8 @@ function createTavernRun() {
         encounterIndex: TAVERN_START_ENCOUNTER,
         keepsakes: [],
         pendingKeepsakeChoices: null,
-        purse: 0,
+        purse: 0,          // in silver pieces (shown as gold and silver, Rules.formatCoins)
+        bought: {},        // how many of each thing were bought this run (risingPrice)
         shelf: [],
         shop: null,
         interlude: null,   // between fights: { stage, ... } (see startInterlude)
@@ -1095,6 +1113,7 @@ function createTavernRun() {
             livesLost: 0,
             keepsakesActivated: 0,
             perfect24s: 0,
+            heartsSpared: 0, // hearts left over all the fights won (points)
             winGold: 0,
             heartGold: 0,
             perfectGold: 0,
@@ -1112,24 +1131,34 @@ function getRandomAbilityRound(encounter) {
     return Math.floor(Math.random() * 3) + 1;
 }
 
-// The final score is the purse (what was won, less what was spent at Thom's), plus a
-// consolation for how far a lost run got.
+// The run's score in points (since 23 Oct, the user's call; it was the purse): the opponents
+// beaten (by their place), the hearts left at each win, how far a lost run got, and the gold left
+// in the purse, converted (BALANCE.points). totalGold: the purse at the end.
 function getTavernScoreSummary(room, completedRun = false) {
     let stats = room.tavernRun.stats;
-    let consolation = !completedRun && stats.encountersDefeated < TAVERN_ENCOUNTERS.length
-        ? (stats.encountersDefeated + 1) * GOLD.consolation : 0;
-    let progressGold = stats.winGold + consolation;
-    let totalGold = Math.max(0, room.tavernRun.purse + consolation);
-
+    let beaten = stats.encountersDefeated;
+    let fell = !completedRun && beaten < TAVERN_ENCOUNTERS.length;
+    let totalGold = Math.max(0, room.tavernRun.purse);
+    let breakdown = {
+        fights: POINTS.perPlace * beaten * (beaten + 1) / 2, // places 1..beaten
+        hearts: POINTS.perHeartLeft * (stats.heartsSpared || 0),
+        perfect: POINTS.perPerfect24 * stats.perfect24s,
+        reached: fell ? POINTS.reachedPerPlace * (beaten + 1) : 0,
+        gold: Math.round(POINTS.perSilver * totalGold),
+        // and the gold side, for the record
+        purse: totalGold, events: stats.eventGold, spent: stats.spent
+    };
+    let points = breakdown.fights + breakdown.hearts + breakdown.perfect + breakdown.reached + breakdown.gold;
     return {
+        points,
         totalGold,
-        breakdown: { progress: progressGold, hearts: stats.heartGold, perfect: stats.perfectGold, events: stats.eventGold, spent: stats.spent },
+        breakdown,
         lines: [
-            `Gold earned: ${totalGold}`,
-            `Progress: ${progressGold}`,
-            `Hearts spared: ${stats.heartGold}`,
-            `Between fights: ${stats.eventGold}`,
-            `Spent: ${stats.spent}`
+            `Points: ${points}`,
+            `Opponents beaten: ${breakdown.fights}`,
+            `Hearts spared: ${breakdown.hearts}`,
+            ...(fell ? [`How far you got: ${breakdown.reached}`] : []),
+            `Gold left (${coins(totalGold)}): ${breakdown.gold}`
         ]
     };
 }
@@ -1153,6 +1182,7 @@ function getTavernOverSummary(room, humanName, scoreSummary, won) {
         defeated: room.tavernRun.stats.encountersDefeated,
         encounters: TAVERN_ENCOUNTERS.map(e => e.name),
         fellTo: won ? null : TAVERN_ENCOUNTERS[index].name,
+        points: scoreSummary.points,
         gold: scoreSummary.totalGold,
         breakdown: scoreSummary.breakdown,
         stats: room.tavernRun.stats,
@@ -1291,7 +1321,7 @@ function disguiseMoves(room, effect) {
 // runs). Without SAVE_SECRET, saves last only until the server restarts.
 const SAVE_SECRET = process.env.SAVE_SECRET || crypto.randomBytes(32).toString('hex');
 if (!process.env.SAVE_SECRET && !process.env.GAME_TIME_SCALE) console.log('SAVE_SECRET is not set: saved Tavern Crawl runs last only until the server restarts.');
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2; // 2: silver pieces, rising prices (23 Oct)
 const openedSaves = new Set();
 const keepsakeById = id => BOSS_DROPS[id] || TAVERN_KEEPSAKES.find(k => k.id === id);
 
@@ -1300,7 +1330,7 @@ function sealSave(room, name) {
     let data = {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
-        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin
+        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
     let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
@@ -1329,6 +1359,8 @@ function restoreRun(room, data) {
     run.purse = Math.max(0, Number(data.purse) || 0);
     run.shelf = (data.shelf || []).filter(id => THONICS[id]).slice(0, SHELF_SIZE + KEEPSAKE_NUMBERS.beltSlots);
     run.stats = { ...run.stats, ...(data.stats || {}) };
+    run.bought = {};
+    Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
     run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
 }
@@ -1379,7 +1411,7 @@ function pickSpots(room) {
     let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
     // A spot that costs more than the purse holds isn't offered (the Shrine and the hot tub cost
     // gold since 21 Oct).
-    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= (INTERLUDE.shrinePrice || 0)) && (id !== 'hotTub' || purse >= (INTERLUDE.hotTubPrice || 0));
+    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
     if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
@@ -1655,7 +1687,7 @@ function evaluateTavernRound(roomCode) {
         let scoreSummary = getTavernScoreSummary(room);
         room.roundPlayers = [];
         room.tavernRun.runComplete = true;
-        io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
+        io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
         emitState(roomCode);
         io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
         return;
@@ -1668,13 +1700,14 @@ function evaluateTavernRound(roomCode) {
         stats.encountersDefeated++;
         stats.winGold += winGold;
         stats.heartGold += heartGold;
+        stats.heartsSpared = (stats.heartsSpared || 0) + Math.max(0, human.lives);
         room.tavernRun.purse += winGold + heartGold;
         room.tavernRun.encounterIndex++;
         if (room.tavernRun.encounterIndex >= TAVERN_ENCOUNTERS.length) {
             let scoreSummary = getTavernScoreSummary(room, true);
             room.roundPlayers = [];
             room.tavernRun.runComplete = true;
-            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
+            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
             emitState(roomCode);
             io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final aboard the Salty Swallow! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
@@ -1970,9 +2003,10 @@ io.on('connection', (socket) => {
         if (!room || !room.tavernRun.shop) return;
         let run = room.tavernRun;
         if (typeof thonicId !== 'string' || !run.shop.stock.includes(thonicId) || !THONICS[thonicId]) return;
-        let price = run.shop.free ? 0 : THONICS[thonicId].price;
+        let price = run.shop.free ? 0 : thonicPrice(run, thonicId);
         if (run.purse < price || run.shelf.length >= shelfSizeOf(room)) return;
         run.shop.free = false;
+        noteBought(run, thonicId); // (the Loyalty Card's free one counts too)
         run.purse -= price;
         run.stats.spent += price;
         run.shelf.push(thonicId);
@@ -2037,8 +2071,9 @@ io.on('connection', (socket) => {
         let room = interludeAt('hotTub');
         if (!room || action !== 'soak') return;
         let run = room.tavernRun;
-        let price = INTERLUDE.hotTubPrice || 0;
+        let price = hotTubPrice(run);
         if (run.purse < price) return;
+        noteBought(run, 'hotTub');
         run.purse -= price;
         run.stats.spent += price;
         let surge = pickHotTubSurge();
@@ -2105,8 +2140,9 @@ io.on('connection', (socket) => {
         let room = interludeAt('shrine');
         if (!room || action !== 'pray') return;
         let run = room.tavernRun;
-        let price = INTERLUDE.shrinePrice || 0;
+        let price = shrinePrice(run);
         if (run.purse < price) return;
+        noteBought(run, 'shrine');
         run.purse -= price;
         run.stats.spent += price;
         let gift = INTERLUDE.shrineGifts[crypto.randomInt(0, INTERLUDE.shrineGifts.length)];
@@ -2277,4 +2313,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, pickSpots, startInterlude, strangerOffer, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };

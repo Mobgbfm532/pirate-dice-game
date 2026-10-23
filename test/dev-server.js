@@ -3,7 +3,7 @@
 // Crawl situations without playing whole fights. It applies to every Tavern Crawl table.
 //
 //   npm run dev:test-server                  (TAVERN_START_ENCOUNTER=5 starts at Sylvester, 10 at Klarg, etc.)
-//   curl "http://localhost:3003/shop?purse=200"     Thom's cart opens with 200 gold (add
+//   curl "http://localhost:3003/shop?purse=200"     Thom's cart opens with 200 sp, 20 gp (amounts are in silver pieces; add
 //        &stock=healing,fizzy,steady to choose what's on it; default: the longest names)
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/foe?lives=1"        the opponent's lives
@@ -35,7 +35,7 @@ const human = r => Object.values(r.players).find(p => p.id !== 'BOT_MOLAR');
 const COMMANDS = {
     '/shop': (r, q) => {
         r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean) };
-        r.tavernRun.purse = Number(q.get('purse') || 200);
+        r.tavernRun.purse = Number(q.get('purse') || 200); // sp
         r.roundPlayers = [];
     },
     '/lives': (r, q) => { const p = human(r); if (p) p.lives = Number(q.get('n')); },
@@ -51,7 +51,9 @@ const COMMANDS = {
     '/won': (r, q) => {
         const run = r.tavernRun, place = run.encounterIndex + 1, left = Number(q.get('hearts') || 2);
         const enemy = server.TAVERN_ENCOUNTERS[run.encounterIndex], next = server.TAVERN_ENCOUNTERS[place] || enemy;
-        const gold = { win: 100 * place, hearts: 25 * left, heartsLeft: left, perHeart: 25, perPlace: 100 };
+        const G = require('../shared/balance').gold;
+        const gold = { win: G.winPerPlace * place, hearts: G.perHeartLeft * left, heartsLeft: left, perHeart: G.perHeartLeft, perPlace: G.winPerPlace };
+        run.stats.heartsSpared = (run.stats.heartsSpared || 0) + left;
         run.purse += gold.win + gold.hearts;
         run.encounterIndex = Math.min(place, server.TAVERN_ENCOUNTERS.length - 1);
         server.startInterlude(r, { defeated: enemy.name, nextEnemy: next.name, place, gold, at: Date.now() });
@@ -65,7 +67,7 @@ const COMMANDS = {
         const run = r.tavernRun, drop = server.BOSS_DROPS[server.TAVERN_ENCOUNTERS[boss].drops];
         run.encounterIndex = boss + 1;
         run.keepsakes = [...run.keepsakes.filter(k => k.id !== drop.id), drop];
-        run.lastWin = { defeated: server.TAVERN_ENCOUNTERS[boss].name, nextEnemy: server.TAVERN_ENCOUNTERS[boss + 1].name, place: boss + 1, drop, gold: { win: 100 * (boss + 1), hearts: 50 } };
+        run.lastWin = { defeated: server.TAVERN_ENCOUNTERS[boss].name, nextEnemy: server.TAVERN_ENCOUNTERS[boss + 1].name, place: boss + 1, drop, gold: { win: require('../shared/balance').gold.winPerPlace * (boss + 1), hearts: 2 * require('../shared/balance').gold.perHeartLeft } };
         run.interlude = server.invitation(r, (human(r) || {}).name || 'Tester');
         r.roundPlayers = [];
     },
@@ -75,7 +77,7 @@ const COMMANDS = {
         const run = r.tavernRun;
         const spots = (q.get('spots') || 'thom,diceDen').split(',');
         const stage = q.get('stage');
-        run.lastWin = run.lastWin || { defeated: 'The Molar', nextEnemy: 'Klarg', gold: { win: 100, hearts: 75 } };
+        run.lastWin = run.lastWin || { defeated: 'The Molar', nextEnemy: 'Klarg', gold: { win: 10, hearts: 6 } };
         if (q.get('purse')) run.purse = Number(q.get('purse'));
         if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), catchOn: 4 };
         else if (stage === 'shrine' || stage === 'hotTub') run.interlude = { stage };

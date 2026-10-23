@@ -42,9 +42,13 @@ interface GameRulesApi {
     ABILITY_NAMES: Record<string, string>;
     getAbilityMaxUses(abilityId: string): number;
     scoreDice(dice: Die[]): { has2: boolean; has4: boolean; score: number };
+    formatCoins(sp: number): string;
 }
 
 export const Rules = (globalThis as unknown as { GameRules: GameRulesApi }).GameRules;
+
+// A Tavern Crawl's money (silver pieces) as gold and silver: "14 gp", "1 gp 1 sp", "8 sp".
+export const coins = (sp?: number) => Rules.formatCoins(sp ?? 0);
 
 export const isLocked = (d: Die) => d.status === 'lockedThisTurn' || d.status === 'permanentlyLocked';
 

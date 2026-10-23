@@ -27,18 +27,35 @@ module.exports = {
     // null: no cap, the three 6s are the whole of it (the user's call, 21 Oct; it was 18).
     devilCap: null,
 
-    // Gold during a run: it goes into the purse as it is won, and the purse is the final score.
+    // MONEY: since 23 Oct (the user's call) every amount here is in silver pieces, D&D-style, and
+    // shown as gold and silver (10 sp = 1 gp; Rules.formatCoins): beating Jaguar pays 14 gp, a
+    // Healing Thonic costs 1 gp 1 sp. The old numbers were these x10 (rounded against you).
+    // Gold during a run goes into the purse as it is won; it is spent between fights.
     gold: {
-        winPerPlace: 100,   // beating an opponent: 100 x their place in the run (McGrath 100 ... Jaguar 1400)
-        perHeartLeft: 25,   // for each heart still standing when you win a fight
-        perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct; it was 75); it still restores a heart
-        consolation: 25     // losing the run: 25 x the place of the opponent you fell to
+        winPerPlace: 10,    // beating an opponent: 1 gp x their place in the run (McGrath 1 gp ... Jaguar 14 gp)
+        perHeartLeft: 2,    // for each heart still standing when you win a fight
+        perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct); it still restores a heart
+        consolation: 0      // (the consolation for a lost run is in points now: points.reachedPerPlace)
+    },
+    // Each time you buy the same thing again in a run (a Thonic of the same kind, a candle at the
+    // Shrine, a soak), it costs this much more of its first price: x1, x1.5, x2, ... (since 23 Oct,
+    // the user's call; rounded up to the silver piece). Keepsakes are bought once.
+    priceRise: 0.5,
+
+    // THE LEADERBOARD ranks runs by points (since 23 Oct, the user's call; it was the purse).
+    // Points come from what the run did, plus the gold left in the purse at the end.
+    points: {
+        perPlace: 100,        // each opponent beaten: 100 x their place (McGrath 100 ... Jaguar 1,400)
+        perHeartLeft: 25,     // each heart still standing when a fight is won
+        perPerfect24: 0,      // a perfect 24 (none for now, as with gold)
+        reachedPerPlace: 25,  // a run that ends: 25 x the place of the opponent you fell to
+        perSilver: 1          // the purse at the end: 1 point a silver piece (10 a gold piece)
     },
 
     // Thom's Thonics: what each costs, how many fit on the shelf, how many are on his cart.
     // Priced a little under what each adds to the final purse when bought before the middle
     // fights, so the right Thonic at the right time pays for itself and a late one doesn't.
-    thonicPrices: { healing: 110, lastGasp: 130, fizzy: 20, secondThoughts: 30, steady: 90, clearEye: 60 },
+    thonicPrices: { healing: 11, lastGasp: 13, fizzy: 2, secondThoughts: 3, steady: 9, clearEye: 6 }, // sp (rising, priceRise)
     shelfSize: 2,
     shopSize: 3, // Healing, plus two others at random
 
@@ -48,10 +65,10 @@ module.exports = {
         pickpocketShare: 0.5,   // of the purse, if they get away (half since 21 Oct, the user's call; it was a quarter)
         pickpocketCatch: 4,     // roll this or higher on one die to catch them
         shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
-        shrinePrice: 100,       // a candle for the Lady (since 21 Oct; a visit is worth ~110 gold to a run)
-        hotTubPrice: 50,        // a soak (since 21 Oct; a gamble, kept cheap)
+        shrinePrice: 10,        // sp: a candle for the Lady, 1 gp (rising, priceRise)
+        hotTubPrice: 5,         // sp: a soak (rising, priceRise)
         favourHearts: 1,        // the Lady's Favour: the next fight starts with this many extra hearts
-        diceDenBets: [50, 100], // the Dice Den: two dice each against the gambler, higher total doubles the bet
+        diceDenBets: [5, 10],   // sp. The Dice Den: two dice each against the gambler, higher total doubles the bet
         strangerChance: 20,     // percent of walks the Hooded Stranger finds you (if the thief didn't)
         strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
         strangerHearts: 2,      // ...and you start the next fight on this many hearts if you take one (a heart short)
@@ -71,9 +88,9 @@ module.exports = {
         darrenChance: 15,
         darrenSmash: 2,
         darrenGift: 4,
-        darrenGlass: 20,
-        darrenCatchGold: 50,
-        darrenFullShelfGold: 30 // a free Thonic with a full shelf comes as gold instead
+        darrenGlass: 2,         // sp
+        darrenCatchGold: 5,     // sp
+        darrenFullShelfGold: 3  // sp: a free Thonic with a full shelf comes as gold instead
     },
 
     // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on
@@ -83,7 +100,7 @@ module.exports = {
     // under what it adds to a run's gold when bought around fight 3, when a purse first reaches a
     // few hundred (balance/experiments/keepsake-when.js; bought later, each is worth less).
     thomKeepsakes: 2,
-    keepsakePrices: { bentCopper: 300, velvetCushion: 150, luckySeat: 150, loyaltyCard: 125, potionBelt: 125, loadedDie: 75 },
+    keepsakePrices: { bentCopper: 30, velvetCushion: 15, luckySeat: 15, loyaltyCard: 13, potionBelt: 13, loadedDie: 8 }, // sp
 
     keepsakes: {
         loadedDieLow: 4,        // the Loaded Die: one of your dice only rolls this or higher

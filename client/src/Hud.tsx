@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
 import { actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
-import { Rules } from './rules';
+import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
 import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
@@ -69,7 +69,7 @@ function JoinScreen() {
                     <div className="saved-run">
                         <button className="primary" onClick={() => actions.resume(saved, avatar)}>
                             Continue your crawl
-                            <span className="detail">{saved.name}: {saved.next} at {saved.place} · {saved.purse} gold</span>
+                            <span className="detail">{saved.name}: {saved.next} at {saved.place} · {coins(saved.purse)}</span>
                         </button>
                         <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
                     </div>
@@ -331,7 +331,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
     if (!run) return null;
     return (
         <div className="tavern-strip">
-            <span className="purse" aria-label={`${run.purse} gold`}><span aria-hidden="true">🪙</span> {run.purse}</span>
+            <span className="purse" aria-label={coins(run.purse)}><span aria-hidden="true">🪙</span> {coins(run.purse)}</span>
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
                 (the user, 21 Oct). Tap one for a reminder of what it does; it dims once spent this fight. */}
@@ -550,16 +550,17 @@ function useCountUp(target: number, ms = 1200) {
     return value;
 }
 
-// The end of a Tavern Crawl: how far you got, the gold, and the leaderboard.
+// The end of a Tavern Crawl: how far you got, the points, and the leaderboard (by points since
+// 23 Oct: the opponents beaten, the hearts spared, how far a lost run got, and the gold left).
 function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard'] }) {
-    const gold = useCountUp(summary.gold);
+    const points = useCountUp(summary.points);
     const b = summary.breakdown;
     const rows: [string, string][] = [
-        ['How far you got', String(b.progress)],
+        ['Opponents beaten', String(b.fights)],
         ['Hearts spared', String(b.hearts)],
-        ...(b.perfect ? [['Perfect 24s', String(b.perfect)] as [string, string]] : []), // no gold for 24s since 19 Oct
-        ['Between fights', b.events ? (b.events > 0 ? `+${b.events}` : `−${-b.events}`) : '0'],
-        ['Spent', b.spent ? `−${b.spent}` : '0']
+        ...(b.perfect ? [['Perfect 24s', String(b.perfect)] as [string, string]] : []),
+        ...(b.reached ? [['How far you got', String(b.reached)] as [string, string]] : []),
+        [`Gold left · ${coins(b.purse)}`, String(b.gold)]
     ];
     // Your best on the board (the board keeps each name's best run).
     const mine = leaderboard.findIndex(e => e.name === summary.name);
@@ -583,9 +584,9 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
                     })}
                 </ol>
                 <div className="gold">
-                    <span className="coin" aria-hidden="true">🪙</span>
-                    <span className="amount">{gold}</span>
-                    <span className="unit">gold</span>
+                    <span className="coin" aria-hidden="true">🏆</span>
+                    <span className="amount">{points.toLocaleString()}</span>
+                    <span className="unit">points</span>
                 </div>
                 <dl className="gold-rows">
                     {rows.map(([label, value]) => (
@@ -600,11 +601,11 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
                                 <li key={e.name} className={i === mine ? 'me' : ''}>
                                     <span className="rank">{i + 1}</span>
                                     <span className="who">{e.name}</span>
-                                    <span className="gold-amount">{e.gold}</span>
+                                    <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
                                 </li>
                             ))}
                         </ol>
-                        {mine >= board.length && <p className="fine">Your best: #{mine + 1} with {leaderboard[mine].gold} gold</p>}
+                        {mine >= board.length && <p className="fine">Your best: #{mine + 1} with {(leaderboard[mine].points ?? 0).toLocaleString()} points</p>}
                     </div>
                 )}
                 <div className="row">
@@ -759,7 +760,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                     <h2>Thom's Thonics</h2>
                     <p className="thom-tag">Potions for 2, 4, 24 players</p>
                 </div>
-                <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{run.purse}</strong> gold in your purse</p>
+                <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{coins(run.purse)}</strong> in your purse</p>
                 {shop.free && <p className="purse-line"><span aria-hidden="true">🎫</span> Loyalty Card: one Thonic free this visit</p>}
                 <div className="thonic-cards">
                     {shop.stock.map((t, i) => {
@@ -772,7 +773,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                 <strong>{t.name}</strong>
                                 <span className="text">{t.text}</span>
                                 <button className="buy" disabled={short || shelfFull} onClick={() => actions.buyThonic(t.id)}>
-                                    {shelfFull ? 'Shelf full' : shop.free ? 'Free' : short ? `${t.price} gold` : `Buy · ${t.price}`}
+                                    {shelfFull ? 'Shelf full' : shop.free ? 'Free' : short ? coins(t.price) : `Buy · ${coins(t.price)}`}
                                 </button>
                             </div>
                         );
@@ -789,7 +790,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                         <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[k.id] ?? '✦'}</span>
                                         <span className="about"><strong>{k.name}</strong><span className="text">{k.text}</span></span>
                                         <button className="buy" disabled={short} onClick={() => actions.buyKeepsake(k.id)}>
-                                            {short ? `${k.price} gold` : `Buy · ${k.price}`}
+                                            {short ? coins(k.price) : `Buy · ${coins(k.price)}`}
                                         </button>
                                     </div>
                                 );
@@ -867,7 +868,7 @@ function Interlude({ state }: { state: GameState }) {
                             <SpotPicture spot={spot} />
                             <strong>{SPOTS[spot].name}</strong>
                             <span className="line">{SPOTS[spot].line}</span>
-                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${run.prices.shrine} gold` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${run.prices.hotTub} gold` : ''}</span>
+                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : ''}</span>
                         </button>
                     ))}
                 </div>
@@ -924,7 +925,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
 
 // The purse, on the scenes between fights (what the fight paid has its own screen: FightWon).
 function PurseLine({ state }: { state: GameState }) {
-    return <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{state.tavernRun!.purse}</strong> gold in your purse</p>;
+    return <p className="purse-line"><span aria-hidden="true">🪙</span> <strong>{coins(state.tavernRun!.purse)}</strong> in your purse</p>;
 }
 
 // The spots, and the events that find you instead (the pickpocket, the Hooded Stranger).
@@ -1034,7 +1035,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
             <>
                 <p className="scene-text">Climb in, and the wild magic surges: most likely one of your dice is blessed for the next fight. Most likely.</p>
                 <div className="event-choices">
-                    <button className="primary" disabled={run.purse < (run.prices?.hotTub ?? 0)} onClick={actions.soak}>Climb in{run.prices?.hotTub ? ` · ${run.prices.hotTub} gold` : ''}</button>
+                    <button className="primary" disabled={run.purse < (run.prices?.hotTub ?? 0)} onClick={actions.soak}>Climb in{run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : ''}</button>
                     <button className="secondary" onClick={onMoveOn}>No thanks: challenge {next}</button>
                 </div>
             </>
@@ -1046,7 +1047,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
             <>
                 <p className="scene-text">Light a candle, and the Lady who keeps sailors safe grants a blessing: an extra heart for your next fight, or her Grace against the dust.</p>
                 <div className="event-choices">
-                    <button className="primary" disabled={run.purse < (run.prices?.shrine ?? 0)} onClick={actions.pray}>Light a candle{run.prices?.shrine ? ` · ${run.prices.shrine} gold` : ''}</button>
+                    <button className="primary" disabled={run.purse < (run.prices?.shrine ?? 0)} onClick={actions.pray}>Light a candle{run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : ''}</button>
                     <button className="secondary" onClick={onMoveOn}>No thanks: challenge {next}</button>
                 </div>
             </>
@@ -1061,7 +1062,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
                     <div className="event-choices">
                         {/* Only the bets the purse can cover. */}
                         {interlude.bets.filter(bet => run.purse >= bet).map(bet => (
-                            <button key={bet} className="primary" onClick={() => actions.diceBet(bet)}>Bet {bet}</button>
+                            <button key={bet} className="primary" onClick={() => actions.diceBet(bet)}>Bet {coins(bet)}</button>
                         ))}
                         <button className="secondary" onClick={() => actions.diceBet(0)}>No thanks</button>
                     </div>
@@ -1164,7 +1165,7 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
     const done = rolled && !rolling;
     return (
         <>
-            {!rolled && <p className="scene-text">The thief is making off with <strong>{interlude.steal}</strong> gold. Roll a {catchFaces} to catch them.</p>}
+            {!rolled && <p className="scene-text">The thief is making off with <strong>{coins(interlude.steal)}</strong>. Roll a {catchFaces} to catch them.</p>}
             {rolled && (
                 <div className={`dice-row single ${done ? (interlude.caught ? 'good' : 'bad') : ''}`}>
                     <Die value={interlude.roll!} rolling={rolling} />
@@ -1173,8 +1174,8 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
             {done && (
                 <p className={`outcome ${interlude.caught ? 'good' : 'bad'}`}>
                     {interlude.caught
-                        ? <>You rolled a {interlude.roll}: <strong>caught the thief!</strong> Your gold is safe.</>
-                        : <>You rolled a {interlude.roll}: the thief slips away with <strong>{interlude.lost}</strong> gold. You have {purse} left.</>}
+                        ? <>You rolled a {interlude.roll}: <strong>caught the thief!</strong> Your purse is safe.</>
+                        : <>You rolled a {interlude.roll}: the thief slips away with <strong>{coins(interlude.lost)}</strong>. You have {coins(purse)} left.</>}
                 </p>
             )}
             <div className="event-choices">
@@ -1222,9 +1223,9 @@ function DarrenRoll({ interlude, setRevealed, next }: { interlude: Extract<Inter
                     {interlude.outcome === 'smash'
                         ? (interlude.smashed
                             ? <>You rolled a {interlude.roll}: your <strong>{interlude.smashed.name}</strong> smashes on the floor.</>
-                            : <>You rolled a {interlude.roll}: a tray of glasses goes over. You pay <strong>{interlude.paid}</strong> gold for the glass.</>)
-                        : <>You rolled a {interlude.roll}: {interlude.thonic ? <>a free <strong>{interlude.thonic.name}</strong> for your shelf</> : <>your shelf is full, so <strong>{interlude.gold}</strong> gold instead</>}
-                            {interlude.outcome === 'catch' && interlude.thonic && <>, and <strong>+{interlude.gold}</strong> gold</>}.</>}
+                            : <>You rolled a {interlude.roll}: a tray of glasses goes over. You pay <strong>{coins(interlude.paid)}</strong> for the glass.</>)
+                        : <>You rolled a {interlude.roll}: {interlude.thonic ? <>a free <strong>{interlude.thonic.name}</strong> for your shelf</> : <>your shelf is full, so <strong>{coins(interlude.gold)}</strong> instead</>}
+                            {interlude.outcome === 'catch' && interlude.thonic && <>, and <strong>+{coins(interlude.gold)}</strong></>}.</>}
                 </p>
             )}
             <div className="event-choices">
@@ -1261,7 +1262,7 @@ function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; th
     const tie = phase === 'shown' && won === undefined;
     return (
         <>
-            <p className="scene-text">Your bet: <strong>{bet}</strong> gold</p>
+            <p className="scene-text">Your bet: <strong>{coins(bet)}</strong></p>
             <div className="dice-den">
                 <div className={`dice-row ${themShown && won === true ? 'good' : ''}`}>
                     <span className="who">You</span>
@@ -1279,7 +1280,7 @@ function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; th
             {tie && <p className="outcome">A tie! Roll again.</p>}
             {phase === 'shown' && won !== undefined && (
                 <p className={`outcome ${won ? 'good' : 'bad'}`}>
-                    {won ? <>You win <strong>+{bet}</strong> gold!</> : <>The gambler takes your {bet} gold.</>}
+                    {won ? <>You win <strong>+{coins(bet)}</strong>!</> : <>The gambler takes your {coins(bet)}.</>}
                 </p>
             )}
             <div className="event-choices">
@@ -1308,8 +1309,8 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     const gold = won.gold;
     const heartsLeft = gold.heartsLeft ?? (gold.perHeart ? Math.round(gold.hearts / gold.perHeart) : 0);
     const rows = [
-        { key: 'win', label: `Beating ${won.defeated}`, detail: won.place && gold.perPlace ? `opponent ${won.place} × ${gold.perPlace}` : '', amount: gold.win },
-        ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${gold.perHeart}` : '', amount: gold.hearts }] : [])
+        { key: 'win', label: `Beating ${won.defeated}`, detail: won.place && gold.perPlace ? `opponent ${won.place} × ${coins(gold.perPlace)}` : '', amount: gold.win },
+        ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${coins(gold.perHeart)}` : '', amount: gold.hearts }] : [])
     ];
     const total = gold.win + gold.hearts;
     const [before] = useState(() => Math.max(0, run.purse - total));
@@ -1346,14 +1347,14 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
                                 {row.key === 'hearts' && <span className="won-hearts" aria-hidden="true">{Array.from({ length: heartsLeft }, (_, k) => <span key={k} style={{ animationDelay: `${0.12 * k}s` }}>♥</span>)}</span>}
                                 {row.detail && <span className="detail">{row.detail}</span>}
                             </span>
-                            <span className="amount">+{row.amount}</span>
+                            <span className="amount">+{coins(row.amount)}</span>
                         </li>
                     ))}
                 </ul>
                 <div className={`won-purse ${counting ? 'shown' : ''}`}>
                     <span aria-hidden="true">🪙</span>
-                    <span className="amount">{before + added}</span>
-                    <span className="unit">gold in your purse</span>
+                    <span className="amount">{coins(before + added)}</span>
+                    <span className="unit">in your purse</span>
                 </div>
                 <button className="primary onward" onClick={next} disabled={leaving}>Next</button>
             </div>

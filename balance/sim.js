@@ -384,7 +384,7 @@ function settleRound(f, run, p, b, has, N) {
 //   bet(run, bets, N)         -> a bet (0 = no thanks)
 //   stranger(run, offers, N, next) -> a keepsake id, or null
 function newRun(N) {
-    return { purse: 0, shelf: [], keepsakes: [], hearts: N.playerHearts, stats: { perfect24s: 0, perfectGold: 0, winGold: 0, heartGold: 0, eventGold: 0, spent: 0, drunk: {} } };
+    return { purse: 0, bought: {}, shelf: [], keepsakes: [], hearts: N.playerHearts, stats: { perfect24s: 0, perfectGold: 0, winGold: 0, heartGold: 0, eventGold: 0, spent: 0, drunk: {} } };
 }
 
 // The numbers for a run: shared/balance.js, with opts.numbers on top (opponents' lives merged,
@@ -437,6 +437,8 @@ function playRun(policy, opts = {}) {
 const loadedFace = (run, N) => (run.keepsakes.includes('loadedDie') ? (low => d => (d.id === 0 ? low + Math.floor(Math.random() * (7 - low)) : d6()))(N.keepsakes.loadedDieLow) : undefined);
 const shelfSize = (run, N) => N.shelfSize + (run.keepsakes.includes('potionBelt') ? N.keepsakes.beltSlots : 0);
 
+// As the server: each one of a kind bought before makes the next cost priceRise x its first price more.
+const risingPrice = (run, N, id, base) => Math.ceil(base * (1 + (N.priceRise || 0) * ((run.bought || {})[id] || 0)));
 const changePurse = (run, amount) => { const a = Math.max(amount, -run.purse); run.purse += a; run.stats.eventGold += a; return a; };
 
 // eventDone: a random event (thief, Stranger, Darren) already happened this walk; since 21 Oct
@@ -454,7 +456,7 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
     }
     const canBet = run.purse >= Math.min(...I.diceDenBets);
     // The Shrine and the hot tub cost gold since 21 Oct: not offered if the purse can't cover it.
-    const affords = sp => (sp !== 'shrine' || run.purse >= (I.shrinePrice || 0)) && (sp !== 'hotTub' || run.purse >= (I.hotTubPrice || 0));
+    const affords = sp => (sp !== 'shrine' || run.purse >= risingPrice(run, N, 'shrine', I.shrinePrice || 0)) && (sp !== 'hotTub' || run.purse >= risingPrice(run, N, 'hotTub', I.hotTubPrice || 0));
     const unowned = KEEPSAKES.filter(k => !run.keepsakes.includes(k));
     // Else, now and then, the Hooded Stranger finds you (while he has keepsakes left): that's
     // the walk. (strangerChance null: he's one of the spots, as before 19 Oct.)
@@ -476,9 +478,10 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
         const stock = ['healing', ...shuffle(THONIC_IDS.filter(t => t !== 'healing')).slice(0, N.shopSize - 1)];
         let free = run.keepsakes.includes('loyaltyCard'); // the Loyalty Card's free Thonic
         for (const id of policy.shop(run, stock, { ...N, shelfSize: shelfSize(run, N) }, nextIndex)) {
-            const price = free ? 0 : N.thonicPrices[id];
+            const price = free ? 0 : risingPrice(run, N, id, N.thonicPrices[id]);
             if (run.purse >= price && run.shelf.length < shelfSize(run, N)) {
                 free = false;
+                run.bought[id] = (run.bought[id] || 0) + 1;
                 run.purse -= price;
                 run.stats.spent += price;
                 run.shelf.push(id);
@@ -496,8 +499,10 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
             if (id === 'potionBelt' && run.shelf.length < shelfSize(run, N)) run.shelf.push(N.keepsakes.beltThonic);
         }
     } else if (spot === 'hotTub') {
-        run.purse -= I.hotTubPrice || 0;
-        run.stats.spent += I.hotTubPrice || 0;
+        const tub = risingPrice(run, N, 'hotTub', I.hotTubPrice || 0);
+        run.bought.hotTub = (run.bought.hotTub || 0) + 1;
+        run.purse -= tub;
+        run.stats.spent += tub;
         // A wild surge, by weight: the dice ones for the next fight, Pruney a heart short.
         const surge = pickSurge(I.hotTubSurges);
         run.stats.surges = run.stats.surges || {};
@@ -505,8 +510,10 @@ function between(run, policy, N, nextIndex, log, eventDone = false) {
         if (surge === 'pruney') run.hearts = Math.max(1, (run.hearts ?? N.playerHearts) - 1);
         else run.nextSurge = surge;
     } else if (spot === 'shrine') {
-        run.purse -= I.shrinePrice || 0;
-        run.stats.spent += I.shrinePrice || 0;
+        const candle = risingPrice(run, N, 'shrine', I.shrinePrice || 0);
+        run.bought.shrine = (run.bought.shrine || 0) + 1;
+        run.purse -= candle;
+        run.stats.spent += candle;
         if (I.shrineGifts) {
             // The Lady's blessing, at random: Favour (an extra heart next fight) or Grace (the
             // next dust that would cost a heart doesn't; not given twice).
