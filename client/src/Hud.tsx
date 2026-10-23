@@ -4,7 +4,7 @@ import { CELEBRATION_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast,
 import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
-import { AVATAR_IDS, EDITABLE, PORTRAITS, SPOT_PORTRAITS, avatarStyle, editPortrait, portraitEdits, portraitFor } from './portraits';
+import { AVATAR_IDS, EDITABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editablePortrait, portraitEdits, portraitFor } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey } from './Backdrop';
 import { lookNext } from './look';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
@@ -1459,7 +1459,7 @@ function PortraitEditor() {
     const [, redraw] = useState(0);
     const frame = useRef<HTMLDivElement>(null);
     const drag = useRef<{ x: number; y: number } | null>(null);
-    const p = PORTRAITS[key];
+    const p = editablePortrait(key);
     const nudge = p.nudge ?? [0, 0];
     const set = (zoom: number, n: [number, number]) => { editPortrait(key, { zoom, nudge: n }); redraw(v => v + 1); };
     const move = (e: React.PointerEvent) => {

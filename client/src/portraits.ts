@@ -32,7 +32,16 @@ const bust = (file: string, face: [number, number], zoom: number): Portrait => (
 // An opponent's painting: its face's middle (percent), zoom, and the image's size in pixels.
 const seated = (file: string, center: [number, number], zoom: number, width: number, height: number, nudge?: [number, number]): Portrait =>
     ({ ...bust(file, center, zoom), center, aspect: width / height, ...(nudge ? { nudge } : {}) });
-const classic = (file: string): Portrait => ({ src: `/${encodeURI(file)}`, face: [50, 50], zoom: 1, bust: false });
+const classic = (file: string, zoom = 1, nudge?: [number, number]): Portrait =>
+    ({ src: `/${encodeURI(file)}`, face: [50, 50], zoom, bust: false, center: [50, 50], aspect: 1, ...(nudge ? { nudge } : {}) });
+// A spot's picture by its old hand-tuned framing (face = a CSS background-position), turned into
+// the centre-and-zoom form the editor works in, so it looks exactly as before until it's edited:
+// the point that background-position puts in the frame's middle becomes its centre.
+const framed = (file: string, face: [number, number], zoom: number, width: number, height: number, nudge?: [number, number]): Portrait => {
+    const aspect = width / height;
+    const middle = (pos: number, k: number) => (Math.abs(1 - k) < 1e-3 ? 50 : ((0.5 - (pos / 100) * (1 - k)) / k) * 100);
+    return { ...bust(file, face, zoom), center: [middle(face[0], zoom), middle(face[1], zoom / aspect)], aspect, ...(nudge ? { nudge } : {}) };
+};
 
 // Keyed by player avatar id and by opponent name (the bot's name in each encounter).
 export const PORTRAITS: Record<string, Portrait> = {
@@ -77,13 +86,13 @@ export const PORTRAITS: Record<string, Portrait> = {
 // painted scene rather than a cut-out; it's framed on the statue and candles. Each is
 // framed to show the whole head and what they hold.
 export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket' | 'hotTub' | 'darren', Portrait> = {
-    thom: bust('thom.webp', [52, 6], 1.15),
-    shrine: bust('shrine.webp', [50, 38], 1.2),
-    diceDen: bust('dicer.webp', [52, 8], 1.75),
-    stranger: bust('stranger.webp', [56, 10], 2.0),
-    pickpocket: bust('pickpocket.webp', [55, 12], 1.2),
-    hotTub: bust('hot-tub.webp', [52, 45], 1.25),
-    darren: bust('darren.webp', [55, 12], 1.6)
+    thom: framed('thom.webp', [52, 6], 1.15, 506, 720),
+    shrine: framed('shrine.webp', [50, 38], 1.2, 1024, 1024),
+    diceDen: framed('dicer.webp', [52, 8], 1.75, 1036, 720),
+    stranger: framed('stranger.webp', [56, 10], 2.0, 1048, 720),
+    pickpocket: framed('pickpocket.webp', [55, 12], 1.2, 540, 720),
+    hotTub: framed('hot-tub.webp', [52, 45], 1.25, 1287, 720),
+    darren: framed('darren.webp', [55, 12], 1.6, 716, 720)
 };
 
 export const AVATAR_IDS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
@@ -96,7 +105,7 @@ export function portraitFor(key: string): Portrait {
 // lands in the middle of the (square) frame: a background-position of X% lines up X% of the image
 // with X% of the frame, so X is solved for (the image is zoom x the frame's width).
 export function avatarStyle(p: Portrait) {
-    const size = p.bust ? `${p.zoom * 100}% auto` : 'cover';
+    const size = p.bust || p.center ? `${p.zoom * 100}% auto` : 'cover';
     let position = `${p.face[0]}% ${p.face[1]}%`;
     if (p.center && p.aspect) {
         // (where the face lands in the frame: its middle, moved by the nudge)
@@ -110,10 +119,23 @@ export function avatarStyle(p: Portrait) {
 // ---- The portrait editor (the tuning panel's Portraits tab, 23 Oct) ----
 // The user drags a picture in its frame and sets its zoom; the edit shows at once everywhere on
 // this device (saved in localStorage.tavernPortraits) and is copied out as numbers to make it
-// the game's (into the `seated(...)` lines above). Only the round avatars change.
+// the game's (into the `seated(...)`, `framed(...)` and `classic(...)` lines above). Only the
+// round avatars change. Every round portrait is here: the opponents, the spots between fights
+// (named as people know them) and the classic avatars.
 export interface PortraitEdit { zoom: number; nudge: [number, number] }
-export const EDITABLE = Object.keys(PORTRAITS).filter(k => PORTRAITS[k].center);
-const BUILT: Record<string, PortraitEdit> = Object.fromEntries(EDITABLE.map(k => [k, { zoom: PORTRAITS[k].zoom, nudge: PORTRAITS[k].nudge ?? [0, 0] }]));
+const SPOT_NAMES: Record<keyof typeof SPOT_PORTRAITS, string> = {
+    thom: 'Thom', shrine: "The Lady's Shrine", diceDen: 'The Dice Den gambler', stranger: 'The Hooded Stranger',
+    pickpocket: 'The thief', hotTub: 'The Wild Magic Hot Tub', darren: 'Darren Snakehands'
+};
+const REGISTRY: Record<string, Portrait> = {
+    ...Object.fromEntries(Object.keys(PORTRAITS).filter(k => PORTRAITS[k].center && PORTRAITS[k].bust).map(k => [k, PORTRAITS[k]])),
+    ...Object.fromEntries((Object.keys(SPOT_PORTRAITS) as (keyof typeof SPOT_PORTRAITS)[]).map(k => [SPOT_NAMES[k], SPOT_PORTRAITS[k]])),
+    'Devil (avatar)': PORTRAITS.Devil,
+    'Vaelin (avatar)': PORTRAITS.Vaelin
+};
+export const EDITABLE = Object.keys(REGISTRY);
+export const editablePortrait = (name: string) => REGISTRY[name];
+const BUILT: Record<string, PortraitEdit> = Object.fromEntries(EDITABLE.map(k => [k, { zoom: REGISTRY[k].zoom, nudge: REGISTRY[k].nudge ?? [0, 0] }]));
 
 function readEdits(): Record<string, PortraitEdit> {
     try { return JSON.parse(localStorage.getItem('tavernPortraits') ?? '{}'); } catch { return {}; }
@@ -121,7 +143,7 @@ function readEdits(): Record<string, PortraitEdit> {
 const edits = readEdits();
 const applyEdit = (key: string) => {
     const e = edits[key] ?? BUILT[key];
-    if (e && PORTRAITS[key]) { PORTRAITS[key].zoom = e.zoom; PORTRAITS[key].nudge = [...e.nudge]; }
+    if (e && REGISTRY[key]) { REGISTRY[key].zoom = e.zoom; REGISTRY[key].nudge = [...e.nudge]; }
 };
 Object.keys(edits).forEach(k => { if (BUILT[k]) applyEdit(k); });
 
