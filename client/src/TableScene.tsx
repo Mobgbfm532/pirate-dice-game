@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { Bloom, EffectComposer, HueSaturation, BrightnessContrast, ToneMapping } from '@react-three/postprocessing';
-import { ToneMappingMode } from 'postprocessing';
+import { Bloom, EffectComposer, Noise, ToneMapping, Vignette } from '@react-three/postprocessing';
+import { BlendFunction, Effect, ToneMappingMode } from 'postprocessing';
 import { flame, lookNext, shareFlame } from './look';
 import { Dice } from './Dice';
 import { table } from './game';
@@ -358,16 +358,55 @@ function NextLights() {
     );
 }
 
-// The look preview's finish over the 3D picture (option 1, step D): a soft glow on what's
-// bright (brass highlights, lacquer, magic), a warm grade, then the filmic tone curve.
-// (Vignette and grain are still drawn over the page in CSS: `.look-finish`.)
+// The look preview's colour grade (step D), from the game's palette: a touch more colour and
+// contrast; shadows lean bottle green, highlights honey; and nothing is pure black or white, the
+// darkest dark is an ember brown and the brightest light a warm cream. Works on display values.
+const gradeShader = /* glsl */`
+uniform vec3 floorColor, ceilColor, shadowTint, highlightTint;
+uniform float saturation, contrast;
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+    vec3 c = pow(max(inputColor.rgb, 0.0), vec3(1.0 / 2.2));
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    c = mix(vec3(l), c, saturation);
+    c = (c - 0.5) * contrast + 0.5;
+    c *= mix(vec3(1.0), shadowTint, 1.0 - smoothstep(0.0, 0.5, l));
+    c *= mix(vec3(1.0), highlightTint, smoothstep(0.5, 1.0, l));
+    // Only the very darkest darks lift to ember, and only white is held to cream: lifting every
+    // shade flattened the room, and capping every bright colour dimmed the fire.
+    c = clamp(c, 0.0, 1.0);
+    c += floorColor * pow(1.0 - l, 14.0);
+    c = mix(c, min(c, ceilColor), smoothstep(0.85, 0.98, min(c.r, min(c.g, c.b)))); // (near-white only: flames keep their yellow)
+    outputColor = vec4(pow(c, vec3(2.2)), inputColor.a);
+}`;
+class GradeEffect extends Effect {
+    constructor() {
+        const srgb = (hex: string) => new THREE.Color(hex).convertLinearToSRGB();
+        super('Grade', gradeShader, {
+            uniforms: new Map<string, THREE.Uniform>([
+                ['floorColor', new THREE.Uniform(srgb('#140b06'))], // ember black
+                ['ceilColor', new THREE.Uniform(srgb('#fbf0da'))],  // warm cream
+                ['shadowTint', new THREE.Uniform(new THREE.Vector3(0.97, 1.02, 0.98))],   // bottle green
+                ['highlightTint', new THREE.Uniform(new THREE.Vector3(1.02, 1.0, 0.98))],  // honey
+                ['saturation', new THREE.Uniform(1.08)],
+                ['contrast', new THREE.Uniform(1.1)]
+            ])
+        });
+    }
+}
+
+// The look preview's finish over the whole 3D picture, the tavern and opponent included (option 1,
+// step D): a soft glow on only what is bright (candle flames, the tavern's lanterns, brass
+// highlights, magic), the filmic tone curve, the grade, a soft vignette and the faintest grain.
+// Edges stay smooth through the multisampling.
 function Finish() {
+    const grade = useMemo(() => new GradeEffect(), []);
     return (
         <EffectComposer multisampling={4}>
-            <Bloom mipmapBlur luminanceThreshold={0.93} luminanceSmoothing={0.15} intensity={0.45} radius={0.7} />
-            <HueSaturation saturation={0.1} />
-            <BrightnessContrast brightness={-0.03} contrast={0.08} />
+            <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.2} intensity={0.5} radius={0.45} />
             <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+            <primitive object={grade} />
+            <Vignette offset={0.42} darkness={0.42} />
+            <Noise premultiply blendFunction={BlendFunction.OVERLAY} opacity={0.08} />
         </EffectComposer>
     );
 }

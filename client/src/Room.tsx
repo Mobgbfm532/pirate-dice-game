@@ -92,7 +92,7 @@ uniform bool glow, linearOut;
 // The look preview's light. flame: the shared flicker (around 1). lanterns: how much the bright
 // parts of a picture breathe with it. warmth, rim: the fire's wash and outline on a cut-out;
 // px: one screen pixel in the picture's texture coordinates.
-uniform float flame, lanterns, warmth, rim;
+uniform float flame, lanterns, warmth, rim, hot;
 uniform vec2 px;
 varying vec2 vUv;
 // How much of the outline faces a light from direction d: open space beside it that way.
@@ -142,7 +142,12 @@ void main() {
     }
     // On screen the colours stay sRGB, as the page drew them; into the look preview's finish
     // they go linear like the rest of the scene.
-    if (linearOut) c = toLinear(c);
+    if (linearOut) {
+        // The lights in a painting (lanterns, candles, the fire) burn brighter than paint can show,
+        // so the finish's glow finds them (step D); the tone curve brings them back.
+        float lum = dot(c, vec3(0.299, 0.587, 0.114));
+        c = toLinear(c) * (1.0 + hot * smoothstep(0.65, 0.92, lum));
+    }
     gl_FragColor = vec4(c * a, a);
 }`;
 
@@ -152,7 +157,7 @@ function pictureMaterial() {
         uniforms: {
             map: { value: null }, brightness: { value: 1 }, saturation: { value: 1 }, sepia: { value: 0 },
             opacity: { value: 1 }, tint: { value: new THREE.Vector4() }, glow: { value: false }, linearOut: { value: lookNext },
-            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, px: { value: new THREE.Vector2() }
+            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, px: { value: new THREE.Vector2() }
         },
         // Drawn first, behind everything, whatever the distance: the table simply paints over.
         depthTest: false, depthWrite: false, fog: false, toneMapped: false,
@@ -241,6 +246,7 @@ export function Room() {
             r.brightness.value = lookNext ? 0.8 + f * 0.04 : 0.8;
             r.flame.value = f;
             r.lanterns.value = lookNext ? 1.6 : 0;
+            r.hot.value = lookNext ? 2 : 0;
             r.saturation.value = lookNext ? 1.1 : 0.95;
             r.sepia.value = lookNext ? 0.12 : 0;
             put(room.current, L.roomLeft, L.roomTop, L.roomWidth, L.roomHeight);

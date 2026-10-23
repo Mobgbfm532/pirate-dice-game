@@ -238,7 +238,16 @@ one too, or saves only last until the server restarts, which on the free tier is
   brass plates reflect the room (their own envMap at 0.3) and read as polished gold; the slot
   rail varnished. Red 1s, green 6s and the plates' 2 and 4 stay clear. Shots in
   `previews/step-c/`, now the same throw each time (`/seed` on the dev controls; `shots.mjs`
-  seeds 42). Next: step D (glow and grade), after the user has seen C.
+  seeds 42).
+  **Step D (23 Oct, committed, not pushed; look preview only):** the finish is one effects pass
+  over the whole picture (TableScene `Finish`): glow (threshold 0.85, radius 0.45), ACES, the
+  palette grade (`GradeEffect`: saturation 1.08, contrast 1.1, a slight green in the shadows and
+  honey in the highlights, only the deepest blacks lifted to ember and near-whites held to cream),
+  vignette (0.42/0.42) and grain (Noise overlay 0.08). The CSS `.look-finish` layer is gone (it
+  also dimmed the HUD). The tavern's lights are pushed above 1 in the room shader (`hot`) so the
+  glow finds them. Checked by the visual-shots subagent over three rounds: depth and glow fine;
+  the fire near the screen edge is still a touch more orange than before (for step G's panel).
+  Next: step E (living air).
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build

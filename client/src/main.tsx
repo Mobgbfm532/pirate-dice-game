@@ -26,9 +26,6 @@ function App() {
             >
                 <TableScene />
             </Canvas>
-            {/* The look preview's finish over the table and tavern (never over the controls):
-                a soft vignette and the faintest film grain. */}
-            {lookNext && <div className="look-finish" aria-hidden="true"><div className="grain" /></div>}
             <Hud />
         </>
     );
