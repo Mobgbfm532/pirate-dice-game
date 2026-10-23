@@ -179,6 +179,7 @@
         turn.hasRolled = true;
         turn.locksThisRoll = 0;
         turn.freeRoll = false;
+        turn.mustRollId = null; // (a knocked-loose die has been rolled)
 
         if (onRolled) onRolled(turn);
 
@@ -195,6 +196,8 @@
         const die = turn.dice.find(d => d.id === dieId);
         if (!die || die.status === STATUS.LOCKED || die.status === STATUS.STOLEN) return null;
         if (die.id === turn.mindDieId) return null;
+        // A die Sylvester knocked loose has to be rolled before it can be kept again.
+        if (die.id === turn.mustRollId) return null;
 
         if (die.status === STATUS.ACTIVE) { die.status = STATUS.LOCKED_THIS_ROLL; turn.locksThisRoll++; }
         else { die.status = STATUS.ACTIVE; turn.locksThisRoll--; }
@@ -238,7 +241,8 @@
 
     // Second Thoughts Thonic: a die kept on an earlier roll goes back into play, and the player
     // may roll without keeping another. A finished hand opens up again. Returns true if done.
-    function putBackDie(turn, dieId) {
+    // mustRoll: the die can't be kept again until it has been rolled (Sylvester's Back of the Head).
+    function putBackDie(turn, dieId, { mustRoll = false } = {}) {
         if (!turn.hasRolled) return false;
         const die = turn.dice.find(d => d.id === dieId);
         // A die kept on an earlier roll; or, once the hand is finished (nothing left to tap), any
@@ -253,6 +257,7 @@
             turn.callout = null;
         }
         turn.freeRoll = true;
+        if (mustRoll) turn.mustRollId = die.id;
         return true;
     }
 
@@ -298,7 +303,7 @@
             key: turn.key,
             playerId: turn.playerId,
             // mind: the die Mind Whip made you keep (this throw).
-            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}) })),
+            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}), ...(d.id === turn.mustRollId ? { mustRoll: true } : {}) })),
             rollCount: turn.rollCount,
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,

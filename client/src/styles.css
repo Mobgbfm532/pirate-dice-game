@@ -667,7 +667,7 @@ footer {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(224, 180, 76, 0.4);
     pointer-events: auto;
     z-index: 3;
-    animation: intro-card 6s ease-out forwards; /* INTRO_MS */
+    animation: intro-card 4.5s ease-out forwards; /* INTRO_MS */
 }
 .encounter-intro .encounter { font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: #6d4c2a; }
 .encounter-intro .name { font-size: clamp(1.7rem, 8vw, 2.3rem); font-weight: 700; color: var(--red); line-height: 1.1; }

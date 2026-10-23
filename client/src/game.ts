@@ -549,8 +549,9 @@ function introduceOpponent(state: GameState) {
     momentFreeAt = Math.max(momentFreeAt, gone);
     momentGoneAt = Math.max(momentGoneAt, gone);
 }
-// An opponent's entrance: the name card's time on screen (Hud), a second longer since 23 Oct.
-export const INTRO_MS = 6000;
+// An opponent's entrance: the name card's time on screen (Hud): 4.5 s since 23 Oct (the user's
+// calls: 5, then 6, then 1.5 shorter).
+export const INTRO_MS = 4500;
 
 // Invite link for a classic table: opens the 3D table with the code filled in.
 export function inviteLink(code: string) {
@@ -730,7 +731,7 @@ export const actions = {
         }
         if (!turn || !isMyTurn || rolling || !turn.hasRolled || turn.finalized) return;
         const die = turn.dice.find(d => d.id === dieId);
-        if (!die || die.status === 'permanentlyLocked' || die.status === 'stolen' || die.mind) return;
+        if (!die || die.status === 'permanentlyLocked' || die.status === 'stolen' || die.mind || die.mustRoll) return; // (a knocked-loose die is rolled, not kept)
         playSound('click');
         socket.emit('toggleDie', dieId);
 

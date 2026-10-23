@@ -247,7 +247,7 @@ export function Dice() {
     const tappable = (id: number) => {
         const die = turn?.dice.find(d => d.id === id);
         if (putBack) return canTouch && !!die && !!turn && canPutBack(turn, die.status);
-        return canTouch && !!die && !die.mind && (die.status === 'active' || die.status === 'lockedThisTurn');
+        return canTouch && !!die && !die.mind && !die.mustRoll && (die.status === 'active' || die.status === 'lockedThisTurn');
     };
 
     return (

@@ -1606,6 +1606,11 @@ test("Sylvester's Back of the Head knocks your best kept die loose from a finish
     assert.equal(turn.finalized, false, 'the hand is open again');
     assert.equal(turn.dice.filter(d => d.status === 'active').length, 1, 'one die back in play');
     assert.ok(Rules.canRoll(turn), 'and you may roll it');
+    // It has to be rolled: keeping it again straight away is refused (the user's bug, 23 Oct).
+    hero.emit('toggleDie', knocked);
+    await sleep(40);
+    assert.equal(room.turn.dice[knocked].status, 'active', 'not kept without a roll');
+    assert.equal(room.turn.finalized, false);
     // Rolled again, the last die goes back in by itself: no second punch.
     hero.emit('rollDice');
     const done = await waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 3000);

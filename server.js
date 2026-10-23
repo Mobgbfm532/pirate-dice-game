@@ -635,7 +635,7 @@ function suckerPunch(roomCode, room) {
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     if (!fireTavernAbility(roomCode, room, encounter, 'suckerPunch')) return false;
     let die = Rules.bestKeptDie(turn);
-    Rules.putBackDie(turn, die.id);
+    Rules.putBackDie(turn, die.id, { mustRoll: true }); // it has to be rolled, not kept again
     emitTurn(roomCode, { type: 'punched', die: die.id });
     sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch to the back of the head knocks your ${die.value} loose. Roll it again.` });
     return true;
@@ -1027,7 +1027,7 @@ function emitMoment(roomCode, room, event, data) {
 // before the dice are thrown). The server keeps the same clock, so a throw (and the bot's next
 // step) waits for it too: momentsLeft.
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 3600, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
-const INTRO_SHOW_MS = 6000; // an opponent's entrance (the client's INTRO_MS)
+const INTRO_SHOW_MS = 4500; // an opponent's entrance (the client's INTRO_MS)
 function sendMoment(roomCode, event, data) {
     let room = rooms[roomCode];
     let shown = !(event === 'roundResult' && data && data.ends); // (the end of a fight shows its summary instead)

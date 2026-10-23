@@ -11,6 +11,7 @@ export interface Die {
     status: DieStatus;
     hidden?: boolean;
     mind?: boolean; // the die Frak's Mind Whip made you keep this throw (can't be tapped back)
+    mustRoll?: boolean; // Sylvester knocked it loose: it has to be rolled before it can be kept
 }
 
 export interface TurnOutcome {

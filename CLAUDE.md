@@ -273,7 +273,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 - **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
   (`Portrait.center`, percent, plus `aspect`; `seated()` in portraits.ts). Behind the table the face
   sits on the table's centre line (Room); round avatars solve the background position so the face
-  is in the middle of the circle (`avatarStyle`), with zooms eased so head and shoulders show, in
+  is in the middle of the circle (`avatarStyle`), with each picture moved by eye where the user asked (`nudge`, percent of the frame, 23 Oct), with zooms eased so head and shoulders show, in
   bigger frames (the win summary up to 170 px, the run-over row 52 px). The spots
   between fights keep their hand-tuned `face`.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
@@ -325,7 +325,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
   Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; Klarg 1, Rokr 2,
   Hangman 1, Jaguar 1). Each use costs the player ~10 points of fight win chance. **The Yawning
-  Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the
+  Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the knocked-loose die must be rolled before it can be kept again, `turn.mustRollId`, 23 Oct; the
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
   hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it
   again; `suckerPunch` via `emitKept`, `Rules.putBackDie`; its turnState event `punched` makes the
@@ -377,7 +377,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   gets no celebration (a sigh). For anyone at the table, with their name when it isn't you.
   `perfectHand` (rules.ts, tested), `Celebration` (Hud), `snapshot.celebration`; a moment of its
   own (`CELEBRATION_MS` 2.8 s): the round result and the next throw wait. Dev: `preview.celebrate()`.
-- **An opponent's entrance (23 Oct):** the name card shows 6 s (`INTRO_MS`); at a fight's start the
+- **An opponent's entrance (23 Oct):** the name card shows 4.5 s (`INTRO_MS`; 6 s, then 1.5 s shorter, the user's); at a fight's start the
   server sends the new opponent before the round's abilities and puts the entrance on its moment
   clock (`INTRO_SHOW_MS`), so abilities and the first throw wait for the card (Martha's entrance
   and disguise used to run together). Thom greets you "Vim, vigour, vitality!" on your first visit
