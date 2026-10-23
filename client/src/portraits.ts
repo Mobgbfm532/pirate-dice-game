@@ -34,14 +34,6 @@ const seated = (file: string, center: [number, number], zoom: number, width: num
     ({ ...bust(file, center, zoom), center, aspect: width / height, ...(nudge ? { nudge } : {}) });
 const classic = (file: string, zoom = 1, nudge?: [number, number]): Portrait =>
     ({ src: `/${encodeURI(file)}`, face: [50, 50], zoom, bust: false, center: [50, 50], aspect: 1, ...(nudge ? { nudge } : {}) });
-// A spot's picture by its old hand-tuned framing (face = a CSS background-position), turned into
-// the centre-and-zoom form the editor works in, so it looks exactly as before until it's edited:
-// the point that background-position puts in the frame's middle becomes its centre.
-const framed = (file: string, face: [number, number], zoom: number, width: number, height: number, nudge?: [number, number]): Portrait => {
-    const aspect = width / height;
-    const middle = (pos: number, k: number) => (Math.abs(1 - k) < 1e-3 ? 50 : ((0.5 - (pos / 100) * (1 - k)) / k) * 100);
-    return { ...bust(file, face, zoom), center: [middle(face[0], zoom), middle(face[1], zoom / aspect)], aspect, ...(nudge ? { nudge } : {}) };
-};
 
 // Keyed by player avatar id and by opponent name (the bot's name in each encounter).
 export const PORTRAITS: Record<string, Portrait> = {
@@ -82,17 +74,18 @@ export const PORTRAITS: Record<string, Portrait> = {
     Vaelin: classic('vaelin.png')
 };
 
-// The spots between fights (and the pickpocket), shown in a round frame. The Shrine is a
+// The spots between fights (and the pickpocket), shown in a round frame (as the user set them in
+// the portrait editor, 23 Oct). The Shrine is a
 // painted scene rather than a cut-out; it's framed on the statue and candles. Each is
 // framed to show the whole head and what they hold.
 export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket' | 'hotTub' | 'darren', Portrait> = {
-    thom: framed('thom.webp', [52, 6], 1.15, 506, 720),
-    shrine: framed('shrine.webp', [50, 38], 1.2, 1024, 1024),
-    diceDen: framed('dicer.webp', [52, 8], 1.75, 1036, 720),
-    stranger: framed('stranger.webp', [56, 10], 2.0, 1048, 720),
-    pickpocket: framed('pickpocket.webp', [55, 12], 1.2, 540, 720),
-    hotTub: framed('hot-tub.webp', [52, 45], 1.25, 1287, 720),
-    darren: framed('darren.webp', [55, 12], 1.6, 716, 720)
+    thom: seated('thom.webp', [50.3, 32.9], 0.95, 506, 720, [-3.2, -3.2]),
+    shrine: seated('shrine.webp', [50, 48], 1.35, 1024, 1024, [0, 0]),
+    diceDen: seated('dicer.webp', [50.9, 42.5], 1.35, 1036, 720, [-2.2, -4.6]),
+    stranger: seated('stranger.webp', [53, 39.1], 1.75, 1048, 720, [6.3, 2]),
+    pickpocket: seated('pickpocket.webp', [50.8, 35.8], 0.9, 540, 720, [5.1, -2.7]),
+    hotTub: seated('hot-tub.webp', [50.4, 52.2], 1.3, 1287, 720, [0, 0]),
+    darren: seated('darren.webp', [51.9, 35.6], 0.9, 716, 720, [2.7, -9.5])
 };
 
 export const AVATAR_IDS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
@@ -119,7 +112,7 @@ export function avatarStyle(p: Portrait) {
 // ---- The portrait editor (the tuning panel's Portraits tab, 23 Oct) ----
 // The user drags a picture in its frame and sets its zoom; the edit shows at once everywhere on
 // this device (saved in localStorage.tavernPortraits) and is copied out as numbers to make it
-// the game's (into the `seated(...)`, `framed(...)` and `classic(...)` lines above). Only the
+// the game's (into the `seated(...)` and `classic(...)` lines above). Only the
 // round avatars change. Every round portrait is here: the opponents, the spots between fights
 // (named as people know them) and the classic avatars.
 export interface PortraitEdit { zoom: number; nudge: [number, number] }

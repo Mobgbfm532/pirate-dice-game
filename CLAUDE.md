@@ -271,8 +271,8 @@ one too, or saves only last until the server restarts, which on the free tier is
   settings" gives the user JSON to paste back: those values become the new defaults. Its **Portraits**
   tab: pick a character, drag the picture in a big frame, set the zoom (live on that device,
   `localStorage.tavernPortraits`, `editPortrait` in portraits.ts); "Copy portraits" gives
-  `{ name: { zoom, nudge } }` to put into the `seated(...)` lines (opponents), `framed(...)` (the spots between
-  fights, by the names in `SPOT_NAMES`; their old hand-tuned framing converted exactly) and
+  `{ name: { zoom, nudge } }` to put into the `seated(...)` lines (opponents, and the spots between fights by the names in
+  `SPOT_NAMES`; theirs set by the user too, 23 Oct) and
   `classic(...)` (the Devil and Vaelin avatars). Not yet
   measured on the user's phone.
 - **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
