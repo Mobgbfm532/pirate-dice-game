@@ -2071,3 +2071,24 @@ button.keepsake.used { opacity: 0.55; }
 .perfect4 .celebration-sparks span { background: radial-gradient(circle, #ffffff, #ce93d8 50%, rgba(142, 36, 170, 0)); }
 @keyframes dots-wait { 0% { opacity: 0.2; } 12% { opacity: 0.6; } 22% { opacity: 1; } }
 @keyframes huh-tilt { 0%, 30% { transform: rotate(0deg); } 45% { transform: rotate(-16deg) translateY(-4px); } 60% { transform: rotate(10deg); } 75%, 100% { transform: rotate(-6deg); } }
+
+/* The tuning panel's Portraits tab: a big frame to drag the picture in, and nameplate-sized copies. */
+.tune-tabs { margin-top: 2px; }
+.portrait-editor { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.portrait-editor select { width: 100%; padding: 6px 8px; border-radius: 8px; background: #2a1a0e; color: var(--parchment); border: 1px solid var(--panel-border); font: inherit; }
+.portrait-frame {
+    position: relative; width: min(56vw, 200px); aspect-ratio: 1; border-radius: 50%;
+    border: 3px solid var(--gold); background-color: #1d120a; background-repeat: no-repeat;
+    touch-action: none; cursor: grab;
+}
+.portrait-frame:active { cursor: grabbing; }
+/* The middle of the frame, faintly. */
+.portrait-guide { position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
+    background: linear-gradient(rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)) center / 1px 100% no-repeat,
+                linear-gradient(rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)) center / 100% 1px no-repeat; }
+.portrait-smalls { display: flex; gap: 10px; align-items: center; }
+.portrait-smalls span { display: inline-block; border-radius: 50%; border: 2px solid var(--gold); background-color: #1d120a; background-repeat: no-repeat; }
+.portrait-smalls span:nth-child(1) { width: 36px; height: 36px; }
+.portrait-smalls span:nth-child(2) { width: 52px; height: 52px; }
+.portrait-smalls span:nth-child(3) { width: 84px; height: 84px; }
+.portrait-editor .tune-row { width: 100%; }

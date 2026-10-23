@@ -105,3 +105,29 @@ export function avatarStyle(p: Portrait) {
     }
     return { backgroundImage: `url("${p.src}")`, backgroundSize: size, backgroundPosition: position };
 }
+
+// ---- The portrait editor (the tuning panel's Portraits tab, 23 Oct) ----
+// The user drags a picture in its frame and sets its zoom; the edit shows at once everywhere on
+// this device (saved in localStorage.tavernPortraits) and is copied out as numbers to make it
+// the game's (into the `seated(...)` lines above). Only the round avatars change.
+export interface PortraitEdit { zoom: number; nudge: [number, number] }
+export const EDITABLE = Object.keys(PORTRAITS).filter(k => PORTRAITS[k].center);
+const BUILT: Record<string, PortraitEdit> = Object.fromEntries(EDITABLE.map(k => [k, { zoom: PORTRAITS[k].zoom, nudge: PORTRAITS[k].nudge ?? [0, 0] }]));
+
+function readEdits(): Record<string, PortraitEdit> {
+    try { return JSON.parse(localStorage.getItem('tavernPortraits') ?? '{}'); } catch { return {}; }
+}
+const edits = readEdits();
+const applyEdit = (key: string) => {
+    const e = edits[key] ?? BUILT[key];
+    if (e && PORTRAITS[key]) { PORTRAITS[key].zoom = e.zoom; PORTRAITS[key].nudge = [...e.nudge]; }
+};
+Object.keys(edits).forEach(k => { if (BUILT[k]) applyEdit(k); });
+
+export function editPortrait(key: string, edit: PortraitEdit | null) {
+    if (edit) edits[key] = { zoom: Math.round(edit.zoom * 100) / 100, nudge: [Math.round(edit.nudge[0] * 10) / 10, Math.round(edit.nudge[1] * 10) / 10] };
+    else delete edits[key];
+    try { localStorage.setItem('tavernPortraits', JSON.stringify(edits)); } catch { /* not saved */ }
+    applyEdit(key);
+}
+export const portraitEdits = () => edits;

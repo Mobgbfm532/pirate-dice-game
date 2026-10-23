@@ -4,7 +4,7 @@ import { CELEBRATION_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast,
 import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
-import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
+import { AVATAR_IDS, EDITABLE, PORTRAITS, SPOT_PORTRAITS, avatarStyle, editPortrait, portraitEdits, portraitFor } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey } from './Backdrop';
 import { lookNext } from './look';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
@@ -1452,8 +1452,61 @@ function useFooterInset() {
 // The tuning panel (step G; with ?tune=1 in the address): sliders for the look's feel, the frame
 // rate and the quality level, and a button that copies the settings to send back, so the numbers
 // the user picks by eye become the game's (tuning.ts).
+// The Portraits tab: pick a character, drag their picture in a big round frame, set the zoom.
+// Every round avatar of theirs on this device follows at once; Copy gives the numbers.
+function PortraitEditor() {
+    const [key, setKey] = useState(EDITABLE[0]);
+    const [, redraw] = useState(0);
+    const frame = useRef<HTMLDivElement>(null);
+    const drag = useRef<{ x: number; y: number } | null>(null);
+    const p = PORTRAITS[key];
+    const nudge = p.nudge ?? [0, 0];
+    const set = (zoom: number, n: [number, number]) => { editPortrait(key, { zoom, nudge: n }); redraw(v => v + 1); };
+    const move = (e: React.PointerEvent) => {
+        if (!drag.current || !frame.current) return;
+        const size = frame.current.clientWidth;
+        const dx = ((e.clientX - drag.current.x) / size) * 100, dy = ((e.clientY - drag.current.y) / size) * 100;
+        drag.current = { x: e.clientX, y: e.clientY };
+        const clamp = (v: number) => Math.max(-45, Math.min(45, v));
+        set(p.zoom, [clamp(nudge[0] + dx), clamp(nudge[1] + dy)]);
+    };
+    const copy = async () => {
+        const text = JSON.stringify(portraitEdits());
+        try { await navigator.clipboard.writeText(text); showToast('', 'Portraits copied: paste them to Claude', 'info', 2600); }
+        catch { showToast('Your portraits', text, 'info', 12000); }
+    };
+    return (
+        <div className="portrait-editor">
+            <select value={key} onChange={e => setKey(e.target.value)} aria-label="Character">
+                {EDITABLE.map(k => <option key={k} value={k}>{k}{portraitEdits()[k] ? ' •' : ''}</option>)}
+            </select>
+            <div ref={frame} className="portrait-frame" style={avatarStyle(p)}
+                onPointerDown={e => { drag.current = { x: e.clientX, y: e.clientY }; (e.target as HTMLElement).setPointerCapture(e.pointerId); }}
+                onPointerMove={move} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
+                role="img" aria-label={`${key}: drag to move`}>
+                <span className="portrait-guide" aria-hidden="true" />
+            </div>
+            <p className="tune-note">Drag the picture. As small as the nameplates:</p>
+            <div className="portrait-smalls" aria-hidden="true">
+                <span style={avatarStyle(p)} /><span style={avatarStyle(p)} /><span style={avatarStyle(p)} />
+            </div>
+            <label className="tune-row">
+                <span>Zoom</span>
+                <input type="range" min={0.8} max={3.5} step={0.05} value={p.zoom} onChange={e => set(Number(e.target.value), nudge)} />
+                <span className="tune-value">×{p.zoom.toFixed(2)}</span>
+            </label>
+            <p className="tune-note">Move: {nudge[0].toFixed(1)}, {nudge[1].toFixed(1)} (left/right, up/down)</p>
+            <div className="tune-actions">
+                <button className="primary" onClick={copy}>Copy portraits</button>
+                <button className="secondary" onClick={() => { editPortrait(key, null); redraw(v => v + 1); }}>Undo this one</button>
+            </div>
+        </div>
+    );
+}
+
 function TuningPanel({ onClose }: { onClose: () => void }) {
     useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
+    const [tab, setTab] = useState<'look' | 'portraits'>('look');
     const [fps, setFps] = useState(framesPerSecond());
     useEffect(() => { const t = setInterval(() => setFps(framesPerSecond()), 500); return () => clearInterval(t); }, []);
     const copy = async () => {
@@ -1469,6 +1522,11 @@ function TuningPanel({ onClose }: { onClose: () => void }) {
                 <span className="tune-fps">{fps} fps · {quality.level}{quality.auto ? ' (auto)' : ''}</span>
                 <button className="tune-close" onClick={onClose} aria-label="Close tuning">✕</button>
             </div>
+            <div className="tune-levels tune-tabs">
+                <button className={tab === 'look' ? 'on' : ''} onClick={() => setTab('look')}>Look</button>
+                <button className={tab === 'portraits' ? 'on' : ''} onClick={() => setTab('portraits')}>Portraits</button>
+            </div>
+            {tab === 'portraits' ? <PortraitEditor /> : <>
             {!lookNext && (
                 <p className="tune-note">The look preview is off, so most sliders do nothing. <a href="?look=next">Turn it on</a></p>
             )}
@@ -1490,6 +1548,7 @@ function TuningPanel({ onClose }: { onClose: () => void }) {
                 <button className="primary" onClick={copy}>Copy settings</button>
                 <button className="secondary" onClick={resetTune}>Reset</button>
             </div>
+            </>}
         </div>
     );
 }

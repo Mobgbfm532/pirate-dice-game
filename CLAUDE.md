@@ -268,7 +268,10 @@ one too, or saves only last until the server restarts, which on the free tier is
   as built, saved per device in `tavernTune`), the frame rate, and the quality level: Auto (starts
   High, steps down when frames stay under ~45 a second, never back up), High / Medium / Low
   (`QUALITY`: screen sharpness, edge smoothing, glow, grain, particles, shadow detail). "Copy
-  settings" gives the user JSON to paste back: those values become the new defaults. Not yet
+  settings" gives the user JSON to paste back: those values become the new defaults. Its **Portraits**
+  tab: pick a character, drag the picture in a big frame, set the zoom (live on that device,
+  `localStorage.tavernPortraits`, `editPortrait` in portraits.ts); "Copy portraits" gives
+  `{ name: { zoom, nudge } }` to put into the `seated(...)` lines. Not yet
   measured on the user's phone.
 - **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
   (`Portrait.center`, percent, plus `aspect`; `seated()` in portraits.ts). Behind the table the face
