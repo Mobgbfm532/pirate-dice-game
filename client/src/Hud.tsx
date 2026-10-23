@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
@@ -654,6 +654,29 @@ function Celebration({ snap }: { snap: Snapshot }) {
                 {Array.from({ length: 16 }, (_, i) => (
                     <span key={i} style={{ '--a': `${i * 22.5 + (i % 2) * 9}deg`, '--d': `${70 + (i * 37) % 60}px`, animationDelay: `${(i % 4) * 0.06}s` } as React.CSSProperties} />
                 ))}
+            </div>
+        </div>
+    );
+}
+
+// Three 6s land (since 23 Oct, the user's): fire surges up the screen, the devil rises holding
+// her three 6s, and a banner says "Devil's titties". Taps go through to the dice.
+function DevilSixes({ snap }: { snap: Snapshot }) {
+    const d = snap.devil;
+    const [visible] = useMoment(d?.at ?? 0, DEVIL_MS);
+    if (!visible || !d) return null;
+    return (
+        <div key={d.at} className="devil-sixes" aria-live="polite">
+            <div className="devil-surge" aria-hidden="true" />
+            <div className="devil-flames" aria-hidden="true">
+                {Array.from({ length: 18 }, (_, i) => (
+                    <span key={i} style={{ left: `${(i * 5.9 + (i % 3) * 2) % 100}%`, '--h': `${22 + (i * 23) % 26}vh`, animationDelay: `${(i * 0.13) % 0.7}s` } as React.CSSProperties} />
+                ))}
+            </div>
+            <img className="devil-picture" src={`${import.meta.env.BASE_URL}art/devil-sixes.webp`} alt="" />
+            <div className="devil-banner">
+                {d.who && <span className="who">{d.who}</span>}
+                <span className="what">Devil's titties</span>
             </div>
         </div>
     );
@@ -1590,6 +1613,7 @@ export function Hud() {
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
             <AbilityMomentView snap={snap} />
             <Celebration snap={snap} />
+            <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}
             {/* (Not over an opponent's entrance card: the card comes first.) */}
             {!introShowing && <YourTurnBanner at={snap.yourTurnAt} />}

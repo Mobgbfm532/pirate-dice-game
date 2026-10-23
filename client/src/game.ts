@@ -169,6 +169,7 @@ export interface Snapshot {
     // A perfect hand's celebration (since 23 Oct): a 24, or in a cursed round (lowest wins) the
     // 2, the 4 and four 1s. who: the player's name when it isn't you.
     celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
+    devil: { at: number; who: string | null } | null; // three 6s landed (who: when it isn't you)
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -210,7 +211,8 @@ let snapshot: Snapshot = {
     betweenShown: false,
     ghosts: null,
     putBackSlot: null,
-    celebration: null
+    celebration: null,
+    devil: null
 };
 
 const listeners = new Set<() => void>();
@@ -358,6 +360,19 @@ function applyTurn(serverView: TurnView | null) {
 
 // How long a perfect hand's celebration holds the screen (Hud's Celebration); what comes next waits.
 export const CELEBRATION_MS = 2800;
+// Three 6s land (since 23 Oct, the user's): fire up the screen, the devil with her three 6s and
+// "Devil's titties" (Hud's DevilSixes). Taps still reach the dice; what comes next waits.
+export const DEVIL_MS = 2800;
+
+function showDevil(turn: TurnView) {
+    table.devilAt = performance.now();
+    playSound('devil');
+    const who = turn.playerId !== snapshot.myId ? snapshot.state?.players[turn.playerId]?.name ?? null : null;
+    update({ devil: { at: performance.now(), who } });
+    const gone = performance.now() + DEVIL_MS;
+    momentFreeAt = Math.max(momentFreeAt, gone);
+    momentGoneAt = Math.max(momentGoneAt, gone);
+}
 
 function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null, turn: TurnView | null) {
     if (!event) return;
@@ -431,7 +446,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
                 if (d.status === 'stolen') table.stolenAt.set(d.id, performance.now() + STEAL_PAUSE_MS);
             });
             table.roll = null;
-            if (data.devil) { table.devilAt = performance.now(); playSound('devil'); }
+            if (data.devil) showDevil(turn);
             update({ rolling: false, ...(data.ghosts ? { ghosts: { dice: data.ghosts, at: performance.now() } } : {}) });
             applyTurn(turn);
             done();
@@ -859,7 +874,9 @@ export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}) { update({ ability: { name, ability, text: '', ...more, at: performance.now() } }); },
     intro() { update({ introAt: performance.now() }); },
-    celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); }
+    celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
+    // (hold: keep it up that much longer, to look at a still of it)
+    devil(who: string | null = null, hold = 0) { table.devilAt = performance.now(); update({ devil: { at: performance.now() + hold, who } }); }
 };
 
 resetTrayForNewTurn();

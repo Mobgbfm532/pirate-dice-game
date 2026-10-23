@@ -28,8 +28,8 @@ each place). See "Tavern Crawl now" below.
   explanations and to see/hear results (send previews, screenshots).
 - Makes the AI art themselves (see `docs/art-direction.md`); has strong opinions on feel
   (dice colours: red 1, green 6; Tavern Crawl has no commentary pop-ups).
-- Not planned for now: new Devil/Vaelin avatars; the devil (three 6s) effect is to be redone
-  "another way" later; ask before designing it.
+- Not planned for now: new Devil/Vaelin avatars. The devil (three 6s) effect was redone the
+  user's way on 23 Oct (see "Three 6s" in Tavern Crawl now).
 - Wants **no sound** when Claude tests in a browser. Sets the game's numbers themself (e.g.
   Thonic prices) and the names ("Fizzy Thomic" is a deliberate pun).
 - Pushing feature branches has been approved before; **merging to `main` deploys the live
@@ -330,6 +330,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   gets no celebration (a sigh). For anyone at the table, with their name when it isn't you.
   `perfectHand` (rules.ts, tested), `Celebration` (Hud), `snapshot.celebration`; a moment of its
   own (`CELEBRATION_MS` 2.8 s): the round result and the next throw wait. Dev: `preview.celebrate()`.
+- **Three 6s (23 Oct, the user's):** whenever a throw lands three 6s (`diceRolled.devil`, any
+  table, anyone's throw) fire surges up the screen, the user's painting of the devil holding three
+  6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`) and a banner says "Devil's titties" (the
+  sound is `DevilsTeets.wav`). `DevilSixes` in Hud, `showDevil` / `snapshot.devil` in game.ts,
+  `DEVIL_MS` 2.8 s; taps go through to the dice, the next moment waits. Dev:
+  `preview.devil(who, hold)` (hold keeps it up, for stills).
 - **An opponent's entrance (23 Oct):** the name card shows 4.5 s (`INTRO_MS`; 6 s, then 1.5 s shorter, the user's); at a fight's start the
   server sends the new opponent before the round's abilities and puts the entrance on its moment
   clock (`INTRO_SHOW_MS`), so abilities and the first throw wait for the card (Martha's entrance
@@ -499,8 +505,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    classic page reachable for a while; until then it skips Thom and the events, which the user
    accepted), update the PWA manifest/service worker, retire the old client code in
    `public/index.html`.
-9. **Feel:** tune dice sound, roll length (~2.2 s), camera on other phones; the devil/three-6s
-   effect done the user's way (ask first).
+9. **Feel:** tune dice sound, roll length (~2.2 s), camera on other phones.
 10. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship);
    new places with tougher opponents (the roguelite); optional art (`docs/art-direction.md`
    "Wanted"; Martha's masked paintings have no moving vape smoke); delete unused code (the old

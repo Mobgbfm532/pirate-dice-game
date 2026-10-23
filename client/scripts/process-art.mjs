@@ -492,3 +492,4 @@ await cutOutFlat('bust-martha-frak.jpg', 'martha-frak', { holes: [[772, 576], [8
 await cutOutFlat('bust-martha-duke.jpg', 'martha-duke', { tolerance: 30, holes: [[771, 579], [871, 611], [760, 829]] }); // the purple mask stays
 await cutOutFlat('bust-martha-danhausen.jpg', 'martha-danhausen', { holes: [[768, 572], [886, 606], [761, 833]] });
 await cutOutFlat('bust-brodor.webp', 'brodor');
+await cutOutFlat('devil-sixes.jpg', 'devil-sixes', { maxHeight: 900 }); // three 6s: the devil's moment

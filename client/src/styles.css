@@ -2072,6 +2072,71 @@ button.keepsake.used { opacity: 0.55; }
 @keyframes dots-wait { 0% { opacity: 0.2; } 12% { opacity: 0.6; } 22% { opacity: 1; } }
 @keyframes huh-tilt { 0%, 30% { transform: rotate(0deg); } 45% { transform: rotate(-16deg) translateY(-4px); } 60% { transform: rotate(10deg); } 75%, 100% { transform: rotate(-6deg); } }
 
+/* ---- Three 6s: fire up the screen, the devil with her three 6s, "Devil's titties" ----
+   A moment over everything for 2.8 s; taps go through to the dice. */
+.devil-sixes { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+/* A sheet of fire sweeps from the bottom to the top and burns off. */
+.devil-surge {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 160%;
+    background: linear-gradient(to top, rgba(255, 214, 90, 0.95), rgba(255, 112, 30, 0.85) 25%, rgba(200, 30, 10, 0.6) 55%, rgba(120, 0, 0, 0) 85%);
+    mix-blend-mode: screen; animation: devil-surge 2.8s ease-out both;
+}
+@keyframes devil-surge {
+    0% { transform: translateY(100%); opacity: 1; }
+    16% { transform: translateY(-10%); opacity: 1; }
+    40% { transform: translateY(-30%); opacity: 0.35; }
+    85% { opacity: 0.22; }
+    100% { transform: translateY(-40%); opacity: 0; }
+}
+/* Tongues of flame licking up from the bottom edge the whole time. */
+.devil-flames span {
+    position: absolute; bottom: -4vh; width: 16vw; max-width: 120px; height: var(--h); margin-left: -8vw;
+    border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
+    background: radial-gradient(ellipse at 50% 85%, #fff3b0, #ffb300 25%, #ff5722 50%, rgba(183, 28, 28, 0.6) 70%, rgba(120, 0, 0, 0) 80%);
+    filter: blur(3px); mix-blend-mode: screen; transform-origin: 50% 100%;
+    animation: devil-lick 0.7s ease-in-out infinite alternate, devil-burn 2.8s ease-out both;
+}
+@keyframes devil-lick { from { transform: scale(0.85, 0.8) skewX(-6deg); } to { transform: scale(1.1, 1.15) skewX(6deg); } }
+@keyframes devil-burn { 0% { opacity: 0; } 8% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; } }
+/* She rises with the fire, holds, and fades. */
+.devil-picture {
+    position: absolute; left: 50%; top: 50%; height: min(64vh, 560px); max-width: 92vw; object-fit: contain;
+    filter: drop-shadow(0 0 24px rgba(255, 87, 34, 0.75));
+    animation: devil-rise 2.8s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes devil-rise {
+    0% { opacity: 0; transform: translate(-50%, 10%) scale(0.85); }
+    18% { opacity: 1; transform: translate(-50%, -54%) scale(1.02); }
+    28% { transform: translate(-50%, -52%) scale(1); }
+    82% { opacity: 1; transform: translate(-50%, -53%) scale(1.01); }
+    100% { opacity: 0; transform: translate(-50%, -60%) scale(1.03); }
+}
+.devil-banner {
+    position: absolute; left: 50%; top: calc(50% + min(26vh, 230px));
+    transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
+    white-space: nowrap; animation: devil-banner 2.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.devil-banner .who { font-size: 1rem; color: #ffe0b2; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); letter-spacing: 1px; }
+.devil-banner .what {
+    padding: 6px 22px 8px; border-radius: 10px; font-size: clamp(2rem, 10.5vw, 3.8rem); font-weight: 700; line-height: 1;
+    color: #fff3e0; background: linear-gradient(#5a0d05, #1c0302); border: 2px solid #ff7043;
+    text-shadow: 0 0 10px #ff5722, 0 0 22px #ff9800, 0 3px 0 #3e0a05;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 34px rgba(255, 87, 34, 0.85);
+}
+/* Phones on their side: she sits higher and the banner along the bottom, clear of her three 6s. */
+@media (max-height: 500px) {
+    .devil-picture { top: 42%; height: 66vh; }
+    .devil-banner { top: calc(100% - 38px); }
+    .devil-banner .what { font-size: 2.3rem; }
+}
+@keyframes devil-banner {
+    0%, 12% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    24% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    32% { transform: translate(-50%, -50%) scale(1); }
+    84% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
+}
+
 /* The tuning panel's Portraits tab: a big frame to drag the picture in, and nameplate-sized copies. */
 .tune-tabs { margin-top: 2px; }
 .portrait-editor { display: flex; flex-direction: column; align-items: center; gap: 6px; }
