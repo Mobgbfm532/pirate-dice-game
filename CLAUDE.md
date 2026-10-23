@@ -247,7 +247,19 @@ one too, or saves only last until the server restarts, which on the free tier is
   also dimmed the HUD). The tavern's lights are pushed above 1 in the room shader (`hot`) so the
   glow finds them. Checked by the visual-shots subagent over three rounds: depth and glow fine;
   the fire near the screen edge is still a touch more orange than before (for step G's panel).
-  Next: step E (living air).
+  **Step E (23 Oct; look preview only):** `Air.tsx`: dust over the table (`DustMotes`, 3D),
+  and on the paintings (`ScreenAir`, driven by Room each frame): embers from the tavern's fire
+  (`Scene.air.fire`; more and redder in the Devil's round), Frak's cigar smoke and tip, Vaelin's
+  dark flame and violet glow, the Ridgeler's hammer glow (`Portrait.air`). Martha's vape clouds
+  and a light shaft were tried and dropped (painted already / couldn't be seen; `SceneAir.shaft`
+  stays for a backdrop with windows). **The flame is calm** (the user, 23 Oct: the painted fire and
+  lanterns pulsed): `flame()` is a slow irregular drift (±6%, at most 2% in 0.1 s; it was ±18%
+  at 7 and 13 Hz), and every light and glow follows it.
+- **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
+  (`Portrait.center`, percent, plus `aspect`; `seated()` in portraits.ts). Behind the table the face
+  sits on the table's centre line (Room); round avatars solve the background position so the face
+  is in the middle of the circle (`avatarStyle`), with zooms eased so whole heads show. The spots
+  between fights keep their hand-tuned `face`.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build

@@ -1,5 +1,6 @@
 import { BOT_ID, store } from './game';
 import { PORTRAITS, type Portrait } from './portraits';
+import type { SceneAir } from './Air';
 
 // The tavern behind the table, and the current opponent sitting across from you: where they go
 // on screen and who sits there. They are drawn inside the 3D scene (Room.tsx) since 23 Oct, in
@@ -9,8 +10,14 @@ import { PORTRAITS, type Portrait } from './portraits';
 // The scenes behind the table. floor: how far down the image its own foreground table starts
 // (our table covers from there); aspect: width / height; center: the point of the image that
 // sits behind the opponent (on a phone only a slice around it shows).
-export interface Scene { file: string; floor: number; aspect: number; center: number }
-const TAVERN: Scene = { file: 'tavern.webp', floor: 0.77, aspect: 1408 / 768, center: 0.45 };
+// air: the look preview's living air in this picture (Air.tsx): where its fire is, its light shaft.
+export interface Scene { file: string; floor: number; aspect: number; center: number; air?: SceneAir }
+const TAVERN: Scene = {
+    file: 'tavern.webp', floor: 0.77, aspect: 1408 / 768, center: 0.45,
+    air: {
+        fire: [0.215, 0.53], fireWidth: 0.05 // (the top of the flames: embers show only once clear of them)
+    }
+};
 // Outside the Ghoul and Gourd: the bouncer's fight, by the front door.
 const OUTSIDE: Scene = { file: 'ghoul-gourd-outside.webp', floor: 0.75, aspect: 1376 / 768, center: 0.6 };
 const SCENES: Record<string, Scene> = { 'Sperm McGrath': OUTSIDE };

@@ -11,6 +11,7 @@ import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slot
 import { artTexture, paintedTexture } from './textures';
 import { layoutBackdrop, setRailAnchor } from './Backdrop';
 import { Room } from './Room';
+import { DustMotes } from './Air';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
 const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
@@ -421,6 +422,7 @@ export function TableScene() {
             {lookNext ? <NextLights /> : <Lights />}
             <Tray />
             <Dice />
+            {lookNext && <DustMotes />}
             {lookNext && <Finish />}
         </>
     );

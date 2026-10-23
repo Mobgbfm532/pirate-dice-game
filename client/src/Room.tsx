@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { BOT_ID, store } from './game';
 import { acrossTheTable, backdropLayout, currentScene } from './Backdrop';
 import { flame, lookNext } from './look';
+import { ScreenAir, type AirFrame } from './Air';
 
 // The tavern behind the table and the opponent's bust, drawn inside the 3D scene (option 1,
 // step A, 23 Oct). They used to be page layers under a see-through canvas; now the glow and
@@ -214,8 +215,10 @@ export function Room() {
     const shown = useRef<Picture | null>(null);
     const v = useMemo(() => new THREE.Vector3(), []);
     const unused = useMemo(() => new THREE.Vector3(), []);
+    // The look preview's living air on the paintings (step E): embers, a light shaft, smoke and glows.
+    const air = useMemo(() => (lookNext ? new ScreenAir() : null), []);
 
-    useFrame(() => {
+    useFrame((_, delta) => {
         const g = group.current;
         if (!g || !room.current || !bust.current) return;
         const cam = camera as THREE.PerspectiveCamera;
@@ -234,6 +237,11 @@ export function Room() {
             mesh.scale.set(w * sx, -h * sy, 1);
         };
         const L = backdropLayout;
+        const breathe = (bust: AirFrame['bust']) => air?.update({
+            map: { x0, y0, sx, sy, depth: DEPTH }, dt: delta, horizon: L.horizon, bust,
+            room: shown.current && L.roomWidth > 0 ? { left: L.roomLeft, top: L.roomTop, width: L.roomWidth, height: L.roomHeight, air: currentScene().air } : null,
+            devil: store.get().state?.tavernRun?.roundEffect?.kind === 'devil'
+        });
 
         // The room: the scene's picture once it has loaded (the last one stays up till then).
         const wanted = picture(`${BASE}art/${currentScene().file}`);
@@ -245,7 +253,7 @@ export function Room() {
             // The look preview: the room holds nearly steady while its lanterns breathe with the flame.
             r.brightness.value = lookNext ? 0.8 + f * 0.04 : 0.8;
             r.flame.value = f;
-            r.lanterns.value = lookNext ? 1.6 : 0;
+            r.lanterns.value = lookNext ? 1.2 : 0;
             r.hot.value = lookNext ? 2 : 0;
             r.saturation.value = lookNext ? 1.1 : 0.95;
             r.sepia.value = lookNext ? 0.12 : 0;
@@ -267,7 +275,7 @@ export function Room() {
         if (glowTarget !== s.glowTo) Object.assign(s, { glowFrom: glowNow, glowTo: glowTarget, glowAt: now });
         bust.current.visible = false;
         glows.current.forEach(m => m && (m.visible = false));
-        if (!across || !art?.ready || L.bustHeight <= 0) return;
+        if (!across || !art?.ready || L.bustHeight <= 0) { breathe(null); return; }
         if (!s.since) s.since = now; // the entrance starts once the picture is there
 
         const light = BUST_LIGHT;
@@ -300,8 +308,11 @@ export function Room() {
         // Anchored so the table hides the lower fifth; `seat` draws a cut-out that shows more body larger.
         const height = L.bustHeight * (across.portrait.seat ?? 1);
         const width = height * art.aspect;
-        const centerX = L.tableX, centerY = L.horizon - L.bustHeight * 0.8 + height / 2 + rise * height;
         const w = width * scale, h = height * scale;
+        // The face on the table's centre line, not the middle of the picture (a painting may hold
+        // a flame, a sword or a mask off to one side: the user's call, 23 Oct, everyone centred).
+        const faceX = (across.portrait.center?.[0] ?? 50) / 100;
+        const centerX = L.tableX + (0.5 - faceX) * w, centerY = L.horizon - L.bustHeight * 0.8 + height / 2 + rise * height;
         const b = materials.bust.uniforms;
         b.map.value = art.texture;
         b.brightness.value = brightness;
@@ -313,6 +324,7 @@ export function Room() {
         b.px.value.set(1 / w, 1 / h);
         put(bust.current, centerX - w / 2, centerY - h / 2, w, h);
         bust.current.visible = true;
+        breathe({ left: centerX - w / 2, top: centerY - h / 2, width: w, height: h, opacity, air: across.portrait.air, key: across.key });
 
         // Its glows: waiting and their turn's crossfade; Martha's violet as she swaps.
         const wantedGlows: [Glow, number][] = [
@@ -354,6 +366,7 @@ export function Room() {
             <mesh ref={bust} renderOrder={-1} material={materials.bust} frustumCulled={false} raycast={noRay} visible={false}>
                 <planeGeometry args={[1, 1]} />
             </mesh>
+            {air && <primitive object={air.group} />}
         </group>
     );
 }
