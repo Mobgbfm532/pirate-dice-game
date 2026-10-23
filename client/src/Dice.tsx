@@ -7,6 +7,7 @@ import { assignSlots, isLocked, type Die } from './rules';
 import { readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
 import { createDiceMaterials } from './textures';
+import { lookNext } from './look';
 
 // The die the Loaded Die keepsake loads (the server's LOADED_DIE).
 const LOADED_DIE = 0;
@@ -120,12 +121,30 @@ function TwinGhost({ index, geometry, materials, meshes }: { index: number; geom
     return <mesh ref={mesh} geometry={geometry} material={faces} visible={false} renderOrder={2} />;
 }
 
+// The look preview (step B): a soft dark patch where each die meets the table, so dice sit in
+// the felt instead of floating; it fades and spreads as the die leaves the table.
+function contactTexture() {
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext('2d')!;
+    const shade = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    shade.addColorStop(0, 'rgba(0,0,0,0.85)');
+    shade.addColorStop(0.45, 'rgba(0,0,0,0.5)');
+    shade.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = shade;
+    g.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+}
+
 export function Dice() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
     const geometry = useMemo(() => new RoundedBoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 4, 0.13), []);
     const materials = useMemo(createDiceMaterials, []);
     const meshes = useRef<(THREE.Mesh | null)[]>([]);
     const rings = useRef<(THREE.Mesh | null)[]>([]);
+    const contacts = useRef<(THREE.Mesh | null)[]>([]);
+    const contactMap = useMemo(() => (lookNext ? contactTexture() : null), []);
     const ringGeometry = useMemo(() => new THREE.RingGeometry(0.56, 0.68, 40), []);
     // An invisible sphere just beyond each die's corners, so taps needn't be exact. A sphere
     // (unlike a box) is the same size whichever way the die has landed.
@@ -205,6 +224,16 @@ export function Dice() {
             // dice a Second Thoughts Thonic could put back while one is being chosen.
             ring.visible = mesh.visible && (putBack && turn ? canPutBack(turn, die.status) : die.status === 'lockedThisTurn');
             ring.position.set(mesh.position.x, 0.012, mesh.position.z);
+
+            const contact = contacts.current[die.id];
+            if (contact) {
+                const height = Math.max(0, mesh.position.y - DIE_SIZE / 2);
+                const near = Math.max(0, 1 - height / 1.4);
+                contact.visible = mesh.visible && near > 0;
+                contact.position.set(mesh.position.x, 0.01, mesh.position.z);
+                contact.scale.setScalar(mesh.scale.x * (1 + height * 0.5));
+                (contact.material as THREE.MeshBasicMaterial).opacity = 0.75 * near * near;
+            }
         });
     });
 
@@ -245,6 +274,12 @@ export function Dice() {
                     <mesh ref={el => { rings.current[id] = el; }} geometry={ringGeometry} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
                         <meshBasicMaterial color="#ffd54f" transparent opacity={0.85} />
                     </mesh>
+                    {contactMap && (
+                        <mesh ref={el => { contacts.current[id] = el; }} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={1}>
+                            <planeGeometry args={[DIE_SIZE * 1.45, DIE_SIZE * 1.45]} />
+                            <meshBasicMaterial map={contactMap} transparent depthWrite={false} toneMapped={false} />
+                        </mesh>
+                    )}
                     <Constellation index={id} meshes={meshes} />
                 </group>
             ))}

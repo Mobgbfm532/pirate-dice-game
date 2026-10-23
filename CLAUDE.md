@@ -220,7 +220,14 @@ one too, or saves only last until the server restarts, which on the free tier is
   at 384x780, 844x390, 1280x800); in the look preview the room now goes through the glow and
   grade too, so it reads warmer and brighter, and the ragged edge is gone. Shots in
   `previews/step-a/` (gitignored). Martha's swap no longer leaves her stuck un-glowing on her turn
-  (the old CSS animation held its last frame). Next: step B on the user's phone.
+  (the old CSS animation held its last frame).
+  **Step B (23 Oct, committed, not pushed; look preview only):** the opponent takes the fire's
+  light in Room's shader (a warm wash from the left, the far side in shade, a thin firelight rim
+  facing the fire and a paler one from the candle; replaces the old orange drop-shadow); the
+  tavern holds steady while its brightest parts (lanterns, candles, fire) breathe with the
+  flame; a soft contact shadow under each die (Dice.tsx, fades as it rises); the candle eased
+  to 17 and paler, so the dice stay ivory. Shots in `previews/step-b/`. Not checked: frame rate on
+  the phone. Next: step C (materials), after the user has seen B.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build

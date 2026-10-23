@@ -2,10 +2,11 @@
 // over the DevTools protocol against the dev client (vite on :5173, proxying the dev test server
 // on :3002 with its controls on :3003), sound off, and saves PNGs.
 //
-//   node test/shots.mjs <out-dir> [look=classic|next] [fight=1] [sizes=384x780@2.625,844x390@2.625,1280x800@1]
+//   node test/shots.mjs <out-dir> [look=classic|next] [fight=1] [roll=1] [sizes=384x780@2.625,844x390@2.625,1280x800@1]
 //
 // Each size gets a fresh page that joins a Tavern Crawl, then a fight against opponent `fight`
-// (0 McGrath ... 13 Jaguar). Files: <out-dir>/<look>-<fight>-<w>x<h>.png
+// (0 McGrath ... 13 Jaguar); roll=1 throws once, so the dice lie on the felt. Files:
+// <out-dir>/<look>-<fight>[-roll]-<w>x<h>.png
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -15,6 +16,7 @@ const args = Object.fromEntries(process.argv.slice(3).map(a => a.split('=')));
 const outDir = process.argv[2] ?? 'previews';
 const look = args.look ?? 'classic';
 const fight = args.fight ?? '1';
+const roll = args.roll === '1';
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
     const [wh, dpr] = s.split('@');
     const [w, h] = wh.split('x').map(Number);
@@ -82,8 +84,12 @@ try {
         await wait(2500);
         await fetch(`${CONTROLS}/fight?n=${fight}`);
         await wait(6000); // the entrance and the intro card settle
+        if (roll) {
+            await evaluate(`window.__game.actions.roll()`);
+            await wait(6000); // the throw lands and any moment passes
+        }
         const { data } = await s('Page.captureScreenshot', { format: 'png' });
-        const file = join(outDir, `${look}-${fight}-${w}x${h}.png`);
+        const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}-${w}x${h}.png`);
         writeFileSync(file, Buffer.from(data, 'base64'));
         console.log(file);
         await cdp.send('Target.closeTarget', { targetId });

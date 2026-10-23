@@ -12,6 +12,8 @@ import { flame, lookNext } from './look';
 // screen pixels from the same numbers (backdropLayout), drawn first so the table covers them.
 // Their CSS filters, glows and entrances are redone here: the shader does brightness, saturate
 // and sepia the way CSS does (in sRGB), and each drop-shadow is a blurred copy of the picture.
+// In the look preview (step B) they also take the room's light: the opponent is lit warm from
+// the fire side with a rim round their outline, and the tavern's lanterns breathe with the flame.
 
 const BASE = import.meta.env.BASE_URL;
 const DEPTH = 50; // how far in front of the camera the pictures hang (any depth inside the frustum)
@@ -87,7 +89,18 @@ uniform sampler2D map;
 uniform float brightness, saturation, sepia, opacity;
 uniform vec4 tint;
 uniform bool glow, linearOut;
+// The look preview's light. flame: the shared flicker (around 1). lanterns: how much the bright
+// parts of a picture breathe with it. warmth, rim: the fire's wash and outline on a cut-out;
+// px: one screen pixel in the picture's texture coordinates.
+uniform float flame, lanterns, warmth, rim;
+uniform vec2 px;
 varying vec2 vUv;
+// How much of the outline faces a light from direction d: open space beside it that way.
+float edge(vec2 d) {
+    float open = 0.0;
+    for (int i = 1; i <= 4; i++) open += 1.0 - texture2D(map, vUv + d * px * (1.5 * float(i))).a;
+    return open / 4.0;
+}
 vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
     vec4 t = texture2D(map, vUv);
@@ -110,6 +123,22 @@ void main() {
             0.393 + 0.607 * k, 0.349 - 0.349 * k, 0.272 - 0.272 * k,
             0.769 - 0.769 * k, 0.686 + 0.314 * k, 0.534 - 0.534 * k,
             0.189 - 0.189 * k, 0.168 - 0.168 * k, 0.131 + 0.869 * k) * c, 0.0, 1.0);
+        if (lanterns > 0.0) {
+            // Lanterns, candles and the fire: the brightest parts follow the flame.
+            float lum = dot(c, vec3(0.299, 0.587, 0.114));
+            c = clamp(c * (1.0 + (flame - 1.0) * lanterns * smoothstep(0.5, 0.9, lum)), 0.0, 1.0);
+        }
+        if (warmth > 0.0) {
+            // The fire is to the left (as in the tavern painting): a warm wash on that side, the
+            // far side a little in shade.
+            float fire = smoothstep(0.85, 0.0, vUv.x) * warmth * flame;
+            c *= mix(vec3(1.0), vec3(1.22, 0.98, 0.74), fire);
+            c *= mix(1.0, 0.86, smoothstep(0.45, 1.0, vUv.x) * warmth);
+            // Firelight on the outline facing the fire, and a fainter, paler rim from the candle
+            // on the other side.
+            vec3 light = vec3(1.0, 0.58, 0.28) * edge(vec2(-1.0, 0.35)) * flame + vec3(1.0, 0.8, 0.6) * edge(vec2(1.0, 0.5)) * 0.4;
+            c = clamp(c + light * rim * t.a, 0.0, 1.0);
+        }
     }
     // On screen the colours stay sRGB, as the page drew them; into the look preview's finish
     // they go linear like the rest of the scene.
@@ -122,7 +151,8 @@ function pictureMaterial() {
         vertexShader, fragmentShader,
         uniforms: {
             map: { value: null }, brightness: { value: 1 }, saturation: { value: 1 }, sepia: { value: 0 },
-            opacity: { value: 1 }, tint: { value: new THREE.Vector4() }, glow: { value: false }, linearOut: { value: lookNext }
+            opacity: { value: 1 }, tint: { value: new THREE.Vector4() }, glow: { value: false }, linearOut: { value: lookNext },
+            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, px: { value: new THREE.Vector2() }
         },
         // Drawn first, behind everything, whatever the distance: the table simply paints over.
         depthTest: false, depthWrite: false, fog: false, toneMapped: false,
@@ -155,16 +185,15 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 const ENTRANCE_MS = 1100, SWAP_MS = 700, GLOW_MS = 400;
 
-// The opponent's light, waiting and on their turn (the look preview's follows the flame).
-function bustLight(f: number) {
-    return lookNext ? {
-        idle: { brightness: 0.66 + f * 0.12, sepia: 0.1, glows: [{ blur: 10, x: -5, color: [255, 140, 50, 0.38] }, { blur: 18, x: 0, color: [0, 0, 0, 0.6] }] as Glow[] },
-        active: { brightness: 0.86 + f * 0.14, sepia: 0.06, glows: [{ blur: 14, x: -6, color: [255, 150, 60, 0.5] }, { blur: 22, x: 0, color: [255, 158, 64, 0.35] }] as Glow[] }
-    } : {
-        idle: { brightness: 0.82, sepia: 0, glows: [{ blur: 18, x: 0, color: [0, 0, 0, 0.6] }] as Glow[] },
-        active: { brightness: 1.02, sepia: 0, glows: [{ blur: 22, x: 0, color: [255, 158, 64, 0.45] }] as Glow[] }
-    };
-}
+// The opponent's light, waiting and on their turn.
+const BUST_LIGHT = lookNext ? {
+    // Lit in the shader (the fire's side and rim follow the flame); dimmer while it isn't their turn.
+    idle: { brightness: 0.78, sepia: 0.08, glows: [{ blur: 18, x: 0, color: [0, 0, 0, 0.6] }] as Glow[] },
+    active: { brightness: 0.96, sepia: 0.04, glows: [{ blur: 22, x: 0, color: [255, 158, 64, 0.35] }] as Glow[] }
+} : {
+    idle: { brightness: 0.82, sepia: 0, glows: [{ blur: 18, x: 0, color: [0, 0, 0, 0.6] }] as Glow[] },
+    active: { brightness: 1.02, sepia: 0, glows: [{ blur: 22, x: 0, color: [255, 158, 64, 0.45] }] as Glow[] }
+};
 const SWAP_GLOW: Glow = { blur: 30, x: 0, color: [206, 147, 216, 1] }; // Martha's violet
 const GLOW_MESHES = 5;
 
@@ -208,7 +237,10 @@ export function Room() {
         room.current.visible = !!shown.current && L.roomWidth > 0;
         if (shown.current) {
             r.map.value = shown.current.texture;
-            r.brightness.value = lookNext ? 0.62 + f * 0.26 : 0.8;
+            // The look preview: the room holds nearly steady while its lanterns breathe with the flame.
+            r.brightness.value = lookNext ? 0.8 + f * 0.04 : 0.8;
+            r.flame.value = f;
+            r.lanterns.value = lookNext ? 1.6 : 0;
             r.saturation.value = lookNext ? 1.1 : 0.95;
             r.sepia.value = lookNext ? 0.12 : 0;
             put(room.current, L.roomLeft, L.roomTop, L.roomWidth, L.roomHeight);
@@ -232,7 +264,7 @@ export function Room() {
         if (!across || !art?.ready || L.bustHeight <= 0) return;
         if (!s.since) s.since = now; // the entrance starts once the picture is there
 
-        const light = bustLight(f);
+        const light = BUST_LIGHT;
         let brightness = lerp(light.idle.brightness, light.active.brightness, glowNow);
         const sepia = lerp(light.idle.sepia, light.active.sepia, glowNow);
         let scale = lerp(1, 1.03, glowNow), rise = 0, opacity = 1, settle = 1; // settle: how much of the usual glow shows
@@ -269,6 +301,10 @@ export function Room() {
         b.brightness.value = brightness;
         b.sepia.value = sepia;
         b.opacity.value = opacity;
+        b.flame.value = f;
+        b.warmth.value = lookNext ? 0.55 : 0;
+        b.rim.value = lookNext ? lerp(0.4, 0.6, glowNow) : 0;
+        b.px.value.set(1 / w, 1 / h);
         put(bust.current, centerX - w / 2, centerY - h / 2, w, h);
         bust.current.visible = true;
 

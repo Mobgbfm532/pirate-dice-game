@@ -263,7 +263,7 @@ function Lights() {
 }
 
 // The look preview's light rig (option 1, step B): one flame drives the candle, a warm key
-// from the fireplace side (left in the tavern painting) and the web-page layers behind; a cool,
+// from the fireplace side (left in the tavern painting) and the tavern and opponent behind (Room); a cool,
 // dim fill keeps shadows from going black; a rim from behind outlines the dice; a small room
 // made in code gives dice, brass and varnish something to reflect.
 function NextLights() {
@@ -283,7 +283,8 @@ function NextLights() {
     useFrame(() => {
         const now = performance.now();
         const f = flame(now / 1000);
-        if (candle.current) candle.current.intensity = 24 * f;
+        // (Eased back from 24, with a paler flame: strong warm light turned the dice amber.)
+        if (candle.current) candle.current.intensity = 17 * f;
         if (fire.current) fire.current.intensity = 1.7 * (0.85 + 0.15 * f);
         shareFlame(f, now);
         if (flash.current) {
@@ -312,7 +313,7 @@ function NextLights() {
             />
             {/* A rim from behind and above: a thin bright edge on each die. */}
             <directionalLight position={[2, 6, -9]} intensity={0.35} color="#fff0dc" />
-            <pointLight ref={candle} position={[3.5, 3, -3.5]} color="#ff9440" distance={16} decay={1.5} />
+            <pointLight ref={candle} position={[3.5, 3, -3.5]} color="#ffa660" distance={16} decay={1.5} />
             <pointLight ref={flash} position={[0, 3, 0]} distance={12} decay={1.4} intensity={0} />
         </>
     );
