@@ -19,7 +19,7 @@ qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), the Y
 (Sylvester Stonefist, Vaelin Inkhand, Stason Jatham, The Ridgeler, Brodor), then the final aboard
 the Salty Swallow, a docked ship (Klarg, Rokr, The Hangman, Jaguar Cantona); each from Frak on has
 an ability; between fights a random event now and then, then a choice of two spots; gold to spend
-(Thonics, keepsakes, the Shrine, the hot tub) and a global leaderboard; the run can be saved after
+(Thonics, keepsakes, the Shrine, the hot tub; prices rise as you buy) and a leaderboard by points; the run can be saved after
 each place). See "Tavern Crawl now" below.
 
 ## The person
@@ -181,113 +181,61 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (23 October 2026)
+## Status (23 October 2026, evening)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
-- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed):** the 3D table at
-  `/next`: physics dice, all painted art, tavern backdrop and opponent busts, multiplayer with
-  invites and reconnection, phone and desktop layouts, separate music / sound switches,
-  synthesized dice sound, and the Tavern Crawl: two pubs and nine fights, Thonics, events
-  between fights, keepsakes, gold to spend. Since 20-21 Oct (the user's calls after playing):
-  3 hearts a fight; Frak's Mind Whip (a random die kept for you); the Duke's Devil without the
-  18 cap; the whole Ghoul and Gourd plays simply; abilities take over the screen; a gold
-  summary after each win and a smooth flow between fights; the Wild Magic Hot Tub and Darren
-  Snakehands; the spots follow a random event; keepsakes on Thom's back shelf; the Shrine and
-  the hot tub cost gold; the thief takes half. Later on 21 Oct: **the 14-fight tournament**
-  (the Yawning Portal's five, Brodor's Sunglasses, Klarg's crew aboard the Salty Swallow, a save
-  after each place). Then the user's 15 fixes after playing it (21 Oct): one thing at a time
-  (see "Order of events"), Back of the Head, keepsakes as icons with a fanfare, the Devil mid-turn,
-  Flourish's ghost dice, the hot tub only at the Ghoul and Gourd. Then: Brodor's painting and
-  Martha's three mask paintings; McGrath on 1 life; a Clear-Eye cancel shows the ability first.
-  117 server/rules/strategy tests + 10 client tests.
-  The user found the game too hard (21 Oct); with the nine fights a sensible player finished
-  ~3.9% of the time (`node balance/experiments/runs.js`; options in `easier.js`); over the
-  fourteen, ~1.1% (`node balance/experiments/tournament.js`): 27% reach the Yawning Portal, 4.5%
-  the ship; Brodor (23% a fight fresh on 3 hearts) and Jaguar (25%) are the steepest steps.
-- **Visuals (22 Oct):** the plan is a doc shared with the user, "2, 4, 24: the next level visually"
-  (https://claude.ai/artifact/9MHGFUVoVrLiQiD7ZgL7ZJ): six directions, option 1 (light, glow and
-  atmosphere) in seven steps A-G. A **rough preview of steps B-D** (22 Oct) is on the test site since 23 Oct
-  (the user asked to push), off unless switched on with `?look=next`: `client/src/look.ts`
-  (the switch, `?look=next` / `?look=classic`, remembered in `localStorage.tavernLook`; one
-  `flame()` for every light, shared with the page as `--flame`), `NextLights` and `Finish` in
-  TableScene (key, fill, rim, candle, a RoomEnvironment reflection; bloom, grade, ACES tone
-  mapping via `@react-three/postprocessing` 2.19.1, added to client/package.json), lacquered dice
-  in textures.ts (`MeshPhysicalMaterial`, clear coat, the face as bump map, an ivory tint), sheen
-  felt, metal brass, and `.look-next` / `.look-finish` CSS (the tavern and bust flicker, vignette,
-  grain). Findings: dice and brass gain most; strong warm light turns dice amber; a ragged edge
-  where the canvas meets the tavern comes from the glow pass over a see-through canvas, which
-  step A (the backdrop and bust into the 3D scene) removes. Not checked on a phone's frame rate.
-  Before/after: `previews/look-preview-1.jpg` (gitignored).
-  **Step A done (23 Oct, on the test site since 23 Oct, 511d459):** the tavern and the bust are in the 3D scene
-  (`Room.tsx`). The classic look matches the old page pixel for pixel (mean difference under 1/255
-  at 384x780, 844x390, 1280x800); in the look preview the room now goes through the glow and
-  grade too, so it reads warmer and brighter, and the ragged edge is gone. Shots in
-  `previews/step-a/` (gitignored). Martha's swap no longer leaves her stuck un-glowing on her turn
-  (the old CSS animation held its last frame).
-  **Step B (23 Oct, on the test site; look preview only):** the opponent takes the fire's
-  light in Room's shader (a warm wash from the left, the far side in shade, a thin firelight rim
-  facing the fire and a paler one from the candle; replaces the old orange drop-shadow); the
-  tavern holds steady while its brightest parts (lanterns, candles, fire) breathe with the
-  flame; a soft contact shadow under each die (Dice.tsx, fades as it rises); the candle eased
-  to 17 and paler, so the dice stay ivory. Shots in `previews/step-b/`. Not checked: frame rate on
-  the phone.
-  **Step C (23 Oct, on the test site; look preview only):** dice pips engraved from the
-  painted faces (`engraving` in textures.ts: a height map, cached per face), worn edges (`wear`:
-  less lacquer, rougher, in blotches); the felt worn darker where throws end (`wornPatch`);
-  brass plates reflect the room (their own envMap at 0.3) and read as polished gold; the slot
-  rail varnished. Red 1s, green 6s and the plates' 2 and 4 stay clear. Shots in
-  `previews/step-c/`, now the same throw each time (`/seed` on the dev controls; `shots.mjs`
-  seeds 42).
-  **Step D (23 Oct, committed, not pushed; look preview only):** the finish is one effects pass
-  over the whole picture (TableScene `Finish`): glow (threshold 0.85, radius 0.45), ACES, the
-  palette grade (`GradeEffect`: saturation 1.08, contrast 1.1, a slight green in the shadows and
-  honey in the highlights, only the deepest blacks lifted to ember and near-whites held to cream),
-  vignette (0.42/0.42) and grain (Noise overlay 0.08). The CSS `.look-finish` layer is gone (it
-  also dimmed the HUD). The tavern's lights are pushed above 1 in the room shader (`hot`) so the
-  glow finds them. Checked by the visual-shots subagent over three rounds: depth and glow fine;
-  the fire near the screen edge is still a touch more orange than before (for step G's panel).
-  **Step E (23 Oct; look preview only):** `Air.tsx`: dust over the table (`DustMotes`, 3D),
-  and on the paintings (`ScreenAir`, driven by Room each frame): embers from the tavern's fire
-  (`Scene.air.fire`; more and redder in the Devil's round), Frak's cigar smoke and tip, Vaelin's
-  dark flame and violet glow, the Ridgeler's hammer glow (`Portrait.air`). Martha's vape clouds
-  and a light shaft were tried and dropped (painted already / couldn't be seen; `SceneAir.shaft`
-  stays for a backdrop with windows). **The flame is calm** (the user, 23 Oct: the painted fire and
-  lanterns pulsed): `flame()` is a slow irregular drift (±6%, at most 2% in 0.1 s; it was ±18%
-  at 7 and 13 Hz), and every light and glow follows it.
-  **Step F (23 Oct; look preview only):** `MomentLight.tsx`: as a big moment shows, a light in its
-  colour over the table (a soft gold pool from above for the Smite) and the same colour washing
-  the painting and the opponent (`roomWash`, Room's `wash` uniform), swelling in and fading over
-  2-3 s: the Devil (and three 6s landing) red, Inkfire violet, Smite gold, Astral Flood white-gold,
-  a keepsake gold, the Shield blue, a perfect 24 gold. Tuned from frozen-clock shots so the room
-  carries the colour and the dice stay readable (`shots.mjs moment=...`; `previews/frozen.mjs`
-  stops the page clock at set instants, which a moving moment needs).
-  **Step G (23 Oct): the tuning panel** (`tuning.ts`, Hud's `TuningPanel`): with `?tune=1` in the
-  address (remembered; `?tune=0` hides it) a ⚙ in the header opens sliders (warmth, glow, grain,
-  vignette, shadow depth, dust, embers and smoke, flame flicker, moment lights; multipliers, 1 =
-  as built, saved per device in `tavernTune`), the frame rate, and the quality level: Auto (starts
-  High, steps down when frames stay under ~45 a second, never back up), High / Medium / Low
-  (`QUALITY`: screen sharpness, edge smoothing, glow, grain, particles, shadow detail). "Copy
-  settings" gives the user JSON to paste back: those values become the new defaults. Its **Portraits**
-  tab: pick a character, drag the picture in a big frame, set the zoom (live on that device,
-  `localStorage.tavernPortraits`, `editPortrait` in portraits.ts); "Copy portraits" gives
-  `{ name: { zoom, nudge } }` to put into the `seated(...)` lines (opponents, and the spots between fights by the names in
-  `SPOT_NAMES`; theirs set by the user too, 23 Oct) and
-  `classic(...)` (the Devil and Vaelin avatars). Not yet
-  measured on the user's phone.
-- **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
-  (`Portrait.center`, percent, plus `aspect`; `seated()` in portraits.ts). Behind the table the face
-  sits on the table's centre line (Room); round avatars solve the background position so the face
-  is in the middle of the circle (`avatarStyle`), with each picture moved by eye where the user asked (`nudge`, percent of the frame, 23 Oct), with zooms eased so head and shoulders show, in
-  bigger frames (the win summary up to 170 px, the run-over row 52 px). The spots
-  between fights keep their hand-tuned `face`.
+- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site at d4aa2db):**
+  the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
+  reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
+  Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
+  keepsakes, gold, saves after each place. 118 server/rules/strategy tests + 13 client tests.
+- **Today's game changes (23 Oct, the user's calls; details in "Tavern Crawl now"):**
+  - abilities play in full before their dice are thrown; the round result shows 2.6 s and the next
+    throw waits for it; an opponent's entrance (4.5 s) comes first, abilities and throws after it;
+  - money a tenth of before, in whole gold; Thonics, the Shrine and the hot tub cost half their
+    first price more each time; the leaderboard ranks by points (no made-up names);
+  - "Perfect 24!" and, in a cursed round, "Perfect ...4?" celebrations;
+  - Sylvester's knocked-loose die has to be rolled before it can be kept again;
+  - Thom greets you "Vim, vigour, vitality!" on your first visit in a run; Frak's painted cigar
+    smoke is cut out of his picture;
+  - every round portrait (opponents, the spots between fights) framed by the user in the portrait
+    editor; faces centred on the table's centre line behind it; bigger round frames.
+- **Visuals, option 1 (all seven steps built, 23 Oct):** the plan is a doc shared with the user,
+  "2, 4, 24: the next level visually" (https://claude.ai/artifact/9MHGFUVoVrLiQiD7ZgL7ZJ). Steps
+  B-G show only with `?look=next` (`client/src/look.ts`; `?look=classic` switches back;
+  remembered in `localStorage.tavernLook`); today's look is unchanged without it.
+  - **A:** the tavern and the bust drawn inside the 3D scene (`Room.tsx`), pixel-identical to the
+    old page layers in the classic look; no ragged edge where canvas met page.
+  - **B (light):** `NextLights` in TableScene (fire key light, cool fill, rim, candle, a
+    RoomEnvironment reflection); the bust lit in Room's shader (warm wash and rim from the fire
+    side); the tavern's brightest parts breathe with the flame; contact shadows under the dice.
+    One `flame()` for every light: a slow irregular drift (±6%, at most 2% in 0.1 s; the user found
+    the old 7 and 13 Hz pulsing unreal).
+  - **C (materials):** engraved pips (`engraving`, a height map from the painted faces), worn
+    edges (`wear`), worn felt (`wornPatch`), brass that reflects the room, varnished rails.
+  - **D (glow and grade):** one effects pass (`Finish`): bloom, ACES, the palette grade
+    (`GradeEffect`), vignette, grain; the tavern's lights pushed above 1 (`hot`) so the glow finds them.
+  - **E (living air):** `Air.tsx`: dust over the table, embers from the fireplace (more in the
+    Devil's round), Frak's cigar smoke, Vaelin's dark flame, the Ridgeler's hammer glow.
+  - **F (moments as light):** `MomentLight.tsx`: big moments light the table and wash the room in
+    their colour (Devil red, Inkfire violet, Smite gold pool, Astral Flood, keepsakes, the Shield,
+    perfect 24 gold, Perfect ...4? violet); tuned so the dice stay readable.
+  - **G (tune and prove):** the tuning panel (`?tune=1`, the ⚙ in the header; `tuning.ts`):
+    sliders for the feel (multipliers saved per device), the frame rate, quality levels (Auto steps
+    down from High when frames stay under ~45 a second), "Copy settings"; its Portraits tab (drag
+    and zoom every round portrait, "Copy portraits"). **Still to do:** the user's tuning and frame
+    rate on their phone; then whether the look preview becomes the default.
+  - Before/after: `test/shots.mjs` + `test/shots-base.mjs` + `test/compare.mjs` and the
+    `visual-shots` subagent; `previews/frozen.mjs` (gitignored) stops the page clock for moments.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
   `npm install && npm run build`, start `npm start`) is at
-  https://pirate-dice-next.onrender.com/next and has every pushed commit. Free tier: it sleeps
-  after ~15 min idle (first visit then takes up to ~50 s); `leaderboard.json` resets on each
-  deploy.
+  https://pirate-dice-next.onrender.com/next and has every pushed commit (a deploy takes about a
+  minute). Free tier: it sleeps after ~15 min idle (first visit then takes up to ~50 s); the
+  leaderboard (`leaderboard.json`, not in git) starts empty after each deploy. `SAVE_SECRET` is set
+  there (the live service will need its own).
 
 ## Tavern Crawl now
 
@@ -308,7 +256,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   backdrop of its own yet (the tavern's) and the same four spots and no events of its own (the
   ship's spots and events: to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
   Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
-  the user's for now, balancing later). Gold for a win is still 100 x the fight's number (Jaguar 1,400). **Turns alternate**
+  the user's for now, balancing later). Gold for a win is 10 x the fight's number (Jaguar 140; a tenth of before since 23 Oct). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
@@ -523,49 +471,39 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Difficulty** (23 Oct, the user: easier than the simulator says, with every Thonic, all the
-   keepsakes and Martha's mask; hence the rising prices. With them the simulated sensible player
-   finishes 0.3% and reaches the ship 2.3% (it doesn't wear the mask or plan purchases the way a
-   person does, so it understates a good player). Earlier, 21 Oct: too hard; hearts and lives are theirs to set): McGrath is on
-   1 life since 21 Oct; over the fourteen fights a sensible player finishes ~1.4% (34% reach the
-   Yawning Portal, 5.5% the ship; McGrath now ends ~10% of runs, was ~26%); Frak, Danhausen and
-   the Duke end the most; Brodor and Jaguar (~24-25% a fight) are the steepest steps. Measured options for the
-   nine (`balance/experiments/easier.js`): every opponent a life fewer → ~14%; the Shield from the
-   start → ~7%; for the fourteen, `tournament-lives.js` (3 hearts with lives of 1-2 gave ~17%).
-   **User plays the test site on the phone** and decides; change `shared/balance.js` and re-run
-   `node balance/experiments/tournament.js` first. (`SAVE_SECRET` is set on the Render test
-   service, by the user, 21 Oct; the live service will need its own when we ship.)
-2. **Visuals, option 1** (the user wants "the best of the best", 22 Oct): next is step A, the
-   tavern backdrop and the bust into the 3D scene with today's framing; then B-G as in the doc,
-   each judged on the user's phone with before/after shots. The rough preview (above) is the
-   starting point for B-D. Ask before pushing any of it.
-3. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots at the Ghoul and Gourd (about half the walks), one of three after it.
-4. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
-   (only Back of the Head has one, the swoosh); the ship's own spots and events (to workshop: a card
-   game below deck, a stowaway instead of the thief); uses per fight for the five (first guesses, 1
-   each). Stronger late abilities: to workshop.
-5. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the
+1. **The user tunes the look on their phone** (`/next?look=next&tune=1`, the ⚙): sliders, the
+   frame rate, "Copy settings" pasted back → those values become the defaults in `tuning.ts` /
+   the effects. Then the user's call: make the look preview the default (or keep the switch).
+   If Auto quality drops a good phone to Low, tune its threshold (`noteFrame`).
+2. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
+   0.3% and reaches the ship 2.3% (`node balance/experiments/tournament.js`), but it never wears
+   Martha's mask or plans its shopping, and the user finds the real game easier. The user plays
+   and decides; change `shared/balance.js` (prices, `priceRise`, hearts, lives, points) and
+   re-run the simulation first. Measured options: `easier.js`, `tournament-lives.js`.
+3. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art; today the
+   tavern's, and its `Scene.air` would need a fire/windows of its own); sounds for the Yawning
+   Portal's new abilities (only Back of the Head has one); the ship's own spots and events (to
+   workshop: a card game below deck, a stowaway instead of the thief); uses per fight for the
+   five (first guesses, 1 each). Thom's visits stay as they are (the user, 21 Oct).
+4. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the
    nameplate before an ability fires. Re-simulate after any change.
-6. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
-   Glove, Gold Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt); keepsake icons on the
-   strip with a flash when one triggers. The Dice Den is still even odds (the user asked whether
-   it makes sense, 21 Oct; with gold now worth spending it's a way to grow a purse).
-7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
-   command to `npm install && npm run build`; the user merges (that deploys the live game);
-   then delete the test service. Fix anything Render-specific as it appears.
-8. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
-   (more important now that gold is the score).
-9. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
-   classic page reachable for a while; until then it skips Thom and the events, which the
-   user accepted), update the PWA manifest/service worker, retire the old client code in
+5. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
+   Glove, Gold Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt). The Dice Den is still
+   even odds (the user asked whether it makes sense, 21 Oct).
+6. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+   command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
+   the live game); then delete the test service. Old saved runs won't open (money changed); the
+   live leaderboard's old gold entries count as points.
+7. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
+8. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+   classic page reachable for a while; until then it skips Thom and the events, which the user
+   accepted), update the PWA manifest/service worker, retire the old client code in
    `public/index.html`.
-10. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
-   perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
-11. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship to
-   carry it into); new places with tougher opponents (the roguelite); possibly the Molar at 1 life if
-   he ends too many runs (~1 in 7 for a careful player); optional art (`docs/art-direction.md`
-   "Wanted": keepsake pictures, Klarg's hand, the Hangman's revolver); delete the unused
-   keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) and `Rules.getAbilityMaxUses`
-   (replaced by `abilityUses` in `shared/balance.js`); smaller bundle (lazy-load three.js),
-   compressed audio (the 9.5 MB ambience track), spectator mode, emoji reactions floating over
-   the table.
+9. **Feel:** tune dice sound, roll length (~2.2 s), camera on other phones; the devil/three-6s
+   effect done the user's way (ask first).
+10. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship);
+   new places with tougher opponents (the roguelite); optional art (`docs/art-direction.md`
+   "Wanted"; Martha's masked paintings have no moving vape smoke); delete unused code (the old
+   keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`, `shareFlame` and
+   the unused `--flame` CSS variable); a smaller first download (lazy-load three.js, compress
+   the 9.5 MB ambience track); spectator mode; emoji reactions floating over the table.

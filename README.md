@@ -46,7 +46,7 @@ Art: originals are in `art/`; `npm --prefix client run art` regenerates the game
 |---|---|
 | blank or any code | Classic multiplayer. Share the code with friends. |
 | `COMP` | Solo against The Molar |
-| `TAVERN` | Tavern Crawl: fourteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold and a global leaderboard. A run can be saved after each place. |
+| `TAVERN` | Tavern Crawl: fourteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold to spend (prices rise as you buy) and a leaderboard by points. A run can be saved after each place. |
 
 ## Project layout
 

@@ -2,6 +2,15 @@
 
 The numbers live in `shared/balance.js` (the server and the simulator both read them).
 
+**Since 23 Oct (the user's calls):** all money is a tenth of what it was, in whole gold (the
+amounts below are in the old gold: divide by 10); Thonics, the Shrine and the hot tub cost half
+their first price more each time one is bought (`priceRise`, which the simulator plays by too);
+the score is points, not gold (`points`). With that the simulated sensible player finishes the
+14-fight tournament 0.3% of the time and reaches the ship 2.3%
+(`node balance/experiments/tournament.js`); it never wears Martha's mask or plans its shopping,
+so it understates a good player. The simulated player's value tables (`experiments/runs.js`)
+are in the old gold and divided by 10 where they're used.
+
 - `sim.js`: a fast offline copy of a Tavern Crawl (fights, gold, Thonics, events, keepsakes)
   on the real dice rules and opponents' play. ~2,500 fights a second. The player is
   "sensible" (best play, the same solver the opponents use, and sensible moments to drink each

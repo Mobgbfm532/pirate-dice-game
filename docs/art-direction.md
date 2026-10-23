@@ -134,7 +134,7 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Backdrop: outside the Ghoul and Gourd | Done | `art/ghoul-gourd-outside.jpg` → `ghoul-gourd-outside.webp` (1376×768), Sperm McGrath's fight; `SCENES` in `client/src/Backdrop.tsx` |
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
 | Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
-| Frak (half-elf sorcerer) | Done | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `smokeBox` so the cigar smoke is see-through) → `frak.webp` |
+| Frak (half-elf sorcerer) | Done; smoke cut out 23 Oct | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `noSmoke`: the painted cigar smoke is taken out, over the background and over his vest, because the game draws its own moving smoke from the tip; `ONLY=frak npm --prefix client run art` redoes just him) → `frak.webp` |
 | Danhausen | Done | `art/bust-danhausen.jpg` (flat magenta, `cutOutFlat`) → `danhausen.webp`; `seat: 1.6` behind the table (he shows more body) |
 | Duke Morrigan | Done | `art/bust-duke.jpg` (flat magenta, `cutOutFlat` with a low `tolerance` so his purple coat and skin stay, and `holes` for the background inside his curled horn) → `duke.webp` |
 | Martha Mystery | Done | `art/bust-martha.jpg` (flat magenta, `cutOutFlat` with `smokeBox` + `smokeColour: 'own'`: her vape smoke stays purple and see-through) → `martha.webp`; `seat: 1.15` |
