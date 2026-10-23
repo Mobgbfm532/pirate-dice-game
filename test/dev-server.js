@@ -3,7 +3,7 @@
 // Crawl situations without playing whole fights. It applies to every Tavern Crawl table.
 //
 //   npm run dev:test-server                  (TAVERN_START_ENCOUNTER=5 starts at Sylvester, 10 at Klarg, etc.)
-//   curl "http://localhost:3003/shop?purse=200"     Thom's cart opens with 200 sp, 20 gp (amounts are in silver pieces; add
+//   curl "http://localhost:3003/shop?purse=200"     Thom's cart opens with 200 gold (add
 //        &stock=healing,fizzy,steady to choose what's on it; default: the longest names)
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/foe?lives=1"        the opponent's lives
@@ -35,7 +35,7 @@ const human = r => Object.values(r.players).find(p => p.id !== 'BOT_MOLAR');
 const COMMANDS = {
     '/shop': (r, q) => {
         r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean) };
-        r.tavernRun.purse = Number(q.get('purse') || 200); // sp
+        r.tavernRun.purse = Number(q.get('purse') || 200);
         r.roundPlayers = [];
     },
     '/lives': (r, q) => { const p = human(r); if (p) p.lives = Number(q.get('n')); },

@@ -845,12 +845,13 @@ test("Thom's back shelf: two keepsakes for gold; buy one and it's yours, the gol
     assert.equal(room.tavernRun.purse, 1000 - k.price);
 
     // Too dear: nothing changes.
-    const poor = await betweenFights('Skint2', { stage: 'choose', spots: ['thom', 'shrine'] }, 10);
+    const short = Math.min(...Object.values(BALANCE.keepsakePrices)) - 1; // less than the cheapest
+    const poor = await betweenFights('Skint2', { stage: 'choose', spots: ['thom', 'shrine'] }, short);
     poor.hero.emit('chooseSpot', 'thom');
     const poorOpen = await nextState(poor.hero, s => runOf(s).shop);
     poor.hero.emit('buyKeepsake', runOf(poorOpen).shop.keepsakes[0].id);
     await sleep(30);
-    assert.equal(poor.room.tavernRun.purse, 10);
+    assert.equal(poor.room.tavernRun.purse, short);
     assert.equal(poor.room.tavernRun.keepsakes.length, 0);
 });
 
@@ -980,7 +981,7 @@ test("the hot tub's surges: the die never rolls a 1, never a 6, only 4-6, always
 test('the Dice Den only appears when the purse covers its smallest bet', async () => {
     const { room } = await betweenFights('Skint', { stage: 'choose', spots: ['thom', 'shrine'] }, 3);
     for (let i = 0; i < 20; i++) {
-        assert.ok(!server.pickSpots(room).includes('diceDen'), 'not with 3 sp');
+        assert.ok(!server.pickSpots(room).includes('diceDen'), 'not with 3 gold');
     }
 });
 
@@ -1081,7 +1082,7 @@ test('full runs through the spots between fights keep the books straight', async
         assert.equal(st.winGold + st.heartGold + st.perfectGold + events - spent, t.gold, 'purse = earned + events - spent');
         assert.equal(t.gold, room.tavernRun.purse);
         assert.equal(fights + hearts + perfect + reached + gold, t.points, 'the points add up');
-        assert.equal(gold, t.gold * BALANCE.points.perSilver, 'gold left, converted');
+        assert.equal(gold, t.gold * BALANCE.points.perGold, 'gold left, converted');
         assert.equal(reached, t.won ? 0 : (t.defeated + 1) * BALANCE.points.reachedPerPlace);
         assert.ok(room.tavernRun.purse >= 0, 'the purse never goes negative');
         assert.ok(room.tavernRun.shelf.length <= BALANCE.shelfSize, 'Darren never overfills the shelf');

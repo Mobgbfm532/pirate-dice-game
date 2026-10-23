@@ -331,7 +331,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
     if (!run) return null;
     return (
         <div className="tavern-strip">
-            <span className="purse" aria-label={coins(run.purse)}><span aria-hidden="true">🪙</span> {coins(run.purse)}</span>
+            <span className="purse" aria-label={coins(run.purse)}><span aria-hidden="true">🪙</span> {run.purse}</span>
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
                 (the user, 21 Oct). Tap one for a reminder of what it does; it dims once spent this fight. */}

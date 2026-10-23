@@ -27,7 +27,7 @@ const VALUE = {
     heartShort: [0, 129, 129, 124, 69],
     blessing: [0, 101, 100, 83, 52] // the Lady's: the average of Favour and Grace (shrine.js)
 };
-// These were measured in the old gold; money is in silver pieces since 23 Oct (a tenth of it).
+// These were measured in the old gold; money is a tenth of it since 23 Oct.
 const OLD_GOLD = 10;
 Object.keys(VALUE).forEach(k => { VALUE[k] = VALUE[k].map(v => v / OLD_GOLD); });
 // What the next one of a Thonic costs (prices rise with each one bought, as on the server).

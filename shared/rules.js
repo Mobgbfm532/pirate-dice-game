@@ -400,17 +400,13 @@
         return toLock;
     }
 
-    // Money in a Tavern Crawl is counted in silver pieces (since 23 Oct, D&D-style: 10 sp to a
-    // gold piece) and shown as gold and silver: 140 -> "14 gp", 11 -> "1 gp 1 sp", 8 -> "8 sp".
-    function formatCoins(sp) {
-        const n = Math.max(0, Math.round(Number(sp) || 0));
-        const gp = Math.floor(n / 10), rest = n % 10;
-        if (!gp) return `${rest} sp`;
-        return rest ? `${gp} gp ${rest} sp` : `${gp} gp`;
+    // A Tavern Crawl's money, in whole gold: 11 -> "11 gold".
+    function formatGold(amount) {
+        return `${Math.max(0, Math.round(Number(amount) || 0))} gold`;
     }
 
     return {
-        formatCoins,
+        formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
         stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks

@@ -93,7 +93,7 @@ export type Interlude =
     | { stage: 'invitation'; place: string; from?: string | null; boss?: string | null; drop?: Keepsake | null; save: string };
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
-// Each name's best run: its points, and the gold (silver pieces) it ended with.
+// Each name's best run: its points, and the gold it ended with.
 export interface LeaderboardEntry { name: string; points: number; gold: number }
 
 export interface TavernSummary {
@@ -103,7 +103,7 @@ export interface TavernSummary {
     encounters: string[];
     fellTo: string | null;
     points: number; // the leaderboard's score (since 23 Oct)
-    gold: number;    // the purse at the end, in silver pieces
+    gold: number;    // the purse at the end
     breakdown: { fights: number; hearts: number; perfect: number; reached: number; gold: number; purse: number; events: number; spent: number };
     stats: { encountersDefeated: number; livesLost: number; keepsakesActivated: number; perfect24s: number };
     keepsakes: string[];

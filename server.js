@@ -332,7 +332,7 @@ function placeOf(room) {
 const INTERLUDE = BALANCE.interlude;
 const GOLD = BALANCE.gold;
 const POINTS = BALANCE.points;
-const coins = Rules.formatCoins;
+const goldText = Rules.formatGold;
 
 // What something costs this time: its first price, and half as much again (BALANCE.priceRise)
 // for each one already bought this run (the user's call, 23 Oct: the Shrine, the hot tub and each
@@ -1094,7 +1094,7 @@ function createTavernRun() {
         encounterIndex: TAVERN_START_ENCOUNTER,
         keepsakes: [],
         pendingKeepsakeChoices: null,
-        purse: 0,          // in silver pieces (shown as gold and silver, Rules.formatCoins)
+        purse: 0,          // in gold
         bought: {},        // how many of each thing were bought this run (risingPrice)
         shelf: [],
         shop: null,
@@ -1144,7 +1144,7 @@ function getTavernScoreSummary(room, completedRun = false) {
         hearts: POINTS.perHeartLeft * (stats.heartsSpared || 0),
         perfect: POINTS.perPerfect24 * stats.perfect24s,
         reached: fell ? POINTS.reachedPerPlace * (beaten + 1) : 0,
-        gold: Math.round(POINTS.perSilver * totalGold),
+        gold: Math.round(POINTS.perGold * totalGold),
         // and the gold side, for the record
         purse: totalGold, events: stats.eventGold, spent: stats.spent
     };
@@ -1158,7 +1158,7 @@ function getTavernScoreSummary(room, completedRun = false) {
             `Opponents beaten: ${breakdown.fights}`,
             `Hearts spared: ${breakdown.hearts}`,
             ...(fell ? [`How far you got: ${breakdown.reached}`] : []),
-            `Gold left (${coins(totalGold)}): ${breakdown.gold}`
+            `Gold left (${goldText(totalGold)}): ${breakdown.gold}`
         ]
     };
 }
@@ -1321,7 +1321,7 @@ function disguiseMoves(room, effect) {
 // runs). Without SAVE_SECRET, saves last only until the server restarts.
 const SAVE_SECRET = process.env.SAVE_SECRET || crypto.randomBytes(32).toString('hex');
 if (!process.env.SAVE_SECRET && !process.env.GAME_TIME_SCALE) console.log('SAVE_SECRET is not set: saved Tavern Crawl runs last only until the server restarts.');
-const SAVE_VERSION = 2; // 2: silver pieces, rising prices (23 Oct)
+const SAVE_VERSION = 2; // 2: gold a tenth of before, rising prices (23 Oct)
 const openedSaves = new Set();
 const keepsakeById = id => BOSS_DROPS[id] || TAVERN_KEEPSAKES.find(k => k.id === id);
 

@@ -382,36 +382,35 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   synthesized coin clinks (`playCoins`), the purse counting up, then "Next" (`lastWin` carries
   `place`, `gold.heartsLeft/perHeart/perPlace` and `at`; shown once, `localStorage.tavernWinSeen`;
   not after a resume). The event scenes show only the purse now.
-- **Money (since 23 Oct, the user's call: D&D-style):** every amount in `shared/balance.js` is in
-  **silver pieces** and shown as gold and silver (10 sp = 1 gp; `Rules.formatCoins`, client
-  `coins()`): 1 gp x the opponent's place per win (Jaguar 14 gp), 2 sp a heart left, Healing
-  1 gp 1 sp, the Shrine 1 gp, a soak 5 sp; the old numbers were these x10. **Prices rise**: each
+- **Money (since 23 Oct, the user's calls: nearer D&D's prices, all in whole gold):** a tenth of
+  the old amounts (`Rules.formatGold`, client `coins()`): 10 x the opponent's place per win
+  (Jaguar 140), 2 a heart left, Healing 11, the Shrine 10, a soak 5. **Prices rise**: each
   Thonic of a kind, candle or soak bought costs half its first price more than the last
   (`priceRise` 0.5; `risingPrice`, `run.bought`, saved with the run; `SAVE_VERSION` 2, so older
   saves don't open). Keepsakes are bought once.
 - **Points and the leaderboard (since 23 Oct):** the run's score is points, not the purse
   (`getTavernScoreSummary`, `BALANCE.points`): 100 x the place of each opponent beaten, 25 per
   heart left at each win (`stats.heartsSpared`), 25 x the place a lost run fell at, and the purse
-  at the end at 1 point a silver piece. Leaderboard entries are `{ name, points, gold }` (each
+  at the end at 1 point a gold piece. Leaderboard entries are `{ name, points, gold }` (each
   name's best; an older entry's gold counts as points). No made-up names: `leaderboard.json` is
   no longer in git and starts empty. The run-over screen shows the points and their parts.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
   shows 3 Thonics (Healing + 2 random, `pickThomStock`) and, since 21 Oct, **his back shelf**: two
-  keepsakes you don't have, for gold (`keepsakePrices`: Shield 3 gp, Trap Card and Velvet Cushion
-  1 gp 5 sp, Loyalty Card and Potion Belt 1 gp 3 sp, Loaded Die 8 sp; priced under what each adds when bought
+  keepsakes you don't have, for gold (`keepsakePrices`: Shield 30, Trap Card and Velvet Cushion
+  15, Loyalty Card and Potion Belt 13, Loaded Die 8; priced under what each adds when bought
   around fight 3, `balance/experiments/keepsake-when.js`; `buyKeepsake`, `pickThomKeepsakes`). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
   between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
   handler; the client's `drinkable()` mirrors it), with a cork pop:
 
   | Thonic | Price | When | Effect |
   |---|---|---|---|
-  | Healing | 1 gp 1 sp | before rolling, once a heart is lost | +1 heart |
-  | Last Gasp | 1 gp 3 sp | works by itself | a round that would take your last heart leaves you on 1 |
-  | Fizzy Thomic | 2 sp | after a roll showing 1s | those 1s roll again (`rerollOnes`, `diceRolled.rerolled`) |
-  | Second Thoughts | 3 sp | after keeping a die | a kept die goes back, free roll (`putBackDie`, `turn.freeRoll`, client `putBackSlot`) |
-  | Steady | 9 sp | any time in the turn | a dust hand scores its dice as they lie at End Turn (`turn.steady`) |
-  | Clear-Eye | 6 sp | before rolling, while the opponent's ability has uses left | waits and cancels that ability's next use this fight (`clearEyeArmed`, `fireTavernAbility`) |
+  | Healing | 11 | before rolling, once a heart is lost | +1 heart |
+  | Last Gasp | 13 | works by itself | a round that would take your last heart leaves you on 1 |
+  | Fizzy Thomic | 2 | after a roll showing 1s | those 1s roll again (`rerollOnes`, `diceRolled.rerolled`) |
+  | Second Thoughts | 3 | after keeping a die | a kept die goes back, free roll (`putBackDie`, `turn.freeRoll`, client `putBackSlot`) |
+  | Steady | 9 | any time in the turn | a dust hand scores its dice as they lie at End Turn (`turn.steady`) |
+  | Clear-Eye | 6 | before rolling, while the opponent's ability has uses left | waits and cancels that ability's next use this fight (`clearEyeArmed`, `fireTavernAbility`) |
 
   Prices and effects were set by simulation on 19 Oct (`balance/README.md`).
 
@@ -422,7 +421,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (light a candle: a blessing at random,
   her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
-  the Dice Den (bet 5 or 10 sp, only the bets the purse covers are offered, and below 5 sp the
+  the Dice Den (bet 5 or 10, only the bets the purse covers are offered, and below 5 gold the
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
@@ -435,7 +434,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   to whatever the next fight starts on (so it stacks with the Stranger's price). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
-  The **Wild Magic Hot Tub** (a spot at the Ghoul and Gourd only, the user's call 21 Oct; 5 sp a soak, `hotTubPrice`; the Shrine's candle 1 gp, `shrinePrice`; both rising with each visit; neither is offered when the purse can't cover it): climb in and a wild surge
+  The **Wild Magic Hot Tub** (a spot at the Ghoul and Gourd only, the user's call 21 Oct; 5 gold a soak, `hotTubPrice`; the Shrine's candle 10, `shrinePrice`; both rising with each visit; neither is offered when the purse can't cover it): climb in and a wild surge
   is picked by weight (`hotTubSurges`): one of your dice (`hotTubDie`, aqua on the table,
   `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
   lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
@@ -443,8 +442,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   rises from the die as a fading ghost die (in a cursed round it keeps the lower roll) (`turn.ghosts` → `diceRolled.ghosts` → `TwinGhost`, one per ghost; its glow animations keep the same filter list at every keyframe, or they snap: the "flash" the user saw). A soak averages about +1-2
   points of the next fight (`balance/experiments/hot-tub.js`). **Darren Snakehands**, the Ghoul and
   Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
-  Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 2 sp for
-  the glass), 3-4 a free Thonic, 5-6 a Thonic and 5 sp (a full shelf: 3 sp instead,
+  Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 2 gold for
+  the glass), 3-4 a free Thonic, 5-6 a Thonic and 5 gold (a full shelf: 3 gold instead,
   `darrenOutcome`). Both have the user's paintings (since 20 Oct; `hot-tub.webp` is wide, sized by width).
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
@@ -461,12 +460,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
   | Keepsake (id) | Effect | Worth at fight 3 | Price |
   |---|---|---|---|
-  | Shield (`bentCopper`) | once a fight, the first life you'd lose isn't | ~31 gp | 3 gp |
-  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~16 gp | 1 gp 5 sp |
-  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~16 gp | 1 gp 5 sp |
-  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~14 gp | 1 gp 3 sp |
-  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~15 gp (mostly the Healing) | 1 gp 3 sp |
-  | Loaded Die | die 0 (`LOADED_DIE`) rolls 4-6 (`loadedDieLow`); old gold on your turns | ~4 gp | 8 sp |
+  | Shield (`bentCopper`) | once a fight, the first life you'd lose isn't | ~31 | 30 |
+  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~16 | 15 |
+  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~16 | 15 |
+  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~14 | 13 |
+  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~15 (mostly the Healing) | 13 |
+  | Loaded Die | die 0 (`LOADED_DIE`) rolls 4-6 (`loadedDieLow`); old gold on your turns | ~4 | 8 |
 
   Numbers in `shared/balance.js` (`keepsakes`, `keepsakePrices`, `thomKeepsakes`). Jaguar's drop
   waits for a second place.
