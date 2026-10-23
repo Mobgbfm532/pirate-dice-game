@@ -2,15 +2,15 @@ import { tuning } from './tuning';
 
 // The look preview (22 Oct): a rough first pass at richer light, materials and glow
 // (docs: "2, 4, 24: the next level visually", option 1, steps B to D), behind a switch so it
-// can be compared with today's look. On with ?look=next, off with ?look=classic; remembered on
-// this device (localStorage.tavernLook).
+// can be compared with today's look. The default since 23 Oct (the user's call); ?look=classic
+// switches back and ?look=next on again, remembered on this device (localStorage.tavernLook).
 function readLook() {
     try {
         const asked = new URLSearchParams(location.search).get('look');
         if (asked) localStorage.setItem('tavernLook', asked);
-        return (asked ?? localStorage.getItem('tavernLook')) === 'next';
+        return (asked ?? localStorage.getItem('tavernLook')) !== 'classic';
     } catch {
-        return false;
+        return true;
     }
 }
 

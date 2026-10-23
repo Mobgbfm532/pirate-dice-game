@@ -76,7 +76,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
   header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both).
-- `look.ts` (the look preview, off by default; see Status: Visuals): the `?look=next` switch and the shared flame.
+- `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray,
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (on desktop a dock: chips, score, Roll; reactions in a
@@ -203,8 +203,8 @@ one too, or saves only last until the server restarts, which on the free tier is
     editor; faces centred on the table's centre line behind it; bigger round frames.
 - **Visuals, option 1 (all seven steps built, 23 Oct):** the plan is a doc shared with the user,
   "2, 4, 24: the next level visually" (https://claude.ai/artifact/9MHGFUVoVrLiQiD7ZgL7ZJ). Steps
-  B-G show only with `?look=next` (`client/src/look.ts`; `?look=classic` switches back;
-  remembered in `localStorage.tavernLook`); today's look is unchanged without it.
+  B-G are **the default since 23 Oct** (the user's call; `client/src/look.ts`): `?look=classic`
+  switches back to the old look and `?look=next` on again, remembered in `localStorage.tavernLook`.
   - **A:** the tavern and the bust drawn inside the 3D scene (`Room.tsx`), pixel-identical to the
     old page layers in the classic look; no ragged edge where canvas met page.
   - **B (light):** `NextLights` in TableScene (fire key light, cool fill, rim, candle, a
@@ -225,8 +225,7 @@ one too, or saves only last until the server restarts, which on the free tier is
     sliders for the feel (multipliers saved per device), the frame rate, quality levels (Auto steps
     down from High when frames stay under ~45 a second), "Copy settings"; its Portraits tab (drag
     and zoom every round portrait, "Copy portraits"). On 23 Oct the user found the built-in
-    settings on High "look great" (no slider changes). **Still to do:** whether the look preview
-    becomes the default.
+    settings on High "look great" (no slider changes), and made the new look the default.
   - Before/after: `test/shots.mjs` + `test/shots-base.mjs` + `test/compare.mjs` and the
     `visual-shots` subagent; `previews/frozen.mjs` (gitignored) stops the page clock for moments.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
@@ -478,9 +477,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **The look preview** (the user liked the built-in settings on High, 23 Oct): the user's call
-   whether `?look=next` becomes the default (or keep the switch).
-   If Auto quality drops a good phone to Low, tune its threshold (`noteFrame`).
+1. **The new look on other phones** (the default since 23 Oct): if Auto quality drops a good
+   phone to Low, tune its threshold (`noteFrame`).
 2. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
    0.3% and reaches the ship 2.3% (`node balance/experiments/tournament.js`), but it never wears
    Martha's mask or plans its shopping, and the user finds the real game easier. The user plays

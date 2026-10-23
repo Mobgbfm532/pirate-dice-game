@@ -1551,7 +1551,7 @@ function TuningPanel({ onClose }: { onClose: () => void }) {
             </div>
             {tab === 'portraits' ? <PortraitEditor /> : <>
             {!lookNext && (
-                <p className="tune-note">The look preview is off, so most sliders do nothing. <a href="?look=next">Turn it on</a></p>
+                <p className="tune-note">The classic look is on, so most sliders do nothing. <a href="?look=next">Back to the new look</a></p>
             )}
             <div className="tune-levels">
                 {levels.map(l => (
