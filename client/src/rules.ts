@@ -86,3 +86,11 @@ export function calloutText(callout: string | null, mine: boolean, botTurn: bool
     const [text, color] = CALLOUT_TEXT[callout](mine, botTurn, outcome);
     return { text, color };
 }
+
+// A perfect hand, for its celebration: a 24, or in a cursed round (the lowest valid hand wins)
+// four 1s with the 2 and 4, which scores 4. A dust hand is never perfect, nor a cursed 24.
+export function perfectHand(outcome: { busted: boolean; score: number }, cursed: boolean): 'perfect24' | 'perfect4' | null {
+    if (outcome.busted) return null;
+    if (cursed) return outcome.score === 4 ? 'perfect4' : null;
+    return outcome.score === 24 ? 'perfect24' : null;
+}

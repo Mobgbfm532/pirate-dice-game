@@ -2014,3 +2014,60 @@ button.keepsake.used { opacity: 0.55; }
 .tune-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--parchment-dim); }
 .tune-actions { display: flex; gap: 8px; margin-top: 8px; }
 .tune-actions button { flex: 1; }
+
+/* ---- A perfect hand: "Perfect 24!" (gold) and, in a cursed round, "Perfect ...4?" (violet) ----
+   Over the table's far edge (the opponent's chest), clear of the dice and the rail. */
+.celebration { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+/* (In the nameplate's place while it shows, as an ability's banner does.) */
+.hud:has(.celebration) .opponent-plate { visibility: hidden; }
+.celebration-rays {
+    position: absolute; left: var(--table-x, 50%); top: calc(var(--horizon, 30%) - 14px);
+    width: min(120vw, 620px); aspect-ratio: 1; transform: translate(-50%, -50%);
+    background: repeating-conic-gradient(from 0deg, rgba(255, 220, 120, 0.42) 0deg 7deg, transparent 7deg 22deg);
+    -webkit-mask: radial-gradient(circle, #000 0%, transparent 62%); mask: radial-gradient(circle, #000 0%, transparent 62%);
+    animation: rays-spin 2.8s linear forwards, rays-fade 2.8s ease-out forwards;
+}
+.celebration-text {
+    position: absolute; left: var(--table-x, 50%); top: calc(var(--horizon, 30%) - 14px);
+    transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
+    white-space: nowrap; animation: perfect-pop 2.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+.celebration-text .who { font-size: 1rem; color: var(--parchment); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); letter-spacing: 1px; }
+.celebration-text .what {
+    font-size: clamp(2.4rem, 13vw, 4.2rem); font-weight: 700; line-height: 1;
+    background: linear-gradient(#fff6c8, #ffd54f 45%, #c9871a); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 3px 0 #5a3a08) drop-shadow(0 0 18px rgba(255, 200, 80, 0.8));
+}
+.celebration-sparks span {
+    position: absolute; left: var(--table-x, 50%); top: calc(var(--horizon, 30%) - 14px);
+    width: 7px; height: 7px; margin: -3.5px; border-radius: 50%;
+    background: radial-gradient(circle, #fffbe0, #ffd54f 50%, rgba(255, 180, 40, 0));
+    animation: spark-out 1.3s ease-out both;
+}
+@keyframes perfect-pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    24% { transform: translate(-50%, -50%) scale(1); }
+    82% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+    100% { opacity: 0; transform: translate(-50%, -58%) scale(1.04); }
+}
+@keyframes rays-spin { from { rotate: 0deg; } to { rotate: 40deg; } }
+@keyframes rays-fade { 0% { opacity: 0; } 15% { opacity: 1; } 70% { opacity: 0.8; } 100% { opacity: 0; } }
+@keyframes spark-out {
+    0% { opacity: 0; transform: rotate(var(--a)) translateY(0) scale(0.6); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scale(1.1); }
+}
+/* Perfect ...4?: the Curse's violet and white, and the 4 not quite sure of itself. */
+.perfect4 .celebration-rays { background: repeating-conic-gradient(from 0deg, rgba(206, 147, 216, 0.4) 0deg 7deg, transparent 7deg 22deg); }
+.perfect4 .celebration-text .what {
+    background: linear-gradient(#ffffff, #e1bee7 45%, #8e24aa); -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 3px 0 #2a0b33) drop-shadow(0 0 18px rgba(186, 104, 200, 0.85));
+}
+/* (Animated pieces don't share the word's gradient fill: their own colour.) */
+.perfect4 .celebration-text .dots, .perfect4 .celebration-text .huh { color: #f3e5f5; -webkit-text-fill-color: #f3e5f5; }
+.perfect4 .celebration-text .dots { display: inline-block; animation: dots-wait 2.8s steps(1) both; }
+.perfect4 .celebration-text .huh { display: inline-block; animation: huh-tilt 2.8s ease-in-out both; }
+.perfect4 .celebration-sparks span { background: radial-gradient(circle, #ffffff, #ce93d8 50%, rgba(142, 36, 170, 0)); }
+@keyframes dots-wait { 0% { opacity: 0.2; } 12% { opacity: 0.6; } 22% { opacity: 1; } }
+@keyframes huh-tilt { 0%, 30% { transform: rotate(0deg); } 45% { transform: rotate(-16deg) translateY(-4px); } 60% { transform: rotate(10deg); } 75%, 100% { transform: rotate(-6deg); } }

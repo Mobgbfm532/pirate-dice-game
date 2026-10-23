@@ -370,6 +370,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   yourself (`wearMask`, `by: 'player'`). On the strip it lights up and shows its choices inline
   (never over the rail); when it can't be worn a tap is a reminder. Martha herself shows a
   "Disguises" moment first, then the trick she copies (`disguiseMoves`).
+- **Perfect hands (23 Oct, the user's):** a finished 24 gets "Perfect 24!" (gold lettering, rays and
+  sparks over the table's far edge, the nameplate hidden meanwhile, the room lit gold in the look
+  preview); in a cursed round (lowest valid hand wins) four 1s with the 2 and 4 (a score of 4) get
+  "Perfect ...4?" in Danhausen's violet and white, its "?" tilting, the room lit violet. A cursed 24
+  gets no celebration (a sigh). For anyone at the table, with their name when it isn't you.
+  `perfectHand` (rules.ts, tested), `Celebration` (Hud), `snapshot.celebration`; a moment of its
+  own (`CELEBRATION_MS` 2.8 s): the round result and the next throw wait. Dev: `preview.celebrate()`.
 - **An opponent's entrance (23 Oct):** the name card shows 6 s (`INTRO_MS`); at a fight's start the
   server sends the new opponent before the round's abilities and puts the entrance on its moment
   clock (`INTRO_SHOW_MS`), so abilities and the first throw wait for the card (Martha's entrance

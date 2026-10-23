@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignSlots, type Die, type DieStatus } from './rules';
+import { assignSlots, perfectHand, type Die, type DieStatus } from './rules';
 
 const die = (id: number, value: number, status: DieStatus = 'permanentlyLocked'): Die => ({ id, value, status });
 
@@ -34,5 +34,22 @@ describe('assignSlots', () => {
     it('sends hidden dice to scoring slots', () => {
         const slots = assignSlots([{ id: 0, value: 0, status: 'lockedThisTurn', hidden: true }], new Map([[0, 1]]));
         expect(slots.get(0)).toBe(2);
+    });
+});
+
+describe('perfectHand', () => {
+    it('celebrates a 24, but not in a cursed round, where it is the worst hand', () => {
+        expect(perfectHand({ busted: false, score: 24 }, false)).toBe('perfect24');
+        expect(perfectHand({ busted: false, score: 24 }, true)).toBe(null);
+    });
+    it('celebrates four 1s with the 2 and 4 (a score of 4) only in a cursed round', () => {
+        expect(perfectHand({ busted: false, score: 4 }, true)).toBe('perfect4');
+        expect(perfectHand({ busted: false, score: 4 }, false)).toBe(null);
+    });
+    it('never celebrates dust or an ordinary hand', () => {
+        expect(perfectHand({ busted: true, score: 24 }, false)).toBe(null);
+        expect(perfectHand({ busted: true, score: 4 }, true)).toBe(null);
+        expect(perfectHand({ busted: false, score: 18 }, false)).toBe(null);
+        expect(perfectHand({ busted: false, score: 9 }, true)).toBe(null);
     });
 });

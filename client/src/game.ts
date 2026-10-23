@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
-import { calloutText, isLocked, type DieStatus, type TurnOutcome, type TurnView } from './rules';
+import { calloutText, isLocked, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, trackDuration, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { playChime, playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
@@ -166,6 +166,9 @@ export interface Snapshot {
     // his), shown as ghost dice once the dice stop.
     ghosts: { dice: Ghost[]; at: number } | null;
     putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
+    // A perfect hand's celebration (since 23 Oct): a 24, or in a cursed round (lowest wins) the
+    // 2, the 4 and four 1s. who: the player's name when it isn't you.
+    celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -206,7 +209,8 @@ let snapshot: Snapshot = {
     shopArrival: null,
     betweenShown: false,
     ghosts: null,
-    putBackSlot: null
+    putBackSlot: null,
+    celebration: null
 };
 
 const listeners = new Set<() => void>();
@@ -352,14 +356,31 @@ function applyTurn(serverView: TurnView | null) {
     if (turn) setCallout(turn, turn.callout, turn.outcome);
 }
 
-function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null) {
+// How long a perfect hand's celebration holds the screen (Hud's Celebration); what comes next waits.
+export const CELEBRATION_MS = 2800;
+
+function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null, turn: TurnView | null) {
     if (!event) return;
     const mine = snapshot.isMyTurn;
     if (event.type === 'toggle' && !mine) playSound('click');
     if (event.type !== 'finalized' || !event.outcome) return;
     const { busted, score, suspense } = event.outcome;
-    if (busted) playSound(suspense === 'survival' ? 'aww' : 'bust');
-    else if (score === 24) { playSound('yay'); table.celebrateAt = performance.now(); }
+    // In a cursed round (Danhausen's, or his face on Martha or your mask) the lowest valid hand
+    // wins: four 1s with the 2 and 4 is its perfect hand, and a 24 its worst.
+    const cursed = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse';
+    const perfect = perfectHand(event.outcome, cursed);
+    if (perfect) {
+        playSound('yay');
+        if (perfect === 'perfect24') table.celebrateAt = performance.now();
+        const who = turn && turn.playerId !== snapshot.myId ? snapshot.state?.players[turn.playerId]?.name ?? null : null;
+        update({ celebration: { kind: perfect, at: performance.now(), who } });
+        // A moment of its own: the round's result and the next throw wait for it.
+        const gone = performance.now() + CELEBRATION_MS;
+        momentFreeAt = Math.max(momentFreeAt, gone);
+        momentGoneAt = Math.max(momentGoneAt, gone);
+    }
+    else if (busted) playSound(suspense === 'survival' ? 'aww' : 'bust');
+    else if (cursed && score === 24) playSound('ohwell');
     else if (suspense === 'perfect') playSound('ohwell');
     else if (suspense === 'survival') playSound('yay');
 }
@@ -369,7 +390,7 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
         // Sylvester knocked a kept die loose: the server's hand wins over taps still showing.
         if (data.event?.type === 'punched') pendingTaps.clear();
         applyTurn(data.turn);
-        playOutcomeSounds(data.event);
+        playOutcomeSounds(data.event, data.turn);
         done();
     });
 });
@@ -836,7 +857,8 @@ export const actions = {
 export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}) { update({ ability: { name, ability, text: '', ...more, at: performance.now() } }); },
-    intro() { update({ introAt: performance.now() }); }
+    intro() { update({ introAt: performance.now() }); },
+    celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); }
 };
 
 resetTrayForNewTurn();

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
@@ -632,6 +632,31 @@ function useMoment(at: number, ms: number) {
     }, [at, ms]);
     const hide = useCallback(() => setVisible(false), []);
     return [visible, hide] as const;
+}
+
+// A perfect hand (since 23 Oct, the user's): "Perfect 24!" in gold with a burst of light and
+// sparks; in a cursed round, where the lowest hand wins, four 1s with the 2 and 4 get "Perfect
+// ...4?" in Danhausen's violet and white, not quite sure of itself. Over the table's far edge, clear
+// of the dice; the opponent's name with it when it's theirs.
+function Celebration({ snap }: { snap: Snapshot }) {
+    const c = snap.celebration;
+    const [visible] = useMoment(c?.at ?? 0, CELEBRATION_MS);
+    if (!visible || !c) return null;
+    const four = c.kind === 'perfect4';
+    return (
+        <div key={c.at} className={`celebration ${four ? 'perfect4' : 'perfect24'}`} aria-live="polite">
+            <div className="celebration-rays" aria-hidden="true" />
+            <div className="celebration-text">
+                {c.who && <span className="who">{c.who}</span>}
+                <span className="what">{four ? <>Perfect <span className="dots">...</span>4<span className="huh">?</span></> : 'Perfect 24!'}</span>
+            </div>
+            <div className="celebration-sparks" aria-hidden="true">
+                {Array.from({ length: 16 }, (_, i) => (
+                    <span key={i} style={{ '--a': `${i * 22.5 + (i % 2) * 9}deg`, '--d': `${70 + (i * 37) % 60}px`, animationDelay: `${(i % 4) * 0.06}s` } as React.CSSProperties} />
+                ))}
+            </div>
+        </div>
+    );
 }
 
 // A Tavern Crawl opponent sits down: a name card on the table edge under their bust.
@@ -1505,6 +1530,7 @@ export function Hud() {
             {state && botAcross && !introShowing && <OpponentPlate state={state} />}
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
             <AbilityMomentView snap={snap} />
+            <Celebration snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}
             {/* (Not over an opponent's entrance card: the card comes first.) */}
             {!introShowing && <YourTurnBanner at={snap.yourTurnAt} />}

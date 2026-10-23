@@ -28,6 +28,7 @@ const KINDS: Record<string, Kind> = {
     keepsake: { color: '#ffc94d', light: 45, wash: 0.5, ms: 2200 },       // a keepsake working
     shield: { color: '#6ab7ff', light: 22, wash: 0.5, ms: 2400, shimmer: true }, // the Shield
     perfect: { color: '#ffd54f', light: 95, wash: 0.5, ms: 2600 },        // a perfect 24: bright enough to bloom
+    perfect4: { color: '#c77dff', light: 40, wash: 0.55, ms: 2600 },      // a cursed round's perfect hand (four 1s)
     sixes: { color: '#ff2a14', light: 30, wash: 0.35, ms: 1400 }          // three 6s land (the devil effect)
 };
 
@@ -52,7 +53,7 @@ export function MomentLights() {
     const point = useRef<THREE.PointLight>(null);
     const beam = useRef<THREE.SpotLight>(null);
     const sky = useRef<THREE.HemisphereLight>(null);
-    const seen = useRef({ at: 0, perfect: 0, sixes: 0 });
+    const seen = useRef({ at: 0, perfect: 0, sixes: 0, cheer: 0 });
     const active = useRef<{ kind: Kind; at: number } | null>(null);
 
     useFrame(() => {
@@ -66,6 +67,8 @@ export function MomentLights() {
             if (kind) start(kind, moment.at);
         }
         if (table.celebrateAt !== s.perfect) { s.perfect = table.celebrateAt; if (s.perfect) start('perfect', s.perfect); }
+        const cheer = store.get().celebration;
+        if (cheer && cheer.at !== s.cheer) { s.cheer = cheer.at; if (cheer.kind === 'perfect4') start('perfect4', cheer.at); }
         if (table.devilAt !== s.sixes) { s.sixes = table.devilAt; if (s.sixes) start('sixes', s.sixes); }
 
         const a = active.current;
