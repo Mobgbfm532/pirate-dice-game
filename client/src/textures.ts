@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FACE_VALUES } from './layout';
+import { lookNext } from './look';
 
 // Placeholder dice and table art drawn with canvas. Swapped for AI-generated art later.
 
@@ -69,16 +70,27 @@ function hiddenTexture() {
 
 const diceMaterialProps = { roughness: 0.32, metalness: 0.0 };
 
+// The look preview: lacquered ivory. A clear coat gleams over a slightly softer body, and the
+// painted face doubles as a bump map, so the dark pips read as engraved.
+const DiceMaterial = lookNext ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+const lacquer = lookNext ? { roughness: 0.5, clearcoat: 0.7, clearcoatRoughness: 0.2, bumpScale: 1.6 } : {};
+// (and a touch of warm ivory under the paint, so strong light doesn't wash the faces white)
+const ivory = lookNext ? { color: new THREE.Color('#f8eedc') } : {};
+const withBump = (m: THREE.MeshStandardMaterial) => {
+    if (lookNext) { m.bumpMap = m.map; m.needsUpdate = true; }
+    return m;
+};
+
 export function createDiceMaterials() {
-    const faces = FACE_VALUES.map(v => new THREE.MeshStandardMaterial({ map: faceTexture(v), ...diceMaterialProps }));
+    const faces = FACE_VALUES.map(v => withBump(new DiceMaterial({ map: faceTexture(v), ...diceMaterialProps, ...lacquer, ...ivory })));
     const hiddenMap = hiddenTexture();
     const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
     // The Loaded Die keepsake's die: the same faces, warmed to old gold so it stands out.
-    const loaded = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps }));
+    const loaded = FACE_VALUES.map((_, i) => withBump(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps, ...lacquer, ...(lookNext ? { metalness: 0.35 } : {}) })));
     // Frak's Mind Whip: the die he made you keep glows his sickly green and violet.
-    const mind = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps }));
+    const mind = FACE_VALUES.map((_, i) => withBump(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps, ...lacquer })));
     // The Wild Magic Hot Tub: the die its surge works on, aqua with a soft glow.
-    const tub = FACE_VALUES.map((_, i) => new THREE.MeshStandardMaterial({ map: faces[i].map, color: new THREE.Color('#86e3ee'), emissive: new THREE.Color('#00838f'), emissiveIntensity: 0.4, ...diceMaterialProps }));
+    const tub = FACE_VALUES.map((_, i) => withBump(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#86e3ee'), emissive: new THREE.Color('#00838f'), emissiveIntensity: 0.4, ...diceMaterialProps, ...lacquer })));
     loadPaintedFaces(faces, [loaded, mind, tub]);
     return { faces, hidden, loaded, mind, tub };
 }
@@ -103,8 +115,9 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.
             }, 512);
             materials[i].map?.dispose();
             materials[i].map = texture;
+            if (lookNext) materials[i].bumpMap = texture;
             materials[i].needsUpdate = true;
-            alike.forEach(set => { set[i].map = texture; set[i].needsUpdate = true; });
+            alike.forEach(set => { set[i].map = texture; if (lookNext) set[i].bumpMap = texture; set[i].needsUpdate = true; });
         });
     };
     image.src = DICE_SHEET_URL;

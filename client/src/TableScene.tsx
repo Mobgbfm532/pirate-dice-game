@@ -1,6 +1,10 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { Bloom, EffectComposer, HueSaturation, BrightnessContrast, ToneMapping } from '@react-three/postprocessing';
+import { ToneMappingMode } from 'postprocessing';
+import { flame, lookNext, shareFlame } from './look';
 import { Dice } from './Dice';
 import { table } from './game';
 import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slotPosition } from './layout';
@@ -158,7 +162,9 @@ function Tray() {
             {/* Tabletop, ending just beyond the tray so the tavern shows behind it */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, (TABLE_FAR_EDGE_Z + 24) / 2]} receiveShadow>
                 <planeGeometry args={[40, 24 - TABLE_FAR_EDGE_Z]} />
-                <meshStandardMaterial map={tabletop} roughness={0.85} />
+                {lookNext
+                    ? <meshPhysicalMaterial map={tabletop} roughness={0.7} clearcoat={0.35} clearcoatRoughness={0.45} />
+                    : <meshStandardMaterial map={tabletop} roughness={0.85} />}
             </mesh>
             {/* Worn, lighter lip along the far edge */}
             <mesh position={[0, 0.02, TABLE_FAR_EDGE_Z + 0.06]}>
@@ -168,13 +174,18 @@ function Tray() {
             {/* Felt */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.001, cz]} receiveShadow>
                 <planeGeometry args={[width, depth]} />
-                <meshStandardMaterial map={felt} roughness={1} />
+                {/* The look preview: a velvety sheen that shows at low angles. */}
+                {lookNext
+                    ? <meshPhysicalMaterial map={felt} roughness={0.95} sheen={1} sheenRoughness={0.55} sheenColor="#7fb88c" />
+                    : <meshStandardMaterial map={felt} roughness={1} />}
             </mesh>
             {/* Rails */}
             {railBoxes.map(([x, z, w, d], i) => (
                 <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
                     <boxGeometry args={[w, h, d]} />
-                    <meshStandardMaterial map={rails} roughness={0.5} />
+                    {lookNext
+                        ? <meshPhysicalMaterial map={rails} roughness={0.5} clearcoat={0.6} clearcoatRoughness={0.3} />
+                        : <meshStandardMaterial map={rails} roughness={0.5} />}
                 </mesh>
             ))}
             {/* Slot rail in front of the tray */}
@@ -198,13 +209,13 @@ function Slots() {
             {REQUIRED_SLOT_X.map((x, i) => (
                 <mesh key={i} position={[x, 0.008, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]}>
                     <planeGeometry args={[1.05, 1.05]} />
-                    <meshStandardMaterial map={i === 0 ? two : four} transparent roughness={0.45} metalness={0.3} />
+                    <meshStandardMaterial map={i === 0 ? two : four} transparent roughness={lookNext ? 0.32 : 0.45} metalness={lookNext ? 0.85 : 0.3} />
                 </mesh>
             ))}
             {scoring.map((p, i) => (
                 <mesh key={i} position={[p.x, 0.008, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]}>
                     <planeGeometry args={[1.0, 1.0]} />
-                    <meshStandardMaterial map={plain} transparent opacity={0.85} roughness={0.45} metalness={0.3} />
+                    <meshStandardMaterial map={plain} transparent opacity={0.85} roughness={lookNext ? 0.32 : 0.45} metalness={lookNext ? 0.85 : 0.3} />
                 </mesh>
             ))}
         </group>
@@ -250,14 +261,86 @@ function Lights() {
     );
 }
 
+// The look preview's light rig (option 1, step B): one flame drives the candle, a warm key
+// from the fireplace side (left in the tavern painting) and the web-page layers behind; a cool,
+// dim fill keeps shadows from going black; a rim from behind outlines the dice; a small room
+// made in code gives dice, brass and varnish something to reflect.
+function NextLights() {
+    const candle = useRef<THREE.PointLight>(null);
+    const fire = useRef<THREE.DirectionalLight>(null);
+    const flash = useRef<THREE.PointLight>(null);
+    const { gl, scene } = useThree();
+
+    useEffect(() => {
+        const pmrem = new THREE.PMREMGenerator(gl);
+        const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+        scene.environment = env;
+        scene.environmentIntensity = 0.16;
+        return () => { scene.environment = null; env.dispose(); pmrem.dispose(); };
+    }, [gl, scene]);
+
+    useFrame(() => {
+        const now = performance.now();
+        const f = flame(now / 1000);
+        if (candle.current) candle.current.intensity = 24 * f;
+        if (fire.current) fire.current.intensity = 1.7 * (0.85 + 0.15 * f);
+        shareFlame(f, now);
+        if (flash.current) {
+            const devil = Math.max(0, 1 - (now - table.devilAt) / 1200);
+            const gold = Math.max(0, 1 - (now - table.celebrateAt) / 2000);
+            flash.current.color.set(devil > gold ? '#ff1a1a' : '#ffd54f');
+            flash.current.intensity = Math.max(devil, gold) * 60;
+        }
+    });
+
+    return (
+        <>
+            <hemisphereLight args={['#ffd8a8', '#1a1f2e', 0.3]} />
+            <directionalLight
+                ref={fire}
+                position={[-6, 7, 2]}
+                color="#ffb373"
+                castShadow
+                shadow-mapSize={[2048, 2048]}
+                shadow-camera-left={-6}
+                shadow-camera-right={6}
+                shadow-camera-top={6}
+                shadow-camera-bottom={-6}
+                shadow-bias={-0.0004}
+                shadow-normalBias={0.02}
+            />
+            {/* A rim from behind and above: a thin bright edge on each die. */}
+            <directionalLight position={[2, 6, -9]} intensity={0.35} color="#fff0dc" />
+            <pointLight ref={candle} position={[3.5, 3, -3.5]} color="#ff9440" distance={16} decay={1.5} />
+            <pointLight ref={flash} position={[0, 3, 0]} distance={12} decay={1.4} intensity={0} />
+        </>
+    );
+}
+
+// The look preview's finish over the 3D picture (option 1, step D): a soft glow on what's
+// bright (brass highlights, lacquer, magic), a warm grade, then the filmic tone curve.
+// (Vignette and grain are drawn over the whole page in CSS for now, so they reach the tavern
+// picture too: `.look-finish`.)
+function Finish() {
+    return (
+        <EffectComposer multisampling={4}>
+            <Bloom mipmapBlur luminanceThreshold={0.93} luminanceSmoothing={0.15} intensity={0.45} radius={0.7} />
+            <HueSaturation saturation={0.1} />
+            <BrightnessContrast brightness={-0.03} contrast={0.08} />
+            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+        </EffectComposer>
+    );
+}
+
 export function TableScene() {
     return (
         <>
             <fog attach="fog" args={['#120a05', 14, 30]} />
             <CameraRig />
-            <Lights />
+            {lookNext ? <NextLights /> : <Lights />}
             <Tray />
             <Dice />
+            {lookNext && <Finish />}
         </>
     );
 }

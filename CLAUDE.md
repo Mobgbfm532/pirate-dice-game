@@ -76,6 +76,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
   header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both).
+- `look.ts` (the look preview, off by default; see Status: Visuals): the `?look=next` switch and the shared flame.
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray,
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (on desktop a dock: chips, score, Roll; reactions in a
@@ -172,7 +173,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (21 October 2026)
+## Status (23 October 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -189,12 +190,27 @@ one too, or saves only last until the server restarts, which on the free tier is
   (the Yawning Portal's five, Brodor's Sunglasses, Klarg's crew aboard the Salty Swallow, a save
   after each place). Then the user's 15 fixes after playing it (21 Oct): one thing at a time
   (see "Order of events"), Back of the Head, keepsakes as icons with a fanfare, the Devil mid-turn,
-  Flourish's ghost dice, the hot tub only at the Ghoul and Gourd. 117 server/rules/strategy tests
-  + 10 client tests.
+  Flourish's ghost dice, the hot tub only at the Ghoul and Gourd. Then: Brodor's painting and
+  Martha's three mask paintings; McGrath on 1 life; a Clear-Eye cancel shows the ability first.
+  117 server/rules/strategy tests + 10 client tests.
   The user found the game too hard (21 Oct); with the nine fights a sensible player finished
   ~3.9% of the time (`node balance/experiments/runs.js`; options in `easier.js`); over the
   fourteen, ~1.1% (`node balance/experiments/tournament.js`): 27% reach the Yawning Portal, 4.5%
   the ship; Brodor (23% a fight fresh on 3 hearts) and Jaguar (25%) are the steepest steps.
+- **Visuals (22 Oct):** the plan is a doc shared with the user, "2, 4, 24: the next level visually"
+  (https://claude.ai/artifact/9MHGFUVoVrLiQiD7ZgL7ZJ): six directions, option 1 (light, glow and
+  atmosphere) in seven steps A-G. A **rough preview of steps B-D** is committed (23 Oct) but **not pushed**, and off
+  unless switched on (the user: keep it off the test site until they say): `client/src/look.ts`
+  (the switch, `?look=next` / `?look=classic`, remembered in `localStorage.tavernLook`; one
+  `flame()` for every light, shared with the page as `--flame`), `NextLights` and `Finish` in
+  TableScene (key, fill, rim, candle, a RoomEnvironment reflection; bloom, grade, ACES tone
+  mapping via `@react-three/postprocessing` 2.19.1, added to client/package.json), lacquered dice
+  in textures.ts (`MeshPhysicalMaterial`, clear coat, the face as bump map, an ivory tint), sheen
+  felt, metal brass, and `.look-next` / `.look-finish` CSS (the tavern and bust flicker, vignette,
+  grain). Findings: dice and brass gain most; strong warm light turns dice amber; a ragged edge
+  where the canvas meets the tavern comes from the glow pass over a see-through canvas, which
+  step A (the backdrop and bust into the 3D scene) removes. Not checked on a phone's frame rate.
+  Before/after: `previews/look-preview-1.jpg` (gitignored).
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
@@ -418,29 +434,33 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    **User plays the test site on the phone** and decides; change `shared/balance.js` and re-run
    `node balance/experiments/tournament.js` first. (`SAVE_SECRET` is set on the Render test
    service, by the user, 21 Oct; the live service will need its own when we ship.)
-2. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots at the Ghoul and Gourd (about half the walks), one of three after it.
-3. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
+2. **Visuals, option 1** (the user wants "the best of the best", 22 Oct): next is step A, the
+   tavern backdrop and the bust into the 3D scene with today's framing; then B-G as in the doc,
+   each judged on the user's phone with before/after shots. The rough preview (above) is the
+   starting point for B-D. Ask before pushing any of it.
+3. **Thom's visits:** kept as they are (the user, 21 Oct): one of four spots at the Ghoul and Gourd (about half the walks), one of three after it.
+4. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art, today the tavern's); sounds for the five new abilities
    (only Back of the Head has one, the swoosh); the ship's own spots and events (to workshop: a card
    game below deck, a stowaway instead of the thief); uses per fight for the five (first guesses, 1
    each). Stronger late abilities: to workshop.
-4. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the
+5. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the
    nameplate before an ability fires. Re-simulate after any change.
-5. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
+6. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
    Glove, Gold Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt); keepsake icons on the
    strip with a flash when one triggers. The Dice Den is still even odds (the user asked whether
    it makes sense, 21 Oct; with gold now worth spending it's a way to grow a purse).
-6. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build`; the user merges (that deploys the live game);
    then delete the test service. Fix anything Render-specific as it appears.
-7. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
+8. **Persistence:** move the leaderboard to a small hosted database so it survives deploys
    (more important now that gold is the score).
-8. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+9. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
    classic page reachable for a while; until then it skips Thom and the events, which the
    user accepted), update the PWA manifest/service worker, retire the old client code in
    `public/index.html`.
-9. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
+10. **Feel and big moments:** tune dice sound, roll length (~2.2 s), camera on other phones; a
    perfect-24 celebration; the devil/three-6s effect done the user's way (ask first).
-10. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship to
+11. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship to
    carry it into); new places with tougher opponents (the roguelite); possibly the Molar at 1 life if
    he ends too many runs (~1 in 7 for a careful player); optional art (`docs/art-direction.md`
    "Wanted": keepsake pictures, Klarg's hand, the Hangman's revolver); delete the unused
