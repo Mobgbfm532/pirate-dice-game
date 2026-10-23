@@ -1,21 +1,21 @@
-import { useRef, useSyncExternalStore } from 'react';
 import { BOT_ID, store } from './game';
 import { PORTRAITS, type Portrait } from './portraits';
 
-// The tavern behind the table, and the current opponent sitting across from you.
-// It is drawn underneath the transparent 3D canvas, so the table covers whatever is
-// below the table's far edge (the "horizon", measured each frame by the camera).
+// The tavern behind the table, and the current opponent sitting across from you: where they go
+// on screen and who sits there. They are drawn inside the 3D scene (Room.tsx) since 23 Oct, in
+// the same places they had as page layers; the table covers whatever is below its far edge (the
+// "horizon", measured each frame by the camera).
 
 // The scenes behind the table. floor: how far down the image its own foreground table starts
 // (our table covers from there); aspect: width / height; center: the point of the image that
 // sits behind the opponent (on a phone only a slice around it shows).
-interface Scene { file: string; floor: number; aspect: number; center: number }
+export interface Scene { file: string; floor: number; aspect: number; center: number }
 const TAVERN: Scene = { file: 'tavern.webp', floor: 0.77, aspect: 1408 / 768, center: 0.45 };
 // Outside the Ghoul and Gourd: the bouncer's fight, by the front door.
 const OUTSIDE: Scene = { file: 'ghoul-gourd-outside.webp', floor: 0.75, aspect: 1376 / 768, center: 0.6 };
 const SCENES: Record<string, Scene> = { 'Sperm McGrath': OUTSIDE };
 
-function currentScene(): Scene {
+export function currentScene(): Scene {
     const name = opponentName();
     return (name && SCENES[name]) || TAVERN;
 }
@@ -24,6 +24,9 @@ const HEADER_SPACE = 58; // keep the opponent's head clear of the turn line at t
 
 let last = '';
 let steadyBust = 0;
+
+// The latest layout in screen px (rounded, as the page layers had it), for the 3D room.
+export const backdropLayout = { horizon: 0, roomLeft: 0, roomTop: 0, roomWidth: 0, roomHeight: 0, bustHeight: 0, tableX: 0 };
 
 // Called by the camera rig every frame with the far edge's height on screen (px). leaning: the
 // camera is leaning in on a suspense roll; the opponent keeps their size (only moves with the
@@ -43,6 +46,10 @@ export function layoutBackdrop(horizon: number, width: number, leaning = false) 
     if (leaning && steadyBust > 0) bustHeight = steadyBust;
     else steadyBust = bustHeight;
 
+    Object.assign(backdropLayout, {
+        horizon: Math.round(horizon), roomLeft: Math.round(left), roomTop: Math.round(top),
+        roomWidth: Math.round(roomWidth), roomHeight: Math.round(height), bustHeight: Math.round(bustHeight)
+    });
     const key = [horizon, height, top, left, bustHeight].map(v => Math.round(v)).join(',') + scene.file;
     if (key === last) return;
     last = key;
@@ -59,6 +66,7 @@ export function layoutBackdrop(horizon: number, width: number, leaning = false) 
 // the Roll button right beside it) and the table's centre line (where the opponent sits).
 let lastAnchor = '';
 export function setRailAnchor(x: number, y: number, tableCenterX: number) {
+    backdropLayout.tableX = Math.round(tableCenterX);
     const key = `${Math.round(x)},${Math.round(y)},${Math.round(tableCenterX)}`;
     if (key === lastAnchor) return;
     lastAnchor = key;
@@ -98,30 +106,7 @@ export function acrossTheTable(): { key: string; portrait: Portrait; isBot: bool
     return key && PORTRAITS[key]?.bust ? { key, portrait: PORTRAITS[key], isBot: true } : null;
 }
 
+// What sits under the 3D canvas now: only the room's dark colour, until the scene has drawn.
 export function Backdrop() {
-    const snap = useSyncExternalStore(store.subscribe, store.get);
-    const across = acrossTheTable();
-    const portrait = across?.portrait ?? null;
-    const name = across?.key;
-    // The bot brightens on its turn.
-    const theirTurn = !!across && snap.state?.currentTurnId === BOT_ID;
-    // Martha changing faces (into a disguise, or back) swaps her bust with a shimmer, rather than
-    // the entrance a new opponent makes.
-    // (Decided once per face, so later re-renders don't cut the shimmer short.)
-    const seen = useRef<{ name?: string; swapped: boolean }>({ swapped: false });
-    if (seen.current.name !== name) {
-        const before = seen.current.name;
-        seen.current = { name, swapped: !!name && !!before && name.startsWith('Martha') && before.startsWith('Martha') };
-    }
-    const swapped = seen.current.swapped;
-
-    return (
-        <div className="backdrop" aria-hidden="true">
-            <div className="tavern-room" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${currentScene().file}")` }} />
-            {portrait?.bust && (
-                <img key={name} className={`opponent ${theirTurn ? 'active' : ''} ${swapped ? 'disguise-swap' : ''}`} src={portrait.src} alt=""
-                    style={portrait.seat ? { height: `calc(var(--bust-h, 0px) * ${portrait.seat})` } : undefined} />
-            )}
-        </div>
-    );
+    return <div className="backdrop" aria-hidden="true" />;
 }

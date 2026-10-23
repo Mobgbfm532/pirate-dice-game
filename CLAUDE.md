@@ -52,7 +52,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
 | `client/` | The 3D client (Vite + React + React Three Fiber + cannon-es), built to `client/dist`, served at **`/next`**. |
-| `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks. |
+| `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks; `shots.mjs` (not a test): silent headless-Chrome screenshots for before/after (`node test/shots.mjs previews/x look=next fight=1`, needs the dev test server and the dev client running). |
 | `art/` | Untouched AI originals. `client/scripts/process-art.mjs` (`npm --prefix client run art`) makes game files in `client/public/{art,textures}`. |
 | `docs/art-direction.md` | Style, palette, asset list + status, prompt pack. |
 | `shared/balance.js` | The Tavern Crawl's numbers: hearts, opponents' lives, gold, Thonic prices, events. |
@@ -89,9 +89,13 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
   and Thonic shelf (`drinkable()`), Thom's full-screen shop scene (`ThomShop`), the choice
   between fights (`Interlude`) and each event's scene (`SpotScene`), the run-over screen.
-  `Backdrop.tsx`: the scene behind the table (`SCENES` by opponent: the tavern, or outside the
-  Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`, `center`) + the bot opponent's
-  bust behind the table (multiplayer tables show no one there). `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
+  `Backdrop.tsx`: where the scene behind the table goes and who sits there (`SCENES` by opponent:
+  the tavern, or outside the Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`,
+  `center`; `backdropLayout` in screen px; multiplayer tables show no one there). `Room.tsx`
+  (since 23 Oct, visuals step A) draws the tavern and the bust **inside the 3D scene**: flat
+  pictures hung in front of the camera at the same screen places, drawn first so the table
+  covers them; a shader redoes the old CSS brightness/saturate/sepia, each drop-shadow is a
+  blurred copy (`halo`), and the entrance, turn glow and Martha's swap are the old CSS curves. `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
   `SPOT_PORTRAITS`; `seat` draws a cut-out that shows more body larger, so heads match: McGrath 2,
   Frak 1.4, Danhausen 1.6, Martha 1.15). While the camera leans in on a suspense roll the bust keeps its size.
 
@@ -211,6 +215,12 @@ one too, or saves only last until the server restarts, which on the free tier is
   where the canvas meets the tavern comes from the glow pass over a see-through canvas, which
   step A (the backdrop and bust into the 3D scene) removes. Not checked on a phone's frame rate.
   Before/after: `previews/look-preview-1.jpg` (gitignored).
+  **Step A done (23 Oct, committed, not pushed):** the tavern and the bust are in the 3D scene
+  (`Room.tsx`). The classic look matches the old page pixel for pixel (mean difference under 1/255
+  at 384x780, 844x390, 1280x800); in the look preview the room now goes through the glow and
+  grade too, so it reads warmer and brighter, and the ragged edge is gone. Shots in
+  `previews/step-a/` (gitignored). Martha's swap no longer leaves her stuck un-glowing on her turn
+  (the old CSS animation held its last frame). Next: step B on the user's phone.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build

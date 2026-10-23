@@ -1,0 +1,94 @@
+// Screenshots of the 3D table for before/after comparisons (not a test). Drives a headless Chrome
+// over the DevTools protocol against the dev client (vite on :5173, proxying the dev test server
+// on :3002 with its controls on :3003), sound off, and saves PNGs.
+//
+//   node test/shots.mjs <out-dir> [look=classic|next] [fight=1] [sizes=384x780@2.625,844x390@2.625,1280x800@1]
+//
+// Each size gets a fresh page that joins a Tavern Crawl, then a fight against opponent `fight`
+// (0 McGrath ... 13 Jaguar). Files: <out-dir>/<look>-<fight>-<w>x<h>.png
+import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const args = Object.fromEntries(process.argv.slice(3).map(a => a.split('=')));
+const outDir = process.argv[2] ?? 'previews';
+const look = args.look ?? 'classic';
+const fight = args.fight ?? '1';
+const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
+    const [wh, dpr] = s.split('@');
+    const [w, h] = wh.split('x').map(Number);
+    return { w, h, dpr: Number(dpr ?? 1) };
+});
+const CLIENT = args.client ?? 'http://localhost:5173/next/';
+const CONTROLS = args.controls ?? 'http://localhost:3003';
+const CHROME = args.chrome ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+mkdirSync(outDir, { recursive: true });
+const port = 9333 + Math.floor(Math.random() * 400);
+const chrome = spawn(CHROME, [
+    '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'shots-'))}`,
+    '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio', '--hide-scrollbars', 'about:blank'
+], { stdio: 'ignore' });
+
+async function connect() {
+    for (let i = 0; i < 50; i++) {
+        try { return await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); } catch { await wait(200); }
+    }
+    throw new Error('Chrome did not start');
+}
+
+function session(url) {
+    const ws = new WebSocket(url);
+    let id = 0;
+    const pending = new Map();
+    ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.id && pending.has(msg.id)) {
+            const { resolve, reject } = pending.get(msg.id);
+            pending.delete(msg.id);
+            msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result);
+        }
+    };
+    const ready = new Promise(r => { ws.onopen = r; });
+    const send = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
+        const n = ++id;
+        pending.set(n, { resolve, reject });
+        setTimeout(() => pending.has(n) && (pending.delete(n), reject(new Error(`${method} timed out`))), 30000);
+        ws.send(JSON.stringify({ id: n, method, params, sessionId }));
+    });
+    return { ready, send, close: () => ws.close() };
+}
+
+try {
+    const { webSocketDebuggerUrl } = await connect();
+    const cdp = session(webSocketDebuggerUrl);
+    await cdp.ready;
+    for (const { w, h, dpr } of sizes) {
+        const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
+        const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+        const s = (m, p) => cdp.send(m, p, sessionId);
+        const evaluate = async expr => (await s('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })).result.value;
+        await s('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: w < 768 });
+        await s('Page.enable');
+        await s('Page.addScriptToEvaluateOnNewDocument', {
+            source: `try { localStorage.tavernMuted = '1'; localStorage.tavernWinSeen = 'x'; localStorage.tavernLook = ${JSON.stringify(look)}; } catch {}
+                HTMLMediaElement.prototype.play = () => Promise.resolve();`
+        });
+        await s('Page.navigate', { url: CLIENT });
+        await wait(4000);
+        await evaluate(`window.__game.actions.join('Tester', 'Rokr', 'TAVERN')`);
+        await wait(2500);
+        await fetch(`${CONTROLS}/fight?n=${fight}`);
+        await wait(6000); // the entrance and the intro card settle
+        const { data } = await s('Page.captureScreenshot', { format: 'png' });
+        const file = join(outDir, `${look}-${fight}-${w}x${h}.png`);
+        writeFileSync(file, Buffer.from(data, 'base64'));
+        console.log(file);
+        await cdp.send('Target.closeTarget', { targetId });
+    }
+    cdp.close();
+} finally {
+    chrome.kill();
+}

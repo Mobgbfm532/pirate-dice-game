@@ -432,44 +432,14 @@ footer {
     .panel.join .fine { font-size: 0.75rem; }
 }
 
-/* ---- The tavern behind the table (under the transparent 3D canvas) ---- */
+/* ---- Under the 3D canvas: only the room's colour (the tavern and the opponent are drawn in
+   the 3D scene since 23 Oct, Room.tsx; their old filters, glows and entrance are redone there) ---- */
 
 .backdrop {
     position: fixed;
     inset: 0;
     z-index: 0;
-    overflow: hidden;
     background: var(--bg);
-}
-.backdrop .tavern-room {
-    position: absolute;
-    left: var(--room-left, 0);
-    top: var(--room-top, 0);
-    width: var(--room-w, 100%);
-    height: var(--room-h, 60%);
-    background-size: 100% 100%;
-    filter: brightness(0.8) saturate(0.95);
-}
-/* The opponent sits across the table: anchored so the table hides their lower fifth. */
-.backdrop .opponent {
-    position: absolute;
-    left: var(--table-x, 50%);
-    top: calc(var(--horizon, 0px) - var(--bust-h, 0px) * 0.8);
-    height: var(--bust-h, 0px);
-    transform: translateX(-50%);
-    filter: brightness(0.82) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6));
-    transition: filter 0.4s, transform 0.4s;
-    animation: opponent-in 1.1s cubic-bezier(0.2, 0.8, 0.25, 1);
-}
-.backdrop .opponent.active {
-    filter: brightness(1.02) drop-shadow(0 0 22px rgba(255, 158, 64, 0.45));
-    transform: translateX(-50%) scale(1.03);
-}
-/* A new opponent rises from behind the table and settles into the seat. */
-@keyframes opponent-in {
-    0% { opacity: 0; transform: translateX(-50%) translateY(45%) scale(0.92); filter: brightness(0.3); }
-    55% { opacity: 1; transform: translateX(-50%) translateY(-3%) scale(1.02); }
-    100% { opacity: 1; transform: translateX(-50%); }
 }
 
 .opponent-plate {
@@ -1989,14 +1959,6 @@ button.keepsake.used { opacity: 0.55; }
 .after-event button { flex: none; }
 .after-event .onward { width: 100%; }
 
-/* Martha changes faces: a quick flash of her violet as the masked bust takes her place. */
-.backdrop .opponent.disguise-swap { animation: disguise-swap 0.7s ease-out both; }
-@keyframes disguise-swap {
-    0% { opacity: 0; transform: translateX(-50%) scale(0.96); filter: brightness(1.6) drop-shadow(0 0 30px rgba(206, 147, 216, 1)); }
-    40% { opacity: 1; }
-    100% { opacity: 1; transform: translateX(-50%); filter: brightness(0.82) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6)); }
-}
-
 /* A Clear-Eye cancelled the move: its banner fades to grey, struck through, with a stamp. */
 .ability-moment.cancelled .ability-banner { filter: grayscale(0.7) brightness(0.85); }
 .ability-moment.cancelled .ability-banner .what { text-decoration: line-through; text-decoration-thickness: 3px; }
@@ -2008,19 +1970,7 @@ button.keepsake.used { opacity: 0.55; }
 }
 @keyframes stamp-in { from { opacity: 0; transform: rotate(-4deg) scale(1.8); } to { opacity: 1; transform: rotate(-4deg) scale(1); } }
 
-/* ---- The look preview (22 Oct; ?look=next): the page's layers follow the table's flame ---- */
-/* The tavern behind breathes with the candle, a little warmer and deeper. */
-.look-next .backdrop .tavern-room { filter: brightness(calc(0.62 + var(--flame, 1) * 0.26)) saturate(1.1) sepia(0.12); }
-/* The opponent takes warm light from the fire side (left), a soft candle rim, and dims when
-   it isn't their turn. */
-.look-next .backdrop .opponent {
-    filter: brightness(calc(0.66 + var(--flame, 1) * 0.12)) sepia(0.1)
-        drop-shadow(-5px 0 10px rgba(255, 140, 50, 0.38)) drop-shadow(0 0 18px rgba(0, 0, 0, 0.6));
-}
-.look-next .backdrop .opponent.active {
-    filter: brightness(calc(0.86 + var(--flame, 1) * 0.14)) sepia(0.06)
-        drop-shadow(-6px 0 14px rgba(255, 150, 60, 0.5)) drop-shadow(0 0 22px rgba(255, 158, 64, 0.35));
-}
+/* ---- The look preview (22 Oct; ?look=next) ---- */
 /* Over the table and tavern, under the controls: a soft vignette and the faintest grain. */
 .look-finish {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;

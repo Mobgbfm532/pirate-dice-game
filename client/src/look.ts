@@ -24,8 +24,8 @@ export function flame(seconds: number) {
         + Math.sin(seconds * 2.1 + 0.4) * 0.06;
 }
 
-// The web-page layers (the tavern picture and the opponent's bust) follow the same flame
-// through a CSS variable, until they move into the 3D scene (step A).
+// The page can follow the same flame through a CSS variable (the tavern and the bust read
+// flame() directly since they moved into the 3D scene, step A).
 let lastCss = 0;
 export function shareFlame(value: number, now: number) {
     if (now - lastCss < 50) return; // about 20 times a second is plenty for CSS

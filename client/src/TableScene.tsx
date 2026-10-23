@@ -10,6 +10,7 @@ import { table } from './game';
 import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slotPosition } from './layout';
 import { artTexture, paintedTexture } from './textures';
 import { layoutBackdrop, setRailAnchor } from './Backdrop';
+import { Room } from './Room';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
 const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
@@ -319,8 +320,7 @@ function NextLights() {
 
 // The look preview's finish over the 3D picture (option 1, step D): a soft glow on what's
 // bright (brass highlights, lacquer, magic), a warm grade, then the filmic tone curve.
-// (Vignette and grain are drawn over the whole page in CSS for now, so they reach the tavern
-// picture too: `.look-finish`.)
+// (Vignette and grain are still drawn over the page in CSS: `.look-finish`.)
 function Finish() {
     return (
         <EffectComposer multisampling={4}>
@@ -337,6 +337,8 @@ export function TableScene() {
         <>
             <fog attach="fog" args={['#120a05', 14, 30]} />
             <CameraRig />
+            {/* After the camera rig: it hangs the tavern and the opponent where the camera puts them this frame. */}
+            <Room />
             {lookNext ? <NextLights /> : <Lights />}
             <Tray />
             <Dice />
