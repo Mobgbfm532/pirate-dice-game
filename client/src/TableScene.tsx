@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -13,6 +13,7 @@ import { layoutBackdrop, setRailAnchor } from './Backdrop';
 import { Room } from './Room';
 import { DustMotes } from './Air';
 import { MomentLights } from './MomentLight';
+import { noteFrame, settings, tuneStore, tuning } from './tuning';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
 const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
@@ -310,6 +311,7 @@ function Lights() {
 function NextLights() {
     const candle = useRef<THREE.PointLight>(null);
     const fire = useRef<THREE.DirectionalLight>(null);
+    const fill = useRef<THREE.HemisphereLight>(null);
     const { gl, scene } = useThree();
 
     useEffect(() => {
@@ -325,19 +327,20 @@ function NextLights() {
         const f = flame(now / 1000);
         // (Eased back from 24, with a paler flame: strong warm light turned the dice amber.)
         if (candle.current) candle.current.intensity = 17 * f;
+        if (fill.current) fill.current.intensity = 0.3 / Math.max(0.25, tuning.shadows); // deeper shadows: less fill
         if (fire.current) fire.current.intensity = 1.7 * (0.85 + 0.15 * f);
         shareFlame(f, now);
     });
 
     return (
         <>
-            <hemisphereLight args={['#ffd8a8', '#1a1f2e', 0.3]} />
+            <hemisphereLight ref={fill} args={['#ffd8a8', '#1a1f2e', 0.3]} />
             <directionalLight
                 ref={fire}
                 position={[-6, 7, 2]}
                 color="#ffb373"
                 castShadow
-                shadow-mapSize={[2048, 2048]}
+                shadow-mapSize={[settings().shadowMap, settings().shadowMap]}
                 shadow-camera-left={-6}
                 shadow-camera-right={6}
                 shadow-camera-top={6}
@@ -359,7 +362,7 @@ function NextLights() {
 // darkest dark is an ember brown and the brightest light a warm cream. Works on display values.
 const gradeShader = /* glsl */`
 uniform vec3 floorColor, ceilColor, shadowTint, highlightTint;
-uniform float saturation, contrast;
+uniform float saturation, contrast, warmth;
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
     vec3 c = pow(max(inputColor.rgb, 0.0), vec3(1.0 / 2.2));
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -367,6 +370,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     c = (c - 0.5) * contrast + 0.5;
     c *= mix(vec3(1.0), shadowTint, 1.0 - smoothstep(0.0, 0.5, l));
     c *= mix(vec3(1.0), highlightTint, smoothstep(0.5, 1.0, l));
+    c *= vec3(1.0 + 0.08 * (warmth - 1.0), 1.0, 1.0 - 0.1 * (warmth - 1.0)); // the tuning panel's warmth
     // Only the very darkest darks lift to ember, and only white is held to cream: lifting every
     // shade flattened the room, and capping every bright colour dimmed the fire.
     c = clamp(c, 0.0, 1.0);
@@ -384,7 +388,8 @@ class GradeEffect extends Effect {
                 ['shadowTint', new THREE.Uniform(new THREE.Vector3(0.97, 1.02, 0.98))],   // bottle green
                 ['highlightTint', new THREE.Uniform(new THREE.Vector3(1.02, 1.0, 0.98))],  // honey
                 ['saturation', new THREE.Uniform(1.08)],
-                ['contrast', new THREE.Uniform(1.1)]
+                ['contrast', new THREE.Uniform(1.1)],
+                ['warmth', new THREE.Uniform(1)]
             ])
         });
     }
@@ -394,17 +399,31 @@ class GradeEffect extends Effect {
 // step D): a soft glow on only what is bright (candle flames, the tavern's lanterns, brass
 // highlights, magic), the filmic tone curve, the grade, a soft vignette and the faintest grain.
 // Edges stay smooth through the multisampling.
+// (Its strengths follow the tuning panel; the quality level drops grain, glow and edge smoothing on
+// devices that need it: tuning.ts.)
 function Finish() {
     const grade = useMemo(() => new GradeEffect(), []);
-    return (
-        <EffectComposer multisampling={4}>
-            <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.2} intensity={0.5} radius={0.45} />
-            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-            <primitive object={grade} />
-            <Vignette offset={0.42} darkness={0.42} />
-            <Noise premultiply blendFunction={BlendFunction.OVERLAY} opacity={0.08} />
-        </EffectComposer>
-    );
+    useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
+    const q = settings();
+    grade.uniforms.get('warmth')!.value = tuning.warmth;
+    const effects = [
+        q.bloom && tuning.glow > 0 && <Bloom key="bloom" mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.2} intensity={0.5 * tuning.glow} radius={0.45} />,
+        <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
+        <primitive key="grade" object={grade} />,
+        <Vignette key="vignette" offset={0.42} darkness={0.42 * tuning.vignette} />,
+        q.grain && tuning.grain > 0 && <Noise key="grain" premultiply blendFunction={BlendFunction.OVERLAY} opacity={0.08 * tuning.grain} />
+    ].filter(Boolean) as JSX.Element[];
+    return <EffectComposer key={`${q.multisampling}-${effects.length}`} multisampling={q.multisampling}>{effects}</EffectComposer>;
+}
+
+// The frame rate (for the panel, and Auto quality's step down), and the screen's sharpness for
+// the quality level.
+function QualityWatch() {
+    const { setDpr } = useThree();
+    const version = useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
+    useEffect(() => { setDpr(Math.min(window.devicePixelRatio || 1, settings().dpr)); }, [version, setDpr]);
+    useFrame((_, delta) => noteFrame(delta));
+    return null;
 }
 
 export function TableScene() {
@@ -419,6 +438,7 @@ export function TableScene() {
             <Dice />
             {lookNext && <DustMotes />}
             {lookNext && <Finish />}
+            {lookNext && <QualityWatch />}
         </>
     );
 }

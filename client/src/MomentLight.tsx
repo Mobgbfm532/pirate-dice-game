@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { store, table, type AbilityMoment } from './game';
+import { tuning } from './tuning';
 
 // The look preview's big moments as light (option 1, step F, 23 Oct): they light the room itself,
 // timed with their banners (as the moment shows on screen), not only the screen. A coloured light
@@ -75,6 +76,7 @@ export function MomentLights() {
             if (a.kind.shimmer) strength *= 0.8 + 0.2 * Math.sin(t / 1000 * 5);
             if (strength <= 0) active.current = null;
         }
+        strength *= tuning.moments; // the tuning panel
         const kind = a?.kind;
         lit.set(kind?.color ?? '#000000');
         if (point.current) { point.current.color.copy(lit); point.current.intensity = (kind?.light ?? 0) * strength; }

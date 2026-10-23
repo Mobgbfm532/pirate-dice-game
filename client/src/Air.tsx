@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { flame } from './look';
+import { settings, tuning } from './tuning';
 
 // The look preview's living air (option 1, step E, 23 Oct): what moves in the room besides the
 // dice. Dust drifting in the candlelight over the table (3D, DustMotes); and, on the paintings
@@ -155,7 +156,7 @@ export class ScreenAir {
             const scale = room.height / 700;
             if (room.air.fire) {
                 const [u, v] = room.air.fire;
-                const rate = f.devil ? 26 : 7;
+                const rate = (f.devil ? 26 : 7) * tuning.air * settings().particles;
                 this.emberDue += dt * rate;
                 while (this.emberDue >= 1) {
                     this.emberDue -= 1;
@@ -197,7 +198,7 @@ export class ScreenAir {
             const at = ([u, v]: [number, number]) => [bust.left + u * bust.width, bust.top + v * bust.height];
             const sm = bust.air.smoke;
             if (sm) {
-                this.smokeDue += dt * sm.rate;
+                this.smokeDue += dt * sm.rate * Math.min(1, tuning.air);
                 while (this.smokeDue >= 1) {
                     this.smokeDue -= 1;
                     const [x, y] = at(sm.at);
@@ -226,7 +227,7 @@ export class ScreenAir {
             p.y += p.vy * dt;
             const t = p.age / p.life;
             const size = p.size + p.grow * t;
-            const a = p.alpha * Math.min(1, p.age * 2.5) * (1 - t) * (bust ? bust.opacity : 0);
+            const a = p.alpha * Math.min(1, p.age * 2.5) * (1 - t) * (bust ? bust.opacity : 0) * Math.max(1, tuning.air);
             (glowingSmoke ? this.lights : this.puffs).add(f.map, p.x, p.y, size, size * 1.15, p.color, a, p.seed + t * 0.8);
         }
         [this.glowing, this.beams, this.puffs, this.lights].forEach(b => b.end());
@@ -239,7 +240,7 @@ const DUST = 44;
 const CANDLE = new THREE.Vector3(3.5, 3, -3.5);
 const dustVertex = /* glsl */`
 attribute float seed;
-uniform float time, scale, flicker;
+uniform float time, scale, flicker, amount;
 uniform vec3 candle;
 varying float vLight;
 void main() {
@@ -253,10 +254,11 @@ void main() {
     gl_Position = projectionMatrix * mv;
 }`;
 const dustFragment = /* glsl */`
+uniform float amount;
 varying float vLight;
 void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
-    float a = pow(max(0.0, 1.0 - d), 2.0) * vLight * 0.9;
+    float a = pow(max(0.0, 1.0 - d), 2.0) * vLight * 0.9 * amount;
     gl_FragColor = vec4(vec3(1.0, 0.86, 0.66) * a, a);
 }`;
 
@@ -273,7 +275,7 @@ export function DustMotes() {
         geometry.setAttribute('seed', new THREE.BufferAttribute(new Float32Array(motes.map(m => m.seed)), 1));
         const material = new THREE.ShaderMaterial({
             vertexShader: dustVertex, fragmentShader: dustFragment,
-            uniforms: { time: { value: 0 }, scale: { value: 300 }, flicker: { value: 1 }, candle: { value: CANDLE } },
+            uniforms: { time: { value: 0 }, scale: { value: 300 }, flicker: { value: 1 }, amount: { value: 1 }, candle: { value: CANDLE } },
             transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false
         });
         return { geometry, material, motes };
@@ -298,6 +300,8 @@ export function DustMotes() {
         pos.needsUpdate = true;
         material.uniforms.time.value = t;
         material.uniforms.flicker.value = flame(t);
+        material.uniforms.amount.value = tuning.dust;
+        geometry.setDrawRange(0, Math.round(DUST * settings().particles));
         // Point size in device pixels at one unit away, so motes keep their size on any screen.
         material.uniforms.scale.value = size.height * gl.getPixelRatio() * 0.012;
     });

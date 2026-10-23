@@ -317,6 +317,7 @@ footer {
     background: rgba(8, 4, 2, 0.72);
     display: flex;
     align-items: center;
+    align-items: safe center; /* a panel taller than the screen starts at the top and scrolls */
     justify-content: center;
     padding: 16px;
     pointer-events: auto;
@@ -863,10 +864,28 @@ footer {
 
 .run-over { gap: 10px; }
 .run-over.won h1 { color: #b8860b; text-shadow: 0 2px 0 rgba(255, 213, 79, 0.5); }
-/* Nine opponents: the Ghoul and Gourd's five on one row, the Yawning Portal's four centred below. */
+/* The fourteen opponents, five a row (three rows) where there's height for it. */
 .crawl-path { list-style: none; margin: 4px auto; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: calc(5 * 52px + 4 * 8px); }
 .crawl-path li { position: relative; }
 .crawl-path .mini-portrait { width: 52px; height: 52px; }
+/* Shorter screens: smaller, seven a row (two rows), so New run and Leave stay on screen. */
+@media (max-height: 700px) {
+    .run-over { gap: 6px; }
+    .crawl-path { gap: 6px; max-width: calc(7 * 38px + 6 * 6px); }
+    .crawl-path .mini-portrait { width: 38px; height: 38px; }
+    .run-over .gold .amount { font-size: 2.1rem; }
+}
+/* A phone on its side: two columns, the run on the left, the leaderboard and buttons on the right. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .panel.run-over { width: min(100%, 780px); display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 4px; align-content: start; padding: 12px 18px; }
+    .run-over > * { grid-column: 1; }
+    .run-over > .leaderboard { grid-column: 2; grid-row: 1 / span 4; }
+    .run-over > .row { grid-column: 2; grid-row: 5; align-self: end; }
+    .run-over h1 { font-size: 1.6rem; margin: 0; }
+    .crawl-path { gap: 5px; max-width: calc(7 * 32px + 6 * 5px); margin: 0 auto; }
+    .crawl-path .mini-portrait { width: 32px; height: 32px; }
+    .run-over .gold .amount { font-size: 1.8rem; }
+}
 .crawl-path .unmet .mini-portrait { filter: grayscale(1); opacity: 0.55; border-color: #b39461; }
 .crawl-path .fell .mini-portrait { border-color: var(--red); }
 .crawl-path .mark {
@@ -1159,6 +1178,7 @@ footer {
     .thom-lantern { top: 10%; }
     .thom-counter {
         justify-content: center;
+        justify-content: safe center; /* taller than the screen: start at the top, scroll the rest */
         overflow-y: auto;
         padding: 16px 24px max(12px, env(safe-area-inset-bottom));
         border-top: none;
@@ -1970,3 +1990,27 @@ button.keepsake.used { opacity: 0.55; }
     transform: rotate(-4deg); animation: stamp-in 0.4s 0.5s ease-out both;
 }
 @keyframes stamp-in { from { opacity: 0; transform: rotate(-4deg) scale(1.8); } to { opacity: 1; transform: rotate(-4deg) scale(1); } }
+
+/* ---- The tuning panel (step G; ?tune=1): a sheet over the controls, never over the dice for long ---- */
+.tune-panel {
+    position: fixed; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 40;
+    width: min(94vw, 420px); max-height: 62vh; overflow-y: auto;
+    padding: 10px 14px 12px; border-radius: 12px;
+    background: rgba(24, 15, 8, 0.94); border: 1px solid var(--panel-border); color: var(--parchment);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); font-size: 0.9rem; pointer-events: auto;
+}
+.tune-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.tune-head strong { font-size: 1.05rem; }
+.tune-fps { flex: 1; color: var(--parchment-dim); font-variant-numeric: tabular-nums; }
+.tune-close { background: none; border: none; color: var(--parchment); font-size: 1.1rem; padding: 4px 6px; }
+.tune-note { margin: 2px 0 6px; color: var(--parchment-dim); font-size: 0.8rem; min-height: 0; }
+.tune-note:empty { display: none; }
+.tune-note a { color: var(--gold-bright); }
+.tune-levels { display: flex; gap: 6px; margin-bottom: 6px; }
+.tune-levels button { flex: 1; padding: 6px 0; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.05); color: var(--parchment); }
+.tune-levels button.on { background: rgba(224, 180, 76, 0.3); border-color: var(--gold-bright); }
+.tune-row { display: grid; grid-template-columns: 8.5em 1fr 3.6em; align-items: center; gap: 8px; padding: 3px 0; }
+.tune-row input { width: 100%; accent-color: var(--gold-bright); }
+.tune-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--parchment-dim); }
+.tune-actions { display: flex; gap: 8px; margin-top: 8px; }
+.tune-actions button { flex: 1; }

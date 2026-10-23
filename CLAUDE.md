@@ -262,6 +262,14 @@ one too, or saves only last until the server restarts, which on the free tier is
   a keepsake gold, the Shield blue, a perfect 24 gold. Tuned from frozen-clock shots so the room
   carries the colour and the dice stay readable (`shots.mjs moment=...`; `previews/frozen.mjs`
   stops the page clock at set instants, which a moving moment needs).
+  **Step G (23 Oct): the tuning panel** (`tuning.ts`, Hud's `TuningPanel`): with `?tune=1` in the
+  address (remembered; `?tune=0` hides it) a ⚙ in the header opens sliders (warmth, glow, grain,
+  vignette, shadow depth, dust, embers and smoke, flame flicker, moment lights; multipliers, 1 =
+  as built, saved per device in `tavernTune`), the frame rate, and the quality level: Auto (starts
+  High, steps down when frames stay under ~45 a second, never back up), High / Medium / Low
+  (`QUALITY`: screen sharpness, edge smoothing, glow, grain, particles, shadow detail). "Copy
+  settings" gives the user JSON to paste back: those values become the new defaults. Not yet
+  measured on the user's phone.
 - **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
   (`Portrait.center`, percent, plus `aspect`; `seated()` in portraits.ts). Behind the table the face
   sits on the table's centre line (Room); round avatars solve the background position so the face

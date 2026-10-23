@@ -6,6 +6,8 @@ import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMus
 import { simulateRoll } from './physics';
 import { AVATAR_IDS, SPOT_PORTRAITS, avatarStyle, portraitFor } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey } from './Backdrop';
+import { lookNext } from './look';
+import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
 const REACTIONS = ['😀', '😂', '😮', '😎', '😭'];
 
@@ -1422,11 +1424,57 @@ function useFooterInset() {
     }, []);
 }
 
+// The tuning panel (step G; with ?tune=1 in the address): sliders for the look's feel, the frame
+// rate and the quality level, and a button that copies the settings to send back, so the numbers
+// the user picks by eye become the game's (tuning.ts).
+function TuningPanel({ onClose }: { onClose: () => void }) {
+    useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
+    const [fps, setFps] = useState(framesPerSecond());
+    useEffect(() => { const t = setInterval(() => setFps(framesPerSecond()), 500); return () => clearInterval(t); }, []);
+    const copy = async () => {
+        const text = JSON.stringify({ tuning, quality: quality.level, auto: quality.auto, fps, screen: `${innerWidth}x${innerHeight}@${devicePixelRatio}` });
+        try { await navigator.clipboard.writeText(text); showToast('', 'Settings copied: paste them to Claude', 'info', 2600); }
+        catch { showToast('Your settings', text, 'info', 12000); }
+    };
+    const levels: (Quality | 'auto')[] = ['auto', 'high', 'medium', 'low'];
+    return (
+        <div className="tune-panel" role="dialog" aria-label="Tuning">
+            <div className="tune-head">
+                <strong>Tuning</strong>
+                <span className="tune-fps">{fps} fps · {quality.level}{quality.auto ? ' (auto)' : ''}</span>
+                <button className="tune-close" onClick={onClose} aria-label="Close tuning">✕</button>
+            </div>
+            {!lookNext && (
+                <p className="tune-note">The look preview is off, so most sliders do nothing. <a href="?look=next">Turn it on</a></p>
+            )}
+            <div className="tune-levels">
+                {levels.map(l => (
+                    <button key={l} className={(l === 'auto' ? quality.auto : !quality.auto && quality.level === l) ? 'on' : ''}
+                        onClick={() => (l === 'auto' ? setQuality('high', true) : setQuality(l, false))}>{l === 'auto' ? 'Auto' : l[0].toUpperCase() + l.slice(1)}</button>
+                ))}
+            </div>
+            <p className="tune-note">{QUALITY[quality.level].bloom ? '' : 'Glow off at this level. '}{QUALITY[quality.level].grain ? '' : 'Grain off at this level.'}</p>
+            {(Object.keys(TUNE_LABELS) as (keyof Tuning)[]).map(key => (
+                <label key={key} className="tune-row">
+                    <span>{TUNE_LABELS[key]}</span>
+                    <input type="range" min={0} max={2} step={0.05} value={tuning[key]} onChange={e => setTune(key, Number(e.target.value))} />
+                    <span className="tune-value">×{tuning[key].toFixed(2)}</span>
+                </label>
+            ))}
+            <div className="tune-actions">
+                <button className="primary" onClick={copy}>Copy settings</button>
+                <button className="secondary" onClick={resetTune}>Reset</button>
+            </div>
+        </div>
+    );
+}
+
 export function Hud() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
     const [musicOff, setMusicOffState] = useState(isMusicOff());
     const [soundsOff, setSoundsOffState] = useState(areSoundsOff());
     const [introShowing, setIntroShowing] = useState(false);
+    const [tuneOpen, setTuneOpen] = useState(false);
     const footerRef = useFooterInset();
 
     if (!snap.joined) return <JoinScreen />;
@@ -1447,6 +1495,7 @@ export function Hud() {
                 {/* Tavern Crawl: the opponent's nameplate and your chip show whose turn it is. */}
                 {state?.mode !== 'tavern-crawl' && <div className="turn-slot"><TurnBanner snap={snap} state={state} /></div>}
                 <div className="sound-toggles">
+                    {tunePanel && <button className="mute" onClick={() => setTuneOpen(!tuneOpen)} aria-label="Tuning" title="Tuning">⚙</button>}
                     <button className={`mute ${musicOff ? 'off' : ''}`} onClick={() => { setMusicOff(!musicOff); setMusicOffState(!musicOff); }}
                         aria-label={musicOff ? 'Music on' : 'Music off'} aria-pressed={!musicOff} title={musicOff ? 'Music is off' : 'Music is on'}>🎵</button>
                     <button className={`mute ${soundsOff ? 'off' : ''}`} onClick={() => { setSoundsOff(!soundsOff); setSoundsOffState(!soundsOff); }}
@@ -1457,7 +1506,9 @@ export function Hud() {
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
             <AbilityMomentView snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}
-            <YourTurnBanner at={snap.yourTurnAt} />
+            {/* (Not over an opponent's entrance card: the card comes first.) */}
+            {!introShowing && <YourTurnBanner at={snap.yourTurnAt} />}
+            {tunePanel && tuneOpen && <TuningPanel onClose={() => setTuneOpen(false)} />}
 
             <div className="callout-area" aria-live="polite">
                 {snap.callout && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}

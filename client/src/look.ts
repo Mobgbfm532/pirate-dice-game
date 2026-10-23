@@ -1,3 +1,5 @@
+import { tuning } from './tuning';
+
 // The look preview (22 Oct): a rough first pass at richer light, materials and glow
 // (docs: "2, 4, 24: the next level visually", option 1, steps B to D), behind a switch so it
 // can be compared with today's look. On with ?look=next, off with ?look=classic; remembered on
@@ -21,7 +23,7 @@ if (lookNext) document.documentElement.classList.add('look-next');
 // so a slow, irregular drift (smoothed random values, not sine waves; the user's call, 23 Oct:
 // the old 7 and 13 times a second read as pulsing).
 export function flame(seconds: number) {
-    return 1 + drift(seconds * 0.7) * 0.05 + drift(seconds * 1.9 + 31.7) * 0.025;
+    return 1 + (drift(seconds * 0.7) * 0.05 + drift(seconds * 1.9 + 31.7) * 0.025) * tuning.flicker;
 }
 
 // Smooth random values between -1 and 1: a new random height each whole step, eased between.
