@@ -5,7 +5,8 @@
 //   node test/shots.mjs <out-dir> [look=classic|next] [fight=1] [roll=1] [sizes=384x780@2.625,844x390@2.625,1280x800@1]
 //
 // Each size gets a fresh page that joins a Tavern Crawl, then a fight against opponent `fight`
-// (0 McGrath ... 13 Jaguar); roll=1 throws once, so the dice lie on the felt. Files:
+// (0 McGrath ... 13 Jaguar); roll=1 throws once, so the dice lie on the felt. seed=42 (the
+// default) makes the server's draws repeat from the fight on: the same throw every time. Files:
 // <out-dir>/<look>-<fight>[-roll]-<w>x<h>.png
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
@@ -17,6 +18,7 @@ const outDir = process.argv[2] ?? 'previews';
 const look = args.look ?? 'classic';
 const fight = args.fight ?? '1';
 const roll = args.roll === '1';
+const seed = args.seed ?? '42';
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
     const [wh, dpr] = s.split('@');
     const [w, h] = wh.split('x').map(Number);
@@ -79,9 +81,13 @@ try {
                 HTMLMediaElement.prototype.play = () => Promise.resolve();`
         });
         await s('Page.navigate', { url: CLIENT });
-        await wait(4000);
+        // Wait for the game to load, join, and wait until the table is there.
+        await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game) { clearInterval(t); r(); } }, 100); })`);
+        await wait(1000);
         await evaluate(`window.__game.actions.join('Tester', 'Rokr', 'TAVERN')`);
-        await wait(2500);
+        await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game.store.get().state?.tavernRun) { clearInterval(t); r(); } }, 100); })`);
+        await wait(1500);
+        await fetch(`${CONTROLS}/seed?n=${seed}`);
         await fetch(`${CONTROLS}/fight?n=${fight}`);
         await wait(6000); // the entrance and the intro card settle
         if (roll) {
@@ -96,5 +102,6 @@ try {
     }
     cdp.close();
 } finally {
+    await fetch(`${CONTROLS}/seed`).catch(() => {});
     chrome.kill();
 }

@@ -70,27 +70,102 @@ function hiddenTexture() {
 
 const diceMaterialProps = { roughness: 0.32, metalness: 0.0 };
 
-// The look preview: lacquered ivory. A clear coat gleams over a slightly softer body, and the
-// painted face doubles as a bump map, so the dark pips read as engraved.
+// The look preview (step C): lacquered ivory. A clear coat gleams over a slightly softer body;
+// the pips are engraved (a height map found from the painted face, `engraving`); the edges and
+// corners are worn, the lacquer rubbed thin and the ivory duller there (`wear`).
 const DiceMaterial = lookNext ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-const lacquer = lookNext ? { roughness: 0.5, clearcoat: 0.7, clearcoatRoughness: 0.2, bumpScale: 1.6 } : {};
+const lacquer = lookNext ? { roughness: 0.55, clearcoat: 0.8, clearcoatRoughness: 0.16, bumpScale: 2.2 } : {};
 // (and a touch of warm ivory under the paint, so strong light doesn't wash the faces white)
 const ivory = lookNext ? { color: new THREE.Color('#f8eedc') } : {};
-const withBump = (m: THREE.MeshStandardMaterial) => {
-    if (lookNext) { m.bumpMap = m.map; m.needsUpdate = true; }
+
+// A face's engraving, from its painting: the ivory stands high, the pips (dark, or the red 1 and
+// green 6) are cut in, with a soft bevel at their rims. Read by the material as a bump map.
+const engravings = new WeakMap<THREE.Texture, THREE.Texture>();
+function engraving(face: THREE.Texture) {
+    const known = engravings.get(face);
+    if (known) return known;
+    const source = face.image as CanvasImageSource & { width: number };
+    const size = source.width;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(source, 0, 0, size, size);
+    const pixels = ctx.getImageData(0, 0, size, size);
+    const d = pixels.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        const sat = Math.max(r, g, b) - Math.min(r, g, b);
+        const pip = Math.min(1, Math.max(0, (0.72 - lum) / 0.25, (sat - 0.3) / 0.2));
+        d[i] = d[i + 1] = d[i + 2] = Math.round(255 * (1 - pip));
+        d[i + 3] = 255;
+    }
+    ctx.putImageData(pixels, 0, 0);
+    // The bevel: soften the cut a little (a hard step reads as a printed outline, not a cut).
+    const soft = document.createElement('canvas');
+    soft.width = soft.height = size;
+    const sctx = soft.getContext('2d')!;
+    sctx.filter = `blur(${size / 256}px)`;
+    sctx.drawImage(canvas, 0, 0);
+    const cut = new THREE.CanvasTexture(soft);
+    engravings.set(face, cut);
+    return cut;
+}
+
+// Wear on a face (shared by all six): red = how much lacquer is left, green = roughness. Full and
+// glossy in the middle, rubbed and duller towards the edges, in blotches rather than a clean band.
+function wearTexture() {
+    const size = 256;
+    const blotches = document.createElement('canvas');
+    blotches.width = blotches.height = 16;
+    const bctx = blotches.getContext('2d')!;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const v = Math.round(255 * Math.random());
+        bctx.fillStyle = `rgb(${v},${v},${v})`;
+        bctx.fillRect(x, y, 1, 1);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(blotches, 0, 0, size, size);
+    const pixels = ctx.getImageData(0, 0, size, size);
+    const d = pixels.data;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4;
+        const edge = Math.min(x, y, size - 1 - x, size - 1 - y) / size; // 0 at the edge, 0.5 in the middle
+        const toEdge = 1 - Math.min(1, Math.max(0, (edge - 0.02) / 0.12));
+        const wear = Math.min(1, toEdge * (0.55 + d[i] / 255 * 0.9));
+        d[i] = Math.round(255 * (1 - wear * 0.75));      // lacquer left
+        d[i + 1] = Math.round(255 * (0.78 + wear * 0.22)); // roughness
+        d[i + 2] = 0;
+        d[i + 3] = 255;
+    }
+    ctx.putImageData(pixels, 0, 0);
+    return new THREE.CanvasTexture(canvas);
+}
+const wear = lookNext ? wearTexture() : null;
+
+const finish = (m: THREE.MeshStandardMaterial) => {
+    if (!lookNext || !m.map) return m;
+    m.bumpMap = engraving(m.map);
+    const coated = m as THREE.MeshPhysicalMaterial;
+    coated.roughnessMap = wear;
+    coated.clearcoatMap = wear;
+    m.needsUpdate = true;
     return m;
 };
 
 export function createDiceMaterials() {
-    const faces = FACE_VALUES.map(v => withBump(new DiceMaterial({ map: faceTexture(v), ...diceMaterialProps, ...lacquer, ...ivory })));
+    const faces = FACE_VALUES.map(v => finish(new DiceMaterial({ map: faceTexture(v), ...diceMaterialProps, ...lacquer, ...ivory })));
     const hiddenMap = hiddenTexture();
     const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
     // The Loaded Die keepsake's die: the same faces, warmed to old gold so it stands out.
-    const loaded = FACE_VALUES.map((_, i) => withBump(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps, ...lacquer, ...(lookNext ? { metalness: 0.35 } : {}) })));
+    const loaded = FACE_VALUES.map((_, i) => finish(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps, ...lacquer, ...(lookNext ? { metalness: 0.35 } : {}) })));
     // Frak's Mind Whip: the die he made you keep glows his sickly green and violet.
-    const mind = FACE_VALUES.map((_, i) => withBump(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps, ...lacquer })));
+    const mind = FACE_VALUES.map((_, i) => finish(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#8fd27a'), emissive: new THREE.Color('#6a1b9a'), emissiveIntensity: 0.7, ...diceMaterialProps, ...lacquer })));
     // The Wild Magic Hot Tub: the die its surge works on, aqua with a soft glow.
-    const tub = FACE_VALUES.map((_, i) => withBump(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#86e3ee'), emissive: new THREE.Color('#00838f'), emissiveIntensity: 0.4, ...diceMaterialProps, ...lacquer })));
+    const tub = FACE_VALUES.map((_, i) => finish(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#86e3ee'), emissive: new THREE.Color('#00838f'), emissiveIntensity: 0.4, ...diceMaterialProps, ...lacquer })));
     loadPaintedFaces(faces, [loaded, mind, tub]);
     return { faces, hidden, loaded, mind, tub };
 }
@@ -115,9 +190,12 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.
             }, 512);
             materials[i].map?.dispose();
             materials[i].map = texture;
-            if (lookNext) materials[i].bumpMap = texture;
-            materials[i].needsUpdate = true;
-            alike.forEach(set => { set[i].map = texture; if (lookNext) set[i].bumpMap = texture; set[i].needsUpdate = true; });
+            const cut = lookNext ? engraving(texture) : null;
+            [materials, ...alike].forEach(set => {
+                set[i].map = texture;
+                if (cut) set[i].bumpMap = cut;
+                set[i].needsUpdate = true;
+            });
         });
     };
     image.src = DICE_SHEET_URL;

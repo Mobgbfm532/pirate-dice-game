@@ -123,7 +123,7 @@ read and follow the file):
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
-against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/between?spots=thom,shrine` (add
+against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren`). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
@@ -227,7 +227,14 @@ one too, or saves only last until the server restarts, which on the free tier is
   tavern holds steady while its brightest parts (lanterns, candles, fire) breathe with the
   flame; a soft contact shadow under each die (Dice.tsx, fades as it rises); the candle eased
   to 17 and paler, so the dice stay ivory. Shots in `previews/step-b/`. Not checked: frame rate on
-  the phone. Next: step C (materials), after the user has seen B.
+  the phone.
+  **Step C (23 Oct, committed, not pushed; look preview only):** dice pips engraved from the
+  painted faces (`engraving` in textures.ts: a height map, cached per face), worn edges (`wear`:
+  less lacquer, rougher, in blotches); the felt worn darker where throws end (`wornPatch`);
+  brass plates reflect the room (their own envMap at 0.3) and read as polished gold; the slot
+  rail varnished. Red 1s, green 6s and the plates' 2 and 4 stay clear. Shots in
+  `previews/step-c/`, now the same throw each time (`/seed` on the dev controls; `shots.mjs`
+  seeds 42). Next: step D (glow and grade), after the user has seen C.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build

@@ -136,6 +136,25 @@ function CameraRig() {
     return null;
 }
 
+// A soft, uneven darkening in the middle of the felt (an oval, a little to the right where the
+// throws mostly end), drawn over it.
+function wornPatch() {
+    const w = 256, h = 150;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.translate(w * 0.56, h * 0.5);
+    ctx.scale(1.7, 1);
+    const shade = ctx.createRadialGradient(0, 0, 0, 0, 0, h * 0.48);
+    shade.addColorStop(0, 'rgba(8,14,6,0.32)');
+    shade.addColorStop(0.6, 'rgba(8,14,6,0.16)');
+    shade.addColorStop(1, 'rgba(8,14,6,0)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(-w, -h, w * 2, h * 2);
+    return new THREE.CanvasTexture(canvas);
+}
+
 function Tray() {
     // Painted textures (docs/art-direction.md). Each tiles at roughly real-world scale:
     // the felt image covers ~3 units, and the plank image (four rows of planks) ~3.8
@@ -144,6 +163,7 @@ function Tray() {
     const tabletop = useMemo(() => paintedTexture('table-planks.webp', 40 / (3.8 * 1402 / 768), (24 - TABLE_FAR_EDGE_Z) / 3.8), []);
     const rails = useMemo(() => paintedTexture('rail-walnut.webp', 2, 0.35), []);
     const slotRail = useMemo(() => paintedTexture('rail-walnut.webp', 1.6, 0.3), []);
+    const feltWear = useMemo(() => (lookNext ? wornPatch() : null), []);
     const width = TRAY.maxX - TRAY.minX;
     const depth = TRAY.maxZ - TRAY.minZ;
     const cx = (TRAY.minX + TRAY.maxX) / 2;
@@ -180,6 +200,13 @@ function Tray() {
                     ? <meshPhysicalMaterial map={felt} roughness={0.95} sheen={1} sheenRoughness={0.55} sheenColor="#7fb88c" />
                     : <meshStandardMaterial map={felt} roughness={1} />}
             </mesh>
+            {/* The look preview (step C): the felt worn darker where the dice mostly land. */}
+            {feltWear && (
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.002, cz]} renderOrder={1}>
+                    <planeGeometry args={[width, depth]} />
+                    <meshBasicMaterial map={feltWear} transparent depthWrite={false} toneMapped={false} />
+                </mesh>
+            )}
             {/* Rails */}
             {railBoxes.map(([x, z, w, d], i) => (
                 <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
@@ -192,7 +219,9 @@ function Tray() {
             {/* Slot rail in front of the tray */}
             <mesh position={[0.05, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[width + 0.9, 1.25]} />
-                <meshStandardMaterial map={slotRail} color="#e8d6c4" roughness={0.6} />
+                {lookNext
+                    ? <meshPhysicalMaterial map={slotRail} color="#e8d6c4" roughness={0.55} clearcoat={0.5} clearcoatRoughness={0.3} />
+                    : <meshStandardMaterial map={slotRail} color="#e8d6c4" roughness={0.6} />}
             </mesh>
             <Slots />
         </group>
@@ -200,6 +229,16 @@ function Tray() {
 }
 
 function Slots() {
+    // The look preview (step C): real brass. Polished metal is mostly reflection, so the plates
+    // see the reflected room about twice as strongly as the rest of the scene does.
+    const brass = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+    const { scene } = useThree();
+    useFrame(() => {
+        if (!lookNext || !scene.environment) return;
+        brass.current.forEach(m => {
+            if (m && m.envMap !== scene.environment) { m.envMap = scene.environment; m.envMapIntensity = 0.3; m.needsUpdate = true; }
+        });
+    });
     const two = useMemo(() => artTexture('plate-2.webp'), []);
     const four = useMemo(() => artTexture('plate-4.webp'), []);
     const plain = useMemo(() => artTexture('plate-blank.webp'), []);
@@ -210,13 +249,13 @@ function Slots() {
             {REQUIRED_SLOT_X.map((x, i) => (
                 <mesh key={i} position={[x, 0.008, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]}>
                     <planeGeometry args={[1.05, 1.05]} />
-                    <meshStandardMaterial map={i === 0 ? two : four} transparent roughness={lookNext ? 0.32 : 0.45} metalness={lookNext ? 0.85 : 0.3} />
+                    <meshStandardMaterial ref={m => { brass.current[i] = m; }} map={i === 0 ? two : four} transparent roughness={lookNext ? 0.26 : 0.45} metalness={lookNext ? 0.9 : 0.3} />
                 </mesh>
             ))}
             {scoring.map((p, i) => (
                 <mesh key={i} position={[p.x, 0.008, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]}>
                     <planeGeometry args={[1.0, 1.0]} />
-                    <meshStandardMaterial map={plain} transparent opacity={0.85} roughness={lookNext ? 0.32 : 0.45} metalness={lookNext ? 0.85 : 0.3} />
+                    <meshStandardMaterial ref={m => { brass.current[2 + i] = m; }} map={plain} transparent opacity={0.85} roughness={lookNext ? 0.26 : 0.45} metalness={lookNext ? 0.9 : 0.3} />
                 </mesh>
             ))}
         </group>

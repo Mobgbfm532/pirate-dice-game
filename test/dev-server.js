@@ -17,6 +17,7 @@
 //   curl "http://localhost:3003/invitation?boss=brodor"   Brodor beaten: on to the Salty Swallow
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
+//   curl "http://localhost:3003/seed?n=42"           every random draw follows a seed (the same throw each time); /seed alone ends it
 //        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands)
 //
 // Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
@@ -87,10 +88,32 @@ const COMMANDS = {
     }
 };
 
+// /seed?n=42: from now on every random draw on the server (dice, throws, abilities) follows that
+// seed, so the same steps give the same throw (before/after screenshots). /seed alone: random again.
+const crypto = require('crypto');
+const realRandomInt = crypto.randomInt;
+function seedRandom(seed) {
+    if (seed === null) { crypto.randomInt = realRandomInt; return; }
+    let s = Number(seed) >>> 0;
+    const next = () => { // mulberry32
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    crypto.randomInt = (min, max) => (max === undefined ? Math.floor(next() * min) : min + Math.floor(next() * (max - min)));
+}
+
 http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
-    const command = COMMANDS[url.pathname];
     res.setHeader('Access-Control-Allow-Origin', '*');
+    if (url.pathname === '/seed') {
+        seedRandom(url.searchParams.get('n'));
+        res.end(`ok: seed ${url.searchParams.get('n') ?? 'off'}\n`);
+        return;
+    }
+    const command = COMMANDS[url.pathname];
     if (!command) {
         res.statusCode = 404;
         res.end(`Commands: ${Object.keys(COMMANDS).join(', ')}\n`);
