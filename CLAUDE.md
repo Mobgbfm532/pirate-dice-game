@@ -341,8 +341,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   waits behind it, so glows, ✦ marks and hearts change with the moment that explains them. The
   Lady's Grace is checked before the Shield. A Clear-Eye cancel shows the ability first (its
   banner struck through, "Cancelled", none of its effect; `cancelled: true`), then the Thonic
-  (`fireTavernAbility`); moments raised while dice are thrown (`emitMoment`, `room.rollMoments`)
-  wait until they land.
+  (`fireTavernAbility`). **Dice are never thrown under a moment** (the user's call, 23 Oct): the
+  abilities a throw brings (the Devil, Martha's disguise, Mind Whip, Flourish, Rokr's blur, a
+  Clear-Eye cancel; `emitMoment`, `room.rollMoments`) play first, banner and effect, and the
+  dice follow once they have gone; only Klarg's steal waits for the dice (his hand takes a
+  landed die). The server keeps the browsers' moment clock (`sendMoment`, `momentsLeft`: every
+  moment event goes through it) and holds `diceRolled` (and the bot) until then; the client's
+  `diceRolled` also waits for `momentGoneAt`. The round result shows 2.6 s (`RESULT_SHOW_MS`,
+  was 4.2) and the next throw waits for it. Mind Whip's banner no longer names the die.
 - **Keepsakes on screen (21 Oct):** small round icons beside your chip (`KeepsakeIcon`,
   `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
   it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon

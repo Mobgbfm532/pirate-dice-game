@@ -248,13 +248,21 @@ function runNext() {
 // One moment at a time (the user's call, 21 Oct: an ability, a keepsake, a Thonic and the
 // round's result used to land all at once). Each waits in the queue until the one before has
 // had MOMENT_GAP_MS on screen; anything queued behind it (a roll, the next state) waits too.
+// Dice are never thrown under one (the user's call, 23 Oct): a roll waits until the last moment
+// has gone (momentGoneAt; the server holds its throws to the same clock, momentsLeft).
 const MOMENT_GAP_MS = 1700;
+const MOMENT_SHOW_MS = 3600; // an ability's banner (useMoment in Hud), a move's toast
+const RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600; // the round's result
 let momentFreeAt = 0;
+let momentGoneAt = 0;
 // earliest: when it may show at the soonest, apart from the gap (Klarg's steal waits for his hand).
-function enqueueMoment(show: () => void, gap = MOMENT_GAP_MS, earliest = () => 0) {
+// shown: how long it stays up.
+function enqueueMoment(show: () => void, gap = MOMENT_GAP_MS, earliest = () => 0, shown = MOMENT_SHOW_MS) {
     enqueue(done => setTimeout(() => {
         show();
-        momentFreeAt = performance.now() + gap;
+        const now = performance.now();
+        momentFreeAt = now + gap;
+        momentGoneAt = Math.max(momentGoneAt, now + shown);
         done();
     }, Math.max(0, momentFreeAt - performance.now(), earliest() - performance.now())));
 }
@@ -362,7 +370,7 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
 });
 
 socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; ghosts?: Ghost[] }) => {
-    enqueue(done => {
+    enqueue(done => setTimeout(() => {
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
 
@@ -402,7 +410,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
             applyTurn(turn);
             done();
         }, durationMs + 120);
-    });
+    }, Math.max(0, momentGoneAt - performance.now())));
 });
 
 // Play has come round to you: a banner, a swoosh, and a short buzz on phones.
@@ -576,7 +584,7 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string }
 // the run (ends): the fight summary (or the run-over screen) comes up instead.
 socket.on('roundResult', (data: { message: string; ends?: boolean }) => {
     if (data.ends) return;
-    enqueueMoment(() => showToast('Round result', data.message, 'result', 4200), 1200);
+    enqueueMoment(() => showToast('Round result', data.message, 'result', RESULT_SHOW_MS), RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
 });
 
 socket.on('displayMessage', (data: { text: string }) => {

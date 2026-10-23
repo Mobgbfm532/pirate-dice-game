@@ -514,7 +514,7 @@ function syncTurn(roomCode) {
     room.turn.busyUntil = 0;
     room.turn.ended = false;
     if (room.turn.playerId === BOT_ID && isTurnPlayable(roomCode)) {
-        botLater(roomCode, key, 1000, () => runBotRoll(roomCode));
+        botLater(roomCode, key, Math.max(1000, Math.round(momentsLeft(room) / TIME_SCALE) + 300), () => runBotRoll(roomCode));
     }
 }
 
@@ -581,7 +581,7 @@ function applyTavernRollAbilities(roomCode, room, turn) {
             run.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindWhip', as, landed: true };
             let die = Rules.mindWhip(turn, n => crypto.randomInt(0, n));
             moves.push(...disguiseMoves(room, run.roundEffect));
-            if (die) moves.push(roundEffectMove(room, run.roundEffect, `You must keep your ${die.value}. You may keep others too.`));
+            if (die) moves.push(roundEffectMove(room, run.roundEffect, 'He keeps one of your dice for you. You may keep others too.'));
         }
     }
 
@@ -619,7 +619,7 @@ function suckerPunch(roomCode, room) {
     let die = Rules.bestKeptDie(turn);
     Rules.putBackDie(turn, die.id);
     emitTurn(roomCode, { type: 'punched', die: die.id });
-    io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch to the back of the head knocks your ${die.value} loose. Roll it again.` });
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch to the back of the head knocks your ${die.value} loose. Roll it again.` });
     return true;
 }
 
@@ -652,23 +652,36 @@ function performRoll(roomCode) {
     room.rollMoments = null;
     if (!result) return 0;
     if (flourish) signatureMoves.unshift(flourish);
-    moments = [...signatureMoves.map(move => ['signatureMove', move]), ...moments];
+    // The abilities this throw brings play first, banner and effect, and the dice are thrown once
+    // they (and anything still on screen, like the round's result) have gone. Only Klarg waits
+    // for the dice: his hand takes one that has landed.
+    let afterLanding = signatureMoves.filter(move => move.ability === Rules.ABILITY_NAMES.reachAround);
+    let first = [...signatureMoves.filter(move => !afterLanding.includes(move)).map(move => ['signatureMove', move]), ...moments];
+    first.forEach(([event, data]) => sendMoment(roomCode, event, data));
+    if (first.length) io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    let lead = momentsLeft(room);
 
     // Browsers show the pre-roll announcement while the dice tumble, then the final board.
     let animationMs = result.suspense !== Rules.SUSPENSE.NONE ? 2000 : 500;
-    turn.busyUntil = Date.now() + delay(animationMs);
-    // throwSeed lets every screen simulate the identical tumble (the values are already decided).
-    let throwSeed = crypto.randomInt(0, 2 ** 31);
-    io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined });
-
+    turn.busyUntil = Date.now() + lead + delay(animationMs);
     let key = turn.key;
-    if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, animationMs, () => sendBotReaction(roomCode, 'hood'));
-    if (moments.length) {
+    // throwSeed lets every screen simulate the identical tumble (the values are already decided).
+    let thrown = { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
+    afterMoments(lead, () => {
+        if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+        io.to(roomCode).emit('diceRolled', thrown);
+    });
+    // (In the bot's and the game's own time from here: the lead in unscaled ms.)
+    let leadMs = Math.round(lead / TIME_SCALE);
+
+    if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, leadMs + animationMs, () => sendBotReaction(roomCode, 'hood'));
+    if (afterLanding.length) {
         setTimeout(() => {
             if (!rooms[roomCode]) return;
-            moments.forEach(([event, data]) => io.to(roomCode).emit(event, data));
+            afterLanding.forEach(move => sendMoment(roomCode, 'signatureMove', move));
             io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        }, delay(animationMs));
+        }, lead + delay(animationMs));
     }
 
     // The last die has nothing to choose: once it lands it goes into its slot by itself.
@@ -680,9 +693,9 @@ function performRoll(roomCode) {
             if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
             let result = Rules.toggleDie(room.turn, lastDieId);
             if (result) emitKept(roomCode, result);
-        }, delay(animationMs));
+        }, lead + delay(animationMs));
     }
-    return animationMs;
+    return leadMs + animationMs;
 }
 
 function performToggle(roomCode, dieId) {
@@ -717,13 +730,13 @@ function performEndTurn(roomCode) {
         }
         if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
             room.players[currentId].score = 24;
-            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
             io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
 
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
             room.players[currentId].score = Math.max(0, score - 3);
-            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
             io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
         }
 
@@ -944,7 +957,7 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
         room.tavernRun.encounterKeepsakeUses = room.tavernRun.encounterKeepsakeUses || {};
         room.tavernRun.encounterKeepsakeUses[keepsakeId] = true;
     }
-    io.to(roomCode).emit('keepsakeActivated', {
+    sendMoment(roomCode, 'keepsakeActivated', {
         id: keepsakeId,
         name: keepsake.name,
         text: text || keepsake.text
@@ -983,12 +996,32 @@ function fireTavernAbility(roomCode, room, encounter, abilityId) {
     return false;
 }
 
-// A moment for the browsers. During a roll (room.rollMoments) it waits and goes out after the
-// dice have landed, with the roll's other moves (performRoll).
+// A moment for the browsers. During a roll (room.rollMoments) it is held and goes out with the
+// roll's other moves, before the dice are thrown (performRoll).
 function emitMoment(roomCode, room, event, data) {
     if (room.rollMoments) room.rollMoments.push([event, data]);
-    else io.to(roomCode).emit(event, data);
+    else sendMoment(roomCode, event, data);
 }
+
+// What the browsers have on screen. They show one moment at a time (an ability, a keepsake, a
+// Thonic, the round's result), MOMENT_GAP_MS apart, each up for its own time, and throw no dice
+// until the last has gone (the user's call, 23 Oct: an ability plays in full, banner and effect,
+// before the dice are thrown). The server keeps the same clock, so a throw (and the bot's next
+// step) waits for it too: momentsLeft.
+const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 3600, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
+function sendMoment(roomCode, event, data) {
+    let room = rooms[roomCode];
+    let shown = !(event === 'roundResult' && data && data.ends); // (the end of a fight shows its summary instead)
+    if (room && shown) {
+        let result = event === 'roundResult';
+        let start = Math.max(Date.now(), room.momentNext || 0);
+        room.momentNext = start + delay(result ? RESULT_GAP_MS : MOMENT_GAP_MS);
+        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? RESULT_SHOW_MS : MOMENT_SHOW_MS));
+    }
+    io.to(roomCode).emit(event, data);
+}
+// Real ms until the browsers' last moment has gone.
+const momentsLeft = room => Math.max(0, (room.momentEnd || 0) - Date.now());
 
 function canUseTavernAbility(room, encounter, abilityId) {
     let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
@@ -1028,7 +1061,7 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
     } else {
         message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
     }
-    io.to(roomCode).emit('roundResult', { message, ends });
+    sendMoment(roomCode, 'roundResult', { message, ends });
 }
 
 function getHumanPlayerId(room) {
@@ -1227,7 +1260,7 @@ function beginTavernRound(roomCode, room) {
     if (encounter.ability === 'astralFlood') {
         if (bot && bot.lives < encounter.lives && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
             bot.lives++;
-            io.to(roomCode).emit('signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light and heals a life.' });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light and heals a life.' });
         }
         return;
     }
@@ -1240,8 +1273,8 @@ function beginTavernRound(roomCode, room) {
     if (ability === 'mindWhip') { run.pendingMind = { as: disguise ? disguise.as : null }; return; }
     if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
-    disguiseMoves(room, run.roundEffect).forEach(move => io.to(roomCode).emit('signatureMove', move));
-    io.to(roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+    disguiseMoves(room, run.roundEffect).forEach(move => sendMoment(roomCode, 'signatureMove', move));
+    sendMoment(roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
 }
 
 // Martha's disguise shows first, then the trick she copies (the user's call, 21 Oct).
@@ -1589,7 +1622,7 @@ function evaluateTavernRound(roomCode) {
         // leaves the Shield for later in the fight.
         if (loser.id === humanId && human.busted && room.tavernRun.ladysGrace) {
             room.tavernRun.ladysGrace = false;
-            io.to(roomCode).emit('blessingUsed', { id: 'grace', name: "The Lady's Grace", text: 'The Lady saves you from the dust' });
+            sendMoment(roomCode, 'blessingUsed', { id: 'grace', name: "The Lady's Grace", text: 'The Lady saves you from the dust' });
             return;
         }
 
@@ -1600,7 +1633,7 @@ function evaluateTavernRound(roomCode) {
         }
 
         if (loser.id === humanId && player.lives <= 1 && useThonic(room, 'lastGasp')) {
-            io.to(roomCode).emit('thonicUsed', { id: 'lastGasp', name: THONICS.lastGasp.name, text: 'You cling on with one heart.' });
+            sendMoment(roomCode, 'thonicUsed', { id: 'lastGasp', name: THONICS.lastGasp.name, text: 'You cling on with one heart.' });
             return;
         }
 
@@ -1928,7 +1961,7 @@ io.on('connection', (socket) => {
             ? { kind, by: 'player', ability: 'cursed', as: 'Danhausen' }
             : { kind, by: 'player', ability: 'devil', as: 'Duke Morrigan' };
         emitKeepsakeActivated(socket.roomCode, room, MARTHAS_MASK.id, `You wear ${run.roundEffect.as}'s face. ${ROUND_EFFECT_TEXT[kind].player}`);
-        io.to(socket.roomCode).emit('signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[kind].player));
+        sendMoment(socket.roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[kind].player));
         emitState(socket.roomCode);
     });
 
@@ -2180,12 +2213,16 @@ io.on('connection', (socket) => {
 
         run.shelf.splice(slot, 1);
         run.stats.thonicsDrunk++;
-        io.to(roomCode).emit('thonicUsed', { id: thonicId, name: thonic.name, text });
+        sendMoment(roomCode, 'thonicUsed', { id: thonicId, name: thonic.name, text });
         if (rerolled) {
             // The rerolled dice tumble like any roll (only those dice are thrown).
             let animationMs = 500;
-            turn.busyUntil = Date.now() + delay(animationMs);
-            io.to(roomCode).emit('diceRolled', { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined });
+            let lead = momentsLeft(room), key = turn.key;
+            turn.busyUntil = Date.now() + lead + delay(animationMs);
+            let thrown = { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+            setTimeout(() => {
+                if (rooms[roomCode] === room && room.turn && room.turn.key === key) io.to(roomCode).emit('diceRolled', thrown);
+            }, lead);
         } else {
             emitTurn(roomCode, { type: 'toggle' });
         }

@@ -1175,7 +1175,8 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     const klarg = await tavernAgainst(fightOf('klarg'), 'ClearKlarg');
     const kroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[klarg.id])];
     kroom.tavernRun.shelf = ['clearEye', 'clearEye'];
-    // In order (the user's call, 21 Oct): the roll, then Klarg's move (cancelled), then the Clear-Eye.
+    // In order: Klarg's move (cancelled), then the Clear-Eye, and only then the roll (the user's
+    // call, 23 Oct: abilities play before the dice are thrown).
     const order = [];
     klarg.on('diceRolled', () => order.push('roll'));
     klarg.on('signatureMove', m => order.push(m.cancelled ? `${m.ability} cancelled` : m.ability));
@@ -1192,7 +1193,7 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     await cancelled;
     await sleep(60);
     assert.equal(rolled.turn.dice.filter(d => d.status === 'stolen').length, 0, 'no die stolen');
-    assert.deepEqual(order.slice(0, 3), ['roll', 'Reach Around cancelled', 'clear-eye']);
+    assert.deepEqual(order.slice(0, 3), ['Reach Around cancelled', 'clear-eye', 'roll']);
     assert.equal(kroom.tavernRun.abilityUsed.reachAround, 1, 'the steal is spent');
     assert.equal(kroom.tavernRun.clearEyeArmed, false);
     // Nothing left to cancel this fight: a second one is refused.
@@ -1301,14 +1302,18 @@ test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at 
     assert.deepEqual(room.tavernRun.pendingMind, { as: null });
     assert.equal(room.tavernRun.abilityUsed.mindWhip, undefined, 'not spent as the round begins');
     const move = waitFor(hero, 'signatureMove');
+    const order = [];
+    hero.on('signatureMove', () => order.push('move'));
+    hero.on('diceRolled', () => order.push('roll'));
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    assert.deepEqual(order, ['move', 'roll'], 'his banner plays before the dice are thrown');
     const forced = rolled.turn.dice.filter(d => d.mind);
     assert.equal(forced.length, 1, 'one die is his pick');
     assert.equal(forced[0].status, 'lockedThisTurn', 'already kept');
     const shown = await move;
     assert.equal(shown.ability, 'Mind Whip');
-    assert.match(shown.text, new RegExp(`keep your ${forced[0].value}`));
+    assert.match(shown.text, /keeps one of your dice/); // (shown before the throw: it can't name the die)
     assert.equal(room.tavernRun.abilityUsed.mindWhip, 1, 'spent as it lands');
     assert.equal(room.tavernRun.roundEffect.kind, 'mind');
     await sleep(rolled.animationMs * 0.01 + 20);
@@ -1354,6 +1359,9 @@ test("the Duke's Devil: once he holds a 2 and a 4, three 6s, and you can't score
     // (Not diceRolled.devil: that is any three 6s, and a natural first throw has them ~6% of the time.)
     assert.equal(room.tavernRun.roundEffect, null, 'nothing on his first throw: no 2 and 4 kept yet');
     await move;
+    // His banner first, then the throw that lands the three 6s (the user's call, 23 Oct).
+    const devilThrow = await waitFor(hero, 'diceRolled', d => d.turn.playerId === 'BOT_MOLAR' && d.turn.dice.filter(x => x.status === 'active' && x.value === 6).length >= 3, 6000);
+    assert.ok(devilThrow, 'the dice come after his banner');
     const kept = room.turn.dice.filter(d => d.status !== 'active').map(d => d.value);
     assert.ok(kept.includes(2) && kept.includes(4), 'he held a 2 and a 4');
     assert.ok(room.turn.dice.filter(d => d.value === 6).length >= 3, 'then three 6s');
