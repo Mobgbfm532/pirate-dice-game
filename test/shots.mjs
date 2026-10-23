@@ -92,7 +92,16 @@ try {
         await wait(6000); // the entrance and the intro card settle
         if (roll) {
             await evaluate(`window.__game.actions.roll()`);
-            await wait(6000); // the throw lands and any moment passes
+            // The throw lands and any moment it raises (an ability, its banner) has come and gone,
+            // then a little longer for fades: shots of the same throw then match whatever the
+            // page's speed (a fresh dev server is slow at first).
+            await wait(1500);
+            await evaluate(`new Promise(r => { const t = setInterval(() => {
+                const s = window.__game.store.get();
+                const quiet = !s.ability || performance.now() - s.ability.at > 4000; // its banner shows 3.6 s
+                if (s.isMyTurn && !s.rolling && quiet && !s.modal && !window.__game.table.roll) { clearInterval(t); r(); }
+            }, 100); })`);
+            await wait(4000);
         }
         const { data } = await s('Page.captureScreenshot', { format: 'png' });
         const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}-${w}x${h}.png`);

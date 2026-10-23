@@ -52,7 +52,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
 | `client/` | The 3D client (Vite + React + React Three Fiber + cannon-es), built to `client/dist`, served at **`/next`**. |
-| `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks; `shots.mjs` (not a test): silent headless-Chrome screenshots for before/after (`node test/shots.mjs previews/x look=next fight=1`, needs the dev test server and the dev client running). |
+| `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks; `shots.mjs`, `shots-base.mjs`, `compare.mjs` (not tests): before/after screenshots. `shots-base.mjs` serves a commit (default HEAD) frozen on :5174 (launch entry `shots-base`), so "before" can be shot while the working copy changes; `shots.mjs` shoots silently in headless Chrome (`node test/shots.mjs previews/x/before client=http://localhost:5174/next/ look=next fight=1 roll=1`; seeds the throw, waits for the table to settle); `compare.mjs previews/x` makes side-by-sides and change numbers. Needs the dev test server running. |
 | `art/` | Untouched AI originals. `client/scripts/process-art.mjs` (`npm --prefix client run art`) makes game files in `client/public/{art,textures}`. |
 | `docs/art-direction.md` | Style, palette, asset list + status, prompt pack. |
 | `shared/balance.js` | The Tavern Crawl's numbers: hearts, opponents' lives, gold, Thonic prices, events. |
@@ -116,6 +116,10 @@ read and follow the file):
   360x640 and 844x390, muted; reports what covers the dice/rail or runs off screen.
 - `art-import`: when the user sends a painting. Saves the original, cuts out the background
   (`cutOut` / `cutOutFlat`), checks edges on dark and light, registers it, reports previews.
+- `visual-shots`: after each visual step. Shoots the last commit (frozen, :5174) against the
+  working copy (:5173), the same throw on both, builds side-by-sides, looks at them and reports
+  in words (readability of 1s/6s and the plates, anything broken) with the pictures worth sending.
+  Keeps dozens of screenshots out of the main session.
 - `render-deploy`: deploying to the Render test service, only after the user says yes to
   pushing. It tests, pushes `phase-2-3d-prototype`, watches the deploy in Claude in Chrome,
   reads the logs if it fails and smoke-tests `/next`. It never touches `main` or the live service.
@@ -203,8 +207,8 @@ one too, or saves only last until the server restarts, which on the free tier is
   the ship; Brodor (23% a fight fresh on 3 hearts) and Jaguar (25%) are the steepest steps.
 - **Visuals (22 Oct):** the plan is a doc shared with the user, "2, 4, 24: the next level visually"
   (https://claude.ai/artifact/9MHGFUVoVrLiQiD7ZgL7ZJ): six directions, option 1 (light, glow and
-  atmosphere) in seven steps A-G. A **rough preview of steps B-D** is committed (23 Oct) but **not pushed**, and off
-  unless switched on (the user: keep it off the test site until they say): `client/src/look.ts`
+  atmosphere) in seven steps A-G. A **rough preview of steps B-D** (22 Oct) is on the test site since 23 Oct
+  (the user asked to push), off unless switched on with `?look=next`: `client/src/look.ts`
   (the switch, `?look=next` / `?look=classic`, remembered in `localStorage.tavernLook`; one
   `flame()` for every light, shared with the page as `--flame`), `NextLights` and `Finish` in
   TableScene (key, fill, rim, candle, a RoomEnvironment reflection; bloom, grade, ACES tone
@@ -215,20 +219,20 @@ one too, or saves only last until the server restarts, which on the free tier is
   where the canvas meets the tavern comes from the glow pass over a see-through canvas, which
   step A (the backdrop and bust into the 3D scene) removes. Not checked on a phone's frame rate.
   Before/after: `previews/look-preview-1.jpg` (gitignored).
-  **Step A done (23 Oct, committed, not pushed):** the tavern and the bust are in the 3D scene
+  **Step A done (23 Oct, on the test site since 23 Oct, 511d459):** the tavern and the bust are in the 3D scene
   (`Room.tsx`). The classic look matches the old page pixel for pixel (mean difference under 1/255
   at 384x780, 844x390, 1280x800); in the look preview the room now goes through the glow and
   grade too, so it reads warmer and brighter, and the ragged edge is gone. Shots in
   `previews/step-a/` (gitignored). Martha's swap no longer leaves her stuck un-glowing on her turn
   (the old CSS animation held its last frame).
-  **Step B (23 Oct, committed, not pushed; look preview only):** the opponent takes the fire's
+  **Step B (23 Oct, on the test site; look preview only):** the opponent takes the fire's
   light in Room's shader (a warm wash from the left, the far side in shade, a thin firelight rim
   facing the fire and a paler one from the candle; replaces the old orange drop-shadow); the
   tavern holds steady while its brightest parts (lanterns, candles, fire) breathe with the
   flame; a soft contact shadow under each die (Dice.tsx, fades as it rises); the candle eased
   to 17 and paler, so the dice stay ivory. Shots in `previews/step-b/`. Not checked: frame rate on
   the phone.
-  **Step C (23 Oct, committed, not pushed; look preview only):** dice pips engraved from the
+  **Step C (23 Oct, on the test site; look preview only):** dice pips engraved from the
   painted faces (`engraving` in textures.ts: a height map, cached per face), worn edges (`wear`:
   less lacquer, rougher, in blotches); the felt worn darker where throws end (`wornPatch`);
   brass plates reflect the room (their own envMap at 0.3) and read as polished gold; the slot
