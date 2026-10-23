@@ -475,8 +475,9 @@ function getTavernRunState(room) {
         purse: room.tavernRun.purse,
         shelf: room.tavernRun.shelf.map(thonicView),
         shelfSize: shelfSizeOf(room),
-        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
         prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun) },
+        thomMet: !!room.tavernRun.thomMet, // you've been to Thom's cart this run
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
@@ -1026,6 +1027,7 @@ function emitMoment(roomCode, room, event, data) {
 // before the dice are thrown). The server keeps the same clock, so a throw (and the bot's next
 // step) waits for it too: momentsLeft.
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 3600, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
+const INTRO_SHOW_MS = 6000; // an opponent's entrance (the client's INTRO_MS)
 function sendMoment(roomCode, event, data) {
     let room = rooms[roomCode];
     let shown = !(event === 'roundResult' && data && data.ends); // (the end of a fight shows its summary instead)
@@ -1245,6 +1247,13 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.encounterKeepsakeUses = {};
     room.tavernRun.clearEyeArmed = false;
     room.tavernRun.started = true;
+    // The opponent's entrance first (the name card, INTRO_SHOW_MS): the browsers learn who sits
+    // down before anything else, and the round's abilities and the first throw wait until the card
+    // has gone (the user's call, 23 Oct: Martha's entrance and her disguise ran together).
+    let now = Date.now();
+    room.momentNext = Math.max(room.momentNext || 0, now + delay(INTRO_SHOW_MS));
+    room.momentEnd = Math.max(room.momentEnd || 0, now + delay(INTRO_SHOW_MS));
+    emitState(roomCode);
     beginTavernRound(roomCode, room);
 }
 
@@ -1330,7 +1339,7 @@ function sealSave(room, name) {
     let data = {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
-        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}
+        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
     let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
@@ -1359,6 +1368,7 @@ function restoreRun(room, data) {
     run.purse = Math.max(0, Number(data.purse) || 0);
     run.shelf = (data.shelf || []).filter(id => THONICS[id]).slice(0, SHELF_SIZE + KEEPSAKE_NUMBERS.beltSlots);
     run.stats = { ...run.stats, ...(data.stats || {}) };
+    run.thomMet = !!data.thomMet;
     run.bought = {};
     Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
@@ -2121,7 +2131,9 @@ io.on('connection', (socket) => {
         if (spot === 'thom') {
             run.interlude = null;
             // Thom's Loyalty Card: the first Thonic of the visit is free.
-            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room) };
+            // first: your first visit this run (Thom greets you with "Vim, vigour, vitality!").
+            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room), first: !run.thomMet };
+            run.thomMet = true;
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine' };
         } else if (spot === 'diceDen') {

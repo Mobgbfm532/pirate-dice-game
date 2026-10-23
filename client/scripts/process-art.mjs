@@ -19,6 +19,10 @@ mkdirSync(OUT, { recursive: true });
 
 const PREVIEW = process.env.ART_PREVIEW_DIR; // optional: write cut-outs on magenta to check edges
 
+// ONLY=frak,martha (env): redo just those pictures, leaving every other output as it is.
+const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null;
+const wanted = name => !ONLY || ONLY.has(name);
+
 async function readRgba(file) {
     const { data, info } = await sharp(path.join(ART, file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     return { data, width: info.width, height: info.height };
@@ -169,6 +173,7 @@ async function writePreview(name, img) {
 // patches: leftover checkerboard boxed in by the character, as
 // [x0, y0, x1, y1, maxChroma, minLum, maxLum] in original pixels. maxChroma 255 clears the box.
 async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [], ...options } = {}) {
+    if (!wanted(name)) return;
     const img = await readRgba(file);
     const { mask, tones } = floodCheckerboard(img, options);
     if (fireBox) eraseFire(img, mask, fireBox);
@@ -296,6 +301,70 @@ function tintVeil(img, mask, bg, boxes, from, { tint = [170, 130, 200], reach = 
     return alpha;
 }
 
+// Painted smoke taken out of a picture (Frak's cigar since 23 Oct: the game draws its own moving
+// smoke, and the painted wisp beside it didn't make sense, the user's call).
+//   clear: over the background, the smoke is background (fully see-through).
+//   paint: over the body, pale low-colour wisps lighter than their surroundings are repainted
+//   in the colour around them (a median of the nearby pixels that aren't smoke); the brass
+//   studs and the orange sparks are left alone (too colourful, or far brighter than smoke).
+function eraseSmoke(img, mask, bg, { clear, paint }) {
+    const { data, width } = img;
+    if (clear) {
+        const [x0, y0, x1, y1] = clear;
+        const excess = Math.max(1, bg[0] - bg[1]);
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+            const p = y * width + x, i = p * 4;
+            if (mask[p]) continue;
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            if (r - g > 0 && r - g <= 1.3 * excess && b - g >= -25) mask[p] = 1;
+        }
+    }
+    if (paint) {
+        const [x0, y0, x1, y1] = paint;
+        const R = 18;
+        const lumAt = i => 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        const satAt = i => { const mx = Math.max(data[i], data[i + 1], data[i + 2]), mn = Math.min(data[i], data[i + 1], data[i + 2]); return mx ? (mx - mn) / mx : 0; };
+        const median = arr => { arr.sort((a, b) => a - b); return arr[arr.length >> 1]; };
+        // The smoke: pale and greyish, and lighter than most of what's around it.
+        const smoky = new Uint8Array(width * img.height);
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+            const p = y * width + x, i = p * 4;
+            if (mask[p] || satAt(i) > 0.36) continue;
+            const around = [];
+            for (let dy = -R; dy <= R; dy += 3) for (let dx = -R; dx <= R; dx += 3) {
+                const q = (y + dy) * width + (x + dx);
+                if (!mask[q]) around.push(lumAt(q * 4));
+            }
+            const lift = lumAt(i) - median(around);
+            if (lift > 5 && lift < 70) smoky[p] = 1;
+        }
+        // Grow the smoke by a few pixels (its soft edge), then repaint from the pixels around that aren't smoke.
+        let grown = smoky;
+        for (let step = 0; step < 3; step++) {
+            const next = grown.slice();
+            for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+                const p = y * width + x;
+                if (grown[p - 1] || grown[p + 1] || grown[p - width] || grown[p + width]) next[p] = 1;
+            }
+            grown = next;
+        }
+        const out = new Uint8ClampedArray(data);
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+            const p = y * width + x;
+            if (!grown[p] || mask[p]) continue;
+            const ch = [[], [], []];
+            for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) {
+                const q = (y + dy) * width + (x + dx);
+                if (mask[q] || grown[q]) continue;
+                for (let c = 0; c < 3; c++) ch[c].push(data[q * 4 + c]);
+            }
+            if (ch[0].length < 8) continue;
+            for (let c = 0; c < 3; c++) out[p * 4 + c] = median(ch[c]);
+        }
+        data.set(out);
+    }
+}
+
 // Options (all optional):
 //   tolerance  how close (RGB distance) a pixel must be to the background to be cleared (80)
 //   minRed, minBlue  how far red / blue must sit above green for a pixel to count as
@@ -307,12 +376,15 @@ function tintVeil(img, mask, bg, boxes, from, { tint = [170, 130, 200], reach = 
 //              boxes in, too far from the edge for pocket (none)
 //   smokeBox   [x0, y0, x1, y1]: thin smoke painted over the background in this box turns
 //              see-through instead of staying pink (none)
+//   noSmoke    { clear, paint }: painted smoke taken out (eraseSmoke)
 //   smokeColour  'grey' (Frak's cigar) turns that smoke grey; 'own' keeps it coloured (lilac)
 //              (Martha's purple smoke; pair it with a low tolerance so the flood leaves it);
 //              then smokeBox may also be a list of boxes
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [] } = {}) {
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null } = {}) {
+    if (!wanted(name)) return;
     const img = await readRgba(file);
     const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes });
+    if (noSmoke) eraseSmoke(img, mask, bg, noSmoke);
     keepMainShape(img, mask);
     const smoke = !smokeBox ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox], tolerance) : veil(img, mask, bg, smokeBox);
     despill(img, mask, bg, despillRadius, smoke);
@@ -356,6 +428,7 @@ async function slotPlates() {
 // A spot between fights painted as a scene (no cut-out): it fills its scene's stage and
 // its round frame, so it keeps its full size.
 async function spotScene(file, name) {
+    if (!wanted(name)) return;
     const info = await sharp(path.join(ART, file)).resize(1024, 1024, { fit: 'cover', withoutEnlargement: true }).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
     console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
 }
@@ -385,9 +458,11 @@ async function surfaces() {
     }
 }
 
-await surfaces();
-await backdrop();
-await slotPlates();
+if (!ONLY) {
+    await surfaces();
+    await backdrop();
+    await slotPlates();
+}
 await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches: [[684, 300, 760, 700, 85, 110, 190], [668, 555, 760, 705, 255]] });
 await cutOut('bust-klarg.jpg', 'klarg', { fireBox: [1005, 230, 1191, 896], patches: [[888, 408, 1006, 515, 30], [1075, 230, 1191, 896, 255]] });
 await cutOut('bust-rokr.jpg', 'rokr');
@@ -397,7 +472,9 @@ await cutOutFlat('bust-thom.jpg', 'thom');
 await cutOutFlat('bust-stranger.jpg', 'stranger');
 await cutOutFlat('bust-dicer.jpg', 'dicer', { pocket: 60 }); // background shows between the dice and his fingers
 await cutOutFlat('bust-pickpocket.jpg', 'pickpocket', { pocket: 40 }); // and behind the hair at the shoulder
-await cutOutFlat('bust-frak.jpg', 'frak', { smokeBox: [190, 130, 298, 466] }); // the cigar smoke above his shoulder
+// His cigar's painted smoke is taken out (the game draws its own): over the background above his
+// shoulder, and over his vest down to the tip.
+await cutOutFlat('bust-frak.jpg', 'frak', { noSmoke: { clear: [180, 120, 305, 470], paint: [205, 452, 312, 702] } });
 await cutOutFlat('bust-mcgrath.jpg', 'mcgrath');
 await cutOutFlat('bust-danhausen.jpg', 'danhausen');
 await cutOutFlat('bust-duke.jpg', 'duke', { tolerance: 30, despillRadius: 2, holes: [[380, 280]] }); // purple coat and skin: only the flat background colour goes

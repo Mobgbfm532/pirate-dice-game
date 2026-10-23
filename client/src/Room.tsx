@@ -5,6 +5,7 @@ import { BOT_ID, store } from './game';
 import { acrossTheTable, backdropLayout, currentScene } from './Backdrop';
 import { flame, lookNext } from './look';
 import { ScreenAir, type AirFrame } from './Air';
+import { roomWash } from './MomentLight';
 
 // The tavern behind the table and the opponent's bust, drawn inside the 3D scene (option 1,
 // step A, 23 Oct). They used to be page layers under a see-through canvas; now the glow and
@@ -94,6 +95,8 @@ uniform bool glow, linearOut;
 // parts of a picture breathe with it. warmth, rim: the fire's wash and outline on a cut-out;
 // px: one screen pixel in the picture's texture coordinates.
 uniform float flame, lanterns, warmth, rim, hot;
+// A big moment's light washing over the painting (MomentLight's roomWash, step F).
+uniform vec3 wash;
 uniform vec2 px;
 varying vec2 vUv;
 // How much of the outline faces a light from direction d: open space beside it that way.
@@ -143,6 +146,7 @@ void main() {
     }
     // On screen the colours stay sRGB, as the page drew them; into the look preview's finish
     // they go linear like the rest of the scene.
+    if (!glow) c = clamp(c + c * wash * 1.6 + wash * 0.05, 0.0, 1.0);
     if (linearOut) {
         // The lights in a painting (lanterns, candles, the fire) burn brighter than paint can show,
         // so the finish's glow finds them (step D); the tone curve brings them back.
@@ -158,7 +162,7 @@ function pictureMaterial() {
         uniforms: {
             map: { value: null }, brightness: { value: 1 }, saturation: { value: 1 }, sepia: { value: 0 },
             opacity: { value: 1 }, tint: { value: new THREE.Vector4() }, glow: { value: false }, linearOut: { value: lookNext },
-            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, px: { value: new THREE.Vector2() }
+            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, wash: { value: new THREE.Color(0, 0, 0) }, px: { value: new THREE.Vector2() }
         },
         // Drawn first, behind everything, whatever the distance: the table simply paints over.
         depthTest: false, depthWrite: false, fog: false, toneMapped: false,
@@ -255,6 +259,7 @@ export function Room() {
             r.flame.value = f;
             r.lanterns.value = lookNext ? 1.2 : 0;
             r.hot.value = lookNext ? 2 : 0;
+            if (lookNext) r.wash.value.copy(roomWash);
             r.saturation.value = lookNext ? 1.1 : 0.95;
             r.sepia.value = lookNext ? 0.12 : 0;
             put(room.current, L.roomLeft, L.roomTop, L.roomWidth, L.roomHeight);
@@ -319,6 +324,7 @@ export function Room() {
         b.sepia.value = sepia;
         b.opacity.value = opacity;
         b.flame.value = f;
+        if (lookNext) b.wash.value.copy(roomWash);
         b.warmth.value = lookNext ? 0.55 : 0;
         b.rim.value = lookNext ? lerp(0.4, 0.6, glowNow) : 0;
         b.px.value.set(1 / w, 1 / h);

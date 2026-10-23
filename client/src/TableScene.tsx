@@ -12,6 +12,7 @@ import { artTexture, paintedTexture } from './textures';
 import { layoutBackdrop, setRailAnchor } from './Backdrop';
 import { Room } from './Room';
 import { DustMotes } from './Air';
+import { MomentLights } from './MomentLight';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
 const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
@@ -309,7 +310,6 @@ function Lights() {
 function NextLights() {
     const candle = useRef<THREE.PointLight>(null);
     const fire = useRef<THREE.DirectionalLight>(null);
-    const flash = useRef<THREE.PointLight>(null);
     const { gl, scene } = useThree();
 
     useEffect(() => {
@@ -327,12 +327,6 @@ function NextLights() {
         if (candle.current) candle.current.intensity = 17 * f;
         if (fire.current) fire.current.intensity = 1.7 * (0.85 + 0.15 * f);
         shareFlame(f, now);
-        if (flash.current) {
-            const devil = Math.max(0, 1 - (now - table.devilAt) / 1200);
-            const gold = Math.max(0, 1 - (now - table.celebrateAt) / 2000);
-            flash.current.color.set(devil > gold ? '#ff1a1a' : '#ffd54f');
-            flash.current.intensity = Math.max(devil, gold) * 60;
-        }
     });
 
     return (
@@ -354,7 +348,8 @@ function NextLights() {
             {/* A rim from behind and above: a thin bright edge on each die. */}
             <directionalLight position={[2, 6, -9]} intensity={0.35} color="#fff0dc" />
             <pointLight ref={candle} position={[3.5, 3, -3.5]} color="#ffa660" distance={16} decay={1.5} />
-            <pointLight ref={flash} position={[0, 3, 0]} distance={12} decay={1.4} intensity={0} />
+            {/* The big moments' light (the Devil, a perfect 24, abilities, keepsakes): step F. */}
+            <MomentLights />
         </>
     );
 }

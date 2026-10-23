@@ -7,7 +7,8 @@
 // Each size gets a fresh page that joins a Tavern Crawl, then a fight against opponent `fight`
 // (0 McGrath ... 13 Jaguar); roll=1 throws once, so the dice lie on the felt. seed=42 (the
 // default) makes the server's draws repeat from the fight on: the same throw every time. Files:
-// <out-dir>/<look>-<fight>[-roll]-<w>x<h>.png
+// <out-dir>/<look>-<fight>[-roll][-<moment>]-<w>x<h>.png. moment=devil|ink|smite|flood|keepsake|shield|perfect
+// plays that moment (as its banner would) and shoots it at its brightest.
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,6 +20,16 @@ const look = args.look ?? 'classic';
 const fight = args.fight ?? '1';
 const roll = args.roll === '1';
 const seed = args.seed ?? '42';
+const moment = args.moment;
+const MOMENTS = {
+    devil: `preview.ability('Duke Morrigan', 'Sympathy for the Devil')`,
+    ink: `preview.ability('Vaelin Inkhand', 'Inkfire Brand')`,
+    smite: `preview.ability('The Ridgeler', 'Divine Smite')`,
+    flood: `preview.ability('Brodor', 'Astral Flood')`,
+    keepsake: `preview.ability('Keepsake', 'Trap Card', { keepsake: 'luckySeat' })`,
+    shield: `preview.ability('Keepsake', 'Shield', { keepsake: 'bentCopper' })`,
+    perfect: `table.celebrateAt = performance.now()`
+};
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
     const [wh, dpr] = s.split('@');
     const [w, h] = wh.split('x').map(Number);
@@ -103,8 +114,12 @@ try {
             }, 100); })`);
             await wait(4000);
         }
+        if (moment) {
+            await evaluate(`(({ preview, table }) => { ${MOMENTS[moment]}; })(window.__game)`);
+            await wait(700); // near its brightest (a slow page needs the time to draw the moment)
+        }
         const { data } = await s('Page.captureScreenshot', { format: 'png' });
-        const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}-${w}x${h}.png`);
+        const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}-${w}x${h}.png`);
         writeFileSync(file, Buffer.from(data, 'base64'));
         console.log(file);
         await cdp.send('Target.closeTarget', { targetId });

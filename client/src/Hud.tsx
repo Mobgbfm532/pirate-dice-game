@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
@@ -617,7 +617,7 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
     );
 }
 
-const INTRO_MS = 5000;
+
 
 // Shows something for `ms` after `at` (a performance.now() time), then hides it.
 function useMoment(at: number, ms: number) {
@@ -746,10 +746,10 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
         setTimeout(actions.leaveShop, LEAVE_MS);
     };
     return (
-        <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Thom's Thonics. Thom: What ya havin'?">
+        <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`Thom's Thonics. Thom: ${thomLine(!!shop.first)}`}>
             <div className="thom-stage" aria-hidden="true">
                 <div className="thom-lantern" />
-                <div className="thom-speech">What ya havin'?</div>
+                <div className="thom-speech">{thomLine(!!shop.first)}</div>
                 <div className="thom-figure">
                     <img className="thom-bust" src={`${import.meta.env.BASE_URL}art/thom.webp`} alt="" />
                     <div className="thom-bottle-glow" />
@@ -813,6 +813,9 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     );
 }
 
+// Thom's greeting: the first time you meet him in a run, then his usual (the user's, 23 Oct).
+const thomLine = (first: boolean) => (first ? 'Vim, vigour, vitality!' : "What ya havin'?");
+
 // ---- Between fights: two spots in the tavern catch your eye ----
 const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
@@ -867,7 +870,7 @@ function Interlude({ state }: { state: GameState }) {
                         <button key={spot} className="spot-card" style={{ animationDelay: `${0.25 + i * 0.15}s` }} onClick={() => actions.chooseSpot(spot)}>
                             <SpotPicture spot={spot} />
                             <strong>{SPOTS[spot].name}</strong>
-                            <span className="line">{SPOTS[spot].line}</span>
+                            <span className="line">{spot === 'thom' ? `"${thomLine(!run.thomMet)}"` : SPOTS[spot].line}</span>
                             <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : ''}</span>
                         </button>
                     ))}

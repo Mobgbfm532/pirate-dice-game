@@ -51,7 +51,8 @@ export interface TavernRun {
     purse: number;
     shelf: Thonic[];
     shelfSize: number;
-    shop: { stock: Thonic[]; free?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
+    shop: { stock: Thonic[]; free?: boolean; first?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
+    thomMet?: boolean; // you've been to Thom's cart this run (his first greeting is different)
     prices?: { shrine: number; hotTub: number }; // what a candle at the Shrine and a soak in the hot tub cost
     interlude: Interlude | null; // between fights (see server.js startInterlude)
     lastWin: ShopArrival | null; // the fight just won
@@ -521,7 +522,14 @@ function introduceOpponent(state: GameState) {
         sessionStorage.setItem('tavernIntro', key);
     } catch { /* storage unavailable: introduce anyway */ }
     update({ introAt: performance.now() });
+    // The entrance is a moment of its own: what comes next (the round's abilities, the first
+    // throw) waits until the name card has gone.
+    const gone = performance.now() + INTRO_MS;
+    momentFreeAt = Math.max(momentFreeAt, gone);
+    momentGoneAt = Math.max(momentGoneAt, gone);
 }
+// An opponent's entrance: the name card's time on screen (Hud), a second longer since 23 Oct.
+export const INTRO_MS = 6000;
 
 // Invite link for a classic table: opens the 3D table with the code filled in.
 export function inviteLink(code: string) {

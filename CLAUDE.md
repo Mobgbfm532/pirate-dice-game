@@ -255,10 +255,18 @@ one too, or saves only last until the server restarts, which on the free tier is
   stays for a backdrop with windows). **The flame is calm** (the user, 23 Oct: the painted fire and
   lanterns pulsed): `flame()` is a slow irregular drift (±6%, at most 2% in 0.1 s; it was ±18%
   at 7 and 13 Hz), and every light and glow follows it.
+  **Step F (23 Oct; look preview only):** `MomentLight.tsx`: as a big moment shows, a light in its
+  colour over the table (a soft gold pool from above for the Smite) and the same colour washing
+  the painting and the opponent (`roomWash`, Room's `wash` uniform), swelling in and fading over
+  2-3 s: the Devil (and three 6s landing) red, Inkfire violet, Smite gold, Astral Flood white-gold,
+  a keepsake gold, the Shield blue, a perfect 24 gold. Tuned from frozen-clock shots so the room
+  carries the colour and the dice stay readable (`shots.mjs moment=...`; `previews/frozen.mjs`
+  stops the page clock at set instants, which a moving moment needs).
 - **Portraits centred (23 Oct, the user's call):** each opponent has a measured face centre
   (`Portrait.center`, percent, plus `aspect`; `seated()` in portraits.ts). Behind the table the face
   sits on the table's centre line (Room); round avatars solve the background position so the face
-  is in the middle of the circle (`avatarStyle`), with zooms eased so whole heads show. The spots
+  is in the middle of the circle (`avatarStyle`), with zooms eased so head and shoulders show, in
+  bigger frames (the win summary up to 170 px, the run-over row 52 px). The spots
   between fights keep their hand-tuned `face`.
 - **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
 - **Render:** the existing live service sits in "My project". The test service
@@ -354,6 +362,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   yourself (`wearMask`, `by: 'player'`). On the strip it lights up and shows its choices inline
   (never over the rail); when it can't be worn a tap is a reminder. Martha herself shows a
   "Disguises" moment first, then the trick she copies (`disguiseMoves`).
+- **An opponent's entrance (23 Oct):** the name card shows 6 s (`INTRO_MS`); at a fight's start the
+  server sends the new opponent before the round's abilities and puts the entrance on its moment
+  clock (`INTRO_SHOW_MS`), so abilities and the first throw wait for the card (Martha's entrance
+  and disguise used to run together). Thom greets you "Vim, vigour, vitality!" on your first visit
+  in a run (`shop.first`, `thomMet`), then "What ya havin'?". Frak's painted cigar smoke is cut out
+  of his picture (`noSmoke` in process-art.mjs; `ONLY=frak npm --prefix client run art` redoes one).
 - **Order of events (21 Oct, the user's: "they should not all happen together"):** after a round
   the server waits `ROUND_PAUSE_MS` (2 s) before the next round and its ability
   (`evaluateTavernRound`). On the client every moment (abilities, keepsakes, Thonics, the Lady, the

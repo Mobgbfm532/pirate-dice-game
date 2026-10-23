@@ -666,7 +666,7 @@ footer {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(224, 180, 76, 0.4);
     pointer-events: auto;
     z-index: 3;
-    animation: intro-card 5s ease-out forwards;
+    animation: intro-card 6s ease-out forwards; /* INTRO_MS */
 }
 .encounter-intro .encounter { font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: #6d4c2a; }
 .encounter-intro .name { font-size: clamp(1.7rem, 8vw, 2.3rem); font-weight: 700; color: var(--red); line-height: 1.1; }
@@ -813,8 +813,8 @@ footer {
 .next-up { margin: 0; display: flex; align-items: center; gap: 8px; color: var(--parchment); }
 .mini-portrait {
     display: inline-block;
-    width: 34px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     border: 2px solid var(--gold);
     background-color: #1d120a;
@@ -864,9 +864,9 @@ footer {
 .run-over { gap: 10px; }
 .run-over.won h1 { color: #b8860b; text-shadow: 0 2px 0 rgba(255, 213, 79, 0.5); }
 /* Nine opponents: the Ghoul and Gourd's five on one row, the Yawning Portal's four centred below. */
-.crawl-path { list-style: none; margin: 4px auto; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: calc(5 * 44px + 4 * 8px); }
+.crawl-path { list-style: none; margin: 4px auto; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: calc(5 * 52px + 4 * 8px); }
 .crawl-path li { position: relative; }
-.crawl-path .mini-portrait { width: 44px; height: 44px; }
+.crawl-path .mini-portrait { width: 52px; height: 52px; }
 .crawl-path .unmet .mini-portrait { filter: grayscale(1); opacity: 0.55; border-color: #b39461; }
 .crawl-path .fell .mini-portrait { border-color: var(--red); }
 .crawl-path .mark {
@@ -1625,9 +1625,10 @@ button.keepsake.used { opacity: 0.55; }
 /* After a fight is won (FightWon): the beaten opponent, what the fight paid one line at a time,
    then the purse counting up. */
 .fight-won .won-portrait {
-    width: clamp(96px, 30vw, 140px);
+    width: clamp(120px, 38vw, 170px);
     aspect-ratio: 1;
     border-radius: 50%;
+    background-repeat: no-repeat;
     border: 3px solid var(--gold);
     background-color: #1d120a;
     box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.5), 0 0 32px rgba(255, 213, 79, 0.45);
@@ -1676,7 +1677,7 @@ button.keepsake.used { opacity: 0.55; }
 .fight-won .onward { margin-top: 8px; min-width: 180px; animation: fade-up 0.4s 0.4s both; }
 @media (max-height: 500px) {
     .fight-won .interlude-body { gap: 6px; }
-    .fight-won .won-portrait { width: 64px; }
+    .fight-won .won-portrait { width: 84px; }
     .fight-won .interlude-title { margin: 0; font-size: 1.4rem; }
     .won-rows li { padding: 6px 12px; }
     .won-purse { margin-top: 0; }
