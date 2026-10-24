@@ -2016,19 +2016,17 @@ button.keepsake.used { opacity: 0.55; }
 .tune-actions button { flex: 1; }
 
 /* ---- A perfect hand: "Perfect 24!" (gold) and, in a cursed round, "Perfect ...4?" (violet) ----
-   Over the table's far edge (the opponent's chest), clear of the dice and the rail. */
+   In the middle of the green felt (the user's call, 24 Oct), clear of the rail. */
 .celebration { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
-/* (In the nameplate's place while it shows, as an ability's banner does.) */
-.hud:has(.celebration) .opponent-plate { visibility: hidden; }
 .celebration-rays {
-    position: absolute; left: var(--table-x, 50%); top: calc(var(--horizon, 30%) - 14px);
-    width: min(120vw, 620px); aspect-ratio: 1; transform: translate(-50%, -50%);
+    position: absolute; left: var(--table-x, 50%); top: var(--felt-y, 45%);
+    width: min(100vw, 460px); aspect-ratio: 1; transform: translate(-50%, -50%);
     background: repeating-conic-gradient(from 0deg, rgba(255, 220, 120, 0.42) 0deg 7deg, transparent 7deg 22deg);
     -webkit-mask: radial-gradient(circle, #000 0%, transparent 62%); mask: radial-gradient(circle, #000 0%, transparent 62%);
     animation: rays-spin 2.8s linear forwards, rays-fade 2.8s ease-out forwards;
 }
 .celebration-text {
-    position: absolute; left: var(--table-x, 50%); top: calc(var(--horizon, 30%) - 14px);
+    position: absolute; left: var(--table-x, 50%); top: var(--felt-y, 45%);
     transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
     white-space: nowrap; animation: perfect-pop 2.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
 }
@@ -2039,10 +2037,15 @@ button.keepsake.used { opacity: 0.55; }
     filter: drop-shadow(0 3px 0 #5a3a08) drop-shadow(0 0 18px rgba(255, 200, 80, 0.8));
 }
 .celebration-sparks span {
-    position: absolute; left: var(--table-x, 50%); top: calc(var(--horizon, 30%) - 14px);
+    position: absolute; left: var(--table-x, 50%); top: var(--felt-y, 45%);
     width: 7px; height: 7px; margin: -3.5px; border-radius: 50%;
     background: radial-gradient(circle, #fffbe0, #ffd54f 50%, rgba(255, 180, 40, 0));
     animation: spark-out 1.3s ease-out both;
+}
+/* Phones on their side: the felt is small, so the words are too. */
+@media (max-height: 500px) {
+    .celebration-text .what { font-size: 2.3rem; }
+    .celebration-rays { width: min(60vw, 320px); }
 }
 @keyframes perfect-pop {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }

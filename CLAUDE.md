@@ -324,8 +324,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (never over the rail); when it can't be worn a tap is a reminder. Martha herself shows a
   "Disguises" moment first, then the trick she copies (`disguiseMoves`).
 - **Perfect hands (23 Oct, the user's):** a finished 24 gets "Perfect 24!" (gold lettering, rays and
-  sparks over the table's far edge, the nameplate hidden meanwhile, the room lit gold in the look
-  preview); in a cursed round (lowest valid hand wins) four 1s with the 2 and 4 (a score of 4) get
+  sparks in the middle of the green felt since 24 Oct (`--felt-y`, from `setRailAnchor`; smaller
+  on phones on their side), the room lit gold); in a cursed round (lowest valid hand wins) four 1s with the 2 and 4 (a score of 4) get
   "Perfect ...4?" in Danhausen's violet and white, its "?" tilting, the room lit violet. A cursed 24
   gets no celebration (a sigh). For anyone at the table, with their name when it isn't you.
   `perfectHand` (rules.ts, tested), `Celebration` (Hud), `snapshot.celebration`; a moment of its

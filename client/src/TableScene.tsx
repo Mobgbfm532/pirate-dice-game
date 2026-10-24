@@ -20,6 +20,7 @@ const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
 const nearPoint = new THREE.Vector3(0, 0, NEAR_EDGE_Z);
 const projected = new THREE.Vector3();
 const railEnd = new THREE.Vector3(TRAY.maxX + 0.45, 0, SLOT_ROW_Z);
+const feltMiddle = new THREE.Vector3((TRAY.minX + TRAY.maxX) / 2, 0, (TRAY.minZ + TRAY.maxZ) / 2);
 const leanAim = new THREE.Vector3();
 
 // Frames the table on any screen shape. It solves for the camera distance and aim so the
@@ -128,7 +129,9 @@ function CameraRig() {
         projected.copy(railEnd).project(cam);
         const railX = (projected.x + 1) / 2 * size.width, railY = (1 - projected.y) / 2 * size.height;
         projected.copy(farPoint).project(cam);
-        setRailAnchor(railX, railY, (projected.x + 1) / 2 * size.width);
+        const tableX = (projected.x + 1) / 2 * size.width;
+        projected.copy(feltMiddle).project(cam);
+        setRailAnchor(railX, railY, tableX, (1 - projected.y) / 2 * size.height);
 
         // Fog only darkens the far end of the table, whatever the camera distance.
         if (scene.fog instanceof THREE.Fog) {

@@ -636,8 +636,8 @@ function useMoment(at: number, ms: number) {
 
 // A perfect hand (since 23 Oct, the user's): "Perfect 24!" in gold with a burst of light and
 // sparks; in a cursed round, where the lowest hand wins, four 1s with the 2 and 4 get "Perfect
-// ...4?" in Danhausen's violet and white, not quite sure of itself. Over the table's far edge, clear
-// of the dice; the opponent's name with it when it's theirs.
+// ...4?" in Danhausen's violet and white, not quite sure of itself. In the middle of the green felt
+// (since 24 Oct); the opponent's name with it when it's theirs.
 function Celebration({ snap }: { snap: Snapshot }) {
     const c = snap.celebration;
     const [visible] = useMoment(c?.at ?? 0, CELEBRATION_MS);

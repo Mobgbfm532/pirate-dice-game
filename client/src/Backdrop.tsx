@@ -70,17 +70,19 @@ export function layoutBackdrop(horizon: number, width: number, leaning = false) 
 }
 
 // Where the table is on screen: the right-hand end of the slot rail (so wide screens can put
-// the Roll button right beside it) and the table's centre line (where the opponent sits).
+// the Roll button right beside it), the table's centre line (where the opponent sits) and the
+// felt's middle (where a perfect hand is celebrated).
 let lastAnchor = '';
-export function setRailAnchor(x: number, y: number, tableCenterX: number) {
+export function setRailAnchor(x: number, y: number, tableCenterX: number, feltY: number) {
     backdropLayout.tableX = Math.round(tableCenterX);
-    const key = `${Math.round(x)},${Math.round(y)},${Math.round(tableCenterX)}`;
+    const key = `${Math.round(x)},${Math.round(y)},${Math.round(tableCenterX)},${Math.round(feltY)}`;
     if (key === lastAnchor) return;
     lastAnchor = key;
     const css = document.documentElement.style;
     css.setProperty('--rail-right', `${Math.round(x)}px`);
     css.setProperty('--rail-y', `${Math.round(y)}px`);
     css.setProperty('--table-x', `${Math.round(tableCenterX)}px`);
+    css.setProperty('--felt-y', `${Math.round(feltY)}px`);
 }
 
 // The bot opponent at this table, if any: The Molar in solo games, the current
