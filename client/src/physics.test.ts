@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { readFrame, simulateRoll, trackDuration } from './physics';
+import { paceFrame, paceSeconds, readFrame, simulateRoll, suspensePace, trackDuration } from './physics';
 import { faceNormal, faceUpQuaternion, valueFacingUp } from './layout';
 
 describe('simulateRoll', () => {
@@ -56,5 +56,17 @@ describe('seeded throws', () => {
 describe('faceUpQuaternion', () => {
     it('puts the requested value on top', () => {
         for (let v = 1; v <= 6; v++) expect(valueFacingUp(faceUpQuaternion(v, 0.3))).toBe(v);
+    });
+
+    it('plays the last bounce of a suspense roll slower, and its clock runs both ways', () => {
+        const track = simulateRoll([0, 1, 2], [2, 4, 6], 42);
+        const plain = { speed: 0.55 }, slow = suspensePace(track, 0.55);
+        expect(slow.slow!.to).toBeGreaterThan(slow.slow!.from);
+        // Longer overall, the same before the slow stretch.
+        expect(paceSeconds(slow, track.frames)).toBeGreaterThan(paceSeconds(plain, track.frames));
+        expect(paceSeconds(slow, slow.slow!.from)).toBeCloseTo(paceSeconds(plain, slow.slow!.from));
+        for (let f = 0; f < track.frames; f += 7) expect(paceFrame(slow, paceSeconds(slow, f))).toBeCloseTo(f, 6);
+        // The cup sits at the end the dice are thrown from.
+        expect(Math.abs(track.cup.x)).toBeGreaterThan(2);
     });
 });

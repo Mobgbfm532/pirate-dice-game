@@ -6,6 +6,7 @@ import { Bloom, EffectComposer, Noise, ToneMapping, Vignette } from '@react-thre
 import { BlendFunction, Effect, ToneMappingMode } from 'postprocessing';
 import { flame, lookNext, shareFlame } from './look';
 import { Dice } from './Dice';
+import { Throw } from './Throw';
 import { table } from './game';
 import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slotPosition } from './layout';
 import { artTexture, paintedTexture } from './textures';
@@ -439,6 +440,7 @@ export function TableScene() {
             {lookNext ? <NextLights /> : <Lights />}
             <Tray />
             <Dice />
+            {lookNext && <Throw />}
             {lookNext && <DustMotes />}
             {lookNext && <Finish />}
             {lookNext && <QualityWatch />}

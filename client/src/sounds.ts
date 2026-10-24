@@ -1,3 +1,4 @@
+import { paceSeconds, type Pace } from './physics';
 // The game's existing sound effects, served by the game server from public/.
 function load(file: string, volume: number, loop = false) {
     const audio = new Audio(`/${encodeURI(file)}`);
@@ -115,20 +116,20 @@ function knock(ctx: BaseAudioContext, bus: AudioNode, when: number, kind: keyof 
 type Impacts = { frame: number; strength: number; kind: keyof typeof VOICES }[];
 
 // Schedules a whole throw's impacts. speed < 1 for slow-motion suspense rolls.
-export function playDiceImpacts(impacts: Impacts, speed = 1) {
+export function playDiceImpacts(impacts: Impacts, pace: Pace | number = 1) {
     if (muted) return;
     const ctx = audio();
     if (!ctx || !impactBus) return;
-    scheduleImpacts(ctx, impactBus, ctx.currentTime + 0.02, impacts, speed);
+    scheduleImpacts(ctx, impactBus, ctx.currentTime + 0.02, impacts, typeof pace === 'number' ? { speed: pace } : pace);
 }
 
-function scheduleImpacts(ctx: BaseAudioContext, bus: AudioNode, start: number, impacts: Impacts, speed: number) {
+function scheduleImpacts(ctx: BaseAudioContext, bus: AudioNode, start: number, impacts: Impacts, pace: Pace) {
     const lastByKind: Record<string, number> = {};
     for (const impact of impacts) {
         // Square-root curve: soft knocks are still heard, hard ones don't dominate.
         const loudness = Math.min(1, Math.sqrt(impact.strength / 10));
         if (loudness < 0.2) continue;
-        const when = start + impact.frame / 60 / speed;
+        const when = start + paceSeconds(pace, impact.frame);
         // Many dice landing in the same instant blur into one knock rather than a buzz.
         if (when - (lastByKind[impact.kind] ?? -1) < 0.015) continue;
         lastByKind[impact.kind] = when;
@@ -147,7 +148,7 @@ export async function renderImpacts(impacts: Impacts, seconds: number, sampleRat
     const level = ctx.createGain();
     level.gain.value = 0.85;
     glue.connect(level).connect(ctx.destination);
-    scheduleImpacts(ctx, glue, 0.05, impacts, 1);
+    scheduleImpacts(ctx, glue, 0.05, impacts, { speed: 1 });
     return (await ctx.startRendering()).getChannelData(0);
 }
 

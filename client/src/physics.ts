@@ -11,10 +11,12 @@ const STEP = 1 / 120;
 const RECORD_EVERY = 2; // frames are recorded at 60 per second
 const MAX_SECONDS = 4.5;
 const FLOATS_PER_DIE = 7; // x, y, z, qx, qy, qz, qw
+const CUP_SPACING = 0.92; // between the dice as they sit in the cup's mouth
 
 // Something a die hit during the throw, for the sound: when (frame, 60 per second),
 // how hard (impact speed) and what (another die, the felt, or the wooden rail).
-export interface Impact { frame: number; strength: number; kind: 'die' | 'felt' | 'wall' }
+// For a felt hit, also where on the felt (x, z), for the puff of dust.
+export interface Impact { frame: number; strength: number; kind: 'die' | 'felt' | 'wall'; x?: number; z?: number }
 
 export interface RollTrack {
     dieIds: number[];
@@ -22,6 +24,35 @@ export interface RollTrack {
     data: Float32Array; // frame-major: [frame][die][7]
     offsets: THREE.Quaternion[]; // per die, applied after the body rotation
     impacts: Impact[];
+    // The leather cup the dice are tipped from (visuals plan step 2): the middle of the dice as
+    // they leave it, and which way they're thrown.
+    cup: { x: number; y: number; z: number; direction: 1 | -1 };
+    lastBounce: number; // the frame of the last real knock, slowed down on a suspense roll
+}
+
+// How a roll is played back: its speed (below 1 on a suspense roll), and optionally a stretch
+// of frames around the last bounce played slower still.
+export interface Pace { speed: number; slow?: { from: number; to: number; factor: number } }
+
+export function suspensePace(track: RollTrack, speed: number): Pace {
+    return { speed, slow: { from: Math.max(0, track.lastBounce - 14), to: track.lastBounce + 8, factor: 0.4 } };
+}
+
+// Seconds into the playback at which a frame shows, and the frame showing at a time.
+export function paceSeconds(pace: Pace, frame: number) {
+    const s = pace.slow;
+    if (!s || frame <= s.from) return frame / 60 / pace.speed;
+    const inSlow = Math.min(frame, s.to) - s.from, after = Math.max(0, frame - s.to);
+    return (s.from + after) / 60 / pace.speed + inSlow / 60 / (pace.speed * s.factor);
+}
+export function paceFrame(pace: Pace, seconds: number) {
+    const s = pace.slow;
+    const plain = seconds * 60 * pace.speed;
+    if (!s || plain <= s.from) return plain;
+    const slowSeconds = (s.to - s.from) / 60 / (pace.speed * s.factor);
+    const intoSlow = seconds - s.from / 60 / pace.speed;
+    if (intoSlow <= slowSeconds) return s.from + intoSlow * 60 * pace.speed * s.factor;
+    return s.to + (intoSlow - slowSeconds) * 60 * pace.speed;
 }
 
 export function trackDuration(track: RollTrack) {
@@ -143,15 +174,16 @@ function simulateOnce(count: number, direction: 1 | -1) {
             sleepTimeLimit: 0.25
         });
         // A low, fast toss in from one end of the tray, along its long side, so the dice
-        // land early and tumble across the felt. They start in a loose two-column cluster.
+        // land early and tumble across the felt. They start in a tight two-column cluster:
+        // the mouth of the leather cup they're tipped from.
         const rows = Math.ceil(count / 2);
         const col = i % 2, row = Math.floor(i / 2);
         const startX = direction > 0 ? TRAY.minX + 0.7 : TRAY.maxX - 0.7;
         const cz = (TRAY.minZ + TRAY.maxZ) / 2;
         body.position.set(
-            startX + direction * col * 1.3 + rand(-0.1, 0.1),
-            rand(0.85, 1.1),
-            cz + (row - (rows - 1) / 2) * 1.3 + rand(-0.1, 0.1)
+            startX + direction * col * CUP_SPACING + rand(-0.06, 0.06),
+            rand(1.0, 1.25),
+            cz + (row - (rows - 1) / 2) * CUP_SPACING + rand(-0.06, 0.06)
         );
         body.quaternion.setFromEuler(rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2));
         const speed = rand(10, 13);
@@ -181,7 +213,7 @@ function simulateOnce(count: number, direction: 1 | -1) {
         const strength = Math.abs(e.contact.getImpactVelocityAlongNormal());
         // Skip touches in the first few frames: that is the dice leaving the hand together.
         const frame = Math.floor(step / RECORD_EVERY);
-        if (strength > 1.2 && frame >= 4) impacts.push({ frame, strength, kind });
+        if (strength > 1.2 && frame >= 4) impacts.push(kind === 'felt' ? { frame, strength, kind, x: body.position.x, z: body.position.z } : { frame, strength, kind });
     }));
 
     for (step = 0; step <= maxSteps; step++) {
@@ -204,7 +236,9 @@ function simulateOnce(count: number, direction: 1 | -1) {
         world.step(STEP);
     }
 
-    return { recorded, bodies, impacts, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
+    const startX = direction > 0 ? TRAY.minX + 0.7 : TRAY.maxX - 0.7;
+    const cup = { x: startX + direction * (count > 1 ? CUP_SPACING / 2 : 0), y: 1.12, z: (TRAY.minZ + TRAY.maxZ) / 2, direction };
+    return { recorded, bodies, impacts, cup, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
 }
 
 // Flat on the felt: one face pointing straight up and not resting on another die.
@@ -238,5 +272,7 @@ export function simulateRoll(dieIds: number[], targetValues: number[], seed?: nu
         return new THREE.Quaternion().setFromUnitVectors(faceNormal(target), faceNormal(landed));
     });
 
-    return { dieIds, frames: result.frames, data: Float32Array.from(result.recorded), offsets, impacts: result.impacts };
+    const knocks = result.impacts.filter(i => i.strength > 1.6);
+    const lastBounce = knocks.length ? knocks[knocks.length - 1].frame : Math.round(result.frames * 0.7);
+    return { dieIds, frames: result.frames, data: Float32Array.from(result.recorded), offsets, impacts: result.impacts, cup: result.cup, lastBounce };
 }

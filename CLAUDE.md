@@ -87,6 +87,15 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   for the Roll button.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
+- **The dice as the star** (visuals plan step 2, 24 Oct, new look only): `Throw.tsx` draws the
+  leather dice cup the throw starts in (`track.cup`; the dice start in a tight cluster,
+  `CUP_SPACING`), flicked and pulled away in 0.5 s, and a faint puff of dust at each hard felt hit
+  (felt impacts carry `x, z`). A kept die gives a wooden clack and a brass glint as it reaches its
+  slot (Dice.tsx `arrival`; the opponent's old toggle click is off in the new look). The red 1 and
+  green 6 pips glow their own colour (`pipGlow` emissive map in textures.ts). A suspense roll's
+  last bounce plays slower still (`Pace`, `suspensePace`, `paceSeconds`/`paceFrame` in physics.ts,
+  used by the playback, the sound and the roll's length; about 0.9 s longer). The living portraits
+  (step 1) were tried and removed, the user's call.
 - `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), turn banner (not in Tavern Crawl, where
   the nameplates show whose turn it is), chips, opponent nameplate, score to
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse

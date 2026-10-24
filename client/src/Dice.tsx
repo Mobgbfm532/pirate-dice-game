@@ -4,10 +4,18 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { actions, canPutBack, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
-import { readFrame } from './physics';
+import { paceFrame, readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
 import { createDiceMaterials } from './textures';
 import { lookNext } from './look';
+import { playDiceImpacts } from './sounds';
+
+// A kept die settling into its slot (visuals plan step 2): a wooden clack and a glint off the
+// brass as it arrives. Arriving: it was well away from the slot and is now right on it.
+const GLINT_MS = 380;
+// (brighter than white, so the finish's glow turns it into a sparkle on the brass)
+const GLINT_COLOR = new THREE.Color(3.2, 2.5, 1.3);
+const CLACK = [{ frame: 0, strength: 5, kind: 'wall' as const }];
 
 // The die the Loaded Die keepsake loads (the server's LOADED_DIE).
 const LOADED_DIE = 0;
@@ -145,6 +153,9 @@ export function Dice() {
     const rings = useRef<(THREE.Mesh | null)[]>([]);
     const contacts = useRef<(THREE.Mesh | null)[]>([]);
     const contactMap = useMemo(() => (lookNext ? contactTexture() : null), []);
+    const glintMap = useMemo(() => (lookNext ? starTexture() : null), []);
+    const glints = useRef<(THREE.Sprite | null)[]>([]);
+    const arrival = useRef(DICE_IDS.map(() => ({ coming: false, at: -1e9, x: 0, y: 0, z: 0 })));
     const ringGeometry = useMemo(() => new THREE.RingGeometry(0.56, 0.68, 40), []);
     // An invisible sphere just beyond each die's corners, so taps needn't be exact. A sphere
     // (unlike a box) is the same size whichever way the die has landed.
@@ -179,7 +190,7 @@ export function Dice() {
 
             if (roll && trackIndex >= 0) {
                 // Mid-throw: play the pre-simulated physics.
-                const frame = Math.floor(((now - roll.startedAt) / 1000) * 60 * roll.speed);
+                const frame = Math.floor(paceFrame(roll.pace, (now - roll.startedAt) / 1000));
                 readFrame(roll.track, frame, trackIndex, mesh.position, mesh.quaternion);
                 showHidden = roll.hidden.has(die.id);
             } else {
@@ -216,6 +227,29 @@ export function Dice() {
                 }
                 mesh.position.lerp(targetPos, ease);
                 mesh.quaternion.slerp(targetQuat, ease);
+                if (lookNext) {
+                    const a = arrival.current[die.id];
+                    const gap = mesh.position.distanceTo(targetPos);
+                    if (!isLocked(die)) a.coming = false;
+                    else if (gap > 0.6) a.coming = true;
+                    else if (a.coming && gap < 0.08) {
+                        a.coming = false;
+                        // (on the front edge of its brass plate, where a glint shows against the rail)
+                        Object.assign(a, { at: now, x: targetPos.x + 0.3, y: 0.12, z: targetPos.z + 0.52 });
+                        playDiceImpacts(CLACK);
+                    }
+                }
+            }
+            const glint = glints.current[die.id];
+            if (glint) {
+                const a = arrival.current[die.id];
+                const t = (now - a.at) / GLINT_MS;
+                glint.visible = t >= 0 && t < 1;
+                if (glint.visible) {
+                    glint.position.set(a.x, a.y, a.z);
+                    glint.scale.setScalar(1.4 * Math.sin(Math.PI * Math.min(1, t * 1.2)));
+                    glint.material.rotation = t * 1.2;
+                }
             }
 
             mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : materials.faces;
@@ -279,6 +313,11 @@ export function Dice() {
                             <planeGeometry args={[DIE_SIZE * 1.45, DIE_SIZE * 1.45]} />
                             <meshBasicMaterial map={contactMap} transparent depthWrite={false} toneMapped={false} />
                         </mesh>
+                    )}
+                    {glintMap && (
+                        <sprite ref={el => { glints.current[id] = el; }} visible={false} renderOrder={4}>
+                            <spriteMaterial map={glintMap} color={GLINT_COLOR} transparent depthWrite={false} depthTest={false} blending={THREE.AdditiveBlending} />
+                        </sprite>
                     )}
                     <Constellation index={id} meshes={meshes} />
                 </group>

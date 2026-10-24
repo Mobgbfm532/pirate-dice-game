@@ -1,8 +1,9 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
 import { calloutText, isLocked, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
-import { simulateRoll, readFrame, trackDuration, type RollTrack } from './physics';
+import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
+import { lookNext } from './look';
 import { playChime, playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
@@ -179,7 +180,7 @@ const STEAL_PAUSE_MS = 500;
 
 // Read every frame by the 3D table, so it lives outside React state.
 export const table = {
-    roll: null as null | { track: RollTrack; startedAt: number; speed: number; hidden: Set<number> },
+    roll: null as null | { track: RollTrack; startedAt: number; speed: number; pace: Pace; hidden: Set<number> },
     rest: new Map<number, DiePose>(), // where each unlocked die is lying in the tray
     lockOrder: new Map<number, number>(), // die id -> when it was locked, so slots never reshuffle
     stolenAt: new Map<number, number>(), // die id -> time Klarg took it
@@ -377,7 +378,8 @@ function showDevil(turn: TurnView) {
 function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null, turn: TurnView | null) {
     if (!event) return;
     const mine = snapshot.isMyTurn;
-    if (event.type === 'toggle' && !mine) playSound('click');
+    // (In the new look a kept die clacks as it reaches its slot, Dice.tsx, so no click here.)
+    if (event.type === 'toggle' && !mine && !lookNext) playSound('click');
     if (event.type !== 'finalized' || !event.outcome) return;
     const { busted, score, suspense } = event.outcome;
     // In a cursed round (Danhausen's, or his face on Martha or your mask) the lowest valid hand
@@ -424,9 +426,11 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         const rolled = turn.dice.filter(d => thrownIds.has(d.id));
         const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed);
         const speed = data.suspense !== 'none' ? 0.55 : 1;
-        const durationMs = (trackDuration(track) / speed) * 1000;
+        // A suspense roll's last bounce plays in slow motion (visuals plan step 2).
+        const pace: Pace = speed < 1 && lookNext ? suspensePace(track, speed) : { speed };
+        const durationMs = paceSeconds(pace, track.frames) * 1000;
 
-        table.roll = { track, startedAt: performance.now(), speed, hidden: new Set(rolled.filter(d => d.hidden).map(d => d.id)) };
+        table.roll = { track, startedAt: performance.now(), speed, pace, hidden: new Set(rolled.filter(d => d.hidden).map(d => d.id)) };
         // Rokr's blur lifts the moment the next roll starts (not when it lands): the dice already
         // kept show their faces at once, and the stars over the thrown ones go.
         const unblurred = before && before.blurActive && !turn.blurActive
@@ -434,7 +438,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
             : null;
         update(unblurred ? { rolling: true, turn: unblurred } : { rolling: true });
         setCallout(turn, data.preRollCallout, null);
-        playDiceImpacts(track.impacts, speed);
+        playDiceImpacts(track.impacts, pace);
 
         setTimeout(() => {
             // Leave each die exactly where its throw ended.
