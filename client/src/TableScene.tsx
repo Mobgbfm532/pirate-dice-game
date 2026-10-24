@@ -13,7 +13,7 @@ import { layoutBackdrop, setRailAnchor } from './Backdrop';
 import { Room } from './Room';
 import { DustMotes } from './Air';
 import { MomentLights } from './MomentLight';
-import { noteFrame, settings, tuneStore, tuning } from './tuning';
+import { noteFrame, renderDpr, settings, tuneStore, tuning } from './tuning';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
 const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
@@ -424,7 +424,7 @@ function Finish() {
 function QualityWatch() {
     const { setDpr } = useThree();
     const version = useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
-    useEffect(() => { setDpr(Math.min(window.devicePixelRatio || 1, settings().dpr)); }, [version, setDpr]);
+    useEffect(() => { setDpr(renderDpr()); }, [version, setDpr]);
     useFrame((_, delta) => noteFrame(delta));
     return null;
 }

@@ -77,6 +77,9 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
   header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both).
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
+- `tuning.ts` `renderDpr()`: pixels drawn per screen point. Computers with a mouse draw at the
+  quality level's dpr (High 2x) even when the screen reports 1x, so the dice are sharp on desktop
+  (24 Oct); phones use their own up to that.
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray,
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (on desktop a dock: chips, score, Roll; reactions in a
@@ -335,7 +338,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`) and a banner says "Devil's titties" (the
   sound is `DevilsTeets.wav`). `DevilSixes` in Hud, `showDevil` / `snapshot.devil` in game.ts,
   `DEVIL_MS` 1.5 s (the user's, was 2.8); taps go through to the dice, the next moment waits. Dev:
-  `preview.devil(who, hold)` (hold keeps it up, for stills).
+  `preview.devil(who, hold)` (hold keeps it up, for stills). Since 24 Oct a **living painting**
+  (`LivingPainting.tsx`, a small WebGL shader on its own canvas, a fresh one per showing): the
+  flames sway and flicker, a heat shimmer, a slow breath, the green pips pulse, a glint in each eye
+  (`DEVIL_EYES`); which parts move comes from `devil-sixes-mask.webp` (`livingMask` in
+  process-art.mjs: red wide flames, green pips/eyes, blue tight flames). Without WebGL, the plain picture.
 - **An opponent's entrance (23 Oct):** the name card shows 4.5 s (`INTRO_MS`; 6 s, then 1.5 s shorter, the user's); at a fight's start the
   server sends the new opponent before the round's abilities and puts the entrance on its moment
   clock (`INTRO_SHOW_MS`), so abilities and the first throw wait for the card (Martha's entrance

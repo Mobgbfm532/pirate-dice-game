@@ -51,6 +51,11 @@ export function setTune(key: keyof Tuning, value: number) { tuning[key] = value;
 export function resetTune() { Object.assign(tuning, TUNE_DEFAULTS); write('tavernTune', tuning); changed(); }
 export function setQuality(level: Quality, auto = quality.auto) { quality.level = level; quality.auto = auto; write('tavernQuality', quality); changed(); }
 export const settings = () => QUALITY[quality.level];
+// How many pixels to draw per screen point. Phones report 2-3 and get up to the level's dpr; a
+// computer with a mouse usually reports 1, and its dice looked soft (the user, 24 Oct), so it
+// draws at the level's dpr anyway (High twice over), and Auto steps down if that is too slow.
+const desktop = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+export const renderDpr = () => desktop ? settings().dpr : Math.min(window.devicePixelRatio || 1, settings().dpr);
 
 // Frames: the panel's frame rate, and Auto's step down (after a settling time, when frames have
 // stayed slower than ~45 a second for a few seconds; it never steps back up by itself).

@@ -397,6 +397,41 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  background rgb(${bg.join(',')}), ${removed}% removed`);
 }
 
+// A living painting's mask (the devil's three 6s): which parts the shader moves, packed into the
+// colour channels of `<name>-mask.webp` at the cut-out's size.
+//   red    the flames, spread wide and soft, so they can sway out into the clear background
+//   green  the glowing green pips (and her eyes)
+//   blue   the flames themselves, tight, for their flicker
+// Flames are the bright, saturated yellow-orange; her skin is darker and redder, and the thin
+// orange rims round her body drop out when the mask is blurred and cut again.
+async function livingMask(name) {
+    if (!wanted(name)) return;
+    const { data, info } = await sharp(path.join(OUT, `${name}.webp`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+    const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+    const flame = Buffer.alloc(width * height), green = Buffer.alloc(width * height);
+    for (let p = 0; p < width * height; p++) {
+        const r = data[p * 4], g = data[p * 4 + 1], b = data[p * 4 + 2];
+        if (data[p * 4 + 3] < 10) continue;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const s = max ? (max - min) / max : 0;
+        let hue = 0;
+        if (max !== min) hue = max === r ? (60 * ((g - b) / (max - min)) + 360) % 360 : max === g ? 60 * ((b - r) / (max - min)) + 120 : 60 * ((r - g) / (max - min)) + 240;
+        flame[p] = Math.round(255 * ramp(hue, 18, 26) * ramp(-hue, -58, -50) * ramp(s, 0.45, 0.6) * ramp(max / 255, 0.62, 0.74));
+        green[p] = Math.round(255 * ramp(g - Math.max(r, b), 25, 65));
+    }
+    const grey = buf => sharp(buf, { raw: { width, height, channels: 1 } });
+    const blurred = async (buf, sigma) => (await grey(buf).blur(sigma).extractChannel(0).raw().toBuffer());
+    const open = await blurred(flame, 2.5);                       // thin rims fade below the cut
+    const tight = open.map(v => Math.round(255 * ramp(v, 90, 190)));
+    const wide = await blurred(Buffer.from(tight.map(v => Math.min(255, v * 2))), 9);
+    const packed = Buffer.alloc(width * height * 3);
+    for (let p = 0; p < width * height; p++) { packed[p * 3] = wide[p]; packed[p * 3 + 1] = green[p]; packed[p * 3 + 2] = tight[p]; }
+    const info2 = await sharp(packed, { raw: { width, height, channels: 3 } }).webp({ lossless: true }).toFile(path.join(OUT, `${name}-mask.webp`));
+    if (PREVIEW) await sharp(packed, { raw: { width, height, channels: 3 } }).png().toFile(path.join(PREVIEW, `${name}-mask.png`));
+    console.log(`${name}-mask.webp  ${width}x${height}  ${Math.round(info2.size / 1024)} KB`);
+}
+
 // The plates image holds three plaques side by side: "2", "4" and a blank one.
 async function slotPlates() {
     const img = await readRgba('slot-plates.jpg');
@@ -493,3 +528,4 @@ await cutOutFlat('bust-martha-duke.jpg', 'martha-duke', { tolerance: 30, holes: 
 await cutOutFlat('bust-martha-danhausen.jpg', 'martha-danhausen', { holes: [[768, 572], [886, 606], [761, 833]] });
 await cutOutFlat('bust-brodor.webp', 'brodor');
 await cutOutFlat('devil-sixes.jpg', 'devil-sixes', { maxHeight: 900 }); // three 6s: the devil's moment
+await livingMask('devil-sixes');

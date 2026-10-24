@@ -4,6 +4,7 @@ import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, actions, canPutBack, readSavedRun, 
 import { Rules, coins } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
+import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editablePortrait, portraitEdits, portraitFor } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey } from './Backdrop';
 import { lookNext } from './look';
@@ -661,6 +662,9 @@ function Celebration({ snap }: { snap: Snapshot }) {
 
 // Three 6s land (since 23 Oct, the user's): fire surges up the screen, the devil rises holding
 // her three 6s, and a banner says "Devil's titties". Taps go through to the dice.
+// Since 24 Oct a living painting: her flames move, her pips pulse, her eyes glint.
+const DEVIL_EYES: [[number, number], [number, number]] = [[0.453, 0.274], [0.609, 0.291]];
+preloadPainting('devil-sixes');
 function DevilSixes({ snap }: { snap: Snapshot }) {
     const d = snap.devil;
     const [visible] = useMoment(d?.at ?? 0, DEVIL_MS);
@@ -673,7 +677,7 @@ function DevilSixes({ snap }: { snap: Snapshot }) {
                     <span key={i} style={{ left: `${(i * 5.9 + (i % 3) * 2) % 100}%`, '--h': `${22 + (i * 23) % 26}vh`, animationDelay: `${(i * 0.13) % 0.7}s` } as React.CSSProperties} />
                 ))}
             </div>
-            <img className="devil-picture" src={`${import.meta.env.BASE_URL}art/devil-sixes.webp`} alt="" />
+            <LivingPainting name="devil-sixes" eyes={DEVIL_EYES} className="devil-picture" />
             <div className="devil-banner">
                 {d.who && <span className="who">{d.who}</span>}
                 <span className="what">Devil's titties</span>

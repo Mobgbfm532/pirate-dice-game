@@ -12,7 +12,7 @@ function canvasTexture(draw: (ctx: CanvasRenderingContext2D) => void, size = SIZ
     draw(canvas.getContext('2d')!);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = 16; // (the dice faces stay crisp seen at a slant; capped by the device)
     return texture;
 }
 
