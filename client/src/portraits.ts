@@ -26,6 +26,9 @@ export interface Portrait {
     seat?: number;
     // The look preview's living air on this painting (Air.tsx): smoke from a point, a glow.
     air?: PaintedAir;
+    // Where the eyes are, for blinking (visuals plan step 1): each eye's middle and size, in
+    // percent of the picture's width and height [x, y, w, h].
+    eyes?: [[number, number, number, number], [number, number, number, number]];
 }
 
 const bust = (file: string, face: [number, number], zoom: number): Portrait => ({ src: `${BASE}art/${file}`, face, zoom, bust: true });
@@ -37,36 +40,39 @@ const classic = (file: string, zoom = 1, nudge?: [number, number]): Portrait =>
 
 // Keyed by player avatar id and by opponent name (the bot's name in each encounter).
 export const PORTRAITS: Record<string, Portrait> = {
-    'The Molar': seated('molar.webp', [50, 30], 1.05, 536, 720, [-1.2, -3.5]),
-    'Sperm McGrath': { ...seated('mcgrath.webp', [57, 14], 2.2, 641, 720, [-9, -4.4]), seat: 2 },
+    'The Molar': { ...seated('molar.webp', [50, 30], 1.05, 536, 720, [-1.2, -3.5]), eyes: [[47, 26.9, 8.3, 2.6], [69.5, 28.3, 6.5, 2.4]] },
+    'Sperm McGrath': { ...seated('mcgrath.webp', [57, 14], 2.2, 641, 720, [-9, -4.4]), seat: 2, eyes: [[59, 12.3, 4.5, 1.4], [69, 12.2, 3.6, 1.4]] },
     Frak: {
         ...seated('frak.webp', [51, 24], 1.6, 584, 720, [-11.3, 2.1]), seat: 1.4,
+        eyes: [[44.6, 22.3, 6.4, 2.2], [57.8, 23.8, 6, 2.2]],
         // His cigar: smoke curling up from the tip, and the tip glowing.
         air: { smoke: { at: [0.31, 0.545], color: [0.8, 0.78, 0.74], alpha: 0.26, rate: 3 }, glow: { at: [0.31, 0.545], color: [0.95, 0.38, 0.1], radius: 0.028, strength: 0.32, pulse: 0.35 } }
     },
-    Danhausen: { ...seated('danhausen.webp', [54, 15], 1.65, 549, 720, [7.1, -8.2]), seat: 1.6 },
-    'Duke Morrigan': seated('duke.webp', [72, 37], 1.2, 582, 720, [16.5, 9.9]),
+    Danhausen: { ...seated('danhausen.webp', [54, 15], 1.65, 549, 720, [7.1, -8.2]), seat: 1.6, eyes: [[44, 17, 5.6, 1.9], [55.1, 17.5, 4.9, 1.9]] },
+    'Duke Morrigan': { ...seated('duke.webp', [72, 37], 1.2, 582, 720, [16.5, 9.9]), eyes: [[62.3, 32.8, 7, 1.7], [77.3, 35.1, 6.7, 1.7]] },
     // (Her vape's clouds are painted in already: no smoke of our own, it couldn't be told apart.)
-    'Martha Mystery': { ...seated('martha.webp', [44, 27], 1.2, 694, 720, [-5.8, -12]), seat: 1.15 },
+    'Martha Mystery': { ...seated('martha.webp', [44, 27], 1.2, 694, 720, [-5.8, -12]), seat: 1.15, eyes: [[50.7, 26.1, 7.4, 2], [62.6, 26.2, 6, 2]] },
     // Her Disguises: the same pose holding up each face as a mask. Behind the table they sit like her own bust (seat); a round avatar shows her face and the mask.
     'Martha as Frak': { ...seated('martha-frak.webp', [55, 32], 0.95, 703, 720, [1.2, -12.9]), seat: 1.15 },
     'Martha as Danhausen': { ...seated('martha-danhausen.webp', [58, 33], 1, 729, 720, [-19.1, -9.5]), seat: 1.15 },
     'Martha as Duke Morrigan': { ...seated('martha-duke.webp', [57, 33], 0.9, 718, 720, [4.5, -11.3]), seat: 1.15 },
-    Klarg: seated('klarg.webp', [62, 26], 1.3, 907, 720, [10.2, -11.9]),
-    Rokr: seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]),
-    'The Hangman': seated('hangman.webp', [45, 36], 1.25, 793, 720, [-10.1, -4]),
-    'Jaguar Cantona': seated('jaguar.webp', [47, 36], 1.6, 886, 720, [-8.3, 1.8]),
+    Klarg: { ...seated('klarg.webp', [62, 26], 1.3, 907, 720, [10.2, -11.9]), eyes: [[52.9, 23, 4.2, 1.4], [63.3, 23.9, 2.9, 1.3]] },
+    Rokr: { ...seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]), eyes: [[43.5, 25.6, 6, 2.7], [53.8, 25.6, 5.5, 2.7]] },
+    'The Hangman': { ...seated('hangman.webp', [45, 36], 1.25, 793, 720, [-10.1, -4]), eyes: [[49, 32, 5.4, 3.3], [59.7, 33.2, 4.4, 3]] },
+    'Jaguar Cantona': { ...seated('jaguar.webp', [47, 36], 1.6, 886, 720, [-8.3, 1.8]), eyes: [[44.2, 28.5, 4.8, 2], [54.8, 28, 5, 2]] },
     // The Yawning Portal's five (painted 20 Oct, in the game since 21 Oct).
-    'Sylvester Stonefist': seated('sylvester.webp', [48, 40], 1.2, 722, 720, [-1.5, 1.2]),
+    'Sylvester Stonefist': { ...seated('sylvester.webp', [48, 40], 1.2, 722, 720, [-1.5, 1.2]), eyes: [[40.5, 38.3, 7.3, 2.4], [58, 37.9, 6.7, 2.4]] },
     // His black flame: dark tongues rising from between his hands, with a violet glow in it.
     'Vaelin Inkhand': {
         ...seated('vaelin-inkhand.webp', [39, 31], 1.1, 759, 720, [-16.6, -11.1]),
+        eyes: [[45.6, 27.5, 5.8, 2.3], [57, 28.5, 5, 2.3]],
         air: { smoke: { at: [0.71, 0.4], color: [0.07, 0.04, 0.11], alpha: 0.45, rate: 7, spread: 0.12, rise: 48 }, glow: { at: [0.62, 0.47], color: [0.55, 0.3, 0.9], radius: 0.12, strength: 0.22, pulse: 0.4 } }
     },
-    'Stason Jatham': seated('stason.webp', [47, 37], 1.45, 991, 720, [-6.2, -3.4]),
+    'Stason Jatham': { ...seated('stason.webp', [47, 37], 1.45, 991, 720, [-6.2, -3.4]), eyes: [[42.2, 31.5, 4.2, 2], [53.3, 31.1, 4.4, 2]] },
     // His hammer's holy light, pulsing.
     'The Ridgeler': {
         ...seated('ridgeler.webp', [40, 30], 1.45, 748, 720, [-12.4, -6]),
+        eyes: [[33.5, 25.5, 3.9, 2], [50.4, 25.2, 5.2, 2]],
         air: { glow: { at: [0.87, 0.67], color: [1, 0.93, 0.75], radius: 0.17, strength: 0.45, pulse: 0.3 } }
     },
     Brodor: { ...seated('brodor.webp', [50, 30], 1.7, 702, 702), seat: 1.3 },

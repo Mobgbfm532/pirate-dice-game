@@ -184,7 +184,9 @@ export const table = {
     lockOrder: new Map<number, number>(), // die id -> when it was locked, so slots never reshuffle
     stolenAt: new Map<number, number>(), // die id -> time Klarg took it
     devilAt: 0,
-    celebrateAt: 0
+    celebrateAt: 0,
+    holdBlink: null as number | null, // (development: hold the opponent's eyes this far shut, 0-1)
+    react: null as null | { kind: 'slump' | 'gloat'; at: number } // the opponent's reaction to their hand
 };
 
 const socket = io({ transports: ['websocket', 'polling'] });
@@ -380,6 +382,13 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
     if (event.type === 'toggle' && !mine) playSound('click');
     if (event.type !== 'finalized' || !event.outcome) return;
     const { busted, score, suspense } = event.outcome;
+    // The opponent reacts to their own hand (visuals plan step 1): slumps at dust, leans in,
+    // pleased, at a strong hand (in a cursed round, a low one).
+    if (turn && turn.playerId === BOT_ID) {
+        const strong = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse' ? score <= 8 : score >= 20;
+        if (busted) table.react = { kind: 'slump', at: performance.now() };
+        else if (strong) table.react = { kind: 'gloat', at: performance.now() };
+    }
     // In a cursed round (Danhausen's, or his face on Martha or your mask) the lowest valid hand
     // wins: four 1s with the 2 and 4 is its perfect hand, and a 24 its worst.
     const cursed = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse';
@@ -876,6 +885,7 @@ export const preview = {
     intro() { update({ introAt: performance.now() }); },
     celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
     // (hold: keep it up that much longer, to look at a still of it)
+    react(kind: 'slump' | 'gloat') { table.react = { kind, at: performance.now() }; },
     devil(who: string | null = null, hold = 0) { table.devilAt = performance.now(); update({ devil: { at: performance.now() + hold, who } }); }
 };
 
