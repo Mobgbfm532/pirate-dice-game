@@ -112,33 +112,24 @@ function engraving(face: THREE.Texture) {
     return cut;
 }
 
-// The coloured pips' own light (visuals plan step 2, 24 Oct): under the new look's light and tone
-// curve the green 6s went a muddy olive and the red 1 dark. A glow map lets them shine their own
-// colour: the painted pips, found by their colour, in a clean bright red or green; all else black.
-function pipGlow(face: THREE.Texture) {
-    const source = face.image as CanvasImageSource & { width: number };
-    const size = source.width;
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-    ctx.drawImage(source, 0, 0, size, size);
+// Clearer coloured pips (visuals plan step 2, 24 Oct): under the new look's light and tone curve
+// the green 6s went a muddy olive and the red 1 dark. The painted pips, found by their colour, are
+// repainted a cleaner, lighter red or green in the face itself, so they still shade with the die.
+// (A glow of their own was tried first: on desktop the pips lit up even on a die's shaded sides.)
+function clearPips(ctx: CanvasRenderingContext2D, size: number) {
     const pixels = ctx.getImageData(0, 0, size, size);
     const d = pixels.data;
+    const RED = [214, 44, 36], GREEN = [58, 178, 72];
     for (let i = 0; i < d.length; i += 4) {
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const red = Math.min(1, Math.max(0, (r - Math.max(g, b) - 40) / 50));
         const green = Math.min(1, Math.max(0, (g - Math.max(r, b) - 15) / 35));
-        d[i] = Math.round(255 * red * 1.0 + 255 * green * 0.2);
-        d[i + 1] = Math.round(255 * red * 0.16 + 255 * green * 0.85);
-        d[i + 2] = Math.round(255 * red * 0.1 + 255 * green * 0.3);
-        d[i + 3] = 255;
+        const k = Math.max(red, green), to = red > green ? RED : GREEN;
+        if (k <= 0) continue;
+        for (let c = 0; c < 3; c++) d[i + c] = Math.round(d[i + c] * (1 - k) + to[c] * k);
     }
     ctx.putImageData(pixels, 0, 0);
-    const glow = new THREE.CanvasTexture(canvas);
-    glow.colorSpace = THREE.SRGBColorSpace;
-    return glow;
 }
-const PIP_GLOW = 0.55;
 
 // Wear on a face (shared by all six): red = how much lacquer is left, green = roughness. Full and
 // glossy in the middle, rubbed and duller towards the edges, in blotches rather than a clean band.
@@ -215,21 +206,14 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.
             const [sx, sy] = DICE_SHEET_FACES[value];
             const texture = canvasTexture(ctx => {
                 ctx.drawImage(image, sx, sy, DICE_SHEET_FACE_SIZE, DICE_SHEET_FACE_SIZE, 0, 0, 512, 512);
+                if (lookNext && (value === 1 || value === 6)) clearPips(ctx, 512);
             }, 512);
             materials[i].map?.dispose();
             materials[i].map = texture;
             const cut = lookNext ? engraving(texture) : null;
-            const glow = lookNext && (value === 1 || value === 6) ? pipGlow(texture) : null;
-            [materials, ...alike].forEach((set, k) => {
+            [materials, ...alike].forEach(set => {
                 set[i].map = texture;
                 if (cut) set[i].bumpMap = cut;
-                // (the plain and the Loaded Die's faces; the Mind Whip's and the hot tub's keep
-                // their own glow)
-                if (glow && k <= 1) {
-                    set[i].emissiveMap = glow;
-                    set[i].emissive.set('#ffffff');
-                    set[i].emissiveIntensity = PIP_GLOW;
-                }
                 set[i].needsUpdate = true;
             });
         });

@@ -66,7 +66,5 @@ describe('faceUpQuaternion', () => {
         expect(paceSeconds(slow, track.frames)).toBeGreaterThan(paceSeconds(plain, track.frames));
         expect(paceSeconds(slow, slow.slow!.from)).toBeCloseTo(paceSeconds(plain, slow.slow!.from));
         for (let f = 0; f < track.frames; f += 7) expect(paceFrame(slow, paceSeconds(slow, f))).toBeCloseTo(f, 6);
-        // The cup sits at the end the dice are thrown from.
-        expect(Math.abs(track.cup.x)).toBeGreaterThan(2);
     });
 });

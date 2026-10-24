@@ -10,11 +10,8 @@ import { createDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
 
-// A kept die settling into its slot (visuals plan step 2): a wooden clack and a glint off the
-// brass as it arrives. Arriving: it was well away from the slot and is now right on it.
-const GLINT_MS = 380;
-// (brighter than white, so the finish's glow turns it into a sparkle on the brass)
-const GLINT_COLOR = new THREE.Color(3.2, 2.5, 1.3);
+// A kept die settling into its slot (visuals plan step 2): a wooden clack as it arrives.
+// Arriving: it was well away from the slot and is now right on it.
 const CLACK = [{ frame: 0, strength: 5, kind: 'wall' as const }];
 
 // The die the Loaded Die keepsake loads (the server's LOADED_DIE).
@@ -153,9 +150,7 @@ export function Dice() {
     const rings = useRef<(THREE.Mesh | null)[]>([]);
     const contacts = useRef<(THREE.Mesh | null)[]>([]);
     const contactMap = useMemo(() => (lookNext ? contactTexture() : null), []);
-    const glintMap = useMemo(() => (lookNext ? starTexture() : null), []);
-    const glints = useRef<(THREE.Sprite | null)[]>([]);
-    const arrival = useRef(DICE_IDS.map(() => ({ coming: false, at: -1e9, x: 0, y: 0, z: 0 })));
+    const arrival = useRef(DICE_IDS.map(() => ({ coming: false })));
     const ringGeometry = useMemo(() => new THREE.RingGeometry(0.56, 0.68, 40), []);
     // An invisible sphere just beyond each die's corners, so taps needn't be exact. A sphere
     // (unlike a box) is the same size whichever way the die has landed.
@@ -234,21 +229,8 @@ export function Dice() {
                     else if (gap > 0.6) a.coming = true;
                     else if (a.coming && gap < 0.08) {
                         a.coming = false;
-                        // (on the front edge of its brass plate, where a glint shows against the rail)
-                        Object.assign(a, { at: now, x: targetPos.x + 0.3, y: 0.12, z: targetPos.z + 0.52 });
                         playDiceImpacts(CLACK);
                     }
-                }
-            }
-            const glint = glints.current[die.id];
-            if (glint) {
-                const a = arrival.current[die.id];
-                const t = (now - a.at) / GLINT_MS;
-                glint.visible = t >= 0 && t < 1;
-                if (glint.visible) {
-                    glint.position.set(a.x, a.y, a.z);
-                    glint.scale.setScalar(1.4 * Math.sin(Math.PI * Math.min(1, t * 1.2)));
-                    glint.material.rotation = t * 1.2;
                 }
             }
 
@@ -313,11 +295,6 @@ export function Dice() {
                             <planeGeometry args={[DIE_SIZE * 1.45, DIE_SIZE * 1.45]} />
                             <meshBasicMaterial map={contactMap} transparent depthWrite={false} toneMapped={false} />
                         </mesh>
-                    )}
-                    {glintMap && (
-                        <sprite ref={el => { glints.current[id] = el; }} visible={false} renderOrder={4}>
-                            <spriteMaterial map={glintMap} color={GLINT_COLOR} transparent depthWrite={false} depthTest={false} blending={THREE.AdditiveBlending} />
-                        </sprite>
                     )}
                     <Constellation index={id} meshes={meshes} />
                 </group>
