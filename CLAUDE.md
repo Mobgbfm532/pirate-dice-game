@@ -98,14 +98,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   (since 23 Oct, visuals step A) draws the tavern and the bust **inside the 3D scene**: flat
   pictures hung in front of the camera at the same screen places, drawn first so the table
   covers them; a shader redoes the old CSS brightness/saturate/sepia, each drop-shadow is a
-  blurred copy (`halo`), and the entrance, turn glow and Martha's swap are the old CSS curves. Since 24 Oct
-  (visuals plan step 1, "the opponents come to life") the bust **breathes and sways** (a UV warp in
-  the shader, anchored at the base; each character's own rhythm, `phaseOf`), **blinks** every
-  2.5-6.5 s (`lid()`: skin blended from above and below each eye closes down with a lash line; eye
-  positions are `eyes` in PORTRAITS, [x, y, w, h] percent; none for Brodor's sunglasses or
-  Martha's disguises; dev `table.holdBlink`), and **reacts** to its own hand (`table.react`:
-  slumps at dust, leans in at 20+ or a cursed round's low hand; dev `preview.react()`). All of it
-  scales with the tuning panel's "Living portraits" (`tuning.life`), only in the new look. `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
+  blurred copy (`halo`), and the entrance, turn glow and Martha's swap are the old CSS curves. `portraits.ts`: bust framing for round avatars (`PORTRAITS`,
   `SPOT_PORTRAITS`; `seat` draws a cut-out that shows more body larger, so heads match: McGrath 2,
   Frak 1.4, Danhausen 1.6, Martha 1.15). While the camera leans in on a suspense roll the bust keeps its size.
 

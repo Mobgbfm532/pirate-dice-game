@@ -15,12 +15,11 @@ export interface Tuning {
     air: number;      // embers and smoke on the paintings
     flicker: number;  // how far the flame wavers
     moments: number;  // the big moments' light
-    life: number;     // the opponents breathing, swaying, blinking (visuals plan step 1)
 }
-export const TUNE_DEFAULTS: Tuning = { warmth: 1, glow: 1, grain: 1, vignette: 1, shadows: 1, dust: 1, air: 1, flicker: 1, moments: 1, life: 1 };
+export const TUNE_DEFAULTS: Tuning = { warmth: 1, glow: 1, grain: 1, vignette: 1, shadows: 1, dust: 1, air: 1, flicker: 1, moments: 1 };
 export const TUNE_LABELS: Record<keyof Tuning, string> = {
     warmth: 'Warmth', glow: 'Glow', grain: 'Grain', vignette: 'Vignette', shadows: 'Shadow depth',
-    dust: 'Dust', air: 'Embers, smoke', flicker: 'Flame flicker', moments: 'Moment lights', life: 'Living portraits'
+    dust: 'Dust', air: 'Embers, smoke', flicker: 'Flame flicker', moments: 'Moment lights'
 };
 
 // Quality: what the device draws. Auto starts high and steps down if frames come too slowly.

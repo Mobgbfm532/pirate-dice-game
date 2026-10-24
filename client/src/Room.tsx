@@ -1,12 +1,11 @@
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { BOT_ID, store, table } from './game';
+import { BOT_ID, store } from './game';
 import { acrossTheTable, backdropLayout, currentScene } from './Backdrop';
 import { flame, lookNext } from './look';
 import { ScreenAir, type AirFrame } from './Air';
 import { roomWash } from './MomentLight';
-import { tuning } from './tuning';
 
 // The tavern behind the table and the opponent's bust, drawn inside the 3D scene (option 1,
 // step A, 23 Oct). They used to be page layers under a see-through canvas; now the glow and
@@ -99,65 +98,16 @@ uniform float flame, lanterns, warmth, rim, hot;
 // A big moment's light washing over the painting (MomentLight's roomWash, step F).
 uniform vec3 wash;
 uniform vec2 px;
-// A living bust (visuals plan step 1, 24 Oct): life 0-1 (0 for the room), the clock in seconds
-// and a phase of its own per character, so no two breathe in step.
-uniform float life, time, phase;
-// Blinking: each eye's middle and half-size in the picture (x across, y up, 0-1; zero size: no
-// eye there), and how far shut the lids are (0 open, 1 closed).
-uniform vec4 eye0, eye1;
-uniform float blink;
 varying vec2 vUv;
-vec2 uv;
 // How much of the outline faces a light from direction d: open space beside it that way.
 float edge(vec2 d) {
     float open = 0.0;
-    for (int i = 1; i <= 4; i++) open += 1.0 - texture2D(map, uv + d * px * (1.5 * float(i))).a;
+    for (int i = 1; i <= 4; i++) open += 1.0 - texture2D(map, vUv + d * px * (1.5 * float(i))).a;
     return open / 4.0;
-}
-// An eyelid closing over the eye at e: skin taken from just above and below the eye comes down
-// from the top to the lid's edge, with a dark line of lashes along it; the oval's rim is
-// feathered into the painting.
-vec4 lid(vec4 t, vec4 e) {
-    if (e.z <= 0.0) return t;
-    vec2 d = (uv - e.xy) / e.zw;           // -1..1 across the eye; y up
-    float r = dot(d, d);
-    if (r >= 1.0) return t;
-    float edge = -d.y;                     // -1 at the top of the eye, 1 at the bottom
-    float line = -1.0 + 1.85 * blink;      // where the lid's edge has come down to
-    // (Blended across the eye's width and two rows each side, so lines in the skin don't streak.)
-    vec4 skin = vec4(0.0);
-    for (int i = -2; i <= 2; i++) {
-        float x = mix(uv.x, e.x, 0.5) + float(i) * e.z * 0.3;
-        skin += texture2D(map, vec2(x, e.y + e.w * 1.3)) + texture2D(map, vec2(x, e.y + e.w * 1.7))
-              + texture2D(map, vec2(x, e.y - e.w * 1.5)) + texture2D(map, vec2(x, e.y - e.w * 1.9));
-    }
-    skin /= 20.0;
-    skin.rgb *= 0.93 - 0.08 * smoothstep(line - 0.6, line, edge); // the lid darkens toward its edge
-    float covered = smoothstep(line + 0.08, line - 0.08, edge);
-    float lash = (1.0 - smoothstep(0.0, 0.22, abs(edge - line))) * smoothstep(0.1, 0.4, blink);
-    vec4 shut = mix(t, skin, covered);
-    shut.rgb = mix(shut.rgb, shut.rgb * 0.3, lash * 0.85);
-    return mix(t, shut, 1.0 - smoothstep(0.7, 1.0, r));
 }
 vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
-    uv = vUv;
-    if (life > 0.0) {
-        // Breathing: the picture swells a touch from the bottom (hidden behind the table), slow
-        // and uneven, a breath every 3-4 seconds.
-        float tt = time + phase * 7.0;
-        float breath = 0.5 + 0.5 * sin(tt * 1.7 + 0.6 * sin(tt * 0.37));
-        uv.y /= 1.0 + 0.011 * life * breath;
-        uv.x = 0.5 + (uv.x - 0.5) / (1.0 + 0.004 * life * breath);
-        // An idle sway: the head and shoulders drift side to side, the base stays put.
-        float sway = sin(tt * 0.53) * 0.6 + sin(tt * 0.91 + 1.3) * 0.4;
-        uv.x -= 0.006 * life * sway * uv.y * uv.y;
-    }
-    vec4 t = texture2D(map, uv);
-    if (blink > 0.0) {
-        t = lid(t, eye0);
-        t = lid(t, eye1);
-    }
+    vec4 t = texture2D(map, vUv);
     float a;
     vec3 c;
     if (glow) {
@@ -212,9 +162,7 @@ function pictureMaterial() {
         uniforms: {
             map: { value: null }, brightness: { value: 1 }, saturation: { value: 1 }, sepia: { value: 0 },
             opacity: { value: 1 }, tint: { value: new THREE.Vector4() }, glow: { value: false }, linearOut: { value: lookNext },
-            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, wash: { value: new THREE.Color(0, 0, 0) }, px: { value: new THREE.Vector2() },
-            life: { value: 0 }, time: { value: 0 }, phase: { value: 0 },
-            eye0: { value: new THREE.Vector4() }, eye1: { value: new THREE.Vector4() }, blink: { value: 0 }
+            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, wash: { value: new THREE.Color(0, 0, 0) }, px: { value: new THREE.Vector2() }
         },
         // Drawn first, behind everything, whatever the distance: the table simply paints over.
         depthTest: false, depthWrite: false, fog: false, toneMapped: false,
@@ -256,34 +204,6 @@ const BUST_LIGHT = lookNext ? {
     idle: { brightness: 0.82, sepia: 0, glows: [{ blur: 18, x: 0, color: [0, 0, 0, 0.6] }] as Glow[] },
     active: { brightness: 1.02, sepia: 0, glows: [{ blur: 22, x: 0, color: [255, 158, 64, 0.45] }] as Glow[] }
 };
-// Blinks: every 2.5-6.5 seconds, a quick close and open (about 0.18 s), now and then twice.
-const BLINK_MS = 180;
-function blinkAt(now: number, s: { nextBlink?: number; blinkAt?: number; double?: boolean }) {
-    if (!s.nextBlink) s.nextBlink = now + 1500 + Math.random() * 3000;
-    if (now >= s.nextBlink) {
-        s.blinkAt = now;
-        s.double = Math.random() < 0.2;
-        s.nextBlink = now + 2500 + Math.random() * 4000;
-    }
-    const since = now - (s.blinkAt ?? -1e9);
-    const one = (t: number) => (t < 0 || t > BLINK_MS ? 0 : Math.sin((t / BLINK_MS) * Math.PI));
-    return Math.max(one(since), s.double ? one(since - BLINK_MS * 1.6) : 0);
-}
-
-// A reaction's strength over time: in quickly, held, then eased back (2.4 s in all).
-function reaction(ms: number) {
-    if (ms < 0 || ms > 2400) return 0;
-    if (ms < 350) return ease(ms / 350);
-    if (ms < 1200) return 1;
-    return 1 - ease((ms - 1200) / 1200);
-}
-
-// Each character's own breathing rhythm (0-1, from their name).
-function phaseOf(key: string) {
-    let h = 0;
-    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 997;
-    return h / 997;
-}
 const SWAP_GLOW: Glow = { blur: 30, x: 0, color: [206, 147, 216, 1] }; // Martha's violet
 const GLOW_MESHES = 5;
 
@@ -295,7 +215,7 @@ export function Room() {
     const glows = useRef<(THREE.Mesh | null)[]>([]);
     const materials = useMemo(() => ({ room: pictureMaterial(), bust: pictureMaterial(), glows: Array.from({ length: GLOW_MESHES }, pictureMaterial) }), []);
     // Who sits there and since when; how far into their turn's glow.
-    const seat = useRef({ key: '' as string | null, since: 0, swap: false, glowFrom: 0, glowTo: 0, glowAt: 0, nextBlink: 0, blinkAt: 0, double: false });
+    const seat = useRef({ key: '' as string | null, since: 0, swap: false, glowFrom: 0, glowTo: 0, glowAt: 0 });
     const shown = useRef<Picture | null>(null);
     const v = useMemo(() => new THREE.Vector3(), []);
     const unused = useMemo(() => new THREE.Vector3(), []);
@@ -390,14 +310,6 @@ export function Room() {
             brightness = lerp(0.3, brightness, settle);
         }
 
-        // Their reaction to their own hand: a pleased lean toward you, or a slump down into the seat
-        // (in about 0.35 s, held, then back over a second).
-        const react = lookNext && table.react ? reaction(now - table.react.at) : 0;
-        if (react > 0 && table.react) {
-            const life = tuning.life;
-            if (table.react.kind === 'gloat') { scale *= 1 + 0.05 * react * life; brightness *= 1 + 0.06 * react; }
-            else { rise += 0.06 * react * life; scale *= 1 - 0.015 * react * life; brightness *= 1 - 0.12 * react; }
-        }
         // Anchored so the table hides the lower fifth; `seat` draws a cut-out that shows more body larger.
         const height = L.bustHeight * (across.portrait.seat ?? 1);
         const width = height * art.aspect;
@@ -416,15 +328,6 @@ export function Room() {
         b.warmth.value = lookNext ? 0.55 : 0;
         b.rim.value = lookNext ? lerp(0.4, 0.6, glowNow) : 0;
         b.px.value.set(1 / w, 1 / h);
-        b.life.value = lookNext ? tuning.life : 0;
-        b.time.value = now / 1000;
-        b.phase.value = phaseOf(across.key);
-        const eyes = lookNext && tuning.life > 0 ? across.portrait.eyes : undefined;
-        [b.eye0.value, b.eye1.value].forEach((u: THREE.Vector4, i) => {
-            const e = eyes?.[i];
-            if (e) u.set(e[0] / 100, 1 - e[1] / 100, e[2] / 200, e[3] / 200); else u.set(0, 0, 0, 0);
-        });
-        b.blink.value = eyes ? table.holdBlink ?? blinkAt(now, s) : 0;
         put(bust.current, centerX - w / 2, centerY - h / 2, w, h);
         bust.current.visible = true;
         breathe({ left: centerX - w / 2, top: centerY - h / 2, width: w, height: h, opacity, air: across.portrait.air, key: across.key });
