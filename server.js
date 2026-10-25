@@ -196,7 +196,10 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🐻',
         lives: BALANCE.opponentLives.klarg,
         ability: 'reachAround',
-        intro: 'Klarg, bugbear paladin and sworn enemy of Kram, may steal one active die with Reach Around.'
+        // Since 25 Oct (the final tier): twice a fight he waits for a 2 or 4 you still need,
+        // snatches it and keeps it for his own hand (it starts his next turn already kept).
+        keepsStolen: true,
+        intro: 'Klarg, bugbear paladin and sworn enemy of Kram. Twice a fight his Reach Around snatches a 2 or 4 you need, and he keeps it for his own hand.'
     },
     {
         id: 'rokr',
@@ -204,8 +207,8 @@ const TAVERN_ENCOUNTERS = [
         name: 'Rokr',
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
-        ability: 'constellationBlur',
-        intro: 'Rokr reads the dice in the stars. Twice per match, constellations can blur your active dice.'
+        ability: 'writtenInStars',
+        intro: 'Rokr reads the dice in the stars. Written in the Stars: for a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept.'
     },
     {
         id: 'hangman',
@@ -213,8 +216,9 @@ const TAVERN_ENCOUNTERS = [
         name: 'The Hangman',
         avatar: '🤠',
         lives: BALANCE.opponentLives.hangman,
-        ability: 'deadeye24',
-        intro: 'The Hangman keeps one round in the chamber of The Ace of Spades, his revolver. At one life, one shot can turn a score of 16 or higher into a perfect 24.'
+        ability: 'deadEye',
+        abilities: ['deadEye', 'deadeye24'], // Dead Eye, and his Ace kept for his last stand
+        intro: 'The Hangman and The Ace of Spades, his revolver. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24.'
     },
     {
         id: 'jaguar',
@@ -222,8 +226,8 @@ const TAVERN_ENCOUNTERS = [
         name: 'Jaguar Cantona',
         avatar: '😎',
         lives: BALANCE.opponentLives.jaguar,
-        ability: 'smoothTalk',
-        intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Once per match, Smooth Talk worsens your finished score.'
+        ability: 'jaguarPhases',
+        intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Smooth Talk: he talks your Thonics off your shelf and drinks them. At two lives, The Cloak. At his last, All In.'
     }
 ];
 
@@ -487,6 +491,7 @@ function getTavernRunState(room) {
         nextSurge: room.tavernRun.nextFightSurge || null,
         abilityUsed: room.tavernRun.abilityUsed,
         abilityMax: seated.ability ? BALANCE.abilityUses[seated.ability] : 0, // uses a fight (the seated opponent's)
+        jaguarPhase: room.tavernRun.jaguarPhase || null, // Jaguar's: 'talk', 'cloak' or 'allIn'
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
@@ -531,6 +536,16 @@ function syncTurn(roomCode) {
     room.turn.key = key;
     room.turn.busyUntil = 0;
     room.turn.ended = false;
+    if (room.mode === 'tavern-crawl' && room.turn.playerId === BOT_ID) {
+        let run = room.tavernRun;
+        // Klarg starts his turn with the die he snatched from you, already kept.
+        if (run.klargHand) {
+            Object.assign(room.turn.dice[0], { value: run.klargHand, status: Rules.STATUS.LOCKED });
+            room.turn.klargDie = 0;
+            run.klargHand = null;
+        }
+        if (run.jaguarPhase === 'cloak') room.turn.cloaked = true;
+    }
     if (room.turn.playerId === BOT_ID && isTurnPlayable(roomCode)) {
         botLater(roomCode, key, Math.max(1000, Math.round(momentsLeft(room) / TIME_SCALE) + 300), () => runBotRoll(roomCode));
     }
@@ -588,6 +603,31 @@ function applyTavernRollAbilities(roomCode, room, turn) {
         effect.landed = true;
         sixes();
     }
+    // Klarg (since 25 Oct): he waits for a throw showing a 2 or 4 you still need, snatches it and
+    // keeps it for his own hand (syncTurn puts it in his next turn).
+    if (mine && encounter && encounter.keepsStolen && FINAL_SHIP.klargWaits) {
+        let keptNow = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+        let inPlayNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+        let showing = inPlayNow.some(d => (d.value === 2 && !keptNow.includes(2)) || (d.value === 4 && !keptNow.includes(4)));
+        if (showing && inPlayNow.length >= 2 && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
+            let stolen = Rules.stealHighestActiveDie(turn);
+            if (stolen) {
+                run.klargHand = stolen.value;
+                moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: `Klarg snatches your ${stolen.value} and keeps it for his own hand.` });
+            }
+        }
+    }
+    // Rokr's Written in the Stars: this throw's marked faces bind the dice that land on them (they
+    // can't be kept this throw); if every die in play is bound, the throw is free. The next
+    // throw's marks are drawn at once, so they show before you roll.
+    if (mine && turn.stars) {
+        turn.marks = turn.nextMarks || twoFaces();
+        let inPlayNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+        let bound = inPlayNow.filter(d => turn.marks.includes(d.value));
+        turn.boundIds = bound.map(d => d.id);
+        if (bound.length && bound.length === inPlayNow.length) turn.freeRoll = true;
+        turn.nextMarks = twoFaces();
+    }
     if (turn.rollCount !== 1 || !mine) return moves;
 
     // Frak's Mind Whip: he makes the player keep one of their dice, at random (Rules.mindWhip).
@@ -604,7 +644,7 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     }
 
     let inPlay = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length;
-    if (inPlay > 1 && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
+    if (inPlay > 1 && !(encounter.keepsStolen && FINAL_SHIP.klargWaits) && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
         Rules.stealHighestActiveDie(turn);
         moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: 'Klarg uses Reach Around and steals one die.' });
     }
@@ -623,6 +663,17 @@ function startFlourish(roomCode, room, turn) {
     if (!fireTavernAbility(roomCode, room, encounter, 'flourish')) return null;
     turn.flourish = true;
     return { name: encounter.name, ability: Rules.ABILITY_NAMES.flourish, text: 'This turn every die he throws rolls twice, and he keeps the better.' };
+}
+
+// Rokr's Written in the Stars, as your turn's first throw begins: the whole turn, two faces are
+// marked before each throw (applyTavernRollAbilities). Returns the move to show, or null.
+function startStars(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID || turn.rollCount !== 0) return null;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!fireTavernAbility(roomCode, room, encounter, 'writtenInStars')) return null;
+    turn.stars = true;
+    turn.nextMarks = twoFaces();
+    return { name: encounter.name, ability: Rules.ABILITY_NAMES.writtenInStars, text: `This turn the stars mark two faces before every throw. Dice that land on them can't be kept. First: ${turn.nextMarks.join(' and ')}.` };
 }
 
 // Sylvester's Back of the Head (id suckerPunch, as in the simulator): as you keep your last die
@@ -659,6 +710,7 @@ function performRoll(roomCode) {
     let preRollCallout = null;
     room.rollMoments = []; // moments raised while the dice are thrown wait until they land
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
+    let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
     let result = Rules.rollTurn(turn, {
         rollFace: rollFaceFor(room, turn),
         onRolled: t => {
@@ -670,6 +722,7 @@ function performRoll(roomCode) {
     room.rollMoments = null;
     if (!result) return 0;
     if (flourish) signatureMoves.unshift(flourish);
+    if (stars) signatureMoves.unshift(stars);
     // The abilities this throw brings play first, banner and effect, and the dice are thrown once
     // they (and anything still on screen, like the round's result) have gone. Only Klarg waits
     // for the dice: his hand takes one that has landed.
@@ -735,6 +788,12 @@ function performEndTurn(roomCode) {
     let currentId = room.roundPlayers[room.currentTurnIndex];
     let { score, busted } = room.turn.outcome;
     if (room.turn.steady && busted) { busted = false; score = Rules.scoreDice(room.turn.dice).score; } // Steady Thonic: the dice score as they lie
+    // Jaguar drank the Steady he talked off your shelf: his dust scores as it lies.
+    if (room.mode === 'tavern-crawl' && currentId === BOT_ID && busted && room.tavernRun.jaguarSteady) {
+        room.tavernRun.jaguarSteady = false;
+        busted = false;
+        score = Rules.scoreDice(room.turn.dice).score;
+    }
     room.players[currentId].score = score;
     room.players[currentId].busted = busted;
 
@@ -750,6 +809,29 @@ function performEndTurn(roomCode) {
             room.players[currentId].score = 24;
             sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
             io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
+        }
+
+        // The Hangman's Dead Eye: he shoots your best scoring die (not the 2 and 4 you need) and it
+        // rolls again (FINAL_SHIP.deadEyeRerolls; otherwise it goes to a 1).
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'deadEye')) {
+            let shot = scoringDice(room.turn).sort((a, b) => b.value - a.value)[0];
+            if (shot) {
+                let was = shot.value;
+                shot.value = FINAL_SHIP.deadEyeRerolls ? rollFace() : 1;
+                score = Rules.scoreDice(room.turn.dice).score;
+                room.turn.outcome = { ...room.turn.outcome, score };
+                room.players[currentId].score = score;
+                sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.deadEye, text: `The Hangman shoots your ${was}. It rolls again: ${shot.value}.`, die: shot.id, from: was, to: shot.value });
+                emitTurn(roomCode, { type: 'shot', die: shot.id });
+            }
+        }
+        // Jaguar, when your shelf was empty: he talks 3 off your finished hand instead.
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.talkThree) {
+            room.tavernRun.talkThree = false;
+            let off = FINAL_SHIP.talkThreeWhenEmpty ?? 3;
+            score = Math.max(0, score - off);
+            room.players[currentId].score = score;
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Jaguar smiles. Smooth Talk knocks ${off} from your finished hand.` });
         }
 
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
@@ -911,7 +993,7 @@ function runBotDecision(roomCode) {
     // score counts as no more than the cap.
     let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
     let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null };
-    let aceAt16 = !!encounter && !round.low && encounter.ability === 'deadeye24' && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
+    let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
     // The Duke (or Martha in his face) waiting on his Devil keeps only what he needs, so it has
@@ -995,7 +1077,8 @@ function markAbilityUsed(room, abilityId) {
 // The current opponent's ability still has uses left this fight.
 function encounterAbilityLeft(room) {
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-    return encounter && encounter.ability && getAbilityUseCount(room, encounter.ability) < BALANCE.abilityUses[encounter.ability];
+    // (any of them: the Hangman's Ace is still to come once his Dead Eye is spent)
+    return encounter && abilitiesOf(encounter).some(a => getAbilityUseCount(room, a) < BALANCE.abilityUses[a]);
 }
 
 // The opponent uses their ability: one use is spent, and it happens unless a Clear-Eye Thonic
@@ -1044,7 +1127,22 @@ const momentsLeft = room => Math.max(0, (room.momentEnd || 0) - Date.now());
 
 function canUseTavernAbility(room, encounter, abilityId) {
     let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < BALANCE.abilityUses[abilityId];
+    return encounter && abilitiesOf(encounter).includes(abilityId) && abilityReady && getAbilityUseCount(room, abilityId) < BALANCE.abilityUses[abilityId];
+}
+// An opponent's abilities: one, or (the Hangman) two.
+const abilitiesOf = encounter => encounter.abilities || (encounter.ability ? [encounter.ability] : []);
+// How the final tier's abilities play (shared/balance.js; set by simulation, 25 Oct).
+const FINAL_SHIP = BALANCE.finalShip || {};
+// Two different faces at random (Rokr's stars).
+const twoFaces = () => shuffled([1, 2, 3, 4, 5, 6]).slice(0, FINAL_SHIP.starFaces || 2).sort((a, b) => a - b);
+// The kept dice that score: all but one 2 and one 4.
+function scoringDice(turn) {
+    let saw2 = false, saw4 = false;
+    return turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).filter(d => {
+        if (d.value === 2 && !saw2) { saw2 = true; return false; }
+        if (d.value === 4 && !saw4) { saw4 = true; return false; }
+        return true;
+    });
 }
 
 // ends: this round ended a Tavern Crawl fight (or the run); the browser skips the pop-up then,
@@ -1292,8 +1390,13 @@ function beginTavernRound(roomCode, room) {
     run.roundEffect = null;
     run.pendingDevil = null;
     run.pendingMind = null;
+    run.jaguarSteady = false;
+    run.talkThree = false;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    if (!encounter || !encounter.keepsStolen) run.klargHand = null; // (a fight ended with one in his hand)
+    if (!encounter || encounter.ability !== 'jaguarPhases') run.jaguarPhase = null;
     if (!encounter || !encounter.ability) return;
+    if (encounter.ability === 'jaguarPhases') { beginJaguarRound(roomCode, room, encounter); return; }
     // Brodor's Astral Flood: once he has lost a life, he heals one as a round begins.
     let bot = room.players[BOT_ID];
     if (encounter.ability === 'astralFlood') {
@@ -1314,6 +1417,46 @@ function beginTavernRound(roomCode, room) {
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
     disguiseMoves(room, run.roundEffect).forEach(move => sendMoment(roomCode, 'signatureMove', move));
     sendMoment(roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+}
+
+// Jaguar Cantona, the final boss, in three phases by his lives left (since 25 Oct):
+//   Smooth Talk (3+ lives): once a round, up to abilityUses.jaguarPhases a fight, he talks a Thonic
+//     off your shelf and drinks it (Healing heals him, Steady counts his dust as it lies); with
+//     your shelf empty he talks talkThreeWhenEmpty off your next finished hand instead.
+//   The Cloak (2 lives): he throws after you (cloakThrowsSecond), his dice hidden until his hand is done.
+//   All In (his last): whoever loses the round loses two hearts.
+const JAGUAR_PHASE_TEXT = {
+    cloak: 'Jaguar draws his cloak. He throws after you now, his dice hidden until his hand is done.',
+    allIn: 'All In: whoever loses a round loses two hearts.'
+};
+function beginJaguarRound(roomCode, room, encounter) {
+    let run = room.tavernRun;
+    let bot = room.players[BOT_ID];
+    if (!bot) return;
+    let phase = bot.lives >= 3 ? 'talk' : bot.lives === 2 ? 'cloak' : 'allIn';
+    let was = run.jaguarPhase;
+    run.jaguarPhase = phase;
+    if (phase === 'cloak' && FINAL_SHIP.cloakThrowsSecond !== false) {
+        let humanId = room.roundPlayers.find(id => id !== BOT_ID);
+        if (humanId) room.roundPlayers = [humanId, BOT_ID];
+    }
+    if (phase !== 'talk') {
+        if (phase !== was) sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES[phase], text: JAGUAR_PHASE_TEXT[phase] });
+        return;
+    }
+    if (!fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
+    let shelf = run.shelf;
+    let id = (bot.lives < encounter.lives && shelf.includes('healing') && 'healing') || (shelf.includes('steady') && 'steady') || shelf[0];
+    if (!id) {
+        run.talkThree = true;
+        sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he'll talk ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
+        return;
+    }
+    shelf.splice(shelf.indexOf(id), 1);
+    if (id === 'healing' && bot.lives < encounter.lives) bot.lives++;
+    if (id === 'steady') run.jaguarSteady = true;
+    let what = id === 'healing' ? ' and heals a life' : id === 'steady' ? ': his dust this round counts as it lies' : '';
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He talks your ${THONICS[id].name} off your shelf and drinks it${what}.`, thonic: id });
 }
 
 // Martha's disguise shows first, then the trick she copies (the user's call, 21 Oct).
@@ -1655,6 +1798,8 @@ function evaluateTavernRound(roomCode) {
     if (effect && effect.kind === 'smite' && losersThisRound.length === 1 && losersThisRound[0].id === humanId) {
         losersThisRound.push({ id: humanId, reason: 'Divine Smite.' });
     }
+    // Jaguar's All In: the round's loser loses two hearts (each can still be caught as above).
+    if (room.tavernRun.jaguarPhase === 'allIn') losersThisRound = losersThisRound.flatMap(loser => [loser, { ...loser, reason: 'All In.' }]);
 
     losersThisRound.forEach(loser => {
         let player = room.players[loser.id];

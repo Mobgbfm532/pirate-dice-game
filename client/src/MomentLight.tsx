@@ -29,7 +29,11 @@ const KINDS: Record<string, Kind> = {
     shield: { color: '#6ab7ff', light: 22, wash: 0.5, ms: 2400, shimmer: true }, // the Shield
     perfect: { color: '#ffd54f', light: 95, wash: 0.5, ms: 2600 },        // a perfect 24: bright enough to bloom
     perfect4: { color: '#c77dff', light: 40, wash: 0.55, ms: 2600 },      // a cursed round's perfect hand (four 1s)
-    sixes: { color: '#ff2a14', light: 30, wash: 0.35, ms: 1400 }          // three 6s land (the devil effect)
+    sixes: { color: '#ff2a14', light: 30, wash: 0.35, ms: 1400 },         // three 6s land (the devil effect)
+    // The Salty Swallow as the final tier (25 Oct)
+    stars: { color: '#8fb0ff', light: 30, wash: 0.45, ms: 2400, shimmer: true }, // Rokr's Written in the Stars
+    cloak: { color: '#7b4fd6', light: 15, wash: 0.5, ms: 2600 },          // Jaguar draws his cloak
+    allIn: { color: '#ff5a2a', light: 40, wash: 0.55, ms: 2600 }          // Jaguar's All In
 };
 
 function kindOf(m: AbilityMoment): string | null {
@@ -41,6 +45,9 @@ function kindOf(m: AbilityMoment): string | null {
         case 'Inkfire Brand': return 'ink';
         case 'Divine Smite': return 'smite';
         case 'Astral Flood': return 'flood';
+        case 'Written in the Stars': return 'stars';
+        case 'The Cloak': return 'cloak';
+        case 'All In': return 'allIn';
         default: return null;
     }
 }

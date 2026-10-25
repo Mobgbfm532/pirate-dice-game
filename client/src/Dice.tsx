@@ -60,8 +60,9 @@ function Constellation({ index, meshes }: { index: number; meshes: MutableRefObj
     useFrame(() => {
         const g = group.current;
         const mesh = meshes.current[index];
-        const die = store.get().turn?.dice.find(d => d.id === index);
-        const show = !!g && !!mesh && mesh.visible && !!die?.hidden;
+        const turn = store.get().turn;
+        const die = turn?.dice.find(d => d.id === index);
+        const show = !!g && !!mesh && mesh.visible && ((!!die?.hidden && !turn?.cloaked) || !!die?.bound);
         if (!g) return;
         g.visible = show;
         if (!show || !mesh) return;
@@ -263,7 +264,7 @@ export function Dice() {
     const tappable = (id: number) => {
         const die = turn?.dice.find(d => d.id === id);
         if (putBack) return canTouch && !!die && !!turn && canPutBack(turn, die.status);
-        return canTouch && !!die && !die.mind && !die.mustRoll && (die.status === 'active' || die.status === 'lockedThisTurn');
+        return canTouch && !!die && !die.mind && !die.mustRoll && !die.bound && (die.status === 'active' || die.status === 'lockedThisTurn');
     };
 
     return (

@@ -213,3 +213,21 @@ lives 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4):
 McGrath on 1 life (the user, 21 Oct; same settings): a sensible player beats him 89% (was 73%);
 whole runs finish 1.4%, reach the Yawning Portal 34%, the ship 5.5%, average gold 1,108; runs
 ending at McGrath 10% (was 26%), Frak 19%, Danhausen 16%.
+
+## The Salty Swallow as the final tier (25 Oct)
+
+`node balance/experiments/final-ship.js [fights]` (sim: `TOURNAMENT_FINAL`, `FINAL_SHIP`). Win % for a
+sensible player, fresh hearts, no items (8,000 fights each): the Yawning Portal 38-43, Brodor 23.
+
+| Fight | No ability | As it was | Reworked |
+|---|---|---|---|
+| Klarg (2 steals, waits for a needed 2 or 4, keeps the die) | 49 | 35 | 27 |
+| Rokr (Written in the Stars, 3 turns, 2 faces every throw) | 51 | 40 | 26 |
+| the Hangman (Dead Eye once, the die rolls again; his Ace) | 50 | 35 | 27 |
+| Jaguar (Smooth Talk x2, the Cloak, All In) | 35 | 25 | 15 |
+
+Tried on the way: Klarg's two steals on your first throw 21% (each steal ~12 points: five dice cap
+the hand at 18), his second only once hurt or at his last life ~21-23%; Dead Eye to a 1, twice 11%,
+once 20%; rerolled twice 20%; Rokr's stars 2 turns 34%; Jaguar's Smooth Talk every round 11% (it
+fired every round, and an empty shelf cost 3 each time), The Cloak hidden only ~0 points, All In ~1-2.
+Whole runs barely change (few runs reach the ship): sensible finish 0.3% → 0.1%.

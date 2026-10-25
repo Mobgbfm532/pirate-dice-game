@@ -12,6 +12,7 @@ export interface Die {
     hidden?: boolean;
     mind?: boolean; // the die Frak's Mind Whip made you keep this throw (can't be tapped back)
     mustRoll?: boolean; // Sylvester knocked it loose: it has to be rolled before it can be kept
+    bound?: boolean; // Rokr's stars: it landed on a marked face and can't be kept this throw
 }
 
 export interface TurnOutcome {
@@ -36,6 +37,9 @@ export interface TurnView {
     outcome: TurnOutcome | null;
     canRoll: boolean;
     steady?: boolean; // a Steady Thonic was drunk: dust this turn counts as 0
+    // Rokr's Written in the Stars (this turn): the faces marked for the next throw, and this throw's.
+    stars?: { next: number[] | null; now: number[] | null } | null;
+    cloaked?: boolean; // Jaguar's Cloak: his dice hidden until his hand is done
 }
 
 interface GameRulesApi {

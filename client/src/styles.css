@@ -2339,3 +2339,25 @@ button.keepsake.used { opacity: 0.55; }
 }
 .invitation.arriving.skip .invitation-card, .invitation.arriving.skip .event-choices,
 .invitation.arriving.skip .fine, .invitation.arriving.skip .interlude-title { animation-delay: 0s; animation-duration: 0.25s; }
+
+/* ==== The Salty Swallow as the final tier (25 Oct): the new abilities' colours ==== */
+/* Rokr's Written in the Stars: his starry blue. */
+.written-in-the-stars .ability-banner { background: linear-gradient(#141a3a, #070a1f); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(130, 170, 255, 0.45); }
+.written-in-the-stars .ability-banner .what { color: #b3c7ff; }
+.takeover.written-in-the-stars { --flare: rgba(130, 170, 255, 0.55); }
+/* The Hangman's Dead Eye: his gun-metal. */
+.dead-eye .ability-banner { background: linear-gradient(#3e3a33, #15130f); border-color: #b0bec5; }
+.dead-eye .ability-banner .what { color: #eceff1; }
+.takeover.dead-eye { --flare: rgba(236, 239, 241, 0.6); }
+/* Jaguar's Cloak: dark velvet; All In: red and gold. */
+.the-cloak .ability-banner { background: linear-gradient(#2a1840, #0e0716); border-color: #b39ddb; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(123, 79, 214, 0.5); }
+.the-cloak .ability-banner .what { color: #e1d4ff; }
+.takeover.the-cloak { --flare: rgba(123, 79, 214, 0.55); }
+.all-in .ability-banner { background: linear-gradient(#6a1408, #250602); border-color: #ffd54f; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 90, 42, 0.65); }
+.all-in .ability-banner .what { color: #ffe0b2; }
+.takeover.all-in { --flare: rgba(255, 90, 42, 0.6); }
+/* Their badges under the Roll button. */
+.hint.round-stars, .hint.round-cloak, .hint.round-allin { display: inline-block; padding: 4px 12px; border-radius: 12px; color: #fff; }
+.hint.round-stars { background: rgba(20, 30, 80, 0.85); border: 1px solid #8fb0ff; box-shadow: 0 0 12px rgba(130, 170, 255, 0.6); }
+.hint.round-cloak { background: rgba(42, 24, 64, 0.88); border: 1px solid #b39ddb; box-shadow: 0 0 12px rgba(123, 79, 214, 0.6); }
+.hint.round-allin { background: rgba(120, 24, 8, 0.88); border: 1px solid #ffd54f; box-shadow: 0 0 12px rgba(255, 90, 42, 0.6); }

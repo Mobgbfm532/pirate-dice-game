@@ -61,6 +61,7 @@ export interface TavernRun {
     abilityUsed?: Record<string, number | boolean>; // uses of each ability this fight
     encounterKeepsakeUses?: Record<string, boolean>; // keepsakes that have worked this fight
     abilityMax?: number; // the opponent's uses a fight
+    jaguarPhase?: 'talk' | 'cloak' | 'allIn' | null; // Jaguar's phase this round
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
     tubSurge?: TubSurge | null; // the Wild Magic Hot Tub's surge on one of your dice, this fight
@@ -583,7 +584,9 @@ socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
 const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
-    'Disguises', 'Back of the Head', 'Inkfire Brand', 'Flourish', 'Divine Smite', 'Astral Flood']);
+    'Disguises', 'Back of the Head', 'Inkfire Brand', 'Flourish', 'Divine Smite', 'Astral Flood',
+    // the Salty Swallow as the final tier (25 Oct)
+    'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,

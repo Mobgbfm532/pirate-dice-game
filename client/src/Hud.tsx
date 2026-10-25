@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
 import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
-import { Rules, coins } from './rules';
+import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
@@ -173,8 +173,18 @@ const SURGE_HINTS: Record<string, string> = {
 // Mind Whip shows only once it has landed (your first throw) and only while it's still your
 // turn; on the opponent's turn the hot tub's surge (if any) shows instead.
 // Returns the line and its badge colour.
-function roundEffectHint(state: GameState, myTurn: boolean): { text: string; kind: string } {
+function roundEffectHint(state: GameState, myTurn: boolean, turn: TurnView | null = null): { text: string; kind: string } {
     const effect = state.tavernRun?.roundEffect;
+    // Rokr's stars, on your turn: which faces they mark for the next throw (and this one's).
+    const stars = myTurn && turn?.stars;
+    if (stars && !turn.finalized) {
+        const next = stars.next ? stars.next.join(' and ') : '';
+        const bound = turn.dice.some(d => d.bound);
+        return { text: bound && stars.now ? `Star-bound now: ${stars.now.join(' and ')}. Next throw: ${next}` : `The stars mark ${next} on your next throw`, kind: 'stars' };
+    }
+    const phase = state.tavernRun?.jaguarPhase;
+    if (phase === 'cloak') return { text: 'The Cloak: Jaguar throws after you, his dice hidden', kind: 'cloak' };
+    if (phase === 'allIn') return { text: 'All In: whoever loses this round loses two hearts', kind: 'allin' };
     const surge = state.tavernRun?.tubSurge;
     const cap = state.tavernRun?.devilCap ?? null;
     if (effect?.kind === 'curse') return { text: 'Cursed round: the lowest valid score wins', kind: 'curse' };
@@ -322,11 +332,13 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     if (snap.rolling) { label = 'Rolling…'; disabled = true; }
     else if (turn.finalized) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
 
-    const badge = state ? roundEffectHint(state, turn.playerId === snap.myId) : { text: '', kind: '' };
+    const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : { text: '', kind: '' };
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
         : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again'
             : '';
-    const hint = tip || badge.text;
+    // (Rokr's stars come before the tip: which faces can't be kept is what you need to know.)
+    const badgeFirst = badge.kind === 'stars' || !tip;
+    const hint = badgeFirst ? badge.text || tip : tip;
 
     return (
         <div className="controls">
@@ -350,7 +362,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 aria-hidden={!snap.isMyTurn}
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
             {/* A hot tub fight: its badge can take two lines on small phones, so the space is kept the whole fight (the table doesn't jump when a tip replaces it). */}
-            <div className={`hint ${!tip && badge.kind ? `round-${badge.kind}` : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>{hint}</div>
+            <div className={`hint ${badgeFirst && badge.kind ? `round-${badge.kind}` : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>{hint}</div>
         </div>
     );
 }
@@ -783,7 +795,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
                 {takeover && moment.text && <span className="line">{moment.text}</span>}
-                {moment.ability === 'Smooth Talk' && fx && <span className="minus">−3</span>}
+                {moment.ability === 'Smooth Talk' && fx && /knocks/.test(moment.text ?? '') && <span className="minus">−3</span>}
                 {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>

@@ -57,7 +57,12 @@ function autoPlay(socket, onShop = null) {
         if (turn.finalized) socket.emit('endTurn');
         else if (!turn.hasRolled) socket.emit('rollDice');
         else {
-            Rules.planBotLocks(turn, 'molar').forEach(id => socket.emit('toggleDie', id));
+            // (Rokr's star-bound dice can't be kept: keep from the rest, or roll again if all are bound.)
+            const bound = id => turn.dice.some(d => d.id === id && d.bound);
+            let keep = Rules.planBotLocks(turn, 'molar').filter(id => !bound(id));
+            const free = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !d.bound);
+            if (!keep.length && free.length && !turn.canRoll) keep = [free[0].id];
+            keep.forEach(id => socket.emit('toggleDie', id));
             socket.emit('rollDice');
         }
     };
@@ -131,20 +136,169 @@ async function tavernAgainst(encounterIndex, name) {
     return hero;
 }
 
-test('Klarg steals a die on the server', async () => {
+// Pins the dice: while on, each die rolled comes up the next of these faces (other draws stay random).
+const nodeCrypto = require('crypto');
+function pinFaces(faces) {
+    const real = nodeCrypto.randomInt;
+    let i = 0;
+    nodeCrypto.randomInt = (a, b, ...rest) => (a === 1 && b === 7 && i < faces.length ? faces[i++] : real(a, b, ...rest));
+    return () => { nodeCrypto.randomInt = real; };
+}
+
+// ---- The Salty Swallow as the final tier (25 Oct) ----
+
+test('Klarg waits for a 2 or 4 you need, snatches it and starts his turn with it', async () => {
     const hero = await tavernAgainst(fightOf('klarg'), 'KlargTest');
-    const move = waitFor(hero, 'signatureMove');
+    const room = roomOf(hero);
+    // No 2 or 4 showing: he waits.
+    let unpin = pinFaces([1, 1, 3, 3, 5, 6]);
     hero.emit('rollDice');
-    const rolled = await waitFor(hero, 'diceRolled');
-    assert.equal(rolled.turn.dice.filter(d => d.status === Rules.STATUS.STOLEN).length, 1);
-    assert.equal((await move).ability, 'Reach Around');
+    let rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.equal(rolled.turn.dice.filter(d => d.status === Rules.STATUS.STOLEN).length, 0, 'nothing he wants yet');
+    await sleep(rolled.animationMs * 0.01 + 30);
+    hero.emit('toggleDie', 5); // keep the 6
+    await sleep(30);
+    // A 2 shows: he takes it.
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Reach Around', 4000);
+    unpin = pinFaces([2, 1, 3, 3, 5]);
+    hero.emit('rollDice');
+    rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === 2, 4000);
+    unpin();
+    const stolen = rolled.turn.dice.filter(d => d.status === Rules.STATUS.STOLEN);
+    assert.equal(stolen.length, 1);
+    assert.equal(stolen[0].value, 2, 'the 2 you needed');
+    assert.match((await move).text, /snatches your 2/);
+    assert.equal(room.tavernRun.klargHand, 2);
+    // His turn begins with it already kept.
+    await sleep(rolled.animationMs * 0.01 + 30);
+    const his = nextState(hero, st => st.currentTurnId === 'BOT_MOLAR');
+    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 4000);
+    room.turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).forEach(d => hero.emit('toggleDie', d.id));
+    await finished;
+    hero.emit('endTurn');
+    await his;
+    assert.equal(room.turn.playerId, 'BOT_MOLAR');
+    assert.deepEqual([room.turn.dice[0].value, room.turn.dice[0].status], [2, Rules.STATUS.LOCKED]);
+    assert.equal(room.tavernRun.klargHand, null);
 });
 
-test('Rokr blur hides dice values from the browser itself', async () => {
+test("Rokr's stars mark two faces before each throw: dice landing on them can't be kept", async () => {
     const hero = await tavernAgainst(fightOf('rokr'), 'RokrTest');
+    const room = roomOf(hero);
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Written in the Stars', 4000);
+    let unpin = pinFaces([1, 2, 3, 4, 5, 6]);
     hero.emit('rollDice');
-    const rolled = await waitFor(hero, 'diceRolled');
-    assert.ok(rolled.turn.dice.every(d => d.hidden && d.value === 0), 'no real values are sent while blurred');
+    let rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.match((await move).text, /First: \d and \d/);
+    const marks = room.turn.marks;
+    assert.equal(marks.length, 2);
+    rolled.turn.dice.forEach(d => assert.equal(!!d.bound, marks.includes(room.turn.dice[d.id].value)));
+    // The next throw's marks are known before it.
+    const next = room.turn.nextMarks;
+    assert.deepEqual(rolled.turn.stars.next, next);
+    await sleep(rolled.animationMs * 0.01 + 30);
+    const bound = room.turn.dice.find(d => d.status === Rules.STATUS.ACTIVE && room.turn.boundIds.includes(d.id));
+    const free = room.turn.dice.find(d => d.status === Rules.STATUS.ACTIVE && !room.turn.boundIds.includes(d.id));
+    hero.emit('toggleDie', bound.id);
+    hero.emit('toggleDie', free.id);
+    await sleep(40);
+    assert.equal(room.turn.dice[bound.id].status, Rules.STATUS.ACTIVE, 'a star-bound die stays in play');
+    assert.equal(room.turn.dice[free.id].status, Rules.STATUS.LOCKED_THIS_ROLL);
+    // Every die in play bound: the next throw is free.
+    unpin = pinFaces(Array(6).fill(next[0]));
+    hero.emit('rollDice');
+    rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === 2, 4000);
+    unpin();
+    assert.ok(rolled.turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).every(d => d.bound));
+    assert.equal(rolled.turn.canRoll, true, 'roll again without keeping');
+});
+
+test("the Hangman's Dead Eye shoots your best die as you finish and it rolls again; Clear-Eye stops it", async () => {
+    for (const clear of [false, true]) {
+        const hero = await tavernAgainst(fightOf('hangman'), `DeadEye-${clear}`);
+        const room = roomOf(hero);
+        if (clear) { room.tavernRun.shelf = ['clearEye']; hero.emit('drinkThonic', 0); await sleep(40); }
+        const shot = waitFor(hero, 'signatureMove', m => m.ability === 'Dead Eye', 4000);
+        hero.emit('rollDice');
+        const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+        room.turn.dice.forEach((d, i) => { d.value = [2, 4, 6, 5, 5, 5][i]; }); // 21
+        await sleep(rolled.animationMs * 0.01 + 30);
+        const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 4000);
+        room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
+        await finished;
+        const scored = nextState(hero, st => st.currentTurnId !== hero.id);
+        const unpin = pinFaces([3]);
+        hero.emit('endTurn');
+        const state = await scored;
+        unpin();
+        assert.equal(state.players[hero.id].score, clear ? 21 : 18, clear ? 'cancelled' : 'the 6 shot, rolled a 3');
+        const m = await shot;
+        if (clear) assert.equal(m.cancelled, true);
+        else assert.match(m.text, /shoots your 6\. It rolls again: 3\./);
+    }
+});
+
+test("Jaguar's Smooth Talk drinks a Thonic off your shelf (his Healing heals him); Clear-Eye stops it", async () => {
+    for (const clear of [false, true]) {
+        const hero = await tavernAgainst(fightOf('jaguar'), `JagTalk-${clear}`);
+        const room = roomOf(hero);
+        room.players.BOT_MOLAR.lives = 3; // of his 4
+        room.tavernRun.shelf = clear ? ['clearEye', 'healing', 'fizzy'] : ['healing', 'fizzy'];
+        if (clear) { hero.emit('drinkThonic', 0); await sleep(40); }
+        const talk = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+        server.beginTavernRound(codeOf(hero), room);
+        const m = await talk;
+        assert.equal(room.tavernRun.jaguarPhase, 'talk');
+        if (clear) {
+            assert.equal(m.cancelled, true);
+            assert.deepEqual(room.tavernRun.shelf, ['healing', 'fizzy']);
+            assert.equal(room.players.BOT_MOLAR.lives, 3);
+        } else {
+            assert.match(m.text, /talks your Healing Thonic off your shelf and drinks it and heals a life/);
+            assert.deepEqual(room.tavernRun.shelf, ['fizzy']);
+            assert.equal(room.players.BOT_MOLAR.lives, 4);
+        }
+    }
+    // An empty shelf: he talks 3 off your finished hand instead.
+    const hero = await tavernAgainst(fightOf('jaguar'), 'JagEmpty');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.lives = 4; // (a fresh test table still has the first opponent's one)
+    room.tavernRun.shelf = [];
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.talkThree, true);
+    const scored = nextState(hero, st => st.currentTurnId !== hero.id);
+    await playHand(hero, room, [2, 4, 6, 5, 5, 5]); // 21
+    assert.equal((await scored).players[hero.id].score, 18);
+});
+
+test("Jaguar's Cloak at two lives: he throws after you, his dice hidden; All In at his last costs two hearts", async () => {
+    const cloaked = await tavernAgainst(fightOf('jaguar'), 'JagCloak');
+    const croom = roomOf(cloaked);
+    croom.players.BOT_MOLAR.lives = 2;
+    croom.roundPlayers = ['BOT_MOLAR', cloaked.id]; // an even round: he'd throw first
+    const cloak = waitFor(cloaked, 'signatureMove', m => m.ability === 'The Cloak', 4000);
+    server.beginTavernRound(codeOf(cloaked), croom);
+    await cloak;
+    assert.deepEqual(croom.roundPlayers, [cloaked.id, 'BOT_MOLAR'], 'you first');
+    // His turn's dice are hidden until his hand is done.
+    const view = Rules.viewTurn({ ...Rules.createTurn('BOT_MOLAR'), cloaked: true, hasRolled: true, dice: [2, 4, 6, 6, 5, 1].map((value, id) => ({ id, value, status: id < 2 ? Rules.STATUS.LOCKED : Rules.STATUS.ACTIVE })) });
+    assert.ok(view.dice.every(d => d.hidden && d.value === 0));
+
+    const hero = await tavernAgainst(fightOf('jaguar'), 'JagAllIn');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.lives = 1;
+    const allIn = waitFor(hero, 'signatureMove', m => m.ability === 'All In', 4000);
+    server.beginTavernRound(codeOf(hero), room);
+    await allIn;
+    hero.on('diceRolled', d => { // his first throw: a 23
+        if (d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1) room.turn.dice.forEach((die, i) => { die.value = [2, 4, 6, 6, 6, 5][i]; });
+    });
+    const result = waitFor(hero, 'roundResult', () => true, 6000);
+    await playHand(hero, room, [2, 4, 1, 1, 1, 1]); // 4: you lose the round
+    await result;
+    assert.equal(room.players[hero.id].lives, 1, 'two hearts gone');
 });
 
 test('unknown reactions are dropped and names are passed through as plain data', async () => {
@@ -1195,7 +1349,7 @@ test('Steady Thonic: a dust hand scores its dice as they lie, drunk before or af
     }
 });
 
-test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, Rokr\'s blur', async () => {
+test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal; it waits for Rokr\'s stars', async () => {
     const klarg = await tavernAgainst(fightOf('klarg'), 'ClearKlarg');
     const kroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[klarg.id])];
     kroom.tavernRun.shelf = ['clearEye', 'clearEye'];
@@ -1212,15 +1366,18 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     await sleep(40);
     assert.equal(kroom.tavernRun.shelf.length, 1);
     const cancelled = waitFor(klarg, 'thonicUsed', u => /Reach Around is cancelled/.test(u.text), 8000);
+    const unpin = pinFaces([2, 1, 1, 3, 3, 5]); // a 2 shows: he reaches
     klarg.emit('rollDice');
     const rolled = await waitFor(klarg, 'diceRolled', () => true, 8000);
+    unpin();
     await cancelled;
     await sleep(60);
     assert.equal(rolled.turn.dice.filter(d => d.status === 'stolen').length, 0, 'no die stolen');
     assert.deepEqual(order.slice(0, 3), ['Reach Around cancelled', 'clear-eye', 'roll']);
     assert.equal(kroom.tavernRun.abilityUsed.reachAround, 1, 'the steal is spent');
     assert.equal(kroom.tavernRun.clearEyeArmed, false);
-    // Nothing left to cancel this fight: a second one is refused.
+    // Nothing left to cancel this fight (his second steal spent too): a second one is refused.
+    kroom.tavernRun.abilityUsed.reachAround = 2;
     kroom.turn.hasRolled = false;
     klarg.emit('drinkThonic', 0);
     await sleep(40);
@@ -1235,8 +1392,8 @@ test('Clear-Eye waits and cancels the opponent\'s next ability: Klarg\'s steal, 
     await sleep(40);
     rokr.emit('rollDice');
     const seen = await waitFor(rokr, 'diceRolled', () => true, 8000);
-    assert.ok(seen.turn.dice.every(d => !d.hidden && d.value > 0), 'dice not blurred');
-    assert.equal(rroom.tavernRun.clearEyeArmed, true, 'still waiting for the blur');
+    assert.ok(!seen.turn.stars, 'no stars yet');
+    assert.equal(rroom.tavernRun.clearEyeArmed, true, 'still waiting for the stars');
 });
 
 test('Clear-Eye is refused against The Molar (no ability) and after rolling', async () => {
@@ -1253,21 +1410,13 @@ test('Clear-Eye is refused against The Molar (no ability) and after rolling', as
     assert.deepEqual(shelfOf(room), ['clearEye'], 'too late once rolled');
 });
 
-test('Clear-Eye stops Jaguar\'s Smooth Talk and the Hangman\'s Ace of Spades', async () => {
-    // Jaguar: Smooth Talk would knock 3 off a finished hand.
-    const jag = await tavernAgainst(fightOf('jaguar'), 'ClearJaguar');
-    const jroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[jag.id])];
-    jroom.tavernRun.shelf = ['clearEye'];
-    jag.emit('drinkThonic', 0);
-    await sleep(40);
-    const scored = nextState(jag, s => s.currentTurnId !== jag.id);
-    await playHand(jag, jroom, [2, 4, 6, 5, 5, 5]); // 21
-    assert.equal((await scored).players[jag.id].score, 21, 'not 18');
-
-    // The Hangman at one life turns 16+ into 24, unless Clear-Eye was drunk this round.
+test('Clear-Eye stops the Hangman\'s Ace of Spades', async () => {
+    // The Hangman at one life turns 16+ into 24, unless Clear-Eye was drunk this round. (His Dead
+    // Eye already spent here, so the Clear-Eye waits for the Ace.)
     for (const clear of [true, false]) {
         const hang = await tavernAgainst(fightOf('hangman'), `Hang-${clear}`);
         const hroom = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hang.id])];
+        hroom.tavernRun.abilityUsed.deadEye = 1;
         hroom.players.BOT_MOLAR.lives = 1;
         if (clear) { hroom.tavernRun.shelf = ['clearEye']; hang.emit('drinkThonic', 0); await sleep(40); }
         let ace = false;

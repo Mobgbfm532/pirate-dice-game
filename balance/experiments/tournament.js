@@ -14,7 +14,8 @@ const numbers = {
     abilityUses: { mindWhip: 1, suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1 },
     ...(process.env.NUMBERS ? JSON.parse(process.env.NUMBERS) : {})
 };
-const order = S.TOURNAMENT;
+// ORDER=final: the Salty Swallow reworked as the final tier (25 Oct).
+const order = process.env.ORDER === 'final' ? S.TOURNAMENT_FINAL : S.TOURNAMENT;
 const pct = (x, n) => (100 * x / n).toFixed(1);
 
 function fightRate(i, player, withAbility) {

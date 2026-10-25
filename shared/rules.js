@@ -51,7 +51,13 @@
         inkfire: 'Inkfire Brand',
         flourish: 'Flourish',
         divineSmite: 'Divine Smite',
-        astralFlood: 'Astral Flood'
+        astralFlood: 'Astral Flood',
+        // The Salty Swallow as the final tier (25 Oct).
+        writtenInStars: 'Written in the Stars', // Rokr's
+        deadEye: 'Dead Eye', // the Hangman's, beside his Ace
+        jaguarPhases: 'Smooth Talk', // Jaguar's first phase (the use is a Thonic he talks off your shelf)
+        cloak: 'The Cloak', // Jaguar's second phase
+        allIn: 'All In' // and his last
     };
 
     function getAbilityMaxUses(abilityId) {
@@ -180,6 +186,7 @@
         turn.locksThisRoll = 0;
         turn.freeRoll = false;
         turn.mustRollId = null; // (a knocked-loose die has been rolled)
+        turn.boundIds = null; // (star-bound dice are free again once thrown; onRolled may bind new ones)
 
         if (onRolled) onRolled(turn);
 
@@ -198,6 +205,8 @@
         if (die.id === turn.mindDieId) return null;
         // A die Sylvester knocked loose has to be rolled before it can be kept again.
         if (die.id === turn.mustRollId) return null;
+        // Rokr's Written in the Stars: a die that landed on a marked face can't be kept this throw.
+        if (die.status === STATUS.ACTIVE && turn.boundIds && turn.boundIds.includes(die.id)) return null;
 
         if (die.status === STATUS.ACTIVE) { die.status = STATUS.LOCKED_THIS_ROLL; turn.locksThisRoll++; }
         else { die.status = STATUS.ACTIVE; turn.locksThisRoll--; }
@@ -298,12 +307,15 @@
     // in play this roll are hidden from everyone (value 0, hidden: true).
     function viewTurn(turn) {
         if (!turn) return null;
-        const hide = d => turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL);
+        // (Jaguar's Cloak: all his dice hidden until his hand is done.)
+        const cloaked = !!turn.cloaked && !turn.finalized;
+        const hide = d => (cloaked && d.status !== STATUS.STOLEN) || (turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL));
+        const bound = d => d.status === STATUS.ACTIVE && !!turn.boundIds && turn.boundIds.includes(d.id);
         return {
             key: turn.key,
             playerId: turn.playerId,
             // mind: the die Mind Whip made you keep (this throw).
-            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}), ...(d.id === turn.mustRollId ? { mustRoll: true } : {}) })),
+            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}), ...(d.id === turn.mustRollId ? { mustRoll: true } : {}), ...(bound(d) ? { bound: true } : {}) })),
             rollCount: turn.rollCount,
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,
@@ -313,7 +325,11 @@
             finalized: turn.finalized,
             outcome: turn.outcome,
             canRoll: canRoll(turn),
-            steady: !!turn.steady
+            steady: !!turn.steady,
+            // Rokr's Written in the Stars: the faces marked for the next throw (this turn), and
+            // whether this turn is under the stars at all.
+            stars: turn.stars ? { next: turn.nextMarks || null, now: turn.marks || null } : null,
+            cloaked
         };
     }
 

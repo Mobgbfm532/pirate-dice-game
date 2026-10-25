@@ -21,7 +21,21 @@ module.exports = {
     abilityUses: {
         mindWhip: 1, cursed: 2, devil: 1, disguises: 2,
         suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1,
-        reachAround: 1, constellationBlur: 2, deadeye24: 1, smoothTalk: 1
+        reachAround: 2, constellationBlur: 2, deadeye24: 1, smoothTalk: 1,
+        // The Salty Swallow as the final tier (25 Oct; balance/experiments/final-ship.js): Rokr's
+        // Written in the Stars (turns a fight), the Hangman's Dead Eye, Jaguar's Smooth Talk
+        // (Thonics he talks off your shelf, in his first phase).
+        writtenInStars: 3, deadEye: 1, jaguarPhases: 2
+    },
+    // How the final tier's abilities play (each set by simulation, 25 Oct): a sensible player,
+    // fresh, wins Klarg 27%, Rokr 26%, the Hangman 26%, Jaguar 14% (the Yawning Portal ~40%,
+    // Brodor 23%; the ship as it was 36, 41, 35, 24).
+    finalShip: {
+        klargWaits: true,        // Klarg steals when a 2 or 4 you still need shows (else: on your first throw)
+        starFaces: 2,            // Rokr: faces marked before each throw of the turn
+        deadEyeRerolls: true,    // the Hangman's shot die rolls again (false: it goes to a 1)
+        talkThreeWhenEmpty: 3,   // Jaguar with your shelf empty talks this much off your finished hand
+        cloakThrowsSecond: true  // at Jaguar's 2 lives he hides his dice and throws after you
     },
     // The Duke's Sympathy for the Devil (and the mask's): the other side can't score above this.
     // null: no cap, the three 6s are the whole of it (the user's call, 21 Oct; it was 18).

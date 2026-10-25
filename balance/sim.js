@@ -36,6 +36,16 @@ const TOURNAMENT = [
     { id: 'brodor', ability: 'astralFlood', boss: true, drops: 'brodorsSunglasses' },
     ...OPPONENTS.slice(5)
 ];
+// The Salty Swallow reworked as the final tier (25 Oct, the user's yes): Klarg steals twice and
+// keeps the die for his own hand; Rokr's Written in the Stars; the Hangman's Dead Eye beside his
+// Ace; Jaguar in three phases. Pass TOURNAMENT_FINAL as opts.order.
+const FINAL_SHIP = [
+    { id: 'klarg', ability: 'reachAround', keepsStolen: true },
+    { id: 'rokr', ability: 'writtenInStars' },
+    { id: 'hangman', ability: 'deadEye', abilities: ['deadEye', 'deadeye24'] },
+    { id: 'jaguar', ability: 'jaguarPhases' }
+];
+const TOURNAMENT_FINAL = [...TOURNAMENT.slice(0, 10), ...FINAL_SHIP];
 // Round abilities (decided as a round begins; server.js beginTavernRound). Martha's disguises
 // pick one of the three at random (Frak's, Danhausen's, the Duke's).
 const ROUND_KIND = { cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
@@ -66,6 +76,7 @@ function fight(index, run, opts = {}) {
         round: 1,
         abilityRound: opp.ability ? 1 + Math.floor(Math.random() * 3) : 0,
         uses: 0,
+        used: {}, // uses so far, by ability (the Hangman has two)
         clearEyeRound: 0,
         keepUsed: {},
         rounds: 0,
@@ -75,12 +86,14 @@ function fight(index, run, opts = {}) {
     };
     run.nextSurge = null;
     const max = ability => N.abilityUses[ability];
-    const canUse = ability => opp.ability === ability && f.clearEyeRound !== f.round && f.round >= f.abilityRound && f.uses < max(ability);
+    const abilities = opp.abilities || (opp.ability ? [opp.ability] : []);
+    const canUse = ability => abilities.includes(ability) && f.clearEyeRound !== f.round && f.round >= f.abilityRound && (f.used[ability] || 0) < max(ability);
     // Using the ability: with Clear-Eye as "cancel the next" (opts.effects.clearEye ===
     // 'cancelNext'), a waiting Clear-Eye spends the use instead.
     f.fire = ability => {
         if (!canUse(ability)) return false;
         f.uses++;
+        f.used[ability] = (f.used[ability] || 0) + 1;
         if (f.cancelArmed) { f.cancelArmed = false; return false; }
         return true;
     };
@@ -88,16 +101,17 @@ function fight(index, run, opts = {}) {
 
     while (f.player > 0 && f.bot > 0) {
         f.rounds++;
-        beginRound(f, run, has);
+        beginRound(f, run, has, N);
         // opts.playerSecond: for experiments, the opponent always throws first (you know the score to beat).
-        const playerFirst = opts.playerSecond ? false : f.round % 2 === 1;
+        // (N.jaguar.cloakSecond: under The Cloak Jaguar always throws after you)
+        const playerFirst = opts.playerSecond ? false : (f.phase === 'cloak' && ((N.jaguar || {}).cloakSecond ?? ship(N).cloakThrowsSecond)) ? true : f.round % 2 === 1;
         let p, b;
         if (playerFirst) {
             p = playerTurn(f, run, opts, undefined, canUse, N);
             b = botTurn(f, run, botToBeat(p, run, f), canUse);
         } else {
             b = botTurn(f, run, undefined, canUse);
-            p = playerTurn(f, run, opts, b.busted ? null : b.score, canUse, N);
+            p = playerTurn(f, run, opts, f.phase === 'cloak' ? undefined : b.busted ? null : b.score, canUse, N);
         }
         settleRound(f, run, p, b, has, N);
         f.round++;
@@ -108,11 +122,29 @@ function fight(index, run, opts = {}) {
 // The round's ability, as it begins: { kind, by } or null. The opponent's (Martha's at random),
 // or, if the opponent has none this round, Martha's mask: the player wears the Devil the first
 // chance they get each fight.
-function beginRound(f, run, has) {
+function beginRound(f, run, has, N = {}) {
     f.effect = null;
     f.pendingDevil = false;
     f.pendingMind = false;
     const a = f.opp.ability;
+    // Jaguar Cantona in three phases (by his lives left): Smooth Talk (he talks a Thonic off your
+    // shelf, once a round, and drinks it: Healing heals him, Steady counts his dust as it lies;
+    // with your shelf empty he talks 3 off your finished hand), at 2 lives The Cloak (his dice
+    // hidden: playing after him, you play blind), at his last All In (the round's loser loses 2).
+    f.phase = null;
+    if (a === 'jaguarPhases') {
+        f.phase = f.bot >= 3 ? 'talk' : f.bot === 2 ? 'cloak' : 'allIn';
+        // (for experiments: N.jaguar { talk, cloak, allIn } false switches a phase off)
+        if ((N.jaguar || {})[f.phase] === false) f.phase = null;
+        if (f.phase === 'talk' && f.fire(a)) {
+            const pick = (f.bot < f.botMax && run.shelf.includes('healing') && 'healing') || (run.shelf.includes('steady') && 'steady') || run.shelf[0];
+            if (pick) {
+                take(run.shelf, pick);
+                if (pick === 'healing' && f.bot < f.botMax) f.bot++;
+                if (pick === 'steady') f.botSteady = true;
+            } else f.talkThree = true;
+        }
+    }
     // Brodor's Astral Flood: heals one of his lives, once he has lost one.
     if (a === 'astralFlood' && f.bot < f.botMax && f.fire(a)) f.bot++;
     if (a && (ROUND_KIND[a] || a === 'disguises' || a === 'mindWhip')) {
@@ -128,6 +160,8 @@ function beginRound(f, run, has) {
     }
 }
 const cursed = f => !!f.effect && f.effect.kind === 'curse';
+// The final tier's settings (shared/balance.js finalShip).
+const ship = N => N.finalShip || {};
 const devilBy = (f, who) => !!f.effect && f.effect.kind === 'devil' && f.effect.by === who;
 // The Devil's three 6s, on the first throw of whoever plays it.
 const devilThrow = t => active(t).slice(0, 3).forEach(d => { d.value = 6; });
@@ -140,8 +174,11 @@ function botToBeat(p, run, f) {
 
 function botTurn(f, run, toBeat, canUse) {
     const turn = Rules.createTurn('BOT');
+    // Klarg keeps what he stole: it starts his next turn already kept.
+    if (f.klargHand) { Object.assign(turn.dice[0], { value: f.klargHand, status: STATUS.LOCKED }); f.klargHand = null; }
     const low = cursed(f), cap = devilBy(f, 'player') ? DEFAULTS.devilCap ?? null : null;
-    const aceAt16 = !low && f.opp.ability === 'deadeye24' && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
+    const hasAce = (f.opp.abilities || [f.opp.ability]).includes('deadeye24');
+    const aceAt16 = !low && hasAce && f.bot <= 1 && canUse('deadeye24') && !f.cancelArmed;
     // Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or
     // 4 he still needs, else the higher).
     const flourish = f.opp.ability === 'flourish' && f.fire('flourish');
@@ -171,7 +208,9 @@ function botTurn(f, run, toBeat, canUse) {
     // A rolled 24 restores a life for the opponent too, up to their lives for the fight (the
     // Ace of Spades' 24 doesn't).
     if (score === 24 && !busted && f.bot < f.botMax) f.bot++;
-    if (!low && f.opp.ability === 'deadeye24' && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
+    if (!low && hasAce && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
+    // Jaguar's phase one: a Steady he talked off your shelf counts his dust as it lies.
+    if (busted && f.botSteady) { f.botSteady = false; busted = false; score = Rules.scoreDice(turn.dice).score; }
     return { busted, score };
 }
 
@@ -188,7 +227,7 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     const effects = { clearEye: 'cancelNext', steady: 'asTheyLie', ...(opts.effects || {}) };
     if (effects.clearEye === 'cancelNext') {
         // Drunk at the start of the fight: it waits for the opponent's next ability.
-        if (drinks.clearEye && f.opp.ability && !f.cancelArmed && f.uses < N.abilityUses[f.opp.ability] && take(shelf, 'clearEye')) {
+        if (drinks.clearEye && f.opp.ability && !f.cancelArmed && (f.used[f.opp.ability] || 0) < N.abilityUses[f.opp.ability] && take(shelf, 'clearEye')) {
             f.cancelArmed = true;
             run.stats.drunk.clearEye = (run.stats.drunk.clearEye || 0) + 1;
         }
@@ -203,6 +242,11 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     // Duke's Devil, the hand counts as no more than the cap.
     const round = { low: cursed(f), cap: devilBy(f, 'opponent') ? DEFAULTS.devilCap ?? null : null };
     let mind = false;
+    // Rokr's Written in the Stars (a use covers a whole turn): before each throw the stars mark
+    // two faces (fresh each throw; N.stars.everyThrow false: the first throw only); dice that land
+    // on them can't be kept this throw. If every die in play is star-bound, roll again for free.
+    const stars = f.opp.ability === 'writtenInStars' && f.fire('writtenInStars');
+    let bound = [];
     // Vaelin's Inkfire Brand: 6 is burned into the table this round; your dice that land on it
     // roll again (so they land 1-5; the Loaded Die 4-5).
     const loaded = loadedFace(run, N);
@@ -217,11 +261,35 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
             rollFace: face,
             onRolled: t => {
                 mind = false;
+                bound = [];
+                if (stars && (t.rollCount === 1 || (N.stars || {}).everyThrow !== false)) {
+                    const marks = shuffle([1, 2, 3, 4, 5, 6]).slice(0, (N.stars || {}).faces || ship(N).starFaces || 2);
+                    bound = active(t).filter(d => marks.includes(d.value)).map(d => d.id);
+                    if (bound.length && bound.length === active(t).length) t.freeRoll = true;
+                }
+                // (N.klarg.smart: Klarg waits for a throw showing a 2 or 4 you still need, any throw)
+                if (ship(N).klargWaits && f.opp.keepsStolen) {
+                    const kept = t.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
+                    const showing = active(t).some(d => (d.value === 2 && !kept.includes(2)) || (d.value === 4 && !kept.includes(4)));
+                    if (showing && active(t).length >= 2 && f.fire('reachAround')) {
+                        const stolen = Rules.stealHighestActiveDie(t);
+                        if (stolen) f.klargHand = stolen.value;
+                    }
+                }
                 if (t.rollCount !== 1) return;
                 if (devilBy(f, 'player')) devilThrow(t);
                 // Frak's Mind Whip (or Martha's copy): he picks the die you must keep.
                 if (f.pendingMind && active(t).length > 1 && f.fire(f.opp.ability)) { f.pendingMind = false; mind = true; }
-                if (f.fire('reachAround')) Rules.stealHighestActiveDie(t);
+                // (N.klarg.secondWhenHurt: his second steal only once he has lost a life)
+                // (N.klarg.secondAtLast: only at his last life)
+                const holdBack = f.opp.keepsStolen && (f.used.reachAround || 0) >= 1 &&
+                    (((N.klarg || {}).secondWhenHurt && f.bot >= f.botMax) || ((N.klarg || {}).secondAtLast && f.bot > 1));
+                if (!holdBack && !(ship(N).klargWaits && f.opp.keepsStolen) && f.fire('reachAround')) {
+                    // (N.klarg.secondHighest: his second steal takes your highest die, not a needed 2 or 4)
+                    const highest = f.opp.keepsStolen && (N.klarg || {}).secondHighest && f.used.reachAround > 1;
+                    const stolen = highest ? stealHighest(t) : Rules.stealHighestActiveDie(t);
+                    if (stolen && f.opp.keepsStolen) f.klargHand = stolen.value;
+                }
                 if (f.fire('constellationBlur')) t.blurActive = true;
             }
         });
@@ -234,7 +302,21 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
                 run.stats.drunk.fizzy = (run.stats.drunk.fizzy || 0) + 1;
             }
         }
-        if (!turn.finalized) {
+        if (!turn.finalized && bound.length) {
+            // Star-bound dice stay in play: the best keep among the rest (at least one, unless all are bound).
+            const free = active(turn).filter(d => !bound.includes(d.id));
+            if (free.length) {
+                let keep = choose().filter(id => !bound.includes(id));
+                if (!keep.length) {
+                    const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).map(d => d.value);
+                    const need = free.find(d => (d.value === 2 && !kept.includes(2)) || (d.value === 4 && !kept.includes(4)));
+                    keep = [(need || free.slice().sort((a, b) => b.value - a.value)[0]).id];
+                }
+                keep.forEach(id => Rules.toggleDie(turn, id));
+            }
+            if (!turn.finalized) continue;
+        }
+        else if (!turn.finalized) {
             if (active(turn).length === 1) Rules.toggleDie(turn, active(turn)[0].id);
             else if (mind && Rules.mindWhip(turn)) {
                 // That die is this throw's keep; you may keep others too.
@@ -274,6 +356,14 @@ function playerTurn(f, run, opts, toBeat, canUse, N) {
     if (steady && busted) { busted = false; score = effects.steady === 'asTheyLie' ? Rules.scoreDice(turn.dice).score : 0; }
     if (round.cap !== null && !busted) score = Math.min(score, round.cap);
     if (!round.low && !busted && score > 0 && f.fire('smoothTalk')) score = Math.max(0, score - 3);
+    // The Hangman's Dead Eye: he shoots your best scoring die (not the 2 and 4 you need) down to a 1.
+    if (!round.low && !busted && score > 0 && f.fire('deadEye')) {
+        const shot = scoringDice(turn).sort((a, b) => b.value - a.value)[0];
+        // (N.deadEye.reroll: the shot die rolls again instead of going to a 1)
+        if (shot) { shot.value = ((N.deadEye || {}).reroll ?? ship(N).deadEyeRerolls) ? d6() : 1; score = Rules.scoreDice(turn.dice).score; }
+    }
+    // Jaguar, phase one with your shelf empty: he talks 3 off your finished hand instead.
+    if (!round.low && !busted && score > 0 && f.talkThree) { f.talkThree = false; score = Math.max(0, score - (ship(N).talkThreeWhenEmpty ?? 3)); }
     if (score === 24 && !busted) {
         run.stats.perfect24s++;
         run.purse += N.gold.perfect24;
@@ -306,6 +396,25 @@ function surgeFace(surge, base, turnOf, N, low = false) {
     };
 }
 
+// Takes the highest die in play out of the turn (Klarg, when not after a 2 or 4).
+function stealHighest(turn) {
+    const dice = active(turn);
+    if (dice.length <= 1) return null;
+    const stolen = dice.slice().sort((a, b) => b.value - a.value)[0];
+    stolen.status = STATUS.STOLEN;
+    return stolen;
+}
+
+// The kept dice that score: all but one 2 and one 4.
+function scoringDice(turn) {
+    let saw2 = false, saw4 = false;
+    return turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN).filter(d => {
+        if (d.value === 2 && !saw2) { saw2 = true; return false; }
+        if (d.value === 4 && !saw4) { saw4 = true; return false; }
+        return true;
+    });
+}
+
 // Second Thoughts: put back the lowest kept die that isn't the 2 or 4 in use.
 function putBackChoice(turn) {
     const kept = turn.dice.filter(d => d.status !== STATUS.ACTIVE && d.status !== STATUS.STOLEN);
@@ -324,8 +433,8 @@ function putBackChoice(turn) {
 function clearEyeNow(f, toBeat, N) {
     const a = f.opp.ability;
     if (!a) return false;
-    if (a === 'deadeye24') return f.bot <= 1 && f.uses < 1 && toBeat === undefined;
-    if (f.uses >= N.abilityUses[a]) return false;
+    if (a === 'deadeye24') return f.bot <= 1 && (f.used[a] || 0) < 1 && toBeat === undefined;
+    if ((f.used[a] || 0) >= N.abilityUses[a]) return false;
     return f.round >= 3 || (a === 'constellationBlur' && f.uses === 1);
 }
 
@@ -366,6 +475,8 @@ function settleRound(f, run, p, b, has, N) {
     }
     // The Ridgeler's Divine Smite: if he wins this round, you lose 2 hearts instead of 1.
     if (f.effect && f.effect.kind === 'smite' && losers.length === 1 && losers[0] === 'P') losers.push('P');
+    // Jaguar's All In: the round's loser loses two.
+    if (f.phase === 'allIn') losers = losers.flatMap(x => [x, x]);
     for (const who of losers) {
         if (who === 'B') { f.bot--; continue; }
         if (has('bentCopper') && !f.keepUsed.bentCopper) { f.keepUsed.bentCopper = true; continue; }
@@ -572,4 +683,4 @@ function darren(run, N) {
     }
 }
 
-module.exports = { OPPONENTS, TOURNAMENT, KEEPSAKES, THONIC_IDS, DEFAULTS, fight, playRun, newRun };
+module.exports = { OPPONENTS, TOURNAMENT, TOURNAMENT_FINAL, FINAL_SHIP, KEEPSAKES, THONIC_IDS, DEFAULTS, fight, playRun, newRun };

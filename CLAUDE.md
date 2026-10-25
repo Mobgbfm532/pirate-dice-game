@@ -298,8 +298,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   looked like mistakes). That costs up to 5 points of win chance at high targets: to beat 20
   they win 48% (pure best 53%, the old fixed habits 35%).
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
-  Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; Klarg 1, Rokr 2,
-  Hangman 1, Jaguar 1). Each use costs the player ~10 points of fight win chance. **The Yawning
+  Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; the ship since 25 Oct:
+  Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2). Each use costs the player ~10 points of fight win chance. **The Yawning
   Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the knocked-loose die must be rolled before it can be kept again, `turn.mustRollId`, 23 Oct; the
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
   hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it
@@ -339,6 +339,27 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   gold sweep, the Hangman a gun-metal banner. The opponent's nameplate/chip
   shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after
   the banner.
+- **The Salty Swallow as the final tier (25 Oct, the user's yes; set by simulation,
+  `balance/experiments/final-ship.js`; settings in `shared/balance.js` `finalShip` and `abilityUses`):**
+  each goes after a different part of your game. A sensible player, fresh, wins Klarg 27%, Rokr 26%,
+  the Hangman 27%, Jaguar 15% (the Yawning Portal ~40%, Brodor 23%; the ship as it was 35, 40, 35, 25).
+  - **Klarg** (`keepsStolen`, `klargWaits`): twice a fight he waits for a throw showing a 2 or 4 you
+    still need, snatches it (`Rules.stealHighestActiveDie`) and keeps it: his next turn starts with it
+    kept (`run.klargHand` → `syncTurn`). (Two first-throw steals cost ~12 points each: too much.)
+  - **Rokr's Written in the Stars** (replaces Constellation Blur): 3 turns a fight (`startStars`), the
+    stars mark two faces before each throw of the turn (`turn.nextMarks` → `turn.marks`); dice landing
+    on them are bound (`turn.boundIds`; `Rules.toggleDie` refuses them; all bound: a free roll). The
+    client: stars over bound dice (Constellation), the badge "Star-bound now: ... Next throw: ...".
+  - **The Hangman** (`abilities: ['deadEye', 'deadeye24']`): **Dead Eye**, once a fight, as you end
+    a hand that counts he shoots your best scoring die and it rolls again (`deadEyeRerolls`; turnState
+    event `shot`); his **Ace of Spades** stays, for his last life. Clear-Eye counts all his abilities
+    (`encounterAbilityLeft`).
+  - **Jaguar** (`jaguarPhases`, `beginJaguarRound`, `run.jaguarPhase` in the state): **Smooth Talk** (3+
+    lives; twice a fight, once a round) talks a Thonic off your shelf and drinks it (Healing heals him,
+    Steady counts his dust as it lies, `jaguarSteady`); an empty shelf: 3 off your finished hand
+    (`talkThree`). **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
+    **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
+  - Tests pin the dice with `pinFaces` (server.test.js). The old Constellation Blur code is unused now.
 - **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
   in a round with no effect yet, wear Danhausen's Curse (before you roll) or the Duke's Devil
   (any time in your turn with 3+ dice to throw, since 21 Oct: the next throw lands three 6s)
