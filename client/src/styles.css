@@ -2078,10 +2078,11 @@ button.keepsake.used { opacity: 0.55; }
 /* ---- Three 6s: fire up the screen, the devil with her three 6s, "Devil's titties" ----
    A moment over everything for 1.5 s; taps go through to the dice. */
 .devil-sixes { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
-/* A sheet of fire sweeps from the bottom to the top and burns off. */
+/* A sheet of fire sweeps from the bottom to the top and burns off. Both its edges fade out:
+   a hard bottom edge showed as a dark line climbing the screen behind her (the user, 25 Oct). */
 .devil-surge {
     position: absolute; left: 0; right: 0; bottom: 0; height: 160%;
-    background: linear-gradient(to top, rgba(255, 214, 90, 0.95), rgba(255, 112, 30, 0.85) 25%, rgba(200, 30, 10, 0.6) 55%, rgba(120, 0, 0, 0) 85%);
+    background: linear-gradient(to top, rgba(255, 214, 90, 0), rgba(255, 214, 90, 0.95) 18%, rgba(255, 112, 30, 0.85) 36%, rgba(200, 30, 10, 0.6) 60%, rgba(120, 0, 0, 0) 86%);
     mix-blend-mode: screen; animation: devil-surge 1.5s ease-out both;
 }
 @keyframes devil-surge {
@@ -2165,7 +2166,8 @@ button.keepsake.used { opacity: 0.55; }
    One set of pieces for every screen: titles and buttons in Almendra, longer text in Alegreya
    (easier to read small); buttons pressed out of the same mould (a wax-seal red, brass, dark
    leather and Thom's green, each with a brass rim and a press); parchment and dark panels in a
-   brass frame; scenes come and go through a drift of candle smoke. ?look=classic keeps the old. */
+   brass frame. (Candle smoke between scenes was tried and taken out, the user's call.)
+   ?look=classic keeps the old. */
 :root {
     --read: 'Alegreya', Georgia, serif;
     --brass-rim: linear-gradient(#f6dc8e, #c9973a 45%, #7a5318);
@@ -2254,28 +2256,4 @@ button.keepsake.used { opacity: 0.55; }
         var(--bg);
 }
 
-/* -- Scenes come and go through candle smoke -- */
-.look-next .thom-scene, .look-next .interlude-scene { animation-name: smoke-in; animation-duration: 0.7s; }
-.look-next .thom-scene.leaving, .look-next .interlude-scene.leaving { animation-name: smoke-out; animation-duration: 0.5s; }
-.look-next .thom-scene::after, .look-next .interlude-scene::after {
-    content: '';
-    position: fixed;
-    inset: -20% -10%;
-    pointer-events: none;
-    z-index: 30;
-    background:
-        radial-gradient(ellipse 30% 22% at 22% 70%, rgba(214, 200, 176, 0.55), transparent 70%),
-        radial-gradient(ellipse 34% 26% at 70% 62%, rgba(200, 186, 160, 0.5), transparent 70%),
-        radial-gradient(ellipse 40% 30% at 45% 85%, rgba(190, 176, 150, 0.55), transparent 70%),
-        radial-gradient(ellipse 28% 20% at 85% 88%, rgba(214, 200, 176, 0.45), transparent 70%),
-        radial-gradient(ellipse 26% 18% at 10% 92%, rgba(200, 186, 160, 0.45), transparent 70%);
-    filter: blur(14px);
-    animation: smoke-drift 1.1s ease-out both;
-}
-@keyframes smoke-in { from { opacity: 0; filter: blur(10px) brightness(1.4); } to { opacity: 1; filter: none; } }
-@keyframes smoke-out { to { opacity: 0; filter: blur(8px) brightness(1.3); } }
-@keyframes smoke-drift {
-    0% { opacity: 0; transform: translateY(18%) scale(1); }
-    25% { opacity: 1; }
-    100% { opacity: 0; transform: translateY(-28%) scale(1.25); }
-}
+

@@ -103,8 +103,8 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   `.primary` and Roll wax-seal red, `.primary.alt` dark leather, `.secondary` brass, Thom's `.buy`
   and End Turn green; parchment panels (`.panel`, `.thonic-card`) in a brass frame with corner
   rivets, dark-wood boxes (`.spot-card`, `.won-rows li`, `.keepsake-ware`) with the same rim; the
-  start screen sits on the tavern painting; full-screen scenes come and go through candle smoke
-  (`smoke-in`/`smoke-out`, a drifting `::after`). The loading screen is in `index.html` (`#boot`:
+  start screen sits on the tavern painting (candle smoke between scenes was tried and taken out,
+  the user's call, 25 Oct). The loading screen is in `index.html` (`#boot`:
   the tavern, the title, a tumbling die), faded out by main.tsx once the canvas exists.
 - `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), turn banner (not in Tavern Crawl, where
   the nameplates show whose turn it is), chips, opponent nameplate, score to
@@ -354,7 +354,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   own (`CELEBRATION_MS` 2.8 s): the round result and the next throw wait. Dev: `preview.celebrate()`.
 - **Three 6s (23 Oct, the user's):** whenever a throw lands three 6s (`diceRolled.devil`, any
   table, anyone's throw) fire surges up the screen, the user's painting of the devil holding three
-  6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`) and a banner says "Devil's titties" (the
+  6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`; the fire sheet, `.devil-surge`, fades at
+  both edges: a hard bottom edge showed as a dark line climbing the screen) and a banner says "Devil's titties" (the
   sound is `DevilsTeets.wav`). `DevilSixes` in Hud, `showDevil` / `snapshot.devil` in game.ts,
   `DEVIL_MS` 1.5 s (the user's, was 2.8); taps go through to the dice, the next moment waits. Dev:
   `preview.devil(who, hold)` (hold keeps it up, for stills). Since 24 Oct a **living painting**
