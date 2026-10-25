@@ -200,10 +200,37 @@ function scoreToBeat(state: GameState, rollerId: string): { label: string; targe
     return { label: 'Score to beat', target: Math.min(...scores) };
 }
 
-function Hearts({ lives, starting }: { lives: number; starting: number }) {
+// One heart per life: full, then empty up to the starting number. Since 25 Oct (visuals plan
+// step 5) a heart that's lost cracks in two and falls away, and one that comes back pops in with
+// a glow. `fight` changes when a new fight starts, where hearts reset without any of that.
+const HEART_MS = 900;
+function Hearts({ lives, starting, fight = '' }: { lives: number; starting: number; fight?: string }) {
     const n = Math.max(0, lives);
-    return <div className="hearts" aria-label={`${n} lives`}>{'♥'.repeat(n)}<span>{'♥'.repeat(Math.max(0, starting - n))}</span></div>;
+    const seen = useRef({ n, fight });
+    const [change, setChange] = useState<{ kind: 'lost' | 'healed'; from: number; to: number; at: number } | null>(null);
+    useEffect(() => {
+        const was = seen.current;
+        seen.current = { n, fight };
+        if (was.fight !== fight || was.n === n) return;
+        const at = performance.now();
+        setChange(n < was.n ? { kind: 'lost', from: n, to: was.n, at } : { kind: 'healed', from: was.n, to: n, at });
+        const timer = setTimeout(() => setChange(c => (c && c.at === at ? null : c)), HEART_MS + 100);
+        return () => clearTimeout(timer);
+    }, [n, fight]);
+    const slots = Math.max(starting, n, change?.to ?? 0);
+    return (
+        <div className="hearts" aria-label={`${n} lives`}>
+            {Array.from({ length: slots }, (_, i) => {
+                const moving = change && i >= change.from && i < change.to;
+                const kind = moving ? (change.kind === 'lost' ? 'breaking' : 'healing') : i < n ? 'full' : 'empty';
+                return <span key={moving ? `${i}-${change.at}` : i} className={`heart ${kind}`} style={moving ? { animationDelay: `${(i - change.from) * 0.12}s` } : undefined}>♥</span>;
+            })}
+        </div>
+    );
 }
+
+// Which fight it is (a new one resets the hearts without cracks or glows).
+const fightKey = (state: GameState) => (state.tavernRun ? `${(state.tavernRun.seated ?? state.tavernRun.enemy).name}` : '');
 
 // Player chips: a column at the top left on wide screens, a scrolling row above the
 // controls on phones. A bot opponent has a nameplate on the table edge instead.
@@ -225,7 +252,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                         <div>
                             <div className="name">{p.name}</div>
                             {/* A Tavern Crawl opponent's hearts are out of their own lives, not yours. */}
-                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} />
+                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} fight={fightKey(state)} />
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
@@ -247,7 +274,7 @@ function OpponentPlate({ state }: { state: GameState }) {
         <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
             {state.tavernRun && <span className="encounter">{state.tavernRun.seated?.number ?? state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
             <span className="name">{name ?? bot.name}</span>
-            <Hearts lives={bot.lives} starting={starting} />
+            <Hearts lives={bot.lives} starting={starting} fight={fightKey(state)} />
             {state.tavernRun && <AbilityMarks state={state} />}
             <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
         </div>
@@ -959,16 +986,30 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     const story = INVITATIONS[interlude.boss ?? ''] ?? INVITATIONS['Martha Mystery'];
     const drop = interlude.drop ?? { id: 'marthasMask', name: "Martha's Mask", text: '' };
     const save = () => actions.saveAndLeave(interlude.save, { name: me?.name ?? 'Traveller', place: interlude.place, next, purse: run.purse });
+    // The end of a place (visuals plan step 5, 25 Oct): a sealed letter flutters down, its wax seal
+    // cracks and the invitation unfolds out of it (in the new look; a tap skips to it).
+    const [skip, setSkip] = useState(!lookNext);
     return (
-        <div className={`interlude-scene invitation ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={story.title}
-            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
+        <div className={`interlude-scene invitation ${lookNext ? 'arriving' : ''} ${skip ? 'skip' : ''} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={story.title}
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }} onPointerDown={() => setSkip(true)}>
             <div className="interlude-body">
                 <PurseLine state={state} />
                 <h2 className="interlude-title">{story.title}</h2>
+                {/* (the letter lands where the invitation then unfolds) */}
+                <div className="invitation-slot">
+                {!skip && (
+                    <div className="letter" aria-hidden="true">
+                        <div className="envelope">
+                            <span className="flap" />
+                            <span className="seal"><i className="half left" /><i className="half right" /></span>
+                        </div>
+                    </div>
+                )}
                 <div className="invitation-card">
                     <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[drop.id] ?? '✦'}</span>
                     <p>{story.line(interlude.place)}</p>
                     <p className="mask-text"><strong>{drop.name}</strong> {story.gift}</p>
+                </div>
                 </div>
                 <div className="event-choices">
                     <button className="primary onward" onClick={onMoveOn} disabled={leaving}>On to {inSentence(interlude.place)}</button>

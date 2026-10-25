@@ -390,6 +390,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
   and a synthesized chime (`playChime`); the Shield's is a force-field dome over the table
   (`.forcefield`), its line "Shield protects a life."
+- **Hearts that react, and the end of a place** (visuals plan step 5, 25 Oct): a heart that's lost
+  swells, cracks along a jagged line and its halves fall away; one that comes back pops in with a
+  pink glow (`Hearts` in Hud, `HEART_MS` 0.9 s, `.heart.breaking` / `.healing`; a new fight resets
+  hearts quietly, `fightKey`). In the new look the invitation opens with a sealed letter that
+  flutters down, its wax seal cracks and the invitation unfolds from it on parchment, 2.2 s in all;
+  a tap skips (`.invitation.arriving`, `.skip`). The gold count stays as it was (the user's call).
 - **The invitations and saving:** beating a boss gives `interlude.stage = 'invitation'` instead of
   an event (`invitation(room, name)`: `place`, `from`, `boss`, `drop`, `save`): after Martha "You
   qualify for the Yawning Portal", after Brodor "Word from the docks" (the Salty Swallow has

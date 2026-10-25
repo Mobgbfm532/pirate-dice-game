@@ -141,7 +141,30 @@ header {
 .player .name { font-size: 0.95rem; font-weight: 700; max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Lost hearts are dark: applies to player chips and the opponent's nameplate alike. */
 .hearts { color: #e53935; font-size: 0.8rem; letter-spacing: 1px; }
-.hearts span { color: #4a3a30; }
+.hearts .heart { position: relative; display: inline-block; }
+.hearts .heart.empty { color: #4a3a30; }
+/* A heart lost: it shakes, cracks down the middle and its halves fall away, leaving an empty
+   heart behind. A heart back: it pops in, glowing. */
+.hearts .heart.breaking { color: #4a3a30; }
+.hearts .heart.breaking::before, .hearts .heart.breaking::after {
+    content: '♥'; position: absolute; inset: 0; color: #e53935;
+    animation: heart-half 0.9s ease-in both; animation-delay: inherit;
+}
+.hearts .heart.breaking::before { clip-path: polygon(0 0, 55% 0, 42% 35%, 58% 60%, 45% 100%, 0 100%); --turn: -32deg; --away: -3px; }
+.hearts .heart.breaking::after { clip-path: polygon(55% 0, 100% 0, 100% 100%, 45% 100%, 58% 60%, 42% 35%); --turn: 32deg; --away: 3px; }
+@keyframes heart-half {
+    0% { transform: none; opacity: 1; filter: brightness(1.6); }
+    10% { transform: scale(1.9) translateX(-1px); filter: brightness(1.8); }
+    18% { transform: scale(1.9) translateX(1px); }
+    26% { transform: scale(1.8) translateX(var(--away)) rotate(calc(var(--turn) * 0.3)); opacity: 1; filter: none; }
+    100% { transform: scale(1.2) translate(calc(var(--away) * 2.5), 18px) rotate(var(--turn)); opacity: 0; }
+}
+.hearts .heart.healing { color: #e53935; animation: heart-heal 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@keyframes heart-heal {
+    0% { transform: scale(0.2); opacity: 0; text-shadow: 0 0 12px #ffd54f; color: #ffd54f; }
+    45% { transform: scale(1.7); opacity: 1; text-shadow: 0 0 12px #ff8a80, 0 0 4px #fff; color: #ff8a80; }
+    100% { transform: scale(1); text-shadow: 0 0 0 rgba(255, 138, 128, 0); color: #e53935; }
+}
 /* Round scores: a clear badge. Gold when scored, amber for the lowest (currently losing),
    red for dust, dim before the player has gone. */
 .score {
@@ -2222,7 +2245,7 @@ button.keepsake.used { opacity: 0.55; }
 }
 
 /* -- Panels: parchment in a brass frame, with a rivet in each corner -- */
-.look-next .panel, .look-next .thonic-card {
+.look-next .panel, .look-next .thonic-card, .look-next .invitation-card {
     border: 3px solid transparent;
     background:
         radial-gradient(circle at 10px 10px, #f6dc8e 0 2px, #7a5318 2.5px 3.5px, transparent 4px) padding-box,
@@ -2235,6 +2258,9 @@ button.keepsake.used { opacity: 0.55; }
         var(--brass-rim) border-box;
     box-shadow: 0 0 0 1px var(--frame-dark), inset 0 0 0 1px rgba(60, 35, 12, 0.35), 0 20px 50px rgba(0, 0, 0, 0.6);
 }
+/* (the invitation is the letter's page, so ink on parchment) */
+.look-next .invitation-card { color: var(--ink); font-family: var(--read); font-size: 1.02rem; }
+.look-next .invitation-card strong { font-family: var(--font); color: var(--red); }
 .look-next .thonic-card { box-shadow: 0 0 0 1px var(--frame-dark), inset 0 0 0 1px rgba(60, 35, 12, 0.35), 0 10px 24px rgba(0, 0, 0, 0.55); }
 /* Dark wood: the spots, the win rows, Thom's back shelf. */
 .look-next .spot-card, .look-next .won-rows li, .look-next .keepsake-ware {
@@ -2257,3 +2283,59 @@ button.keepsake.used { opacity: 0.55; }
 }
 
 
+
+/* ==== The end of a place: the invitation arrives (visuals plan step 5, 25 Oct; new look) ====
+   A sealed letter flutters down into the middle, its wax seal cracks in two, and the invitation
+   unfolds where it was; the title shows first, the buttons last. A tap (.skip) jumps to the end. */
+.invitation-slot { position: relative; width: 100%; }
+.invitation.arriving .letter {
+    position: absolute; left: 50%; top: 50%; z-index: 2; pointer-events: none;
+    animation: letter-flutter 1.15s cubic-bezier(0.3, 0.6, 0.4, 1) both, letter-gone 0.35s 1.75s ease-in forwards;
+}
+.invitation .envelope {
+    position: relative; width: 150px; height: 100px; margin: -50px 0 0 -75px;
+    background: linear-gradient(160deg, #f6e8c6, #e2c992 70%, #c9a86a);
+    border: 1px solid #8d6e3f; border-radius: 4px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.55), inset 0 0 18px rgba(120, 80, 30, 0.25);
+}
+.invitation .envelope .flap {
+    position: absolute; left: 0; right: 0; top: 0; height: 62%;
+    background: linear-gradient(#ead6a6, #d4b67a); clip-path: polygon(0 0, 100% 0, 50% 100%);
+    filter: drop-shadow(0 2px 1px rgba(90, 60, 20, 0.35));
+}
+.invitation .envelope .seal {
+    position: absolute; left: 50%; top: 62%; width: 34px; height: 34px; margin: -17px 0 0 -17px;
+}
+.invitation .envelope .seal .half {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #e0503c, #a3201c 55%, #5e0d0a);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.45);
+    animation: seal-crack 0.5s 1.15s ease-in forwards;
+}
+.invitation .envelope .seal .half.left { clip-path: polygon(0 0, 52% 0, 44% 40%, 56% 62%, 47% 100%, 0 100%); --turn: -35deg; --away: -14px; }
+.invitation .envelope .seal .half.right { clip-path: polygon(52% 0, 100% 0, 100% 100%, 47% 100%, 56% 62%, 44% 40%); --turn: 35deg; --away: 14px; }
+@keyframes letter-flutter {
+    0% { transform: translate(140px, -300px) rotate(28deg); opacity: 0; }
+    15% { opacity: 1; }
+    40% { transform: translate(-50px, -160px) rotate(-16deg); }
+    65% { transform: translate(30px, -50px) rotate(9deg); }
+    85% { transform: translate(-8px, -6px) rotate(-3deg); }
+    100% { transform: none; }
+}
+@keyframes seal-crack {
+    0% { transform: none; filter: brightness(1); }
+    25% { transform: scale(1.15); filter: brightness(1.5); }
+    100% { transform: translate(var(--away), 30px) rotate(var(--turn)); opacity: 0; }
+}
+@keyframes letter-gone { to { transform: scale(1.25); opacity: 0; } }
+/* What the letter held: it unfolds from the top, then the choices come. */
+.invitation.arriving .invitation-card { transform-origin: 50% 0; animation: invitation-unfold 0.6s 1.7s cubic-bezier(0.2, 0.8, 0.3, 1.1) both; }
+.invitation.arriving .event-choices, .invitation.arriving .fine { animation: fade-up 0.4s 2.2s both; }
+.invitation.arriving .interlude-title { animation: fade-up 0.5s 0.3s both; }
+@keyframes invitation-unfold {
+    0% { opacity: 0; transform: perspective(600px) rotateX(-85deg) scaleY(0.4); }
+    60% { opacity: 1; }
+    100% { opacity: 1; transform: none; }
+}
+.invitation.arriving.skip .invitation-card, .invitation.arriving.skip .event-choices,
+.invitation.arriving.skip .fine, .invitation.arriving.skip .interlude-title { animation-delay: 0s; animation-duration: 0.25s; }
