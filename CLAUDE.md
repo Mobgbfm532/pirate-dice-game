@@ -97,6 +97,15 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   last bounce plays slower still (`Pace`, `suspensePace`, `paceSeconds`/`paceFrame` in physics.ts,
   used by the playback, the sound and the roll's length; about 0.9 s longer). The living portraits
   (step 1) were tried and removed, the user's call.
+- **One painted interface** (visuals plan step 4, 25 Oct, new look only; the block at the end of
+  `styles.css`, scoped to `.look-next`): Almendra for titles and buttons, Alegreya (`--read`) for
+  longer text; buttons from one mould, each with a brass rim (`--brass-rim`) and a press:
+  `.primary` and Roll wax-seal red, `.primary.alt` dark leather, `.secondary` brass, Thom's `.buy`
+  and End Turn green; parchment panels (`.panel`, `.thonic-card`) in a brass frame with corner
+  rivets, dark-wood boxes (`.spot-card`, `.won-rows li`, `.keepsake-ware`) with the same rim; the
+  start screen sits on the tavern painting; full-screen scenes come and go through candle smoke
+  (`smoke-in`/`smoke-out`, a drifting `::after`). The loading screen is in `index.html` (`#boot`:
+  the tavern, the title, a tumbling die), faded out by main.tsx once the canvas exists.
 - `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), turn banner (not in Tavern Crawl, where
   the nameplates show whose turn it is), chips, opponent nameplate, score to
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse

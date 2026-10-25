@@ -14,6 +14,14 @@ import './styles.css';
 // Development only (left out of production builds): lets test scripts drive the game.
 if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, preview, store, table, simulateRoll, renderImpacts, renderCorkPop };
 
+// The loading screen in index.html goes once the table can be drawn.
+function hideLoadingScreen() {
+    const boot = document.getElementById('boot');
+    if (!boot) return;
+    requestAnimationFrame(() => boot.classList.add('gone'));
+    setTimeout(() => boot.remove(), 700);
+}
+
 function App() {
     return (
         <>
@@ -24,6 +32,7 @@ function App() {
                 camera={{ fov: 40, near: 0.1, far: 80, position: [0, 10, 8] }}
                 gl={{ antialias: true, alpha: true }}
                 style={{ position: 'fixed', inset: 0, zIndex: 1, touchAction: 'none' }}
+                onCreated={hideLoadingScreen}
             >
                 <TableScene />
             </Canvas>

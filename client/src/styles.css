@@ -2160,3 +2160,122 @@ button.keepsake.used { opacity: 0.55; }
 .portrait-smalls span:nth-child(2) { width: 52px; height: 52px; }
 .portrait-smalls span:nth-child(3) { width: 84px; height: 84px; }
 .portrait-editor .tune-row { width: 100%; }
+
+/* ==== One painted interface (visuals plan step 4, 25 Oct; the new look only) ====
+   One set of pieces for every screen: titles and buttons in Almendra, longer text in Alegreya
+   (easier to read small); buttons pressed out of the same mould (a wax-seal red, brass, dark
+   leather and Thom's green, each with a brass rim and a press); parchment and dark panels in a
+   brass frame; scenes come and go through a drift of candle smoke. ?look=classic keeps the old. */
+:root {
+    --read: 'Alegreya', Georgia, serif;
+    --brass-rim: linear-gradient(#f6dc8e, #c9973a 45%, #7a5318);
+    --frame-dark: #2b1708;
+}
+.look-next .panel p, .look-next .subtitle, .look-next .fine, .look-next .choice span,
+.look-next .thonic-card .text, .look-next .spot-card .line, .look-next .spot-card .offer,
+.look-next .thom-speech, .look-next .won-rows .detail, .look-next .keepsake-ware .text, .look-next .fight-won .won-fight,
+.look-next .hint, .look-next .toast {
+    font-family: var(--read);
+}
+.look-next .thonic-card .text { font-size: clamp(0.8rem, 3.5vw, 0.92rem); }
+
+/* -- Buttons -- */
+.look-next .primary, .look-next .secondary, .look-next .thonic-card .buy, .look-next .keepsake-ware .buy, .look-next .roll {
+    border: 2px solid transparent;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+    letter-spacing: 0.3px;
+    box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.32), inset 0 -3px 5px rgba(0, 0, 0, 0.35), 0 3px 0 var(--frame-dark), 0 6px 12px rgba(0, 0, 0, 0.45);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.2s;
+}
+/* Wax-seal red: the main thing to do on every screen. */
+.look-next .primary, .look-next .roll {
+    color: #fff4dc;
+    background: radial-gradient(ellipse 120% 90% at 50% 25%, #d84a35, #a3201c 55%, #6e110d) padding-box, var(--brass-rim) border-box;
+}
+/* Dark leather: the second choice beside it. */
+.look-next .primary.alt {
+    background: radial-gradient(ellipse 120% 90% at 50% 25%, #7a5638, #4a2e1a 60%, #2a170b) padding-box, var(--brass-rim) border-box;
+}
+/* Brass: the quiet choice. */
+.look-next .secondary {
+    color: #2a1a0e;
+    text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6);
+    background: linear-gradient(#fbecc4, #e6c983 60%, #cfa95a) padding-box, var(--brass-rim) border-box;
+}
+/* Thom's green, and the End Turn button. */
+.look-next .thonic-card .buy, .look-next .keepsake-ware .buy, .look-next .roll.end {
+    color: #f4ffe8;
+    background: radial-gradient(ellipse 120% 90% at 50% 25%, #5cae63, #2e7d32 55%, #174d1b) padding-box, var(--brass-rim) border-box;
+}
+.look-next .primary:active:not(:disabled), .look-next .secondary:active:not(:disabled),
+.look-next .thonic-card .buy:active:not(:disabled), .look-next .keepsake-ware .buy:active:not(:disabled), .look-next .roll:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.2), inset 0 -1px 4px rgba(0, 0, 0, 0.45), 0 1px 0 var(--frame-dark), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.look-next .primary:disabled, .look-next .secondary:disabled { filter: grayscale(0.65) brightness(0.8); box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.15), 0 2px 0 var(--frame-dark); }
+.look-next .thonic-card .buy:disabled, .look-next .keepsake-ware .buy:disabled {
+    color: #5a4a35; text-shadow: none;
+    background: linear-gradient(#d8c8a4, #b8a888) padding-box, var(--brass-rim) border-box;
+    box-shadow: 0 2px 0 var(--frame-dark);
+}
+
+/* -- Panels: parchment in a brass frame, with a rivet in each corner -- */
+.look-next .panel, .look-next .thonic-card {
+    border: 3px solid transparent;
+    background:
+        radial-gradient(circle at 10px 10px, #f6dc8e 0 2px, #7a5318 2.5px 3.5px, transparent 4px) padding-box,
+        radial-gradient(circle at calc(100% - 10px) 10px, #f6dc8e 0 2px, #7a5318 2.5px 3.5px, transparent 4px) padding-box,
+        radial-gradient(circle at 10px calc(100% - 10px), #f6dc8e 0 2px, #7a5318 2.5px 3.5px, transparent 4px) padding-box,
+        radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #f6dc8e 0 2px, #7a5318 2.5px 3.5px, transparent 4px) padding-box,
+        radial-gradient(ellipse at center, transparent 55%, rgba(110, 70, 25, 0.25)) padding-box,
+        url('/art/parchment.webp') center / cover padding-box,
+        linear-gradient(#f1e2c2, #f1e2c2) padding-box,
+        var(--brass-rim) border-box;
+    box-shadow: 0 0 0 1px var(--frame-dark), inset 0 0 0 1px rgba(60, 35, 12, 0.35), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.look-next .thonic-card { box-shadow: 0 0 0 1px var(--frame-dark), inset 0 0 0 1px rgba(60, 35, 12, 0.35), 0 10px 24px rgba(0, 0, 0, 0.55); }
+/* Dark wood: the spots, the win rows, Thom's back shelf. */
+.look-next .spot-card, .look-next .won-rows li, .look-next .keepsake-ware {
+    border: 2px solid transparent;
+    background: linear-gradient(rgba(74, 46, 22, 0.95), rgba(32, 19, 9, 0.96)) padding-box, var(--brass-rim) border-box;
+    box-shadow: 0 0 0 1px var(--frame-dark), inset 0 1px 0 rgba(255, 236, 179, 0.14), 0 8px 22px rgba(0, 0, 0, 0.6);
+}
+.look-next .spot-card:hover, .look-next .spot-card:focus-visible {
+    box-shadow: 0 0 0 1px var(--frame-dark), inset 0 1px 0 rgba(255, 236, 179, 0.14), 0 8px 26px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 213, 79, 0.45);
+}
+.look-next .panel input { border-color: #b08a4e; background: #fffaf0; box-shadow: inset 0 2px 3px rgba(80, 50, 20, 0.18); }
+.look-next .choice { border-color: #b08a4e; box-shadow: inset 0 1px 0 #fff, 0 2px 0 rgba(80, 50, 20, 0.2); }
+
+/* -- The start screen sits in the tavern, not on black -- */
+.look-next .modal-backdrop:has(.panel.join) {
+    background:
+        radial-gradient(ellipse 80% 70% at 50% 45%, rgba(18, 10, 4, 0.45), rgba(8, 4, 2, 0.9)),
+        url('/art/tavern.webp') center / cover,
+        var(--bg);
+}
+
+/* -- Scenes come and go through candle smoke -- */
+.look-next .thom-scene, .look-next .interlude-scene { animation-name: smoke-in; animation-duration: 0.7s; }
+.look-next .thom-scene.leaving, .look-next .interlude-scene.leaving { animation-name: smoke-out; animation-duration: 0.5s; }
+.look-next .thom-scene::after, .look-next .interlude-scene::after {
+    content: '';
+    position: fixed;
+    inset: -20% -10%;
+    pointer-events: none;
+    z-index: 30;
+    background:
+        radial-gradient(ellipse 30% 22% at 22% 70%, rgba(214, 200, 176, 0.55), transparent 70%),
+        radial-gradient(ellipse 34% 26% at 70% 62%, rgba(200, 186, 160, 0.5), transparent 70%),
+        radial-gradient(ellipse 40% 30% at 45% 85%, rgba(190, 176, 150, 0.55), transparent 70%),
+        radial-gradient(ellipse 28% 20% at 85% 88%, rgba(214, 200, 176, 0.45), transparent 70%),
+        radial-gradient(ellipse 26% 18% at 10% 92%, rgba(200, 186, 160, 0.45), transparent 70%);
+    filter: blur(14px);
+    animation: smoke-drift 1.1s ease-out both;
+}
+@keyframes smoke-in { from { opacity: 0; filter: blur(10px) brightness(1.4); } to { opacity: 1; filter: none; } }
+@keyframes smoke-out { to { opacity: 0; filter: blur(8px) brightness(1.3); } }
+@keyframes smoke-drift {
+    0% { opacity: 0; transform: translateY(18%) scale(1); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-28%) scale(1.25); }
+}
