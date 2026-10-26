@@ -136,7 +136,8 @@ started before a file was added won't see it by name, so run a general-purpose a
 read and follow the file):
 - `phone-check`: after any HUD, camera, overlay or full-screen-scene change. Checks 384x780,
   360x640 and 844x390, muted; reports what covers the dice/rail or runs off screen.
-- `art-import`: when the user sends a painting. Saves the original, cuts out the background
+- `art-import`: when the user sends a painting (busts, ability paintings, place backdrops; since
+  26 Oct it knows the last two and finishes ability paintings with `test/ability-shots.mjs`). Saves the original, cuts out the background
   (`cutOut` / `cutOutFlat`), checks edges on dark and light, registers it, reports previews.
 - `visual-shots`: after each visual step. Shoots the last commit (frozen, :5174) against the
   working copy (:5173), the same throw on both, builds side-by-sides, looks at them and reports
@@ -274,9 +275,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   more, holding up Frak's, Danhausen's or the Duke's face as a mask: while one of her disguises
   is the round's effect, her bust and chip show that painting (`opponentPortraitKey` in
   Backdrop, PORTRAITS `'Martha as Frak'` etc.; a violet shimmer as she swaps,
-  `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). The ship has no
-  backdrop of its own yet (the tavern's) and the same four spots and no events of its own (the
-  ship's spots and events: to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
+  `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). Since 26 Oct each place
+  has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
+  scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
+  glowing well, the Salty Swallow's gun deck; the ship has the same four spots and no events of its
+  own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
   Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10 x the fight's number (Jaguar 140; a tenth of before since 23 Oct). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
@@ -360,6 +363,15 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     (`talkThree`). **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
     **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
   - Tests pin the dice with `pinFaces` (server.test.js). The old Constellation Blur code is unused now.
+- **Ability paintings (26 Oct, the user's):** the ability's painting rises above its takeover
+  banner (over the opponent's place, the banner across its chest; on phones on their side it stands
+  at the left edge in front of the banner), the 3.6 s of the banner; not when a Clear-Eye cancels it.
+  So far Mind Whip, You are Cursed, Sympathy for the Devil and Disguises (`ABILITY_ART` in Hud,
+  `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets). Martha's Disguises
+  painting shows ~1.7 s, then the trick she copies with its own painting. Check new ones with
+  `node test/ability-shots.mjs <dir> only=<key>` (plays the ability for real headless, holds the
+  moment, shoots it at phone sizes and checks it stays above the rail; works with the pane hidden;
+  dev `preview.ability(name, ability, more, hold)`).
 - **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
   in a round with no effect yet, wear Danhausen's Curse (before you roll) or the Duke's Devil
   (any time in your turn with 3+ dice to throw, since 21 Oct: the next throw lands three 6s)
@@ -538,9 +550,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    Martha's mask or plans its shopping, and the user finds the real game easier. The user plays
    and decides; change `shared/balance.js` (prices, `priceRise`, hearts, lives, points) and
    re-run the simulation first. Measured options: `easier.js`, `tournament-lives.js`.
-3. **The tournament, finishing touches:** a backdrop for the Salty Swallow (art; today the
-   tavern's, and its `Scene.air` would need a fire/windows of its own); sounds for the Yawning
-   Portal's new abilities (only Back of the Head has one); the ship's own spots and events (to
+3. **The tournament, finishing touches:** paintings for the other abilities (the user's; four done,
+   26 Oct); sounds for the Yawning Portal's new abilities (only Back of the Head has one); the ship's own spots and events (to
    workshop: a card game below deck, a stowaway instead of the thief); uses per fight for the
    five (first guesses, 1 each). Thom's visits stay as they are (the user, 21 Oct).
 4. **Opponent abilities** (proposed 19 Oct; ask first): rework Rokr's blur, and a warning on the

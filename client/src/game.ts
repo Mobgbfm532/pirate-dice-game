@@ -879,7 +879,8 @@ export const actions = {
 // demand, to check how it looks without waiting for it to happen in a game.
 export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
-    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}) { update({ ability: { name, ability, text: '', ...more, at: performance.now() } }); },
+    // (hold: keep it up that much longer, to look at a still of it)
+    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now() }); },
     celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
     // (hold: keep it up that much longer, to look at a still of it)

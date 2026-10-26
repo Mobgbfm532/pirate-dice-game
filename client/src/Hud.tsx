@@ -6,7 +6,7 @@ import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMus
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editablePortrait, portraitEdits, portraitFor } from './portraits';
-import { acrossTheTable, opponentName, opponentPortraitKey } from './Backdrop';
+import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, sceneFileOf } from './Backdrop';
 import { lookNext } from './look';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
@@ -776,6 +776,16 @@ function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
 
 // An opponent's signature move. Klarg's steal and Rokr's stars happen on the 3D table; here
 // the move's name, plus the shot from The Hangman's revolver and Jaguar's -3.
+// The user's paintings of the abilities (26 Oct; more to come): each rises above its banner as the
+// moment plays, like the devil's three 6s. Fetched ahead, so the first showing isn't blank.
+const ABILITY_ART: Record<string, string> = {
+    'Mind Whip': 'ability-mind-whip.webp',
+    'You are Cursed': 'ability-cursed.webp',
+    'Sympathy for the Devil': 'ability-devil.webp',
+    'Disguises': 'ability-disguises.webp'
+};
+Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
+
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
     const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3600 : 3600);
@@ -791,6 +801,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const fx = !moment.cancelled;
     return (
         <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''}`} aria-live="polite">
+            {takeover && fx && ABILITY_ART[moment.ability] && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${ABILITY_ART[moment.ability]}`} alt="" />}
             <div className="ability-banner">
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
@@ -954,7 +965,7 @@ function Interlude({ state }: { state: GameState }) {
     }
     return (
         <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
-            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${placeBackdrop(state.tavernRun?.place)}")` }}>
             <div className="interlude-body">
                 <PurseLine state={state} />
                 <h2 className="interlude-title">Make your choice</h2>
@@ -1003,7 +1014,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     const [skip, setSkip] = useState(!lookNext);
     return (
         <div className={`interlude-scene invitation ${lookNext ? 'arriving' : ''} ${skip ? 'skip' : ''} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={story.title}
-            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }} onPointerDown={() => setSkip(true)}>
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${placeBackdrop(state.tavernRun?.place)}")` }} onPointerDown={() => setSkip(true)}>
             <div className="interlude-body">
                 <PurseLine state={state} />
                 <h2 className="interlude-title">{story.title}</h2>
@@ -1444,7 +1455,7 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     };
     return (
         <div className={`interlude-scene fight-won ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${won.defeated} is defeated`}
-            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/tavern.webp")` }}>
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${sceneFileOf(won.defeated)}")` }}>
             <div className="interlude-body">
                 <span className="won-portrait" style={avatarStyle(portraitFor(won.defeated))} aria-hidden="true" />
                 <h2 className="interlude-title">{won.defeated} is defeated!</h2>

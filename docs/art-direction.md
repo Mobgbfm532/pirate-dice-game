@@ -131,6 +131,8 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
 | Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
 | Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
+| Backdrop: the Yawning Portal | Done (26 Oct) | `art/yawning-portal-backdrop.jpg` → `yawning-portal.webp` (1584×672), the hall with its well; the Portal's five fights and its scenes |
+| Ability paintings (Mind Whip, You are Cursed, Sympathy for the Devil, Disguises) | Done (26 Oct) | `art/ability-<id>.jpg` → `ability-<id>.webp` (900 tall, cut out); `ABILITY_ART` in `client/src/Hud.tsx`; the other abilities' paintings wanted (subjects in the prompt pack's ability table) |
 | Backdrop: outside the Ghoul and Gourd | Done | `art/ghoul-gourd-outside.jpg` → `ghoul-gourd-outside.webp` (1376×768), Sperm McGrath's fight; `SCENES` in `client/src/Backdrop.tsx` |
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
 | Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
@@ -149,7 +151,7 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | The Wild Magic Hot Tub (a spot) | Done | `art/hot-tub.jpg` → `hot-tub.webp` (raspberry background, `cutOutFlat`); a wide painting, sized by width in its scene |
 | Darren Snakehands (the Ghoul and Gourd's barman, an event) | Done | `art/bust-darren.jpg` → `darren.webp` |
 | The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS`, in the game since 21 Oct. Brodor: see his own row |
-| A backdrop for the Salty Swallow | Wanted | The ship's four fights use the tavern backdrop for now; a ship's deck or cabin, same format as `tavern.webp`, would go in `SCENES` in `client/src/Backdrop.tsx` |
+| Backdrop: the Salty Swallow | Done (26 Oct) | `art/salty-swallow-backdrop.jpg` → `salty-swallow.webp` (1584×672), the gun deck; the ship's four fights and its scenes between fights |
 
 ## Processing art
 

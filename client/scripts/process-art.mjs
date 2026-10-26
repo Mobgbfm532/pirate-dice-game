@@ -474,6 +474,11 @@ async function backdrop() {
     // Outside the Ghoul and Gourd (Sperm McGrath's fight).
     const outside = await sharp(path.join(ART, 'ghoul-gourd-outside.jpg')).webp({ quality: 80 }).toFile(path.join(OUT, 'ghoul-gourd-outside.webp'));
     console.log(`ghoul-gourd-outside.webp  ${outside.width}x${outside.height}  ${Math.round(outside.size / 1024)} KB`);
+    // The other two places (26 Oct): the Yawning Portal's hall with its well, the Salty Swallow's gun deck.
+    for (const name of ['yawning-portal', 'salty-swallow']) {
+        const info = await sharp(path.join(ART, `${name}-backdrop.jpg`)).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
+        console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    }
 }
 
 // Tiling wood for the 3D table, and parchment for dialogs (used once per panel, not tiled).
@@ -529,3 +534,8 @@ await cutOutFlat('bust-martha-danhausen.jpg', 'martha-danhausen', { holes: [[768
 await cutOutFlat('bust-brodor.webp', 'brodor');
 await cutOutFlat('devil-sixes.jpg', 'devil-sixes', { maxHeight: 900 }); // three 6s: the devil's moment
 await livingMask('devil-sixes');
+// Ability paintings (26 Oct): shown as the ability's moment plays (ABILITY_ART in Hud).
+await cutOutFlat('ability-mind-whip.jpg', 'ability-mind-whip', { maxHeight: 900, holes: [[216, 284], [192, 248], [384, 200], [318, 330], [270, 360], [294, 366], [336, 408], [324, 426], [312, 438]] }); // background inside the ribbon's loop
+await cutOutFlat('ability-cursed.jpg', 'ability-cursed', { maxHeight: 900, tolerance: 10, smokeBox: [[150, 700, 720, 1264]], smokeColour: 'own' }); // his purple smoke stays purple, fading out
+await cutOutFlat('ability-devil.jpg', 'ability-devil', { maxHeight: 900 });
+await cutOutFlat('ability-disguises.jpg', 'ability-disguises', { maxHeight: 900, holes: [[164, 210], [152, 234], [222, 108], [270, 126], [222, 156], [318, 294], [584, 246], [620, 270], [592, 286], [522, 189], [654, 534], [740, 560]] }); // (and the purple mask's horn curl, the white mask's eyes) // inside her raised arm

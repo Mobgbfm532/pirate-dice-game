@@ -20,7 +20,27 @@ const TAVERN: Scene = {
 };
 // Outside the Ghoul and Gourd: the bouncer's fight, by the front door.
 const OUTSIDE: Scene = { file: 'ghoul-gourd-outside.webp', floor: 0.75, aspect: 1376 / 768, center: 0.6 };
-const SCENES: Record<string, Scene> = { 'Sperm McGrath': OUTSIDE };
+// The other two places (the user's paintings, 26 Oct): the Yawning Portal's hall, its glowing
+// well in the middle and its fireplace on the left; the Salty Swallow's gun deck, a stove on the left.
+// (floor 0.75: just above the top of the tankard on each painting's own foreground table.)
+const YAWNING_PORTAL: Scene = {
+    file: 'yawning-portal.webp', floor: 0.75, aspect: 1584 / 672, center: 0.5,
+    air: { fire: [0.21, 0.6], fireWidth: 0.05 }
+};
+const SALTY_SWALLOW: Scene = {
+    file: 'salty-swallow.webp', floor: 0.75, aspect: 1584 / 672, center: 0.45,
+    air: { fire: [0.19, 0.62], fireWidth: 0.02 }
+};
+const SCENES: Record<string, Scene> = {
+    'Sperm McGrath': OUTSIDE,
+    ...Object.fromEntries(['Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor'].map(n => [n, YAWNING_PORTAL])),
+    ...Object.fromEntries(['Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona'].map(n => [n, SALTY_SWALLOW]))
+};
+// A place's painting, for the scenes between fights (by the place's name).
+const PLACE_FILES: Record<string, string> = { 'The Yawning Portal': YAWNING_PORTAL.file, 'The Salty Swallow': SALTY_SWALLOW.file };
+export const placeBackdrop = (place: string | undefined) => (place && PLACE_FILES[place]) || TAVERN.file;
+// The painting behind a given opponent (the fight summary shows where it was won).
+export const sceneFileOf = (name: string) => (SCENES[name] || TAVERN).file;
 
 export function currentScene(): Scene {
     const name = opponentName();

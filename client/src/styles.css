@@ -2361,3 +2361,35 @@ button.keepsake.used { opacity: 0.55; }
 .hint.round-stars { background: rgba(20, 30, 80, 0.85); border: 1px solid #8fb0ff; box-shadow: 0 0 12px rgba(130, 170, 255, 0.6); }
 .hint.round-cloak { background: rgba(42, 24, 64, 0.88); border: 1px solid #b39ddb; box-shadow: 0 0 12px rgba(123, 79, 214, 0.6); }
 .hint.round-allin { background: rgba(120, 24, 8, 0.88); border: 1px solid #ffd54f; box-shadow: 0 0 12px rgba(255, 90, 42, 0.6); }
+
+/* ==== Ability paintings (26 Oct): the user's painting rises above the move's banner, over the
+   opponent's place, the banner across its chest; clear of the dice and the rail below. ==== */
+.ability-art {
+    position: absolute; left: var(--table-x, 50%); top: 38%;
+    height: min(48vh, 440px); max-width: 86vw; object-fit: contain;
+    transform: translate(-50%, -78%);
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 22px var(--flare, rgba(255, 138, 101, 0.5)));
+    animation: ability-art 3.6s ease-out both;
+}
+@keyframes ability-art {
+    0% { opacity: 0; transform: translate(-50%, -58%) scale(0.9); }
+    12% { opacity: 1; transform: translate(-50%, -80%) scale(1.02); }
+    20% { transform: translate(-50%, -78%) scale(1); }
+    84% { opacity: 1; transform: translate(-50%, -79%) scale(1.01); }
+    100% { opacity: 0; transform: translate(-50%, -84%) scale(1.02); }
+}
+/* Phones on their side: the strip above the banner is too thin, so the painting stands at the
+   left edge instead, in front of the banner and above the slot rail, sliding in from the side. */
+@media (max-height: 500px) {
+    .ability-art {
+        left: 1vw; top: 3vh; height: 72vh; max-width: 34vw; z-index: 2;
+        transform: none; animation-name: ability-art-side;
+    }
+}
+@keyframes ability-art-side {
+    0% { opacity: 0; transform: translateX(-30%); }
+    12% { opacity: 1; transform: translateX(2%); }
+    20% { transform: none; }
+    84% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateX(-6%); }
+}
