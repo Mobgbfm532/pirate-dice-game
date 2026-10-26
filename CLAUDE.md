@@ -348,7 +348,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   and 4 he needs, `Rules.devilWaitLocks`, or it hardly ever fired);
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
   shows a takeover (since 21 Oct: a flash in the ability's colours, `--flare`, and a banner across
-  the screen with who, what and the move's text; Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
+  the screen with who, what and the move's text; since 26 Oct, the user's call, it rises like the devil's
+  three 6s: a sheet of light in the move's colours sweeps up, plumes lick up from the bottom
+  (`.ability-rise`, not for keepsakes), and the banner and painting fly up into place, then leave
+  upwards; Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
   (`AbilityAura` + banner classes by ability name): Mind Whip a green-violet mist and a
   green-violet glow on the die he chose (`materials.mind`; Rokr's blur keeps the blue "?" and stars), the Devil

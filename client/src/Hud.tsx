@@ -800,6 +800,10 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     // A Clear-Eye cancelled it: the banner, struck through, and none of the move's effect.
     const fx = !moment.cancelled;
     const art = takeover && fx ? ABILITY_ART[moment.ability] : undefined;
+    // A signature move rises up the screen like the devil's three 6s (the user, 26 Oct): a sheet of
+    // light in its colours sweeps up from the bottom, plumes lick up, and the banner (and painting)
+    // shoot up into place. Keepsakes keep their gold burst.
+    const surge = takeover && fx && !keepsake;
     return (
         <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''} ${art ? 'with-art' : ''}`} aria-live="polite">
             {/* With a painting the moment is a scene of its own (the user's call, 26 Oct): a stage in
@@ -807,6 +811,14 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {art && (
                 <div className="ability-stage" aria-hidden="true">
                     {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.29) % 2.4}s` }} />)}
+                </div>
+            )}
+            {surge && (
+                <div className="ability-rise" aria-hidden="true">
+                    <div className="ability-surge" />
+                    {Array.from({ length: 12 }, (_, i) => (
+                        <span key={i} className="plume" style={{ left: `${(i * 8.7 + (i % 3) * 2) % 100}%`, '--h': `${18 + (i * 19) % 22}vh`, animationDelay: `${(i * 0.11) % 0.5}s` } as React.CSSProperties} />
+                    ))}
                 </div>
             )}
             {art && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${art}`} alt="" />}

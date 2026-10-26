@@ -1800,13 +1800,32 @@ button.keepsake.used { opacity: 0.55; }
 .takeover .ability-banner .who { font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--parchment); }
 .takeover .ability-banner .what { font-size: clamp(2rem, 10vw, 3.2rem); line-height: 1.05; text-shadow: 0 0 22px var(--flare), 0 2px 6px #000; }
 .takeover .ability-banner .line { margin-top: 4px; font-size: 0.95rem; color: var(--parchment); max-width: 30em; }
+/* It flies up from the bottom of the screen, overshoots, settles, and leaves upwards (26 Oct, the
+   user: "fly up the screen like Devil's titties"; it used to sweep in from the side). */
 @keyframes takeover-in {
-    0% { opacity: 0; transform: translateY(-50%) translateX(-100%) skewX(-14deg); }
-    11% { opacity: 1; transform: translateY(-50%) translateX(3%) skewX(-3deg); }
-    17% { transform: translateY(-50%) translateX(0) skewX(0); }
-    84% { opacity: 1; transform: translateY(-50%) scaleY(1); }
-    100% { opacity: 0; transform: translateY(-50%) scaleY(0.4); }
+    0% { opacity: 0; transform: translateY(calc(-50% + 55vh)) scale(0.8); }
+    9% { opacity: 1; transform: translateY(calc(-50% - 4vh)) scale(1.08); }
+    15% { transform: translateY(-50%) scale(1); }
+    84% { opacity: 1; transform: translateY(-50%) scale(1.02); }
+    100% { opacity: 0; transform: translateY(calc(-50% - 18vh)) scale(1.04); }
 }
+/* The rise behind it: a sheet of light in the move's colours sweeps from the bottom to the top
+   (the devil's surge, white-hot at its leading edge), and plumes lick up from the bottom edge.
+   Both are gone within ~1.6 s. */
+.ability-rise { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.ability-surge {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 160%;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0), rgba(255, 250, 235, 0.7) 16%, var(--flare) 32%, var(--flare) 58%, rgba(0, 0, 0, 0) 86%);
+    mix-blend-mode: screen; animation: devil-surge 1.5s ease-out both;
+}
+.ability-rise .plume {
+    position: absolute; bottom: -4vh; width: 14vw; max-width: 110px; height: var(--h); margin-left: -7vw;
+    border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
+    background: radial-gradient(ellipse at 50% 85%, rgba(255, 255, 255, 0.95), var(--flare) 38%, rgba(0, 0, 0, 0) 75%);
+    filter: blur(4px); mix-blend-mode: screen; transform-origin: 50% 100%;
+    animation: devil-lick 0.6s ease-in-out infinite alternate, plume-burn 1.7s ease-out both;
+}
+@keyframes plume-burn { 0% { opacity: 0; } 8% { opacity: 1; } 60% { opacity: 0.8; } 100% { opacity: 0; } }
 .takeover.mind-whip { --flare: rgba(156, 204, 101, 0.55); }
 .takeover.you-are-cursed { --flare: rgba(186, 104, 200, 0.6); }
 .takeover.sympathy-for-the-devil { --flare: rgba(255, 87, 34, 0.6); }
@@ -2428,12 +2447,13 @@ button.keepsake.used { opacity: 0.55; }
     filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 34px var(--flare, rgba(255, 138, 101, 0.5)));
     animation-name: ability-art-stage;
 }
+/* The painting rises from below with the surge, as the devil does, then pushes slowly in. */
 @keyframes ability-art-stage {
-    0% { opacity: 0; transform: translate(-50%, -42%) scale(0.92); }
-    14% { opacity: 1; transform: translate(-50%, -51%) scale(1.01); }
-    22% { transform: translate(-50%, -50%) scale(1); }
+    0% { opacity: 0; transform: translate(-50%, 15%) scale(0.85); }
+    13% { opacity: 1; transform: translate(-50%, -54%) scale(1.03); }
+    21% { transform: translate(-50%, -50%) scale(1); }
     86% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
-    100% { opacity: 0; transform: translate(-50%, -52%) scale(1.05); }
+    100% { opacity: 0; transform: translate(-50%, -58%) scale(1.05); }
 }
 .with-art.takeover .ability-banner { top: 77%; z-index: 2; }
 /* Phones on their side: the painting on the left, the banner beside it on the right. */
@@ -2442,8 +2462,8 @@ button.keepsake.used { opacity: 0.55; }
     .with-art.takeover .ability-banner { top: 50%; left: 40vw; right: 0; }
 }
 @keyframes ability-art-stage-side {
-    0% { opacity: 0; transform: translate(-12%, -50%) scale(0.94); }
-    14% { opacity: 1; transform: translate(1%, -50%) scale(1.01); }
+    0% { opacity: 0; transform: translate(0, 15%) scale(0.88); }
+    13% { opacity: 1; transform: translate(0, -54%) scale(1.02); }
     22% { transform: translate(0, -50%) scale(1); }
     86% { opacity: 1; transform: translate(0, -50%) scale(1.04); }
     100% { opacity: 0; transform: translate(-3%, -50%) scale(1.05); }
