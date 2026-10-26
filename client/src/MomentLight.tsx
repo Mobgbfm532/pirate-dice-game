@@ -23,8 +23,8 @@ interface Kind {
 const KINDS: Record<string, Kind> = {
     devil: { color: '#ff2a14', light: 35, wash: 0.55, ms: 2600 },          // the Duke's Devil (and the mask's)
     ink: { color: '#9b4dff', light: 50, wash: 0.45, ms: 2600 },           // Vaelin's Inkfire
-    smite: { color: '#ffd36b', light: 0, beam: 30, wash: 0.45, ms: 2800 }, // the Ridgeler's Smite: a beam onto the table
-    flood: { color: '#fff2cc', light: 40, wash: 0.75, sky: 1.6, ms: 2800 }, // Brodor's Astral Flood: a white-gold wash
+    smite: { color: '#ffd36b', light: 0, beam: 30, wash: 0.45, ms: 2400 }, // the Ridgeler's Smite: a beam onto the table
+    flood: { color: '#fff2cc', light: 40, wash: 0.75, sky: 1.6, ms: 2400 }, // Brodor's Astral Flood: a white-gold wash
     keepsake: { color: '#ffc94d', light: 45, wash: 0.5, ms: 2200 },       // a keepsake working
     shield: { color: '#6ab7ff', light: 22, wash: 0.5, ms: 2400, shimmer: true }, // the Shield
     perfect: { color: '#ffd54f', light: 95, wash: 0.5, ms: 2600 },        // a perfect 24: bright enough to bloom

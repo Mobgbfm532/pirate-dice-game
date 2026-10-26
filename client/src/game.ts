@@ -4,7 +4,7 @@ import { calloutText, isLocked, onePerfect4Away, perfectHand, type DieStatus, ty
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { lookNext } from './look';
-import { playChime, playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS } from './sounds';
+import { playChime, playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -264,7 +264,7 @@ function runNext() {
 // Dice are never thrown under one (the user's call, 23 Oct): a roll waits until the last moment
 // has gone (momentGoneAt; the server holds its throws to the same clock, momentsLeft).
 const MOMENT_GAP_MS = 1700;
-const MOMENT_SHOW_MS = 3600; // an ability's banner (useMoment in Hud), a move's toast
+export const MOMENT_SHOW_MS = 2600; // an ability's banner (useMoment in Hud), a move's toast (3.6 s until 26 Oct)
 const RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600; // the round's result
 let momentFreeAt = 0;
 let momentGoneAt = 0;
@@ -595,13 +595,17 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
 // so the name and sound land just as Klarg's hand lifts the die.
-socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean }) => {
+socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null }) => {
     const steal = data.ability === 'Reach Around';
     enqueueMoment(() => {
         const sound = ABILITY_SOUNDS[data.ability];
-        if (sound && !data.cancelled) playSound(sound);
+        if (data.cancelled) { /* a Clear-Eye stopped it: silent */ }
+        else if (data.disguise && data.ability !== 'Disguises') {
+            playSound('marthaSwitch');
+            if (sound) setTimeout(() => playSound(sound), SWITCH_LEAD_MS);
+        } else if (sound) playSound(sound);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
-        else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', 3600);
+        else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
     }, MOMENT_GAP_MS, () => (steal ? Math.max(0, ...table.stolenAt.values()) : 0));
 });
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
 import { simulateRoll } from './physics';
@@ -795,7 +795,7 @@ Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.en
 
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
-    const [visible] = useMoment(moment?.at ?? 0, moment?.ability === 'The Ace of Spades' ? 3600 : 3600);
+    const [visible] = useMoment(moment?.at ?? 0, MOMENT_SHOW_MS);
     if (!visible || !moment) return null;
     const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
     // An opponent's ability (or your mask) takes over the screen: a flash in its colours and a
@@ -817,7 +817,9 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 its colours over the whole screen, motes of light rising, the painting pushing in. */}
             {art && (
                 <div className="ability-stage" aria-hidden="true">
-                    {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.29) % 2.4}s` }} />)}
+                    {/* Light rays turning slowly behind the painting. */}
+                    <span className="rays" />
+                    {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.17) % 1.2}s` }} />)}
                 </div>
             )}
             {surge && (
@@ -830,6 +832,8 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             )}
             {art && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${art}`} alt="" />}
             <div className="ability-banner">
+                {/* As it lands: a shockwave ring from its middle (its edges glow and a shine sweeps it, in CSS). */}
+                {surge && <span className="impact" aria-hidden="true" />}
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>
                 {takeover && moment.text && <span className="line">{moment.text}</span>}

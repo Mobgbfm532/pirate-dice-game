@@ -331,8 +331,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   "lost 2 lives"); Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he
   heals one). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
   (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
-  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Only Back of the Head has a
-  sound (the swoosh). The Ghoul and Gourd's are **round effects**, decided as a round
+  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Only Back of the Head has a sound (the swoosh). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaPuff.mp3` with Disguises, `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
   **Mind Whip** (since 20 Oct, replacing Psychic Fog; like the Devil it waits, `pendingMind`, and is spent only as it
   lands, so his ✦ flashes then (21 Oct): on your first throw he keeps one of your dice
@@ -351,7 +350,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   the screen with who, what and the move's text; since 26 Oct, the user's call, it rises like the devil's
   three 6s: a sheet of light in the move's colours sweeps up, plumes lick up from the bottom
   (`.ability-rise`, not for keepsakes), and the banner and painting fly up into place, then leave
-  upwards; Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
+  upwards; as it lands a shockwave ring, glowing edges drawn out from the middle, a shine and the name snapping into focus; every moment is up 2.6 s, `MOMENT_SHOW_MS` on both sides, 3.6 s until 26 Oct; Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
   (`AbilityAura` + banner classes by ability name): Mind Whip a green-violet mist and a
   green-violet glow on the die he chose (`materials.mind`; Rokr's blur keeps the blue "?" and stars), the Devil
@@ -384,7 +383,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
   bust behind it overlapped the painting, the user's call), motes of light rising, the painting
   pushing slowly in, the banner below it (on phones on their side the painting left, the banner
-  right), the 3.6 s of the banner; not when a Clear-Eye cancels it.
+  right), 2.6 s like every moment (3.6 s until 26 Oct; turning light rays behind the painting); not when a Clear-Eye cancels it.
   So far Mind Whip, You are Cursed, Sympathy for the Devil, Disguises, Back of the Head, Inkfire
   Brand, Flourish, Astral Flood, Reach Around and Written in the Stars (`ABILITY_ART` in Hud,
   `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets; `cutOutFlat` also has

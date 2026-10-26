@@ -19,7 +19,13 @@ const sfx = {
     winner: load('Winner.mp3', 0.75),
     reachAround: load('Reach Around.mp3', 0.75),
     constellation: load('Constellation.mp3', 0.75),
-    gunshot: load('Gunshot.mp3', 0.85)
+    gunshot: load('Gunshot.mp3', 0.85),
+    // The user's ability sounds (26 Oct).
+    mindWhip: load('MindWhip.mp3', 0.75),
+    cursed: load('YouAreCursed.mp3', 0.75),
+    sympathy: load('SympathyForTheDevil.mp3', 0.75),
+    marthaPuff: load('MarthaPuff.mp3', 0.75),
+    marthaSwitch: load('MarthaSwitch.mp3', 0.75)
 };
 
 const music = load('BackgroundMusic.mp3', 0.4, true);
@@ -304,8 +310,15 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
     'Constellation Blur': 'constellation',
     'The Ace of Spades': 'gunshot',
-    'Back of the Head': 'swoosh' // the Yawning Portal's five have no sounds of their own yet
+    'Back of the Head': 'swoosh', // the Yawning Portal's other four have no sounds of their own yet
+    'Mind Whip': 'mindWhip',
+    'You are Cursed': 'cursed',
+    'Sympathy for the Devil': 'sympathy',
+    'Disguises': 'marthaPuff' // Martha's vape; her switch of faces comes with the trick she copies
 };
+// A face put on (Martha's copied trick, or your mask): her switch sound, then the trick's own
+// sound this long after it starts.
+export const SWITCH_LEAD_MS = 750;
 
 // Browsers only allow audio after the player has interacted with the page.
 export function startMusic() {
