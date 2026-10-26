@@ -320,7 +320,12 @@ footer {
 /* Someone else's turn: the button keeps its place (so nothing shifts) but isn't shown;
    the desktop dock shows it as a quiet placeholder instead. */
 .roll.idle { visibility: hidden; }
-.hint { min-height: 1.2em; font-size: 0.9rem; color: var(--parchment-dim); text-shadow: 0 1px 4px #000; }
+/* The hint is one line high whether it's empty, a tip or a round badge (whose padding and border
+   add 6px), so the footer keeps its height as tips come and go and the camera holds still. */
+.hint {
+    box-sizing: border-box; line-height: 1.2; min-height: calc(1.2em + 6px);
+    font-size: 0.9rem; color: var(--parchment-dim); text-shadow: 0 1px 4px #000;
+}
 
 .reactions { display: flex; gap: 6px; }
 .reactions button {
@@ -645,7 +650,7 @@ footer {
         white-space: nowrap;
         max-width: 200px;
     }
-    footer .hint { grid-area: hint; min-height: 1.1em; font-size: 0.8rem; text-align: center; }
+    footer .hint { grid-area: hint; font-size: 0.8rem; text-align: center; }
     /* Reactions stay out of the dock, in a column at the left edge. */
     footer .reactions { position: fixed; left: 16px; bottom: max(14px, env(safe-area-inset-bottom)); flex-direction: column; }
 }
@@ -662,7 +667,7 @@ footer {
     .turn-score .value { font-size: 1.7rem; }
     .roll { padding: 9px 26px; font-size: 1.2rem; }
     .reactions button { width: 34px; height: 34px; font-size: 1rem; }
-    .hint { min-height: 1em; font-size: 0.8rem; }
+    .hint { font-size: 0.8rem; }
 }
 
 /* ---- Tavern Crawl: an opponent's entrance ---- */

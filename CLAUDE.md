@@ -222,10 +222,11 @@ one too, or saves only last until the server restarts, which on the free tier is
   that crack and the sealed-letter invitation); the Salty Swallow reworked as the final tier; the
   Yawning Portal and Salty Swallow backdrops; the first four ability paintings on a stage of their
   own; Perfect ...4? gets its own slow motion and the suspense slow motion is 0.5 s shorter.
-- **Known bug (26 Oct, not fixed):** the camera zooms in very slightly while the dice roll and back
-  out when they settle (the user: "the screen should be relatively static"). Likely the footer's
-  height changing during a roll (the Rolling... label or a hint line) moves `screenInsets.bottom`
-  (`useFooterInset`, Hud.tsx) and the camera solve refits. Not yet measured.
+- **The camera zoom while rolling (fixed 26 Oct):** the hint under Roll ("Tap dice to keep them...")
+  is empty while dice roll and appears when they land; a line of text (and a round badge, more so)
+  was a few px taller than the empty box, so the footer's height (`screenInsets.bottom`) changed and
+  the camera refitted. `.hint` is now one fixed line high (`calc(1.2em + 6px)`, border-box) whatever
+  it shows; measured steady through roll, tip and keep at 384x780, 360x640 and 1280x800.
 - **Game changes of 23 Oct (the user's calls; details in "Tavern Crawl now"):**
   - abilities play in full before their dice are thrown; the round result shows 2.6 s and the next
     throw waits for it; an opponent's entrance (4.5 s) comes first, abilities and throws after it;
@@ -558,42 +559,39 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **The camera zoom while rolling** (see Status, Known bug): measure the footer height and
-   `screenInsets.bottom` through a roll, then hold the camera still (fix the footer's height, or
-   let the solve ignore small changes while dice are moving). Check at 384x780, 360x640, 844x390.
-2. **The new look on other phones** (the default since 23 Oct): if Auto quality drops a good
+1. **The new look on other phones** (the default since 23 Oct): if Auto quality drops a good
    phone to Low, tune its threshold (`noteFrame`).
-3. **The user's decisions waiting:** names for the ship's new abilities (Written in the Stars,
+2. **The user's decisions waiting:** names for the ship's new abilities (Written in the Stars,
    Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other ten
    abilities (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
    the Dice Den rework or a new spot instead (ideas: the Cult of Kram, the Flying Snakes who bring
    messages to the Ghoul and Gourd); music and ambience from Udio (the plan and prompts were given
    26 Oct; nothing is in the game yet).
-4. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
+3. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
    0.3% and reaches the ship 2.3% (`node balance/experiments/tournament.js`), but it never wears
    Martha's mask or plans its shopping, and the user finds the real game easier. The user plays
    and decides; change `shared/balance.js` (prices, `priceRise`, hearts, lives, points) and
    re-run the simulation first. Measured options: `easier.js`, `tournament-lives.js`.
-5. **The tournament, finishing touches:** paintings for the other abilities (the user's; four done,
+4. **The tournament, finishing touches:** paintings for the other abilities (the user's; four done,
    26 Oct); sounds for the Yawning Portal's new abilities (only Back of the Head has one); the ship's own spots and events (to
    workshop: a card game below deck, a stowaway instead of the thief); uses per fight for the
    five (first guesses, 1 each). Thom's visits stay as they are (the user, 21 Oct).
-6. **Opponent abilities** (proposed 19 Oct; ask first): Rokr's blur was replaced on 25 Oct; still open, a warning on the
+5. **Opponent abilities** (proposed 19 Oct; ask first): Rokr's blur was replaced on 25 Oct; still open, a warning on the
    nameplate before an ability fires. Re-simulate after any change.
-7. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
+6. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
    Glove, Gold Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt). The Dice Den is still
    even odds (the user asked whether it makes sense, 21 Oct).
-8. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
    the live game); then delete the test service. Old saved runs won't open (money changed); the
    live leaderboard's old gold entries count as points.
-9. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
-10. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+8. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
+9. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
    classic page reachable for a while; until then it skips Thom and the events, which the user
    accepted), update the PWA manifest/service worker, retire the old client code in
    `public/index.html`.
-11. **Feel:** tune dice sound, roll length (~2.2 s), camera on other phones.
-12. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship);
+10. **Feel:** tune dice sound, roll length (~2.2 s), camera on other phones.
+11. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship);
    new places with tougher opponents (the roguelite); optional art (`docs/art-direction.md`
    "Wanted"; Martha's masked paintings have no moving vape smoke); delete unused code (the old
    keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`, `shareFlame` and
