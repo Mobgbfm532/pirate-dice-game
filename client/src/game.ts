@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
-import { calloutText, isLocked, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
+import { calloutText, isLocked, onePerfect4Away, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { lookNext } from './look';
@@ -426,7 +426,11 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
             .filter(d => d.status === 'active').map(d => d.id));
         const rolled = turn.dice.filter(d => thrownIds.has(d.id));
         const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed);
-        const speed = data.suspense !== 'none' ? 0.55 : 1;
+        // A cursed round's chance at its perfect hand (since 26 Oct, the user's): the 2, the 4 and
+        // three 1s kept, one die to throw for the fourth 1. The server's suspense doesn't know the
+        // Curse, so the throw gets its slow motion here.
+        const perfect4Chance = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse' && !!before && !data.rerolled && onePerfect4Away(before.dice);
+        const speed = data.suspense !== 'none' || perfect4Chance ? 0.55 : 1;
         // A suspense roll's last bounce plays in slow motion (visuals plan step 2).
         const pace: Pace = speed < 1 && lookNext ? suspensePace(track, speed) : { speed };
         const durationMs = paceSeconds(pace, track.frames) * 1000;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignSlots, perfectHand, type Die, type DieStatus } from './rules';
+import { assignSlots, onePerfect4Away, perfectHand, type Die, type DieStatus } from './rules';
 
 const die = (id: number, value: number, status: DieStatus = 'permanentlyLocked'): Die => ({ id, value, status });
 
@@ -51,5 +51,21 @@ describe('perfectHand', () => {
         expect(perfectHand({ busted: true, score: 4 }, true)).toBe(null);
         expect(perfectHand({ busted: false, score: 18 }, false)).toBe(null);
         expect(perfectHand({ busted: false, score: 9 }, true)).toBe(null);
+    });
+});
+
+describe('onePerfect4Away', () => {
+    const dice = (kept: number[], active = 1): Die[] => [
+        ...kept.map((value, id) => ({ id, value, status: 'permanentlyLocked' as DieStatus })),
+        ...Array.from({ length: active }, (_, i) => ({ id: kept.length + i, value: 3, status: 'active' as DieStatus }))
+    ];
+    it('is the 2, the 4 and three 1s kept with one die left', () => {
+        expect(onePerfect4Away(dice([2, 4, 1, 1, 1]))).toBe(true);
+        expect(onePerfect4Away(dice([1, 1, 4, 2, 1]))).toBe(true);
+    });
+    it('is not anything else', () => {
+        expect(onePerfect4Away(dice([2, 4, 1, 1, 2]))).toBe(false); // a 2 among the scoring dice
+        expect(onePerfect4Away(dice([2, 1, 1, 1, 1]))).toBe(false); // no 4
+        expect(onePerfect4Away(dice([2, 4, 1, 1], 2))).toBe(false); // two dice left
     });
 });

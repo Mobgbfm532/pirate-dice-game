@@ -95,7 +95,10 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   sparkle at the slot, and a glow of the pips' own (it lit them on the dice's shaded sides,
   which looked wrong on desktop). A suspense roll's
   last bounce plays slower still (`Pace`, `suspensePace`, `paceSeconds`/`paceFrame` in physics.ts,
-  used by the playback, the sound and the roll's length; about 0.9 s longer). The living portraits
+  used by the playback, the sound and the roll's length; about 0.5 s longer since 26 Oct, it was
+  ~1 s). A cursed round's last throw for a Perfect ...4? (the 2, the 4 and three 1s kept) gets the
+  same slow motion, decided in the client (`onePerfect4Away` in rules.ts; the server's suspense
+  doesn't know the Curse). The living portraits
   (step 1) were tried and removed, the user's call.
 - **One painted interface** (visuals plan step 4, 25 Oct, new look only; the block at the end of
   `styles.css`, scoped to `.look-next`): Almendra for titles and buttons, Alegreya (`--read`) for
@@ -363,9 +366,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     (`talkThree`). **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
     **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
   - Tests pin the dice with `pinFaces` (server.test.js). The old Constellation Blur code is unused now.
-- **Ability paintings (26 Oct, the user's):** the ability's painting rises above its takeover
-  banner (over the opponent's place, the banner across its chest; on phones on their side it stands
-  at the left edge in front of the banner), the 3.6 s of the banner; not when a Clear-Eye cancels it.
+- **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
+  stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
+  bust behind it overlapped the painting, the user's call), motes of light rising, the painting
+  pushing slowly in, the banner below it (on phones on their side the painting left, the banner
+  right), the 3.6 s of the banner; not when a Clear-Eye cancels it.
   So far Mind Whip, You are Cursed, Sympathy for the Devil and Disguises (`ABILITY_ART` in Hud,
   `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets). Martha's Disguises
   painting shows ~1.7 s, then the trick she copies with its own painting. Check new ones with

@@ -30,8 +30,10 @@ export interface RollTrack {
 // of frames around the last bounce played slower still.
 export interface Pace { speed: number; slow?: { from: number; to: number; factor: number } }
 
+// (11 frames around the last bounce at 0.4: about 0.5 s longer; it was 22 frames, ~1 s, until the
+// user asked for half a second less, 26 Oct.)
 export function suspensePace(track: RollTrack, speed: number): Pace {
-    return { speed, slow: { from: Math.max(0, track.lastBounce - 14), to: track.lastBounce + 8, factor: 0.4 } };
+    return { speed, slow: { from: Math.max(0, track.lastBounce - 7), to: track.lastBounce + 4, factor: 0.4 } };
 }
 
 // Seconds into the playback at which a frame shows, and the frame showing at a time.

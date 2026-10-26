@@ -2393,3 +2393,53 @@ button.keepsake.used { opacity: 0.55; }
     84% { opacity: 1; transform: none; }
     100% { opacity: 0; transform: translateX(-6%); }
 }
+
+/* ==== An ability with a painting is a scene of its own (26 Oct, the user's call: the tavern and the
+   opponent behind it overlapped the painting). A stage in the ability's colours covers the screen,
+   motes of light rise through it, the painting pushes slowly in, the banner sits below it. ==== */
+.ability-moment.with-art { z-index: 12; }
+.ability-stage {
+    position: fixed; inset: 0; overflow: hidden;
+    /* (the ability's colour, partly see-through, over a solid dark base: nothing behind shows) */
+    background:
+        radial-gradient(ellipse 75% 55% at 50% 40%, var(--flare) 0%, transparent 62%),
+        radial-gradient(ellipse 90% 80% at 50% 40%, #1d0f07 0%, #070302 100%);
+    animation: stage-in 3.6s ease-out both;
+}
+@keyframes stage-in { 0% { opacity: 0; } 7% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+.ability-stage .mote {
+    position: absolute; bottom: -12px; width: 7px; height: 7px; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, var(--flare) 55%, transparent 72%);
+    animation: mote-rise 2.6s ease-in infinite;
+}
+@keyframes mote-rise {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: translate(14px, -78vh) scale(1.2); }
+}
+.with-art .ability-art {
+    top: 39%; height: min(60vh, 560px); max-width: 92vw; z-index: 1;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 34px var(--flare, rgba(255, 138, 101, 0.5)));
+    animation-name: ability-art-stage;
+}
+@keyframes ability-art-stage {
+    0% { opacity: 0; transform: translate(-50%, -42%) scale(0.92); }
+    14% { opacity: 1; transform: translate(-50%, -51%) scale(1.01); }
+    22% { transform: translate(-50%, -50%) scale(1); }
+    86% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+    100% { opacity: 0; transform: translate(-50%, -52%) scale(1.05); }
+}
+.with-art.takeover .ability-banner { top: 77%; z-index: 2; }
+/* Phones on their side: the painting on the left, the banner beside it on the right. */
+@media (max-height: 500px) {
+    .with-art .ability-art { left: 4vw; top: 50%; height: 90vh; max-width: 40vw; transform: translateY(-50%); animation-name: ability-art-stage-side; }
+    .with-art.takeover .ability-banner { top: 50%; left: 40vw; right: 0; }
+}
+@keyframes ability-art-stage-side {
+    0% { opacity: 0; transform: translate(-12%, -50%) scale(0.94); }
+    14% { opacity: 1; transform: translate(1%, -50%) scale(1.01); }
+    22% { transform: translate(0, -50%) scale(1); }
+    86% { opacity: 1; transform: translate(0, -50%) scale(1.04); }
+    100% { opacity: 0; transform: translate(-3%, -50%) scale(1.05); }
+}

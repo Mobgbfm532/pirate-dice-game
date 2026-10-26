@@ -799,9 +799,17 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const keepsake = moment.keepsake;
     // A Clear-Eye cancelled it: the banner, struck through, and none of the move's effect.
     const fx = !moment.cancelled;
+    const art = takeover && fx ? ABILITY_ART[moment.ability] : undefined;
     return (
-        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''}`} aria-live="polite">
-            {takeover && fx && ABILITY_ART[moment.ability] && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${ABILITY_ART[moment.ability]}`} alt="" />}
+        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''} ${art ? 'with-art' : ''}`} aria-live="polite">
+            {/* With a painting the moment is a scene of its own (the user's call, 26 Oct): a stage in
+                its colours over the whole screen, motes of light rising, the painting pushing in. */}
+            {art && (
+                <div className="ability-stage" aria-hidden="true">
+                    {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.29) % 2.4}s` }} />)}
+                </div>
+            )}
+            {art && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${art}`} alt="" />}
             <div className="ability-banner">
                 <span className="who">{moment.name}</span>
                 <span className="what">{moment.ability}</span>

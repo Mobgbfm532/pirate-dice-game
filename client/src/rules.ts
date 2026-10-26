@@ -99,3 +99,17 @@ export function perfectHand(outcome: { busted: boolean; score: number }, cursed:
     if (cursed) return outcome.score === 4 ? 'perfect4' : null;
     return outcome.score === 24 ? 'perfect24' : null;
 }
+
+// One throw from a cursed round's perfect hand: the 2, the 4 and three 1s kept, one die to throw.
+// (That throw plays in slow motion, as the server's suspense rolls do; the server doesn't know the
+// Curse. Since 26 Oct, the user's.)
+export function onePerfect4Away(dice: Die[]): boolean {
+    if (dice.filter(d => d.status === 'active').length !== 1) return false;
+    const rest = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').map(d => d.value);
+    for (const need of [2, 4]) {
+        const i = rest.indexOf(need);
+        if (i < 0) return false;
+        rest.splice(i, 1);
+    }
+    return rest.length === 3 && rest.every(v => v === 1);
+}

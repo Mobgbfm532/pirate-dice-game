@@ -4,8 +4,8 @@
 // opponent's fight with the ability ready, plays your turns simply (roll, keep a die, end the
 // turn) until the moment really comes from the server, holds its animations at `at` ms and saves
 // a PNG per size. It reports the moment's text, whether it was the real thing (or, after
-// `wait` seconds, a stand-in from preview.ability), and whether the ability's painting stays
-// above the slot rail (it must not cover the dice or the rail for its few seconds).
+// `wait` seconds, a stand-in from preview.ability), and whether the painting is on its own stage
+// (since 26 Oct; without one it must stay above the slot rail).
 //
 //   node test/ability-shots.mjs <out-dir> [only=mindWhip,cursed] [sizes=384x780@2,844x390@2] [at=900] [wait=60]
 //
@@ -147,7 +147,10 @@ try {
             const { data } = await s('Page.captureScreenshot', { format: 'png' });
             const file = join(outDir, `${key}-${w}x${h}.png`);
             writeFileSync(file, Buffer.from(data, 'base64'));
-            const clear = seen.artBottom == null || seen.railY == null ? 'n/a' : seen.artBottom < seen.railY - 20 ? 'clear of the rail' : 'OVER THE RAIL';
+            // (Since 26 Oct a painting's moment is a stage over the whole screen, so the rail is covered
+            // by design for its 3.6 s; the check stays for a moment without a stage.)
+            const staged = await evaluate(`!!document.querySelector('.ability-stage')`);
+            const clear = staged ? 'on its own stage' : seen.artBottom == null || seen.railY == null ? 'n/a' : seen.artBottom < seen.railY - 20 ? 'clear of the rail' : 'OVER THE RAIL';
             const line = `${key} ${w}x${h}: ${seen.how}; painting ${seen.art ? 'shown' : 'none'} (${clear})${onScreen ? '' : '; GONE before the picture'}; "${seen.text}" -> ${file}`;
             console.log(line);
             report.push(line);
