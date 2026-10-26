@@ -69,7 +69,8 @@ export const PORTRAITS: Record<string, Portrait> = {
         ...seated('ridgeler.webp', [40, 30], 1.45, 748, 720, [-12.4, -6]),
         air: { glow: { at: [0.87, 0.67], color: [1, 0.93, 0.75], radius: 0.17, strength: 0.45, pulse: 0.3 } }
     },
-    Brodor: { ...seated('brodor.webp', [50, 30], 1.7, 702, 702), seat: 1.3 },
+    // His second painting (26 Oct): fists and ribbons; the head sits as in the first, so the same seat.
+    Brodor: { ...seated('brodor.webp', [52, 31], 1.7, 696, 720), seat: 1.3 },
     Devil: classic('Devil.png'),
     Vaelin: classic('vaelin.png')
 };

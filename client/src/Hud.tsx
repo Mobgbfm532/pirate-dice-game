@@ -782,7 +782,14 @@ const ABILITY_ART: Record<string, string> = {
     'Mind Whip': 'ability-mind-whip.webp',
     'You are Cursed': 'ability-cursed.webp',
     'Sympathy for the Devil': 'ability-devil.webp',
-    'Disguises': 'ability-disguises.webp'
+    'Disguises': 'ability-disguises.webp',
+    // 26 Oct: the Yawning Portal's and the ship's.
+    'Back of the Head': 'ability-back-of-the-head.webp',
+    'Inkfire Brand': 'ability-inkfire.webp',
+    'Flourish': 'ability-flourish.webp',
+    'Astral Flood': 'ability-astral-flood.webp',
+    'Reach Around': 'ability-reach-around.webp',
+    'Written in the Stars': 'ability-written-in-the-stars.webp'
 };
 Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
 

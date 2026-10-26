@@ -120,8 +120,8 @@ function eraseFire(img, mask, [x0, y0, x1, y1], greyChroma = 30, minLum = 0, max
 }
 
 // Drops specks and leftover patches: keeps only foreground pieces at least 2% the size
-// of the biggest one (the character).
-function keepMainShape(img, mask) {
+// of the biggest one (the character; `minPiece` lowers that share to keep a flying die).
+function keepMainShape(img, mask, minPiece = 0.02) {
     const { width, height } = img;
     const label = new Int32Array(width * height).fill(-1);
     const sizes = [];
@@ -142,7 +142,7 @@ function keepMainShape(img, mask) {
         sizes.push(size);
     }
     const biggest = Math.max(...sizes);
-    for (let p = 0; p < mask.length; p++) if (!mask[p] && sizes[label[p]] < biggest * 0.02) mask[p] = 1;
+    for (let p = 0; p < mask.length; p++) if (!mask[p] && sizes[label[p]] < biggest * minPiece) mask[p] = 1;
 }
 
 // Alpha from the mask, with a 1px soft edge so cut-outs don't look jagged.
@@ -259,16 +259,18 @@ function despill(img, mask, bg, radius, skip = null) {
 // above green, blue not far below it: smoke, not skin or embers) is unmixed: the red
 // excess says how much background is in it, that share becomes transparency, and the
 // pixel becomes grey of the smoke's own brightness.
+// `minBlue`: how far blue may sit below green (-25); raise it (to 0 or more) when skin or
+// leather inside the box would turn grey: over magenta, blue sits above green.
 // Returns the alpha to apply after applyMask.
-function veil(img, mask, bg, [x0, y0, x1, y1]) {
+function veil(img, mask, bg, boxes, minBlue = -25) {
     const { data, width } = img;
     const alpha = new Map();
     const excess = Math.max(1, bg[0] - bg[1]);
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         const p = y * width + x, i = p * 4;
         if (mask[p]) continue;
         const r = data[i], g = data[i + 1], b = data[i + 2];
-        if (r - g <= 0 || r - g > 1.3 * excess || b - g < -25) continue;
+        if (r - g <= 0 || r - g > 1.3 * excess || b - g < minBlue) continue;
         const a = Math.max(0.05, 1 - (r - g) / excess);
         // Smoke is grey: keep the unmixed brightness (from green), with a touch of warmth.
         const grey = Math.max(0, Math.min(255, (g - (1 - a) * bg[1]) / a));
@@ -298,6 +300,51 @@ function tintVeil(img, mask, bg, boxes, from, { tint = [170, 130, 200], reach = 
         for (let c = 0; c < 3; c++) data[i + c] = Math.min(255, Math.round(tint[c] * shade));
         alpha.set(p, a);
     }
+    return alpha;
+}
+
+// See-through streaks of one colour painted over the background (Stason's cream swirl trails,
+// the motion streaks behind a flying die). Each kept pixel in the boxes that lies on the line from
+// the background colour to the streak's `colour` (within `reach`) is unmixed: how far along that
+// line it sits is its opacity, and it takes the streak's colour (unmixing each pixel's own colour
+// turned the faint ones green). Pixels further along than `solid` (0.8) stay as painted, opaque.
+// Skin and cloth lie off the line and are left alone. Returns alpha, like veil.
+function unmixTrails(img, mask, bg, { colour, boxes, reach = 30, solid = 0.8 }, alpha = new Map()) {
+    const { data, width } = img;
+    const d = colour.map((c, k) => c - bg[k]);
+    const len2 = d.reduce((s, v) => s + v * v, 0);
+    for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const p = y * width + x, i = p * 4;
+        if (mask[p] || alpha.has(p)) continue;
+        const v = [0, 1, 2].map(k => data[i + k] - bg[k]);
+        const t = (v[0] * d[0] + v[1] * d[1] + v[2] * d[2]) / len2;
+        if (t <= 0 || t >= solid) continue;
+        if (Math.hypot(v[0] - t * d[0], v[1] - t * d[1], v[2] - t * d[2]) > reach) continue;
+        const a = Math.max(0.04, t);
+        for (let k = 0; k < 3; k++) data[i + k] = colour[k];
+        alpha.set(p, a);
+    }
+    return alpha;
+}
+
+// A soft edge instead of a hard one (Brodor's cosmic aura, painted darker where it meets the
+// background): inside the boxes, kept pixels within `radius` px of the background fade out towards it.
+// Returns alpha, like veil.
+function feather(img, mask, { boxes, radius = 10 }, alpha = new Map()) {
+    const { width, height } = img;
+    const inBox = (x, y) => boxes.some(([x0, y0, x1, y1]) => x >= x0 && x < x1 && y >= y0 && y < y1);
+    const dist = new Map();
+    let front = [];
+    for (let p = 0; p < mask.length; p++) if (mask[p]) {
+        const x = p % width;
+        for (const q of [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, p - width, p + width]) if (q >= 0 && q < mask.length && !mask[q] && !dist.has(q)) { dist.set(q, 1); front.push(q); }
+    }
+    for (let d = 2; d <= radius && front.length; d++) {
+        const next = [];
+        for (const p of front) { const x = p % width; for (const q of [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, p - width, p + width]) if (q >= 0 && q < mask.length && !mask[q] && !dist.has(q)) { dist.set(q, d); next.push(q); } }
+        front = next;
+    }
+    dist.forEach((d, p) => { const x = p % width, y = (p - x) / width; if (inBox(x, y)) alpha.set(p, (alpha.get(p) ?? 1) * Math.min(1, d / radius)); });
     return alpha;
 }
 
@@ -377,16 +424,26 @@ function eraseSmoke(img, mask, bg, { clear, paint }) {
 //   smokeBox   [x0, y0, x1, y1]: thin smoke painted over the background in this box turns
 //              see-through instead of staying pink (none)
 //   noSmoke    { clear, paint }: painted smoke taken out (eraseSmoke)
+//   minPiece   pieces apart from the character smaller than this share of it go as specks
+//              (0.02); lower it to keep dice flying beside him
 //   smokeColour  'grey' (Frak's cigar) turns that smoke grey; 'own' keeps it coloured (lilac)
 //              (Martha's purple smoke; pair it with a low tolerance so the flood leaves it);
-//              then smokeBox may also be a list of boxes
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null } = {}) {
+//              smokeBox may also be a list of boxes
+//   trails     { colour, boxes, reach }: see-through streaks of that colour over the background
+//              in those boxes turn see-through instead of pink (unmixTrails)
+//   soften     { boxes, radius }: a soft edge fading over that many px in those boxes (feather)
+//   smokeMinBlue  grey smoke only: how far blue may sit below green to count as smoke (-25);
+//              raise it to keep skin and leather in the box out (veil)
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null } = {}) {
     if (!wanted(name)) return;
     const img = await readRgba(file);
     const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes });
     if (noSmoke) eraseSmoke(img, mask, bg, noSmoke);
-    keepMainShape(img, mask);
-    const smoke = !smokeBox ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox], tolerance) : veil(img, mask, bg, smokeBox);
+    keepMainShape(img, mask, minPiece);
+    const boxes = !smokeBox ? null : Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox];
+    let smoke = !boxes ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, boxes, tolerance) : veil(img, mask, bg, boxes, smokeMinBlue);
+    if (trails) smoke = unmixTrails(img, mask, bg, trails, smoke ?? undefined);
+    if (soften) smoke = feather(img, mask, soften, smoke ?? undefined);
     despill(img, mask, bg, despillRadius, smoke);
     applyMask(img, mask);
     smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
@@ -531,7 +588,7 @@ await spotScene('shrine.jpg', 'shrine');
 await cutOutFlat('bust-martha-frak.jpg', 'martha-frak', { holes: [[772, 576], [873, 607], [760, 830]] });
 await cutOutFlat('bust-martha-duke.jpg', 'martha-duke', { tolerance: 30, holes: [[771, 579], [871, 611], [760, 829]] }); // the purple mask stays
 await cutOutFlat('bust-martha-danhausen.jpg', 'martha-danhausen', { holes: [[768, 572], [886, 606], [761, 833]] });
-await cutOutFlat('bust-brodor.webp', 'brodor');
+await cutOutFlat('bust-brodor.jpg', 'brodor', { holes: [[891, 424], [968, 564], [888, 343], [134, 961], [890, 473], [55, 591], [806, 439], [952, 409], [901, 303], [839, 452], [998, 733], [982, 668], [25, 659], [22, 869], [128, 1011]] });
 await cutOutFlat('devil-sixes.jpg', 'devil-sixes', { maxHeight: 900 }); // three 6s: the devil's moment
 await livingMask('devil-sixes');
 // Ability paintings (26 Oct): shown as the ability's moment plays (ABILITY_ART in Hud).
@@ -539,3 +596,9 @@ await cutOutFlat('ability-mind-whip.jpg', 'ability-mind-whip', { maxHeight: 900,
 await cutOutFlat('ability-cursed.jpg', 'ability-cursed', { maxHeight: 900, tolerance: 10, smokeBox: [[150, 700, 720, 1264]], smokeColour: 'own' }); // his purple smoke stays purple, fading out
 await cutOutFlat('ability-devil.jpg', 'ability-devil', { maxHeight: 900 });
 await cutOutFlat('ability-disguises.jpg', 'ability-disguises', { maxHeight: 900, holes: [[164, 210], [152, 234], [222, 108], [270, 126], [222, 156], [318, 294], [584, 246], [620, 270], [592, 286], [522, 189], [654, 534], [740, 560]] }); // (and the purple mask's horn curl, the white mask's eyes) // inside her raised arm
+await cutOutFlat('ability-back-of-the-head.jpg', 'ability-back-of-the-head', { maxHeight: 900, tolerance: 50, minPiece: 0.001, trails: { colour: [215, 185, 150], boxes: [[600, 330, 695, 510], [695, 448, 820, 510]] } });
+await cutOutFlat('ability-inkfire.jpg', 'ability-inkfire', { maxHeight: 900, smokeBox: [500, 60, 800, 700], smokeMinBlue: 5 });
+await cutOutFlat('ability-flourish.jpg', 'ability-flourish', { maxHeight: 900, tolerance: 50, minPiece: 0.001, trails: { colour: [212, 178, 132], reach: 22, boxes: [[0, 0, 340, 1200], [600, 0, 896, 250], [720, 250, 896, 1200], [600, 680, 720, 1200]] }, holes: [[808, 874], [787, 444], [702, 807], [809, 394], [762, 831], [123, 905], [165, 318], [107, 896], [72, 852], [141, 372], [106, 876], [696, 276], [702, 753]] });
+await cutOutFlat('ability-written-in-the-stars.jpg', 'ability-written-in-the-stars', { maxHeight: 900 });
+await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight: 900 });
+await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight: 900, soften: { boxes: [[180, 0, 850, 420]], radius: 12 }, holes: [[839, 728], [221, 751], [951, 800], [122, 857], [247, 863], [749, 890], [135, 832], [903, 819], [312, 845], [762, 832], [32, 723], [996, 741], [739, 865], [136, 792], [886, 798]] });

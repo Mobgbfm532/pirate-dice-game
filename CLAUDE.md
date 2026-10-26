@@ -385,8 +385,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   bust behind it overlapped the painting, the user's call), motes of light rising, the painting
   pushing slowly in, the banner below it (on phones on their side the painting left, the banner
   right), the 3.6 s of the banner; not when a Clear-Eye cancels it.
-  So far Mind Whip, You are Cursed, Sympathy for the Devil and Disguises (`ABILITY_ART` in Hud,
-  `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets). Martha's Disguises
+  So far Mind Whip, You are Cursed, Sympathy for the Devil, Disguises, Back of the Head, Inkfire
+  Brand, Flourish, Astral Flood, Reach Around and Written in the Stars (`ABILITY_ART` in Hud,
+  `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets; `cutOutFlat` also has
+  `minPiece` (keep a flying die), `trails` (see-through streaks of one colour), `soften` (a fading
+  edge) and `smokeMinBlue`). Brodor's bust is a new painting since 26 Oct (the first is
+  `art/bust-brodor-v1.webp`). Martha's Disguises
   painting shows ~1.7 s, then the trick she copies with its own painting. Check new ones with
   `node test/ability-shots.mjs <dir> only=<key>` (plays the ability for real headless, holds the
   moment, shoots it at phone sizes and checks it stays above the rail; works with the pane hidden;
