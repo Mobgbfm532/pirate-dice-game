@@ -25,11 +25,22 @@ const sfx = {
     cursed: load('YouAreCursed.mp3', 0.75),
     sympathy: load('SympathyForTheDevil.mp3', 0.75),
     marthaPuff: load('MarthaPuff.mp3', 0.75),
-    marthaSwitch: load('MarthaSwitch.mp3', 0.75)
+    marthaSwitch: load('MarthaSwitch.mp3', 0.75),
+    // Between fights (the user's, 27 Oct): what a soak or a candle brings.
+    tubGood: load('HotTubGood.mp3', 0.75),
+    tubBad: load('HotTubBad.mp3', 0.75),
+    ladyChoice: load('LadyChoice.mp3', 0.75)
 };
 
-const music = load('BackgroundMusic.mp3', 0.4, true);
-const ambience = load('Ambience.mp3', 0.5, true);
+const MUSIC_VOLUME = 0.4, AMBIENCE_VOLUME = 0.5;
+const music = load('BackgroundMusic.mp3', MUSIC_VOLUME, true);
+const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
+// The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
+// scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
+const SCENE_VOLUME = 0.6;
+const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true) };
+Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
+export type SceneAmbience = keyof typeof sceneAmbience;
 
 export type SoundName = keyof typeof sfx;
 
@@ -297,6 +308,7 @@ let musicOff = readSetting('tavernMusicOff');
 let muted = readSetting('tavernSoundsOff'); // game sounds
 music.muted = musicOff;
 ambience.muted = musicOff;
+Object.values(sceneAmbience).forEach(el => { el.muted = musicOff; });
 
 export function playSound(name: SoundName, playbackRate = 1) {
     if (muted) return;
@@ -328,10 +340,42 @@ export function startMusic() {
     ambience.play().catch(() => {});
 }
 
+// Volume fades (one at a time per element; a new one takes over from wherever the last got to).
+const fades = new WeakMap<HTMLAudioElement, number>();
+function fade(el: HTMLAudioElement, to: number, ms: number, then?: () => void) {
+    clearInterval(fades.get(el));
+    const from = el.volume, start = performance.now();
+    const id = window.setInterval(() => {
+        const p = Math.min(1, (performance.now() - start) / ms);
+        el.volume = from + (to - from) * p;
+        if (p >= 1) { clearInterval(id); fades.delete(el); then?.(); }
+    }, 40);
+    fades.set(el, id);
+}
+
+// Starts a scene's ambience (with the music switch on) and fades the tavern's music down under
+// it; the returned function fades it out and the music back up.
+export function startSceneAmbience(name: SceneAmbience) {
+    if (musicOff) return () => {};
+    const el = sceneAmbience[name];
+    el.currentTime = 0;
+    el.volume = 0;
+    el.play().catch(() => {});
+    fade(el, SCENE_VOLUME, 700);
+    fade(music, MUSIC_VOLUME * 0.25, 700);
+    fade(ambience, AMBIENCE_VOLUME * 0.25, 700);
+    return () => {
+        fade(el, 0, 700, () => el.pause());
+        fade(music, MUSIC_VOLUME, 1000);
+        fade(ambience, AMBIENCE_VOLUME, 1000);
+    };
+}
+
 export function setMusicOff(value: boolean) {
     musicOff = value;
     music.muted = value;
     ambience.muted = value;
+    Object.values(sceneAmbience).forEach(el => { el.muted = value; if (value) el.pause(); });
     saveSettings();
     if (value) { music.pause(); ambience.pause(); } else startMusic();
 }

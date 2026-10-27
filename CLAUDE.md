@@ -532,7 +532,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Gourd's barman (`PLACES.ghoulAndGourd.events`), finds you ~15% of walks when no thief or
   Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 2 gold for
   the glass), 3-4 a free Thonic, 5-6 a Thonic and 5 gold (a full shelf: 3 gold instead,
-  `darrenOutcome`). Both have the user's paintings (since 20 Oct; `hot-tub.webp` is wide, sized by width).
+  `darrenOutcome`). The hot tub and the Shrine have the user's sounds (27 Oct): their own ambience loops while the scene is up (`startSceneAmbience` in sounds.ts, `HotTubAmbience.mp3` / `LadyIntro.mp3`, under the music switch, the tavern music fading down meanwhile, fetched only when the scene opens), then `HotTubGood.mp3` or `HotTubBad.mp3` (Soggy Die, Pruney Fingers) for the surge and `LadyChoice.mp3` for the blessing. Both have the user's paintings (since 20 Oct; `hot-tub.webp` is wide, sized by width).
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
   the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with

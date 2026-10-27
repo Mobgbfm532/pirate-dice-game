@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { screenInsets } from './layout';
 import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins, type TurnView } from './rules';
-import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editablePortrait, portraitEdits, portraitFor } from './portraits';
@@ -1140,6 +1140,12 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
                     : interlude.stage === 'darren' && interlude.roll !== undefined && revealed ? (interlude.outcome === 'smash' ? 'escaped' : 'caught')
                         : '';
     const portrait = SPOT_PORTRAITS[spot];
+    // The hot tub and the Lady's shrine have their own ambience while their scene is up, and a
+    // sound for what the soak or the candle brings (the user's clips, 27 Oct).
+    useEffect(() => (spot === 'hotTub' || spot === 'shrine' ? startSceneAmbience(spot) : undefined), [spot]);
+    const result = interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'tubGood' : 'tubBad')
+        : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'ladyChoice' : null;
+    useEffect(() => { if (result) playSound(result); }, [result]);
     return (
         <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
             <div className="thom-stage" aria-hidden="true"
