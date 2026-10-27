@@ -737,14 +737,14 @@ footer {
     border: 2px solid var(--gold);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 22px rgba(255, 138, 101, 0.35);
-    animation: banner-in 2.6s ease-out forwards;
+    animation: banner-in 1.85s ease-out forwards;
 }
 .ability-banner .who { font-size: 0.9rem; color: var(--parchment-dim); }
 .ability-banner .what { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ffab91; }
 .ability-banner .minus { font-size: clamp(1.4rem, 6.5vw, 2rem); font-weight: 700; color: #e57373; animation: minus-drop 2.6s ease-out forwards; }
 .constellation-blur .ability-banner { background: linear-gradient(#141a3a, #070a1f); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(130, 170, 255, 0.45); }
 .constellation-blur .ability-banner .what { color: #b3c7ff; }
-.the-ace-of-spades .ability-banner { animation-duration: 2.4s; }
+.the-ace-of-spades .ability-banner { animation-duration: 1.75s; }
 @keyframes banner-in {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
     10% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
@@ -779,7 +779,7 @@ footer {
     display: flex;
     align-items: center;
     gap: 10px;
-    animation: bullet-in 2.4s ease-out forwards;
+    animation: bullet-in 1.75s ease-out forwards;
 }
 /* A small, sharp hole punched in the felt, splintered round the edge, smoke rising off it. */
 .bullet-24 .hole {
@@ -1536,7 +1536,7 @@ button.keepsake.used { opacity: 0.55; }
 .ability-marks .left { color: #ffab91; text-shadow: 0 0 6px rgba(255, 138, 101, 0.9); }
 .ability-marks .used { color: #5d4037; text-shadow: none; }
 /* Just spent: once the move's banner has gone (the plate hides under it), the marks flare. */
-.ability-marks.spent-now { border-radius: 6px; animation: marks-spent 2s ease-out 2.4s 1 both; }
+.ability-marks.spent-now { border-radius: 6px; animation: marks-spent 2s ease-out 1.75s 1 both; }
 @keyframes marks-spent {
     0% { transform: scale(1); box-shadow: none; }
     15%, 45% { transform: scale(1.5); box-shadow: 0 0 18px 6px rgba(255, 112, 67, 0.9); background: rgba(255, 112, 67, 0.35); }
@@ -1795,7 +1795,7 @@ button.keepsake.used { opacity: 0.55; }
     white-space: normal;
     text-align: center;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.75), 0 0 46px var(--flare);
-    animation: takeover-in 2.4s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+    animation: takeover-in 1.75s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
 }
 .takeover .ability-banner .who { font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--parchment); }
 .takeover .ability-banner .what { font-size: clamp(2rem, 10vw, 3.2rem); line-height: 1.05; text-shadow: 0 0 22px var(--flare), 0 2px 6px #000; }
@@ -1866,7 +1866,7 @@ button.keepsake.used { opacity: 0.55; }
     background: repeating-conic-gradient(from 0deg, var(--flare) 0deg 5deg, rgba(0, 0, 0, 0) 5deg 20deg);
     -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, rgba(0, 0, 0, 0) 40%);
     mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, rgba(0, 0, 0, 0) 40%);
-    mix-blend-mode: screen; animation: rays-turn 2.6s linear both;
+    mix-blend-mode: screen; animation: rays-turn 1.85s linear both;
 }
 @keyframes rays-turn { 0% { opacity: 0; transform: rotate(0deg) scale(0.6); } 15% { opacity: 0.75; transform: rotate(4deg) scale(1); } 85% { opacity: 0.6; } 100% { opacity: 0; transform: rotate(24deg) scale(1.05); } }
 @media (max-height: 500px) { .ability-stage .rays { left: 24vw; top: 50%; } }
@@ -2019,7 +2019,7 @@ button.keepsake.used { opacity: 0.55; }
     display: flex; align-items: center; justify-content: center; font-size: 3rem;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255, 248, 225, 0.9), rgba(255, 213, 79, 0.35) 55%, transparent 72%);
-    animation: keepsake-burst 2.4s ease-out forwards;
+    animation: keepsake-burst 1.75s ease-out forwards;
 }
 @keyframes keepsake-burst {
     0% { opacity: 0; transform: scale(0.2) rotate(-20deg); }
@@ -2040,7 +2040,7 @@ button.keepsake.used { opacity: 0.55; }
         repeating-linear-gradient(60deg, rgba(179, 229, 252, 0.16) 0 2px, transparent 2px 22px),
         repeating-linear-gradient(-60deg, rgba(179, 229, 252, 0.16) 0 2px, transparent 2px 22px);
     box-shadow: 0 0 40px rgba(79, 195, 247, 0.7), inset 0 0 50px rgba(129, 212, 250, 0.55);
-    animation: forcefield 2.4s ease-out forwards;
+    animation: forcefield 1.75s ease-out forwards;
 }
 @keyframes forcefield {
     0% { opacity: 0; transform: translate(-50%, -18%) scale(0.3); }
@@ -2437,7 +2437,7 @@ button.keepsake.used { opacity: 0.55; }
     height: min(48vh, 440px); max-width: 86vw; object-fit: contain;
     transform: translate(-50%, -78%);
     filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 22px var(--flare, rgba(255, 138, 101, 0.5)));
-    animation: ability-art 2.6s ease-out both;
+    animation: ability-art 1.85s ease-out both;
 }
 @keyframes ability-art {
     0% { opacity: 0; transform: translate(-50%, -58%) scale(0.9); }
@@ -2472,13 +2472,13 @@ button.keepsake.used { opacity: 0.55; }
     background:
         radial-gradient(ellipse 75% 55% at 50% 40%, var(--flare) 0%, transparent 62%),
         radial-gradient(ellipse 90% 80% at 50% 40%, #1d0f07 0%, #070302 100%);
-    animation: stage-in 2.6s ease-out both;
+    animation: stage-in 1.85s ease-out both;
 }
 @keyframes stage-in { 0% { opacity: 0; } 7% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
 .ability-stage .mote {
     position: absolute; bottom: -12px; width: 7px; height: 7px; border-radius: 50%;
     background: radial-gradient(circle, #fff 0%, var(--flare) 55%, transparent 72%);
-    animation: mote-rise 2.6s ease-in infinite;
+    animation: mote-rise 1.6s ease-in infinite;
 }
 @keyframes mote-rise {
     0% { opacity: 0; transform: translate(0, 0) scale(0.6); }

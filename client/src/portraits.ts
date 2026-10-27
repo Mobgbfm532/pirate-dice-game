@@ -55,7 +55,8 @@ export const PORTRAITS: Record<string, Portrait> = {
     Klarg: seated('klarg.webp', [62, 26], 1.3, 907, 720, [10.2, -11.9]),
     Rokr: seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]),
     'The Hangman': seated('hangman.webp', [45, 36], 1.25, 793, 720, [-10.1, -4]),
-    'Jaguar Cantona': seated('jaguar.webp', [47, 36], 1.6, 886, 720, [-8.3, 1.8]),
+    // His second painting (27 Oct): the same pose with his cloak flowing out to the right (faded at the painting's edge); the head as in the first, so no seat.
+    'Jaguar Cantona': seated('jaguar.webp', [45.7, 35.5], 2, 969, 720, [-3, 4]),
     // The Yawning Portal's five (painted 20 Oct, in the game since 21 Oct).
     'Sylvester Stonefist': seated('sylvester.webp', [48, 40], 1.2, 722, 720, [-1.5, 1.2]),
     // His black flame: dark tongues rising from between his hands, with a violet glow in it.
@@ -119,7 +120,7 @@ export function avatarStyle(p: Portrait) {
 export interface PortraitEdit { zoom: number; nudge: [number, number] }
 const SPOT_NAMES: Record<keyof typeof SPOT_PORTRAITS, string> = {
     thom: 'Thom', shrine: "The Lady's Shrine", diceDen: 'The Dice Den gambler', stranger: 'The Hooded Stranger',
-    pickpocket: 'The thief', hotTub: 'The Wild Magic Hot Tub', darren: 'Darren Snakehands'
+    pickpocket: 'The thief', hotTub: 'Wild Magic Hot Tub', darren: 'Darren Snakehands'
 };
 const REGISTRY: Record<string, Portrait> = {
     ...Object.fromEntries(Object.keys(PORTRAITS).filter(k => PORTRAITS[k].center && PORTRAITS[k].bust).map(k => [k, PORTRAITS[k]])),

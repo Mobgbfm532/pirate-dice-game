@@ -27,7 +27,10 @@ const ABILITIES = {
     astralFlood: { fight: 9, name: 'Astral Flood', who: 'Brodor' },
     reachAround: { fight: 10, name: 'Reach Around', who: 'Klarg' },
     stars: { fight: 11, name: 'Written in the Stars', who: 'Rokr' },
-    deadEye: { fight: 12, name: 'Dead Eye', who: 'The Hangman' }
+    deadEye: { fight: 12, name: 'Dead Eye', who: 'The Hangman' },
+    // Jaguar's phases (Smooth Talk at 3+ lives, The Cloak at 2): they rarely come up in time, so usually stand-ins.
+    smoothTalk: { fight: 13, name: 'Smooth Talk', who: 'Jaguar Cantona' },
+    cloak: { fight: 13, name: 'The Cloak', who: 'Jaguar Cantona' }
 };
 const args = Object.fromEntries(process.argv.slice(3).map(a => a.split('=')));
 const outDir = process.argv[2] ?? 'previews/abilities';

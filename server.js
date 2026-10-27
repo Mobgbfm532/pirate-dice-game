@@ -1109,7 +1109,7 @@ function emitMoment(roomCode, room, event, data) {
 // until the last has gone (the user's call, 23 Oct: an ability plays in full, banner and effect,
 // before the dice are thrown). The server keeps the same clock, so a throw (and the bot's next
 // step) waits for it too: momentsLeft.
-const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 2600, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
+const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
 const INTRO_SHOW_MS = 4500; // an opponent's entrance (the client's INTRO_MS)
 function sendMoment(roomCode, event, data) {
     let room = rooms[roomCode];

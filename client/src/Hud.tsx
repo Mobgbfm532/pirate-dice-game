@@ -205,7 +205,7 @@ function scoreToBeat(state: GameState, rollerId: string): { label: string; targe
     const finished = state.roundPlayers.filter(id => id !== rollerId && state.players[id] && state.players[id].score !== null);
     if (finished.length === 0) return null; // first to roll: nothing to beat yet
     const scores = finishedScores(state, rollerId);
-    if (scores.length === 0) return { label: 'Everyone else dusted: just find a 2 and a 4', target: null };
+    if (scores.length === 0) return null; // everyone else dusted: nothing to beat (the user took the line out, 27 Oct)
     if (cursed(state)) return { label: 'Score to stay under', target: Math.max(...scores) };
     return { label: 'Score to beat', target: Math.min(...scores) };
 }
@@ -789,7 +789,10 @@ const ABILITY_ART: Record<string, string> = {
     'Flourish': 'ability-flourish.webp',
     'Astral Flood': 'ability-astral-flood.webp',
     'Reach Around': 'ability-reach-around.webp',
-    'Written in the Stars': 'ability-written-in-the-stars.webp'
+    'Written in the Stars': 'ability-written-in-the-stars.webp',
+    // 27 Oct: Jaguar's.
+    'Smooth Talk': 'ability-smooth-talk.webp',
+    'The Cloak': 'ability-the-cloak.webp'
 };
 Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
 
@@ -819,7 +822,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <div className="ability-stage" aria-hidden="true">
                     {/* Light rays turning slowly behind the painting. */}
                     <span className="rays" />
-                    {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.17) % 1.2}s` }} />)}
+                    {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.11) % 0.8}s` }} />)}
                 </div>
             )}
             {surge && (
@@ -956,7 +959,7 @@ const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
     shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A blessing from the Lady' },
     diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
-    hotTub: { name: 'The Wild Magic Hot Tub', line: 'Bubbling, glowing, faintly humming.', offer: 'A wild surge on one of your dice' }
+    hotTub: { name: 'Wild Magic Hot Tub', line: 'Bubbling, glowing, faintly humming.', offer: 'A wild surge on one of your dice' }
 };
 
 // Who (or what) is at the spot, in a lit round frame.
@@ -1089,7 +1092,7 @@ const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
     shrine: { name: 'Shrine to the Lady', tag: 'Goddess of sailors' },
     diceDen: { name: 'The Dice Den', tag: 'Two dice each. Highest wins.' },
     stranger: { name: 'The Hooded Stranger', tag: 'Keepsakes, for a price' },
-    hotTub: { name: 'The Wild Magic Hot Tub', tag: 'Soak at your own risk' },
+    hotTub: { name: 'Wild Magic Hot Tub', tag: 'Soak at your own risk' },
     darren: { name: 'Darren Snakehands', tag: 'The barman, and his snakes' }
 };
 

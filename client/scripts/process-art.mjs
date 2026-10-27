@@ -430,11 +430,25 @@ function eraseSmoke(img, mask, bg, { clear, paint }) {
 //              (Martha's purple smoke; pair it with a low tolerance so the flood leaves it);
 //              smokeBox may also be a list of boxes
 //   trails     { colour, boxes, reach }: see-through streaks of that colour over the background
-//              in those boxes turn see-through instead of pink (unmixTrails)
+//              in those boxes turn see-through instead of pink (unmixTrails); a list of them for streaks
+//              of different colours (Jaguar's gold sparkles and his potion's red glow)
 //   soften     { boxes, radius }: a soft edge fading over that many px in those boxes (feather)
+//   fade       { left, right, top, bottom }: fade out over that many px towards those edges of the
+//              painting, where it crops the character itself (fadeEdges)
 //   smokeMinBlue  grey smoke only: how far blue may sit below green to count as smoke (-25);
 //              raise it to keep skin and leather in the box out (veil)
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null } = {}) {
+// A painting that crops the character at its own edge (Jaguar's cloak running off the right side, 27 Oct)
+// shows a hard straight line; this fades the picture out over that many px (original) towards each
+// edge named: { left, right, top, bottom }.
+function fadeEdges({ data, width, height }, { left = 0, right = 0, top = 0, bottom = 0 }) {
+    const ramp = (d, n) => { if (!n) return 1; const t = Math.min(1, d / n); return t * t * (3 - 2 * t); };
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const k = Math.min(ramp(x, left), ramp(width - 1 - x, right), ramp(y, top), ramp(height - 1 - y, bottom));
+        if (k < 1) data[(y * width + x) * 4 + 3] = Math.round(data[(y * width + x) * 4 + 3] * k);
+    }
+}
+
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null } = {}) {
     if (!wanted(name)) return;
     const img = await readRgba(file);
     const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes });
@@ -442,11 +456,12 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     keepMainShape(img, mask, minPiece);
     const boxes = !smokeBox ? null : Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox];
     let smoke = !boxes ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, boxes, tolerance) : veil(img, mask, bg, boxes, smokeMinBlue);
-    if (trails) smoke = unmixTrails(img, mask, bg, trails, smoke ?? undefined);
+    for (const t of trails ? [].concat(trails) : []) smoke = unmixTrails(img, mask, bg, t, smoke ?? undefined);
     if (soften) smoke = feather(img, mask, soften, smoke ?? undefined);
     despill(img, mask, bg, despillRadius, smoke);
     applyMask(img, mask);
     smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
+    if (fade) fadeEdges(img, fade);
     await writePreview(name, img);
     const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());
     const info = await sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, `${name}.webp`));
@@ -564,7 +579,7 @@ await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches:
 await cutOut('bust-klarg.jpg', 'klarg', { fireBox: [1005, 230, 1191, 896], patches: [[888, 408, 1006, 515, 30], [1075, 230, 1191, 896, 255]] });
 await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
-await cutOut('bust-jaguar.jpg', 'jaguar');
+await cutOutFlat('bust-jaguar.jpg', 'jaguar', { holes: [[634, 46], [478, 329]], fade: { right: 140 } }); // his second painting (27 Oct), on a flat background (the first: bust-jaguar-v1.jpg, a checkerboard); his cloak runs off the painting's right edge, so it fades out there
 await cutOutFlat('bust-thom.jpg', 'thom');
 await cutOutFlat('bust-stranger.jpg', 'stranger');
 await cutOutFlat('bust-dicer.jpg', 'dicer', { pocket: 60 }); // background shows between the dice and his fingers
@@ -602,3 +617,5 @@ await cutOutFlat('ability-flourish.jpg', 'ability-flourish', { maxHeight: 900, t
 await cutOutFlat('ability-written-in-the-stars.jpg', 'ability-written-in-the-stars', { maxHeight: 900 });
 await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight: 900 });
 await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight: 900, soften: { boxes: [[180, 0, 850, 420]], radius: 12 }, holes: [[839, 728], [221, 751], [951, 800], [122, 857], [247, 863], [749, 890], [135, 832], [903, 819], [312, 845], [762, 832], [32, 723], [996, 741], [739, 865], [136, 792], [886, 798]] });
+await cutOutFlat('ability-smooth-talk.jpg', 'ability-smooth-talk', { maxHeight: 900, tolerance: 30, holes: [[414, 180], [294, 424]], minPiece: 0.00002, trails: [{ colour: [245, 200, 120], reach: 35, boxes: [[90, 320, 325, 660], [520, 420, 660, 525]] }, { colour: [255, 70, 60], reach: 30, boxes: [[565, 120, 640, 330]] }], fade: { bottom: 60 } }); // his golden sparkle swirls and the potion's red glow stay, see-through
+await cutOutFlat('ability-the-cloak.jpg', 'ability-the-cloak', { maxHeight: 900, holes: [[777, 496], [751, 419], [822, 326], [712, 489], [833, 808], [293, 421], [415, 180]], trails: [{ colour: [60, 78, 92], reach: 20, boxes: [[0, 540, 330, 820], [640, 380, 848, 900]] }, { colour: [20, 28, 38], reach: 20, boxes: [[0, 700, 220, 800]] }], fade: { left: 90, right: 40, bottom: 60 } }); // his smoky wisps and the thin cloak's edge stay see-through; background between the folds and the arm

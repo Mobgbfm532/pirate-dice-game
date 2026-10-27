@@ -192,7 +192,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   Check at ~360x640 and ~384x800 after any HUD or camera change.
 - **The phone footer decides how big the tavern and the opponent are** (the table sits right
   above it). Upright phones (`orientation: portrait`, width up to 600) keep it short: the score to
-  beat and the turn score share a line, the purse/shelf sit beside your chip when they fit, and
+  beat and the turn score share a line (when everyone else dusted there is nothing to beat and the line stays empty, the user's call 27 Oct), the purse/shelf sit beside your chip when they fit, and
   at tables with reactions the emoji row takes the hidden Roll button's place (same height, so
   nothing moves between turns). In a Tavern Crawl the bust may rise to 10 px from the top (no
   turn banner there). At 412x780 the far edge is at ~240 px (the old, rail-covering layout ~250).
@@ -350,7 +350,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   the screen with who, what and the move's text; since 26 Oct, the user's call, it rises like the devil's
   three 6s: a sheet of light in the move's colours sweeps up, plumes lick up from the bottom
   (`.ability-rise`, not for keepsakes), and the banner and painting fly up into place, then leave
-  upwards; as it lands a shockwave ring, glowing edges drawn out from the middle, a shine and the name snapping into focus; every moment is up 2.6 s, `MOMENT_SHOW_MS` on both sides, 3.6 s until 26 Oct; Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
+  upwards; as it lands a shockwave ring, glowing edges drawn out from the middle, a shine and the name snapping into focus; every moment is up 1.85 s, `MOMENT_SHOW_MS` on both sides (3.6 s until 26 Oct, 2.6 s until 27 Oct); Thonics keep the small plaque), a badge under the Roll button ("Cursed round: ..."), and in a cursed
   round a violet glow round the screen edges (`.curse-veil`). Every ability has its own colours
   (`AbilityAura` + banner classes by ability name): Mind Whip a green-violet mist and a
   green-violet glow on the die he chose (`materials.mind`; Rokr's blur keeps the blue "?" and stars), the Devil
@@ -383,13 +383,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
   bust behind it overlapped the painting, the user's call), motes of light rising, the painting
   pushing slowly in, the banner below it (on phones on their side the painting left, the banner
-  right), 2.6 s like every moment (3.6 s until 26 Oct; turning light rays behind the painting); not when a Clear-Eye cancels it.
+  right), 1.85 s like every moment (turning light rays behind the painting); not when a Clear-Eye cancels it.
   So far Mind Whip, You are Cursed, Sympathy for the Devil, Disguises, Back of the Head, Inkfire
-  Brand, Flourish, Astral Flood, Reach Around and Written in the Stars (`ABILITY_ART` in Hud,
+  Brand, Flourish, Astral Flood, Reach Around, Written in the Stars, and since 27 Oct Jaguar's Smooth Talk and The Cloak (`ABILITY_ART` in Hud,
   `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets; `cutOutFlat` also has
-  `minPiece` (keep a flying die), `trails` (see-through streaks of one colour), `soften` (a fading
+  `minPiece` (keep a flying die), `trails` (see-through streaks; a list for several colours), `fade` (fades out where the painting itself crops the character), `soften` (a fading
   edge) and `smokeMinBlue`). Brodor's bust is a new painting since 26 Oct (the first is
-  `art/bust-brodor-v1.webp`). Martha's Disguises
+  `art/bust-brodor-v1.webp`); so is Jaguar's since 27 Oct, his cloak faded where it runs off the painting (the first is `art/bust-jaguar-v1.jpg`). Martha's Disguises
   painting shows ~1.7 s, then the trick she copies with its own painting. Check new ones with
   `node test/ability-shots.mjs <dir> only=<key>` (plays the ability for real headless, holds the
   moment, shoots it at phone sizes and checks it stays above the rail; works with the pane hidden;
@@ -522,7 +522,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   to whatever the next fight starts on (so it stacks with the Stranger's price). The choice screen
   is headed "Make your choice"; "Or challenge Klarg right away" (the next opponent's name)
   skips both spots (it's all at the one table, so the wording is "Challenge", never "walk").
-  The **Wild Magic Hot Tub** (a spot at the Ghoul and Gourd only, the user's call 21 Oct; 5 gold a soak, `hotTubPrice`; the Shrine's candle 10, `shrinePrice`; both rising with each visit; neither is offered when the purse can't cover it): climb in and a wild surge
+  The **Wild Magic Hot Tub** (shown without "The" since 27 Oct; a spot at the Ghoul and Gourd only, the user's call 21 Oct; 5 gold a soak, `hotTubPrice`; the Shrine's candle 10, `shrinePrice`; both rising with each visit; neither is offered when the purse can't cover it): climb in and a wild surge
   is picked by weight (`hotTubSurges`): one of your dice (`hotTubDie`, aqua on the table,
   `materials.tub`) next fight never rolls a 1 / keeps the better of two / only rolls 4-6 / always
   lands on 6 / never rolls a 6, or Pruney Fingers, the next fight a heart short
@@ -568,8 +568,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 1. **The new look on other phones** (the default since 23 Oct): if Auto quality drops a good
    phone to Low, tune its threshold (`noteFrame`).
 2. **The user's decisions waiting:** names for the ship's new abilities (Written in the Stars,
-   Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other ten
-   abilities (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
+   Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other eight
+   abilities (Divine Smite, Dead Eye, the Ace of Spades, All In, and the unused old ones aside) (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
    the Dice Den rework or a new spot instead (ideas: the Cult of Kram, the Flying Snakes who bring
    messages to the Ghoul and Gourd); music and ambience from Udio (the plan and prompts were given
    26 Oct; nothing is in the game yet).

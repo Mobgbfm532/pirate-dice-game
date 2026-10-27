@@ -264,7 +264,7 @@ function runNext() {
 // Dice are never thrown under one (the user's call, 23 Oct): a roll waits until the last moment
 // has gone (momentGoneAt; the server holds its throws to the same clock, momentsLeft).
 const MOMENT_GAP_MS = 1700;
-export const MOMENT_SHOW_MS = 2600; // an ability's banner (useMoment in Hud), a move's toast (3.6 s until 26 Oct)
+export const MOMENT_SHOW_MS = 1850; // an ability's banner (useMoment in Hud), a move's toast (3.6 s until 26 Oct, 2.6 s until 27 Oct)
 const RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600; // the round's result
 let momentFreeAt = 0;
 let momentGoneAt = 0;

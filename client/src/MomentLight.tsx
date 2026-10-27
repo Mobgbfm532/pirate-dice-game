@@ -21,19 +21,19 @@ interface Kind {
 // Tuned 23 Oct from frozen-clock before/after shots: the room carries the colour, while the light on
 // the dice stays gentle, so red 1s, green 6s and black pips still read.
 const KINDS: Record<string, Kind> = {
-    devil: { color: '#ff2a14', light: 35, wash: 0.55, ms: 2600 },          // the Duke's Devil (and the mask's)
-    ink: { color: '#9b4dff', light: 50, wash: 0.45, ms: 2600 },           // Vaelin's Inkfire
-    smite: { color: '#ffd36b', light: 0, beam: 30, wash: 0.45, ms: 2400 }, // the Ridgeler's Smite: a beam onto the table
-    flood: { color: '#fff2cc', light: 40, wash: 0.75, sky: 1.6, ms: 2400 }, // Brodor's Astral Flood: a white-gold wash
-    keepsake: { color: '#ffc94d', light: 45, wash: 0.5, ms: 2200 },       // a keepsake working
-    shield: { color: '#6ab7ff', light: 22, wash: 0.5, ms: 2400, shimmer: true }, // the Shield
+    devil: { color: '#ff2a14', light: 35, wash: 0.55, ms: 1800 },          // the Duke's Devil (and the mask's)
+    ink: { color: '#9b4dff', light: 50, wash: 0.45, ms: 1800 },           // Vaelin's Inkfire
+    smite: { color: '#ffd36b', light: 0, beam: 30, wash: 0.45, ms: 1800 }, // the Ridgeler's Smite: a beam onto the table
+    flood: { color: '#fff2cc', light: 40, wash: 0.75, sky: 1.6, ms: 1800 }, // Brodor's Astral Flood: a white-gold wash
+    keepsake: { color: '#ffc94d', light: 45, wash: 0.5, ms: 1800 },       // a keepsake working
+    shield: { color: '#6ab7ff', light: 22, wash: 0.5, ms: 1800, shimmer: true }, // the Shield
     perfect: { color: '#ffd54f', light: 95, wash: 0.5, ms: 2600 },        // a perfect 24: bright enough to bloom
     perfect4: { color: '#c77dff', light: 40, wash: 0.55, ms: 2600 },      // a cursed round's perfect hand (four 1s)
     sixes: { color: '#ff2a14', light: 30, wash: 0.35, ms: 1400 },         // three 6s land (the devil effect)
     // The Salty Swallow as the final tier (25 Oct)
-    stars: { color: '#8fb0ff', light: 30, wash: 0.45, ms: 2400, shimmer: true }, // Rokr's Written in the Stars
-    cloak: { color: '#7b4fd6', light: 15, wash: 0.5, ms: 2600 },          // Jaguar draws his cloak
-    allIn: { color: '#ff5a2a', light: 40, wash: 0.55, ms: 2600 }          // Jaguar's All In
+    stars: { color: '#8fb0ff', light: 30, wash: 0.45, ms: 1800, shimmer: true }, // Rokr's Written in the Stars
+    cloak: { color: '#7b4fd6', light: 15, wash: 0.5, ms: 1800 },          // Jaguar draws his cloak
+    allIn: { color: '#ff5a2a', light: 40, wash: 0.55, ms: 1800 }          // Jaguar's All In
 };
 
 function kindOf(m: AbilityMoment): string | null {
