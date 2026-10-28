@@ -32,17 +32,16 @@ const sfx = {
     ladyChoice: load('LadyChoice.mp3', 0.75),
     // 28 Oct: the slow-motion last throw, a fight's payout, the Shield, a Thonic drunk.
     gasp: load('Gasp.wav', 0.75),
-    coinPayout: load('CoinPayout.mp3', 0.7),
+    coinPayout: load('CoinWinning.mp3', 0.8), // the user's Coin Winning clip (it was CoinPayout.mp3)
     shield: load('Shield.mp3', 0.75),
     drinkPotion: load('DrinkPotion.mp3', 0.75),
-    // Thom, as you buy from him (the user's, 28 Oct).
-    thomMmmHm: load('ThomMmmHm.m4a', 0.85),
-    thomVitality: load('ThomVitality.m4a', 0.85),
-    thomOhYes: load('ThomOhYes.m4a', 0.85)
+    // Buying: a Thonic, and a keepsake from Thom's back shelf or the Stranger (the user's, 28 Oct).
+    potionSelect: load('PotionSelector.mp3', 0.9),
+    itemPickup: load('ItemPickup.mp3', 0.8)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
-const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, thomMmmHm: 0.46, thomVitality: 0.4, thomOhYes: 0.46 };
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05 };
 // The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
 // asked to, where an <audio> element can lag noticeably on phones.
 const buffers = new Map<keyof typeof sfx, AudioBuffer>();
@@ -352,12 +351,6 @@ export function playSound(name: SoundName, playbackRate = 1) {
     el.currentTime = lead;
     el.playbackRate = playbackRate;
     el.play().catch(() => {});
-}
-
-// One of Thom's lines, at random, as you buy a Thonic or a keepsake from him.
-const THOM_LINES: SoundName[] = ['thomMmmHm', 'thomVitality', 'thomOhYes'];
-export function playThomPurchase() {
-    playSound(THOM_LINES[Math.floor(Math.random() * THOM_LINES.length)]);
 }
 
 export const ABILITY_SOUNDS: Record<string, SoundName> = {

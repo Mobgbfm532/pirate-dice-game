@@ -4,7 +4,7 @@ import { calloutText, isLocked, onePerfect4Away, perfectHand, type DieStatus, ty
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { lookNext } from './look';
-import { playChime, playDiceImpacts, playSound, startMusic, playThomPurchase, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
+import { playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -780,7 +780,7 @@ export const actions = {
         }, PENDING_MS + 50);
     },
     buyThonic(id: string) {
-        playThomPurchase();
+        playSound('potionSelect');
         socket.emit('buyThonic', id);
     },
     leaveShop() {
@@ -817,7 +817,7 @@ export const actions = {
     },
     // A keepsake from Thom's back shelf.
     buyKeepsake(id: string) {
-        playThomPurchase();
+        playSound('itemPickup');
         socket.emit('buyKeepsake', id);
     },
     chooseSpot(spot: Spot) {
@@ -855,7 +855,7 @@ export const actions = {
         socket.emit('diceRoll');
     },
     strangerPick(id: string | null) {
-        playSound('click');
+        playSound(id ? 'itemPickup' : 'click');
         socket.emit('strangerPick', id);
     },
     drinkThonic(slot: number, dieId?: number) {

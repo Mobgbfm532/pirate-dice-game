@@ -1630,12 +1630,11 @@ button.keepsake.used { opacity: 0.55; }
     }
     footer .goal { grid-area: goal; }
     footer .turn-score { grid-area: score; }
-    /* A smaller Roll button on phones (the user's call, 28 Oct): the table gets the room. */
-    footer .roll { grid-area: roll; justify-self: center; min-width: 170px; padding: 7px 22px; font-size: 1.15rem; }
+    footer .roll { grid-area: roll; justify-self: center; }
     footer .hint { grid-area: hint; justify-self: center; text-align: center; }
     footer:has(.reactions) .roll.idle { display: none; }
     footer:has(.roll:not(.idle)) .reactions { display: none; }
-    footer .reactions { min-height: 41px; align-items: center; margin-top: -6px; }
+    footer .reactions { min-height: 52px; align-items: center; margin-top: -6px; }
     /* A Tavern Crawl: the purse and shelf beside your chip when they fit (else they wrap). */
     footer { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 10px; }
     footer .tavern-strip { margin-top: 0; }
