@@ -436,7 +436,8 @@ function eraseSmoke(img, mask, bg, { clear, paint }) {
 //   fade       { left, right, top, bottom }: fade out over that many px towards those edges of the
 //              painting, where it crops the character itself (fadeEdges)
 //   glow       { boxes }: a bright glow or flame over the background in those boxes keeps its own
-//              warm colours and turns see-through by how bright it is (glowToAlpha)
+//              warm colours and turns see-through by how bright it is (glowToAlpha); colour: 'light'
+//              for a cool or pale flame (cyan, white) instead of a warm one
 //   redOverBlue  how far red must sit above blue to count as background (none): on a crimson
 //              background, keeps violet that has as much blue as red (Purple Haze's smoke)
 //   smokeMinBlue  grey smoke only: how far blue may sit below green to count as smoke (-25);
@@ -459,7 +460,8 @@ function fadeEdges({ data, width, height }, { left = 0, right = 0, top = 0, bott
 // horns or green coat); bright cores come out opaque, the faint halo nearly clear and gold;
 // leftover pink in the boxes goes.
 // Returns alpha, like veil.
-function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97 }, alpha = new Map()) {
+function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97, colour = 'warm' }, alpha = new Map()) {
+    const light = colour === 'light';
     const { data, width } = img;
     for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         const p = y * width + x, i = p * 4;
@@ -470,9 +472,12 @@ function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97 }, alpha =
             a = Math.max(a, v > b ? (v - b) / (255 - b) : (b - v) / b);
         }
         if (a >= solid) continue;
-        if (a < min) { if (mask[p]) continue; a = min; }
+        if (a < min) { if (mask[p] || light) continue; a = min; }
         const f = [0, 1, 2].map(k => Math.max(0, Math.min(255, Math.round(bg[k] + (data[i + k] - bg[k]) / a))));
-        if (!(f[0] >= f[1] && f[1] >= f[2] - 10 && f[0] - f[2] > 60)) {
+        // 'light' (the Lady's Grace candle, 29 Oct): a cyan flame and its pale glow; any bright colour
+        // with plenty of green and some blue (cyan, white, pale gold) is glow; the wick and pink are not.
+        const isGlow = light ? f[1] >= 160 && f[2] >= 90 : f[0] >= f[1] && f[1] >= f[2] - 10 && f[0] - f[2] > 60;
+        if (!isGlow) {
             // Not flame: still pink (blue over green, red well over it) or dusky rose is the background
             // showing through the faintest wisps; it goes (keep red cloth and leather out of the boxes).
             const r = data[i], g = data[i + 1], b = data[i + 2];
@@ -481,7 +486,9 @@ function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97 }, alpha =
         }
         for (let k = 0; k < 3; k++) data[i + k] = f[k];
         mask[p] = 0;
-        alpha.set(p, a);
+        // 'light': the faint outer glow fades in from nothing (no ring at `min`) and fades out over
+        // the box's last 24 px (no straight line where the box ends).
+        alpha.set(p, light ? a * Math.min(1, (a - min) / min) * Math.min(1, (y1 - y) / 24) : a);
     }
     return alpha;
 }
@@ -687,3 +694,17 @@ await cutOutFlat('elfbar-lemonLevitation.jpg', 'elfbars/lemonLevitation', { icon
 await cutOutFlat('elfbar-watermelonHindsight.jpg', 'elfbars/watermelonHindsight', { icon: 320, holes: [[614, 97], [654, 294], [354, 445], [462, 445], [273, 554]] });
 await cutOutFlat('elfbar-cottonCandyCloud.jpg', 'elfbars/cottonCandyCloud', { icon: 320, holes: [[611, 95], [658, 286], [336, 445], [466, 445], [591, 557], [244, 948], [235, 1028]] });
 await cutOutFlat('elfbar-purpleHaze.jpg', 'elfbars/purpleHaze', { icon: 320, redOverBlue: 15, holes: [[612, 94], [658, 288], [362, 444]] });
+// The keepsakes (29 Oct): square item icons like the Thonics (strip button ~26 px, Thom's back shelf ~40 px, the gold burst ~84 px)
+await cutOutFlat('keepsake-bentCopper.jpg', 'keepsakes/bentCopper', { icon: 320 });
+await cutOutFlat('keepsake-velvetCushion.jpg', 'keepsakes/velvetCushion', { icon: 320 });
+await cutOutFlat('keepsake-luckySeat.jpg', 'keepsakes/luckySeat', { icon: 320 });
+await cutOutFlat('keepsake-loyaltyCard.jpg', 'keepsakes/loyaltyCard', { icon: 320, holes: [[725, 528], [586, 530], [823, 530], [678, 531], [774, 562], [624, 566], [673, 596], [726, 598], [579, 599]] }); // the punched holes (the potion's red liquid stays)
+await cutOutFlat('keepsake-potionBelt.jpg', 'keepsakes/potionBelt', { icon: 320 });
+await cutOutFlat('keepsake-loadedDie.jpg', 'keepsakes/loadedDie', { icon: 320 });
+await cutOutFlat('keepsake-marthasMask.jpg', 'keepsakes/marthasMask', { icon: 320 }); // its light pink sticker outline stays as the icon's border
+await cutOutFlat('keepsake-brodorsSunglasses.jpg', 'keepsakes/brodorsSunglasses', { icon: 320 });
+// The Bard's songs, the Lady's Grace and Kram's oath (29 Oct): icons like the keepsakes, for the strip
+await cutOutFlat('keepsake-inspiringSong.jpg', 'keepsakes/inspiringSong', { icon: 320, minPiece: 0.001 }); // the floating notes stay
+await cutOutFlat('keepsake-cuttingWords.jpg', 'keepsakes/cuttingWords', { icon: 320 });
+await cutOutFlat('keepsake-ladysGrace.jpg', 'keepsakes/ladysGrace', { icon: 320, holes: [[548, 540]], glow: { boxes: [[575, 70, 850, 294]], colour: 'light', min: 0.12 } }); // the cyan flame keeps a soft see-through glow; the handle's loop
+await cutOutFlat('keepsake-kram.jpg', 'keepsakes/kram', { icon: 320 });

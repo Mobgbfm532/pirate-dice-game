@@ -382,11 +382,11 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
                 <span className="keepsake-row">
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
-                        : <KeepsakeIcon key={k.id} icon={KEEPSAKE_ICONS[k.id] ?? '✦'} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
-                    {run.ladysGrace && <KeepsakeIcon icon="🕯️" name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." blessing />}
-                    {run.bard?.words && <KeepsakeIcon icon={KEEPSAKE_ICONS.cuttingWords} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} blessing />}
+                        : <KeepsakeIcon key={k.id} icon={keepsakeIcon(k.id)} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
+                    {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." blessing />}
+                    {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} blessing />}
                     {run.bard?.song && <SongKeepsake snap={snap} state={state} />}
-                    {run.kram?.now && <KeepsakeIcon icon={KEEPSAKE_ICONS.kram} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} blessing />}
+                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} blessing />}
                 </span>
             )}
         </div>
@@ -396,8 +396,8 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
 // Keepsakes that work once a fight (dimmed once they have).
 const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask']);
 
-function KeepsakeIcon({ icon, name, text, spent = false, blessing = false }: { icon: string; name: string; text: string; spent?: boolean; blessing?: boolean }) {
-    const remind = () => { playSound('click'); showToast(`${icon} ${name}`, spent ? `${text} (Used this fight.)` : text, 'info', 4200); };
+function KeepsakeIcon({ icon, name, text, spent = false, blessing = false }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean }) {
+    const remind = () => { playSound('click'); showToast(typeof icon === 'string' ? `${icon} ${name}` : name, spent ? `${text} (Used this fight.)` : text, 'info', 4200); };
     return (
         <button className={`keepsake-icon ${spent ? 'spent' : ''} ${blessing ? 'blessing' : ''}`} aria-label={`${name}: ${text}`} onClick={remind}>
             <span aria-hidden="true">{icon}</span>
@@ -429,7 +429,7 @@ function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     return (
         <span className="mask-keepsake">
             <button className={`keepsake-icon ${usable ? 'usable' : ''} ${run.maskReady ? '' : 'spent'}`} aria-label={`Martha's Mask: ${MASK_TEXT}`} onClick={tap}>
-                <span aria-hidden="true">🎭</span>
+                <span aria-hidden="true">{keepsakeIcon('marthasMask')}</span>
             </button>
             {open && (
                 <span className="mask-choice" role="group" aria-label="Wear a disguise for this round">
@@ -459,7 +459,7 @@ function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     return (
         <span className="mask-keepsake">
             <button className={`keepsake-icon blessing ${usable ? 'usable' : ''}`} aria-label={`Inspiring Song: ${text}`} onClick={tap}>
-                <span aria-hidden="true">{KEEPSAKE_ICONS.inspiringSong}</span>
+                <span aria-hidden="true">{keepsakeIcon('inspiringSong')}</span>
             </button>
             {open && (
                 <span className="mask-choice" role="group" aria-label="Inspiring Song">
@@ -595,6 +595,16 @@ function YourTurnBanner({ at }: { at: number }) {
 }
 
 // A picture for each keepsake card.
+// Keepsakes with the user's paintings (29 Oct; art/keepsake-<id>.jpg, cut out to art/keepsakes/<id>.webp).
+// The others (the blessings and songs) keep their emoji.
+const PAINTED_KEEPSAKES = new Set(['bentCopper', 'velvetCushion', 'luckySeat', 'loyaltyCard', 'potionBelt', 'loadedDie', 'marthasMask', 'brodorsSunglasses',
+    // ...and the blessings and the Bard's songs (shown the same way, on the strip and in their moments).
+    'ladysGrace', 'cuttingWords', 'inspiringSong', 'kram']);
+function keepsakeIcon(id: string): React.ReactNode {
+    if (PAINTED_KEEPSAKES.has(id)) return <img className="item-art" src={`${import.meta.env.BASE_URL}art/keepsakes/${id}.webp`} alt="" draggable={false} />;
+    return KEEPSAKE_ICONS[id] ?? '✦';
+}
+
 const KEEPSAKE_ICONS: Record<string, string> = {
     bentCopper: '🛡️',
     luckySeat: '🃏',
@@ -637,7 +647,7 @@ function KeepsakeCards({ defeated, nextEnemy, transitionMessage, choices }: { de
                             onClick={() => { setPicked(c.id); playSound('click'); }}
                             aria-pressed={picked === c.id}
                         >
-                            <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[c.id] ?? '✦'}</span>
+                            <span className="icon" aria-hidden="true">{keepsakeIcon(c.id)}</span>
                             <strong>{c.name}</strong>
                             <span className="text">{c.text}</span>
                         </button>
@@ -944,7 +954,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {fx && moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
             {fx && moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
             {moment.ability === 'Disguises' && <div className="mask-flare" aria-hidden="true">🎭</div>}
-            {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : KEEPSAKE_ICONS[keepsake] ?? '✦'}</div>}
+            {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) || PAINTED_KEEPSAKES.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : keepsakeIcon(keepsake)}</div>}
             {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
             {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
             {fx && moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
@@ -1021,7 +1031,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                 const short = run.purse < k.price;
                                 return (
                                     <div key={k.id} className="keepsake-ware" style={{ animationDelay: `${1.3 + i * 0.15}s` }}>
-                                        <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[k.id] ?? '✦'}</span>
+                                        <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
                                         <span className="about"><strong>{k.name}</strong><span className="text">{k.text}</span></span>
                                         <button className="buy" disabled={short} onClick={() => actions.buyKeepsake(k.id)}>
                                             {short ? coins(k.price) : `Buy · ${coins(k.price)}`}
@@ -1161,7 +1171,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
                     </div>
                 )}
                 <div className="invitation-card">
-                    <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[drop.id] ?? '✦'}</span>
+                    <span className="icon" aria-hidden="true">{keepsakeIcon(drop.id)}</span>
                     <p>{story.line(interlude.place)}</p>
                     <p className="mask-text"><strong>{drop.name}</strong> {story.gift}</p>
                 </div>
@@ -1377,7 +1387,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
                 <div className="keepsake-cards">
                     {interlude.songs.map((s, i) => (
                         <button key={s.id} className={`keepsake-card ${picked === s.id ? 'picked' : picked ? 'passed' : ''}`} style={{ animationDelay: `${0.9 + i * 0.15}s` }} onClick={() => setPicked(s.id)}>
-                            <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[s.id]}</span>
+                            <span className="icon" aria-hidden="true">{keepsakeIcon(s.id)}</span>
                             <strong>{s.name}</strong>
                             <span className="text">{s.text}</span>
                         </button>
@@ -1414,7 +1424,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
                 <div className="keepsake-cards">
                     {interlude.offers.map((k, i) => (
                         <button key={k.id} className={`keepsake-card ${picked === k.id ? 'picked' : picked ? 'passed' : ''}`} style={{ animationDelay: `${0.9 + i * 0.15}s` }} onClick={() => setPicked(k.id)}>
-                            <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[k.id] ?? '✦'}</span>
+                            <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
                             <strong>{k.name}</strong>
                             <span className="text">{k.text}</span>
                         </button>

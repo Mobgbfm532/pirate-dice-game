@@ -1019,6 +1019,9 @@ footer {
 .vape.painted img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--flavour) 60%, transparent)); pointer-events: none; }
 .vape.painted .puffs { bottom: -5px; }
 .keepsake-flare.painted { font-size: 4.6rem; }
+/* A painted keepsake (29 Oct): sized like the emoji it replaces, a touch bigger. */
+.item-art { width: 1.3em; height: 1.3em; object-fit: contain; display: inline-block; vertical-align: middle; pointer-events: none; }
+.keepsake-flare.painted .item-art { width: 1em; height: 1em; display: block; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)); }
 .keepsake-flare.painted img { width: 1em; height: 1em; object-fit: contain; display: block; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)); }
 .vape.purpleHaze { --flavour: #8e24aa; }
 .vape.cottonCandyCloud { --flavour: #f48fb1; }
