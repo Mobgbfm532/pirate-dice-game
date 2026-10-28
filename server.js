@@ -292,8 +292,17 @@ const THONICS = {
     fizzy: { id: 'fizzy', name: 'Fizzy Thomic', text: 'After a roll: your 1s roll again, once.', price: BALANCE.thonicPrices.fizzy, drink: true },
     secondThoughts: { id: 'secondThoughts', name: 'Second Thoughts Thonic', text: 'Put back a die you kept, then roll it again.', price: BALANCE.thonicPrices.secondThoughts, drink: true },
     steady: { id: 'steady', name: 'Steady Thonic', text: "This turn, a missing 2 or 4 doesn't dust you: your dice score as they lie.", price: BALANCE.thonicPrices.steady, drink: true },
-    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Cancels the opponent's next ability, whenever it comes.", price: BALANCE.thonicPrices.clearEye, drink: true }
+    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Cancels the opponent's next ability, whenever it comes.", price: BALANCE.thonicPrices.clearEye, drink: true },
+    // Elf Bars (28 Oct, the user's): magic vapes from Johnny Elf Bar, one of Frak's street
+    // urchins. They sit on the shelf like Thonics, but each has ELF_BAR_PUFFS puffs, at most one
+    // a fight (run.puffs, run.puffed); the last puff empties it. No side effects (the user's call).
+    purpleHaze: { id: 'purpleHaze', name: 'Purple Haze Elf Bar', text: 'After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it.', price: BALANCE.elfBarPrices.purpleHaze, drink: true, elf: true },
+    cottonCandyCloud: { id: 'cottonCandyCloud', name: 'Cotton Candy Cloud Elf Bar', text: "On your turn, while your opponent is still to throw: they play this round without seeing your score.", price: BALANCE.elfBarPrices.cottonCandyCloud, drink: true, elf: true },
+    lemonLevitation: { id: 'lemonLevitation', name: 'Lemon Levitation Elf Bar', text: 'After a throw: throw again without keeping a die.', price: BALANCE.elfBarPrices.lemonLevitation, drink: true, elf: true },
+    watermelonHindsight: { id: 'watermelonHindsight', name: 'Watermelon Hindsight Elf Bar', text: 'Undo your last throw: those dice are thrown again.', price: BALANCE.elfBarPrices.watermelonHindsight, drink: true, elf: true }
 };
+const ELF_BARS = Object.keys(THONICS).filter(id => THONICS[id].elf);
+const ELF_BAR_PUFFS = BALANCE.elfBarPuffs || 3;
 const SHELF_SIZE = BALANCE.shelfSize;
 const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
 
@@ -307,7 +316,7 @@ const PLACES = {
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
         // Between fights two of these catch your eye, and you go to one, unless the pickpocket,
         // the Hooded Stranger or one of the place's own events finds you first (startInterlude).
-        spots: ['thom', 'shrine', 'hotTub'],
+        spots: ['thom', 'shrine', 'hotTub', 'elfKid'],
         events: ['darren'] // Darren Snakehands is the barman here
     },
     yawningPortal: {
@@ -315,14 +324,14 @@ const PLACES = {
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
         // The hot tub is the Ghoul and Gourd's (the user's call, 21 Oct); the Bard and the Cult of
         // Kram are the Yawning Portal's own (28 Oct).
-        spots: ['thom', 'shrine', 'bard'],
+        spots: ['thom', 'shrine', 'bard', 'elfKid'],
         events: ['kram']
     },
     // A ship docked after the Yawning Portal: Klarg's crew, top-tier players.
     saltySwallow: {
         name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine'],
+        spots: ['thom', 'shrine', 'elfKid'],
         events: []
     }
 };
@@ -443,7 +452,9 @@ function flourishFace(turn) {
     };
 }
 
-const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink });
+const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink, ...(THONICS[id].elf ? { elf: true } : {}) });
+// On the shelf, an Elf Bar also shows its puffs left and whether it was puffed this fight.
+const shelfView = run => id => (THONICS[id].elf ? { ...thonicView(id), puffs: (run.puffs && run.puffs[id]) || ELF_BAR_PUFFS, puffed: !!(run.puffed && run.puffed[id]) } : thonicView(id));
 
 function getRoomState(roomCode) {
     let room = rooms[roomCode];
@@ -482,10 +493,11 @@ function getTavernRunState(room) {
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
         purse: room.tavernRun.purse,
-        shelf: room.tavernRun.shelf.map(thonicView),
+        shelf: room.tavernRun.shelf.map(shelfView(room.tavernRun)),
         shelfSize: shelfSizeOf(room),
         shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
-        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun) },
+        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun), elfBars: Object.fromEntries(ELF_BARS.map(id => [id, thonicPrice(room.tavernRun, id)])) },
+        cloud: !!room.tavernRun.cloud, // Cotton Candy Cloud: the opponent can't see your score this round
         // The Bard's song for this fight: Inspiring Song ('ready' until your first throw, 'now' while
         // that throw can be thrown again) or Cutting Words (until it lands); nextSong: bought for the next.
         bard: {
@@ -747,6 +759,8 @@ function performRoll(roomCode) {
     // The Bard's Inspiring Song waits for your first throw of the fight; after it, it's gone.
     let run = room.mode === 'tavern-crawl' ? room.tavernRun : null;
     let firstThrow = run && turn.playerId !== BOT_ID && run.song === 'ready' && !turn.hasRolled;
+    // (Watermelon Hindsight throws these again.)
+    let thrownNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
     let songGone = run && turn.playerId !== BOT_ID && run.song && run.song !== 'ready' && Rules.canRoll(turn);
     if (songGone) run.song = null;
     let result = Rules.rollTurn(turn, {
@@ -760,6 +774,7 @@ function performRoll(roomCode) {
     room.rollMoments = null;
     if (!result) return 0;
     if (firstThrow) run.song = turn.key;
+    turn.lastThrown = thrownNow;
     // (The strip's song lights up, or goes out: the browsers hear of it.)
     if (firstThrow || songGone) emitState(roomCode);
     if (flourish) signatureMoves.unshift(flourish);
@@ -1007,6 +1022,7 @@ function getTavernScoreToBeat(room) {
     let humanId = getHumanPlayerId(room);
     let human = humanId && room.players[humanId];
     if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
+    if (room.tavernRun.cloud) return undefined; // Cotton Candy Cloud: they can't see it, and play for their best
     if (human.busted) return null;
     let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
     let effect = room.tavernRun.roundEffect;
@@ -1259,6 +1275,9 @@ function createTavernRun() {
         nextFightSong: null,   // the Bard's song for the next fight ('cuttingWords' or 'inspiringSong')
         song: null,            // Inspiring Song this fight: 'ready', then your first throw's turn key
         cuttingWords: false,   // Cutting Words this fight, until it lands
+        puffs: {},             // Elf Bars on the shelf: puffs left, by id
+        puffed: {},            // ...and those puffed this fight
+        cloud: false,          // Cotton Candy Cloud this round
         kramFights: 0,         // sworn to Kram: fights still to come without 1s
         kram: false,           // ...and this one
         abilityUsed: {},
@@ -1387,6 +1406,9 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
         room.tavernRun.nextFightSong = null;
         room.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
         room.tavernRun.cuttingWords = song === 'cuttingWords';
+        // Each Elf Bar may be puffed once a fight.
+        room.tavernRun.puffed = {};
+        room.tavernRun.cloud = false;
         // Fealty to Kram: each fight sworn takes one off the count.
         room.tavernRun.kram = room.tavernRun.kramFights > 0;
         if (room.tavernRun.kram) room.tavernRun.kramFights--;
@@ -1457,6 +1479,7 @@ function beginTavernRound(roomCode, room) {
     run.pendingMind = null;
     run.jaguarSteady = false;
     run.talkThree = false;
+    run.cloud = false;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     if (!encounter || !encounter.keepsStolen) run.klargHand = null; // (a fight ended with one in his hand)
     if (!encounter || encounter.ability !== 'jaguarPhases') run.jaguarPhase = null;
@@ -1511,7 +1534,7 @@ function beginJaguarRound(roomCode, room, encounter) {
     }
     if (!fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
     let shelf = run.shelf;
-    let id = (bot.lives < encounter.lives && shelf.includes('healing') && 'healing') || (shelf.includes('steady') && 'steady') || shelf[0];
+    let id = (bot.lives < encounter.lives && shelf.includes('healing') && 'healing') || (shelf.includes('steady') && 'steady') || shelf.find(t => !THONICS[t].elf); // (not an Elf Bar)
     if (!id) {
         run.talkThree = true;
         sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he'll talk ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
@@ -1548,7 +1571,7 @@ function sealSave(room, name) {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
         shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
-        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0)
+        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), puffs: run.puffs || {}
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
     let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
@@ -1581,6 +1604,8 @@ function restoreRun(room, data) {
     run.bought = {};
     Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
+    run.puffs = {};
+    Object.entries(data.puffs || {}).forEach(([id, n]) => { if (THONICS[id] && THONICS[id].elf && Number.isInteger(n) && n > 0 && n <= ELF_BAR_PUFFS) run.puffs[id] = n; });
     run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
     run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
 }
@@ -1608,6 +1633,7 @@ function invitation(room, name) {
 //                                        two dice and the gambler two; a tie rolls again
 //   stranger    { offers, hearts }       a random event, while he has keepsakes left: take one
 //                                        (next fight on `hearts`) or turn him down
+//   elfKid      { stock, puffs, bought } Johnny Elf Bar (every place): buy Elf Bars for the shelf
 //   bard        { songs, price }         the Bard (Yawning Portal): pay for a song for the next fight
 //   kram        { fights }               the Cult of Kram (a Yawning Portal event): swear fealty and
 //                                        your dice never land on 1 for `fights` fights, or refuse
@@ -1634,7 +1660,7 @@ function pickSpots(room) {
     let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
     // A spot that costs more than the purse holds isn't offered (the Shrine and the hot tub cost
     // gold since 21 Oct).
-    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun));
+    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
     if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
@@ -2357,6 +2383,8 @@ io.on('connection', (socket) => {
             run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
         } else if (spot === 'hotTub') {
             run.interlude = { stage: 'hotTub' };
+        } else if (spot === 'elfKid') {
+            run.interlude = { stage: 'elfKid', stock: ELF_BARS.map(thonicView), puffs: ELF_BAR_PUFFS, bought: [] };
         } else if (spot === 'bard') {
             run.interlude = { stage: 'bard', songs: BARD_SONGS, price: bardPrice(run) };
         }
@@ -2432,6 +2460,22 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // Johnny Elf Bar: an Elf Bar for the shelf (not one you already carry), full of puffs.
+    socket.on('buyElfBar', (id) => {
+        let room = interludeAt('elfKid');
+        if (!room || typeof id !== 'string' || !ELF_BARS.includes(id)) return;
+        let run = room.tavernRun;
+        let price = thonicPrice(run, id);
+        if (run.purse < price || run.shelf.length >= shelfSizeOf(room) || run.shelf.includes(id)) return;
+        noteBought(run, id);
+        run.purse -= price;
+        run.stats.spent += price;
+        run.shelf.push(id);
+        run.puffs[id] = ELF_BAR_PUFFS;
+        run.interlude.bought = [...(run.interlude.bought || []), id];
+        emitState(socket.roomCode);
+    });
+
     // The Bard: pay for one of his songs for the next fight (null: walk away, nothing paid).
     socket.on('bardPick', (songId) => {
         let room = interludeAt('bard');
@@ -2502,6 +2546,45 @@ io.on('connection', (socket) => {
         let player = room.players[socket.id];
         let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
         let text, rerolled = null;
+
+        if (thonic.elf) {
+            if (run.puffed[thonicId]) return; // once a fight
+            let A = Rules.STATUS.ACTIVE;
+            if (thonicId === 'purpleHaze') {
+                // A 1 just thrown becomes the 2 or 4 you still need (it tumbles onto it).
+                if (!turn.hasRolled || turn.finalized) return;
+                let kept = turn.dice.filter(d => d.status !== A && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+                let need = !kept.includes(2) ? 2 : !kept.includes(4) ? 4 : null;
+                let one = turn.dice.find(d => d.status === A && d.value === 1 && !(turn.boundIds || []).includes(d.id));
+                if (!need || !one) return;
+                one.value = need;
+                rerolled = [one.id];
+                text = `A 1 becomes your ${need}`;
+            } else if (thonicId === 'cottonCandyCloud') {
+                let bot = room.players[BOT_ID];
+                if (run.cloud || turn.finalized || !bot || !room.roundPlayers.includes(BOT_ID) || bot.score !== null) return;
+                run.cloud = true;
+                text = "This round your opponent can't see your score";
+            } else if (thonicId === 'lemonLevitation') {
+                if (!turn.hasRolled || turn.finalized || turn.locksThisRoll > 0 || turn.freeRoll) return;
+                turn.freeRoll = true;
+                text = 'Throw again without keeping a die';
+            } else if (thonicId === 'watermelonHindsight') {
+                rerolled = Rules.redoThrow(turn, turn.lastThrown, rollFaceFor(room, turn), turn.mindDieId);
+                if (!rerolled) return;
+                text = 'Your last throw, thrown again';
+            } else {
+                return;
+            }
+            run.puffed[thonicId] = true;
+            run.puffs[thonicId] = (run.puffs[thonicId] || ELF_BAR_PUFFS) - 1;
+            if (run.puffs[thonicId] <= 0) { run.shelf.splice(slot, 1); delete run.puffs[thonicId]; }
+            sendMoment(roomCode, 'keepsakeActivated', { id: thonicId, name: thonic.name.replace(/ Elf Bar$/, ''), text, who: 'Elf Bar' });
+            if (rerolled) throwAgain(roomCode, room, turn, rerolled);
+            else emitTurn(roomCode, { type: 'toggle' });
+            emitState(roomCode);
+            return;
+        }
 
         if (thonicId === 'healing') {
             if (turn.hasRolled || player.lives >= room.startingLives) return;
@@ -2585,4 +2668,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, ELF_BARS, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };

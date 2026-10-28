@@ -994,6 +994,37 @@ footer {
 .bottle.empty .liquid { background: none; box-shadow: none; border-style: dashed; }
 .bottle.empty::before { border-style: dashed; background: none; }
 
+/* An Elf Bar (28 Oct): a slim vape in its flavour's colour, a mouthpiece on top and a dot for
+   each puff left; dimmed once puffed this fight. */
+.vape { --flavour: #ab47bc; position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 22px; height: 28px; flex: none; }
+.vape .body {
+    width: 11px; height: 22px; border-radius: 4px 4px 3px 3px; position: relative;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.45), transparent 35%, rgba(0, 0, 0, 0.25)), var(--flavour);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--flavour) 55%, transparent);
+}
+.vape .body::before { content: ''; position: absolute; left: 2px; top: -5px; width: 5px; height: 5px; border-radius: 2px 2px 0 0; background: #cfd8dc; border: 1px solid rgba(255, 255, 255, 0.6); border-bottom: none; }
+.vape .puffs { position: absolute; bottom: -4px; display: flex; gap: 2px; }
+.vape .puffs i { width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px var(--flavour); }
+.vape.puffed { filter: saturate(0.4) brightness(0.75); }
+.vape.purpleHaze { --flavour: #8e24aa; }
+.vape.cottonCandyCloud { --flavour: #f48fb1; }
+.vape.lemonLevitation { --flavour: #fdd835; }
+.vape.watermelonHindsight { --flavour: #43a047; }
+.thonic-card .vape { transform: scale(1.4); margin: 4px 0 8px; }
+/* (Four Elf Bars: two by two, each card a little more compact than Thom's.) */
+.thonic-cards.elf-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.thonic-cards.elf-cards .thonic-card { max-width: none; padding: 7px 8px; gap: 3px; }
+.thonic-cards.elf-cards .thonic-card .text { font-size: 0.78rem; line-height: 1.25; }
+.thonic-cards.elf-cards .thonic-card .buy { padding: 5px 10px; }
+/* (Short phones: the counter needs the room, so the kid keeps more of his.) */
+@media (max-height: 680px) { .spot-scene.elfKid .scene-text { display: none; } }
+
+/* Johnny Elf Bar: a violet haze of vapour. */
+.spot-pic.elfKid { background: radial-gradient(circle at 50% 40%, rgba(186, 104, 200, 0.45), rgba(34, 14, 40, 0.95) 70%); }
+.spot-scene.elfKid { --glow: rgba(186, 104, 200, 0.45); }
+.spot-scene.elfKid .thom-figure { height: min(78%, 440px); }
+
 /* During a fight: purse and shelf beside the keepsakes, above the player chips. */
 .purse { color: var(--gold-bright); font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
 .shelf { display: inline-flex; gap: 4px; }

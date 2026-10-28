@@ -24,7 +24,8 @@ export interface Player {
 export interface Keepsake { id: string; name: string; text: string }
 
 // One of Thom's Thonics. `drink`: tapped by the player (the others work by themselves).
-export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean }
+// (An Elf Bar is on the shelf like a Thonic: elf, with its puffs left and whether it was puffed this fight.)
+export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean; elf?: boolean; puffs?: number; puffed?: boolean }
 
 // A round changed by an ability (server.js beginTavernRound): Mind Whip, the Curse (lowest valid
 // score wins), the Devil (`by` throws three 6s; the other side can't score above devilCap),
@@ -54,7 +55,8 @@ export interface TavernRun {
     shelfSize: number;
     shop: { stock: Thonic[]; free?: boolean; first?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
     thomMet?: boolean; // you've been to Thom's cart this run (his first greeting is different)
-    prices?: { shrine: number; hotTub: number; bard?: number }; // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
+    prices?: { shrine: number; hotTub: number; bard?: number; elfBars?: Record<string, number> };
+    cloud?: boolean; // Cotton Candy Cloud: the opponent can't see your score this round // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
     // The Bard's song this fight: Inspiring Song ('ready' until your first throw, 'now' while it can
     // be thrown again), Cutting Words (words, until it lands); nextSong: bought for the next fight.
     bard?: { song: 'ready' | 'now' | null; words: boolean; nextSong: 'cuttingWords' | 'inspiringSong' | null };
@@ -80,7 +82,7 @@ export interface TubSurge { id: 'noOnes' | 'twin' | 'lucky' | 'scalding' | 'sogg
 
 // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots
 // catch your eye and you go to one.
-export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub' | 'bard';
+export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub' | 'bard' | 'elfKid';
 export interface BardSong { id: 'cuttingWords' | 'inspiringSong'; name: string; text: string }
 export interface DiceThrow { you: [number, number]; them: [number, number] }
 export type Interlude =
@@ -90,6 +92,7 @@ export type Interlude =
     | { stage: 'diceDen'; bets: number[]; bet: number | null; throws: DiceThrow[] }
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
     | { stage: 'hotTub' }
+    | { stage: 'elfKid'; stock: Thonic[]; puffs: number; bought: string[] } // Johnny Elf Bar: Elf Bars for the shelf
     | { stage: 'bard'; songs: BardSong[]; price: number } // the Bard (Yawning Portal): a song for the next fight
     | { stage: 'kram'; fights: number } // the Cult of Kram (a Yawning Portal event): swear fealty, no 1s for `fights` fights
     | { stage: 'done'; spot: 'bard'; song: BardSong | null }
@@ -652,6 +655,7 @@ socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => 
 socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string }) => {
     enqueueMoment(() => {
         if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
+        else if (data.who === 'Elf Bar') playSound('marthaPuff'); // a puff (Martha's own clip)
         else playChime();
         update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
     });
@@ -863,6 +867,11 @@ export const actions = {
     },
     diceRoll() {
         socket.emit('diceRoll');
+    },
+    // Johnny Elf Bar: an Elf Bar for the shelf.
+    buyElfBar(id: string) {
+        playSound('potionSelect');
+        socket.emit('buyElfBar', id);
     },
     // The Bard: a song for the next fight (null: walk away).
     bardPick(id: string | null) {

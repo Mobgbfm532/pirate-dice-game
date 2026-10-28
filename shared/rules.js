@@ -261,6 +261,25 @@
         return thrown.map(d => d.id);
     }
 
+    // Watermelon Hindsight Elf Bar: the dice of the last throw (`ids`) are thrown again; any kept
+    // since go back first (`stays`: a die kept for the player, Frak's Mind Whip). Returns the ids
+    // thrown, or null.
+    function redoThrow(turn, ids, rollFace = defaultRollFace, stays = null) {
+        if (!turn.hasRolled || !Array.isArray(ids) || ids.length === 0) return null;
+        const dice = turn.dice.filter(d => ids.includes(d.id) && d.id !== stays && (isActive(d) || d.status === STATUS.LOCKED_THIS_ROLL));
+        if (dice.length === 0) return null;
+        dice.forEach(d => { if (d.status === STATUS.LOCKED_THIS_ROLL) { d.status = STATUS.ACTIVE; turn.locksThisRoll--; } });
+        if (turn.finalized) {
+            turn.finalized = false;
+            turn.outcome = null;
+            turn.callout = null;
+        }
+        turn.freeRoll = false;
+        dice.forEach(d => { d.value = rollFace(d); });
+        settleTurn(turn);
+        return dice.map(d => d.id);
+    }
+
     // Second Thoughts Thonic: a die kept on an earlier roll goes back into play, and the player
     // may roll without keeping another. A finished hand opens up again. Returns true if done.
     // mustRoll: the die can't be kept again until it has been rolled (Sylvester's Back of the Head).
@@ -443,6 +462,6 @@
         formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

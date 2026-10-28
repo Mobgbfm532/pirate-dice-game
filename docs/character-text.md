@@ -112,6 +112,14 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 - Counter: "Swear fealty to Kram, and your dice never land on an ugly 1 for your next 2 fights."
 - Sworn: "Sworn to Kram: Your dice never land on 1 for your next 2 fights." Refused: "You refuse. The cultists melt back into the crowd."
 
+**Johnny Elf Bar** (every place; sign "Johnny Elf Bar", "One of Frak's street urchins")
+- On the choice of spots: ""Psst! Wanna touch the sky?"" / "Elf Bars: magic vapes, three puffs each"
+- "Psst! Wanna touch the sky?" After a purchase: "Nice one! You'll be back."
+- Counter: "Each Elf Bar sits on your shelf with 3 puffs, one a fight."
+- Elf Bars: Purple Haze "After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it." · Cotton Candy Cloud "On your turn, while your opponent is still to throw: they play this round without seeing your score." · Lemon Levitation "After a throw: throw again without keeping a die." · Watermelon Hindsight "Undo your last throw: those dice are thrown again."
+- When puffed: "Elf Bar / [flavour] / A 1 becomes your [2 or 4]", "This round your opponent can't see your score", "Throw again without keeping a die", "Your last throw, thrown again"
+- Where: `server.js` (`THONICS`, the puffs in `drinkThonic`), `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`)
+
 **Wild Magic Hot Tub** ("Soak at your own risk")
 - On the choice of spots: "Bubbling, glowing, faintly humming." / "A wild surge on one of your dice"
 - Counter: "Climb in, and the wild magic surges: most likely one of your dice is blessed for the next fight. Most likely."

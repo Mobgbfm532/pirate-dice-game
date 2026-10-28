@@ -638,6 +638,7 @@ await cutOutFlat('bust-sylvester.jpg', 'sylvester');
 await cutOutFlat('bust-darren.jpg', 'darren');
 await cutOutFlat('bust-bard.jpg', 'bard');
 await cutOutFlat('bust-kram.jpg', 'kram', { holes: [[484, 500]] }); // background enclosed by her hair, left of her cheek
+await cutOutFlat('bust-elf-kid.jpg', 'elf-kid', { tolerance: 30, holes: [[238, 1010]] }); // the vial's pink liquid stays; background enclosed between his sleeve and waistcoat
 await cutOutFlat('hot-tub.jpg', 'hot-tub');
 await spotScene('shrine.jpg', 'shrine');
 // 21 Oct: Martha's three disguises, each face held up as a mask (the eye holes and the gap under her wrist go), and Brodor.

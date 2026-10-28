@@ -691,7 +691,7 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
     assert.equal(interlude.stage, 'choose');
     assert.equal(interlude.spots.length, 2);
     assert.equal(new Set(interlude.spots).size, 2, 'two different spots');
-    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'diceDen', 'hotTub'].includes(id)));
+    interlude.spots.forEach(id => assert.ok(['thom', 'shrine', 'hotTub', 'elfKid'].includes(id), id));
 });
 
 // Puts the run between fights at the given stage, with the given purse.
@@ -2108,4 +2108,89 @@ test('the Cult of Kram: swear fealty and your dice never land on 1 for two fight
     for (let i = 0; i < 200; i++) assert.notEqual(face({ id: i % 6 }), 1);
     const bot = server.rollFaceFor(room, { playerId: 'BOT_MOLAR', dice: [] });
     assert.ok(Array.from({ length: 300 }, () => bot({ id: 0 })).includes(1), "the opponent's dice still can");
+});
+
+// ---- Elf Bars, from Johnny Elf Bar (28 Oct) ----
+
+test('Johnny Elf Bar is a spot in every place; an Elf Bar comes with 3 puffs, one of each kind', async () => {
+    const { hero, room } = await betweenFights('Vaper', { stage: 'choose', spots: ['elfKid', 'thom'] }, 100);
+    for (const fight of ['frak', 'vaelin', 'rokr']) {
+        room.tavernRun.encounterIndex = fightOf(fight);
+        assert.ok(Array.from({ length: 80 }, () => server.pickSpots(room)).some(s => s.includes('elfKid')), fight);
+    }
+    room.tavernRun.encounterIndex = fightOf('frak');
+    hero.emit('chooseSpot', 'elfKid');
+    await nextState(hero, s => runOf(s).interlude.stage === 'elfKid');
+    hero.emit('buyElfBar', 'healing'); // not his
+    hero.emit('buyElfBar', 'lemonLevitation');
+    const bought = await nextState(hero, s => runOf(s).shelf.length === 1);
+    assert.equal(runOf(bought).shelf[0].puffs, BALANCE.elfBarPuffs);
+    assert.equal(room.tavernRun.purse, 100 - BALANCE.elfBarPrices.lemonLevitation);
+    hero.emit('buyElfBar', 'lemonLevitation'); // one you carry
+    await sleep(40);
+    assert.deepEqual(room.tavernRun.shelf, ['lemonLevitation']);
+});
+
+// A fight with the given Elf Bar on the shelf; the player's first throw has landed.
+async function puffing(name, id, faces) {
+    const { hero, room } = await tavernTable(name);
+    room.tavernRun.shelf = [id];
+    room.tavernRun.puffs = { [id]: 3 };
+    const unpin = pinFaces(faces);
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    unpin();
+    await sleep(rolled.animationMs * 0.01 + 30);
+    return { hero, room };
+}
+
+test('Lemon Levitation: throw again without keeping; one puff a fight', async () => {
+    const { hero, room } = await puffing('Lemon', 'lemonLevitation', [3, 3, 5, 5, 6, 6]);
+    const moment = waitFor(hero, 'keepsakeActivated', m => m.id === 'lemonLevitation');
+    hero.emit('drinkThonic', 0);
+    assert.equal((await moment).who, 'Elf Bar');
+    assert.equal(room.turn.freeRoll, true);
+    assert.equal(room.tavernRun.puffs.lemonLevitation, 2);
+    hero.emit('rollDice');
+    await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && !d.rerolled);
+    await sleep(30);
+    hero.emit('drinkThonic', 0); // once a fight
+    await sleep(40);
+    assert.equal(room.tavernRun.puffs.lemonLevitation, 2);
+});
+
+test('Purple Haze: a 1 becomes the 2 you still need', async () => {
+    const { hero, room } = await puffing('Haze', 'purpleHaze', [1, 3, 3, 5, 5, 6]);
+    const thrown = waitFor(hero, 'diceRolled', d => d.rerolled);
+    hero.emit('drinkThonic', 0);
+    assert.deepEqual((await thrown).rerolled, [0]);
+    assert.equal(room.turn.dice[0].value, 2);
+});
+
+test('Watermelon Hindsight: a die kept since goes back and the last throw is thrown again', async () => {
+    const { hero, room } = await puffing('Melon', 'watermelonHindsight', [2, 3, 3, 5, 5, 6]);
+    hero.emit('toggleDie', 0);
+    await sleep(40);
+    assert.equal(room.turn.locksThisRoll, 1);
+    const unpin = pinFaces([4, 4, 4, 4, 4, 4]);
+    const thrown = waitFor(hero, 'diceRolled', d => d.rerolled);
+    hero.emit('drinkThonic', 0);
+    assert.equal((await thrown).rerolled.length, 6);
+    unpin();
+    assert.equal(room.turn.locksThisRoll, 0);
+    assert.ok(room.turn.dice.every(d => d.status === 'active' && d.value === 4));
+});
+
+test("Cotton Candy Cloud: the opponent can't see your score this round; the last puff empties it", async () => {
+    const { hero, room } = await puffing('Cloud', 'cottonCandyCloud', [2, 4, 6, 6, 6, 6]);
+    room.tavernRun.puffs.cottonCandyCloud = 1;
+    hero.emit('drinkThonic', 0);
+    await nextState(hero, s => runOf(s).cloud);
+    assert.deepEqual(room.tavernRun.shelf, [], 'the last puff');
+    room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
+    await sleep(60);
+    hero.emit('endTurn');
+    await waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === 'BOT_MOLAR', 4000);
+    assert.equal(room.tavernRun.cloud, true);
+    assert.notEqual(room.players[hero.id].score, null);
 });

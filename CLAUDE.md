@@ -154,7 +154,7 @@ read and follow the file):
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
-`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram). The pane's launch entry for it is `dev-test-server`.
+`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
@@ -576,6 +576,20 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
   at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
   with that until the switch-over.
+- **Elf Bars (28 Oct, the user's; no side effects, the user's call):** magic vapes sold by the
+  **Johnny Elf Bar**, one of Frak's street urchins, a spot in every place (`elfKid`, painting
+  `art/bust-elf-kid.jpg`; offered when the purse covers the cheapest). They sit on the Thonic
+  shelf (`THONICS` entries with `elf: true`) with `elfBarPuffs` (3) puffs each, at most one
+  puff a fight (`run.puffs`, `run.puffed` reset at a fight's start; saved with the run); the last
+  puff empties it; one of a kind on the shelf (`buyElfBar`). Prices in `elfBarPrices` (first
+  guesses, rising like Thonics): **Purple Haze** 12 (after a throw showing a 1 while you still
+  need a 2 or 4: that 1 tumbles onto it), **Cotton Candy Cloud** 9 (on your turn while the
+  opponent is still to throw: `run.cloud` for the round, `getTavernScoreToBeat` returns
+  undefined so they play for their best; a badge), **Lemon Levitation** 8 (after a throw, before
+  a keep: `turn.freeRoll`), **Watermelon Hindsight** 14 (`Rules.redoThrow`: the last throw's dice,
+  `turn.lastThrown`, any kept since put back, thrown again). Puffed through `drinkThonic`; the
+  moment is `keepsakeActivated` with `who: 'Elf Bar'` and Martha's puff sound. Jaguar's Smooth
+  Talk never takes one. The shelf draws them as slim vapes with a dot per puff (`Vape` in Hud).
 - **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
   single last die (Second Thoughts can reopen the hand).
 

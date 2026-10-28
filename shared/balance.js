@@ -73,6 +73,10 @@ module.exports = {
     // Priced a little under what each adds to the final purse when bought before the middle
     // fights, so the right Thonic at the right time pays for itself and a late one doesn't.
     thonicPrices: { healing: 11, lastGasp: 13, fizzy: 2, secondThoughts: 3, steady: 9, clearEye: 6 }, // (rising, priceRise)
+    // Elf Bars (28 Oct, the user's): from Johnny Elf Bar, a spot in every place. Each has
+    // elfBarPuffs puffs, at most one a fight. First guesses, to set by play (rising, priceRise).
+    elfBarPrices: { purpleHaze: 12, cottonCandyCloud: 9, lemonLevitation: 8, watermelonHindsight: 14 },
+    elfBarPuffs: 3,
     shelfSize: 2,
     shopSize: 3, // Healing, plus two others at random
 

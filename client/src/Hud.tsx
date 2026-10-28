@@ -195,6 +195,7 @@ function roundEffectHint(state: GameState, myTurn: boolean, turn: TurnView | nul
     if (effect?.kind === 'devil') return cap != null
         ? { text: effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`, kind: 'devil' }
         : effect.by === 'player' ? { text: "Devil's round: three 6s for you", kind: 'devil' } : { text: '', kind: '' };
+    if (state.tavernRun?.cloud && !turn?.finalized) return { text: "Cotton Candy Cloud: they can't see your score", kind: 'cloud' };
     if (surge && surge.id !== 'pruney') return { text: `${surge.name}: ${SURGE_HINTS[surge.id]}`, kind: 'tub' };
     return { text: '', kind: '' };
 }
@@ -471,7 +472,19 @@ function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
 
 // A small painted bottle; the colour says which Thonic it is.
 function Bottle({ thonic }: { thonic: Thonic | null }) {
+    if (thonic?.elf) return <Vape bar={thonic} />;
     return <span className={`bottle ${thonic ? thonic.id : 'empty'}`} aria-hidden="true"><span className="liquid" /></span>;
+}
+
+// An Elf Bar: a slim vape in its flavour's colour, with a dot for each puff left (dim once
+// puffed this fight).
+function Vape({ bar }: { bar: Thonic }) {
+    return (
+        <span className={`vape ${bar.id} ${bar.puffed ? 'puffed' : ''}`} aria-hidden="true">
+            <span className="body" />
+            {bar.puffs !== undefined && <span className="puffs">{Array.from({ length: bar.puffs }, (_, i) => <i key={i} />)}</span>}
+        </span>
+    );
 }
 
 // When a Thonic can be drunk, always on your own turn (the server checks the same):
@@ -489,6 +502,18 @@ function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
         case 'fizzy': return turn.hasRolled && !turn.finalized && turn.dice.some(d => d.status === 'active' && !d.hidden && d.value === 1);
         case 'secondThoughts': return turn.dice.some(d => canPutBack(turn, d.status));
         case 'steady': return !turn.steady;
+        // Elf Bars: one puff a fight (the server checks the same).
+        case 'purpleHaze': {
+            if (t.puffed || !turn.hasRolled || turn.finalized) return false;
+            const kept = turn.dice.filter(d => d.status !== 'active' && d.status !== 'stolen').map(d => d.value);
+            return (!kept.includes(2) || !kept.includes(4)) && turn.dice.some(d => d.status === 'active' && !d.hidden && !d.bound && d.value === 1);
+        }
+        case 'cottonCandyCloud': {
+            const bot = state.players[BOT_ID];
+            return !t.puffed && !run.cloud && !turn.finalized && !!bot && state.roundPlayers.includes(BOT_ID) && bot.score === null;
+        }
+        case 'lemonLevitation': return !t.puffed && turn.hasRolled && !turn.finalized && turn.locksThisRoll === 0 && !turn.canRoll;
+        case 'watermelonHindsight': return !t.puffed && turn.hasRolled;
         default: return false;
     }
 }
@@ -515,7 +540,7 @@ function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
                         className={`shelf-slot ${usable ? 'usable' : ''} ${armed === i || choosing ? 'armed' : ''}`}
                         disabled={!usable}
                         title={t ? `${t.name}: ${t.text}` : 'Empty'}
-                        aria-label={t ? (choosing ? `Cancel ${t.name}` : armed === i ? `Drink ${t.name}` : t.name) : 'Empty shelf slot'}
+                        aria-label={t ? (choosing ? `Cancel ${t.name}` : armed === i ? `${t.elf ? 'Puff' : 'Drink'} ${t.name}` : t.name) : 'Empty shelf slot'}
                         onClick={() => {
                             if (!t || !usable) return;
                             if (choosing) { actions.cancelPutBack(); return; }
@@ -526,7 +551,7 @@ function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
                         }}
                     >
                         <Bottle thonic={t} />
-                        {armed === i && !choosing && <span className="drink-label">Drink?</span>}
+                        {armed === i && !choosing && <span className="drink-label">{t?.elf ? 'Puff?' : 'Drink?'}</span>}
                         {choosing && <span className="drink-label">Pick a die</span>}
                     </button>
                 );
@@ -572,7 +597,12 @@ const KEEPSAKE_ICONS: Record<string, string> = {
     // The Bard's songs and fealty to Kram (not keepsakes, but shown the same way).
     cuttingWords: '🗡️',
     inspiringSong: '🎶',
-    kram: '🔱'
+    kram: '🔱',
+    // Elf Bars, as they're puffed.
+    purpleHaze: '🌫️',
+    cottonCandyCloud: '🍭',
+    lemonLevitation: '🍋',
+    watermelonHindsight: '🍉'
 };
 
 // After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then
@@ -1016,7 +1046,8 @@ const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A blessing from the Lady' },
     diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
     hotTub: { name: 'Wild Magic Hot Tub', line: 'Bubbling, glowing, faintly humming.', offer: 'A wild surge on one of your dice' },
-    bard: { name: 'The Bard', line: '"A song for your next fight?"', offer: 'Inspiration for the next fight' }
+    bard: { name: 'The Bard', line: '"A song for your next fight?"', offer: 'Inspiration for the next fight' },
+    elfKid: { name: 'Johnny Elf Bar', line: '"Psst! Wanna touch the sky?"', offer: 'Elf Bars: magic vapes, three puffs each' }
 };
 
 // Who (or what) is at the spot, in a lit round frame.
@@ -1152,7 +1183,8 @@ const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
     hotTub: { name: 'Wild Magic Hot Tub', tag: 'Soak at your own risk' },
     darren: { name: 'Darren Snakehands', tag: 'The barman, and his snakes' },
     bard: { name: 'The Bard', tag: 'Songs to win by' },
-    kram: { name: 'The Cult of Kram', tag: 'Kram abhors an ugly 1' }
+    kram: { name: 'The Cult of Kram', tag: 'Kram abhors an ugly 1' },
+    elfKid: { name: 'Johnny Elf Bar', tag: "One of Frak's street urchins" }
 };
 
 function sceneLine(interlude: Interlude, revealed: boolean): string | null {
@@ -1172,6 +1204,7 @@ function sceneLine(interlude: Interlude, revealed: boolean): string | null {
                     : 'The lads caught the lot! Here, for your trouble.';
         case 'shrine': return null;
         case 'bard': return 'A song for your next fight, friend?';
+        case 'elfKid': return interlude.bought.length ? "Nice one! You'll be back." : 'Psst! Wanna touch the sky?';
         case 'kram': return 'Swear fealty to Kram, and no ugly 1 shall trouble you.';
         case 'done':
             if (interlude.spot === 'diceDen') {
@@ -1294,6 +1327,34 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
             );
         }
         return <DiceDenTable bet={interlude.bet} throws={interlude.throws} setRevealed={setRevealed} next={null} />;
+    }
+
+    // Johnny Elf Bar: Elf Bars for the shelf (not one you already carry).
+    if (interlude.stage === 'elfKid') {
+        const shelfFull = run.shelf.length >= run.shelfSize;
+        return (
+            <>
+                <p className="scene-text">Each Elf Bar sits on your shelf with <strong>{interlude.puffs} puffs</strong>, one a fight.</p>
+                <div className="thonic-cards elf-cards">
+                    {interlude.stock.map((t, i) => {
+                        const price = run.prices?.elfBars?.[t.id] ?? t.price;
+                        const carried = run.shelf.some(s => s.id === t.id);
+                        const short = run.purse < price;
+                        return (
+                            <div key={t.id} className="thonic-card" style={{ animationDelay: `${0.9 + i * 0.12}s` }}>
+                                <Bottle thonic={t} />
+                                <strong>{t.name.replace(/ Elf Bar$/, '')}</strong>
+                                <span className="text">{t.text}</span>
+                                <button className="buy" disabled={short || shelfFull || carried} onClick={() => actions.buyElfBar(t.id)}>
+                                    {carried ? 'On your shelf' : shelfFull ? 'Shelf full' : short ? coins(price) : `Buy · ${coins(price)}`}
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className="event-choices">{challenge}</div>
+            </>
+        );
     }
 
     // The Bard: one of his songs, for the next fight.
