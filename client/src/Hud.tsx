@@ -377,12 +377,15 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
                 (the user, 21 Oct). Tap one for a reminder of what it does; it dims once spent this fight. */}
-            {(run.keepsakes.length > 0 || run.ladysGrace) && (
+            {(run.keepsakes.length > 0 || run.ladysGrace || run.bard?.words || run.bard?.song || run.kram?.now) && (
                 <span className="keepsake-row">
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
                         : <KeepsakeIcon key={k.id} icon={KEEPSAKE_ICONS[k.id] ?? '✦'} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
                     {run.ladysGrace && <KeepsakeIcon icon="🕯️" name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." blessing />}
+                    {run.bard?.words && <KeepsakeIcon icon={KEEPSAKE_ICONS.cuttingWords} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} blessing />}
+                    {run.bard?.song && <SongKeepsake snap={snap} state={state} />}
+                    {run.kram?.now && <KeepsakeIcon icon={KEEPSAKE_ICONS.kram} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} blessing />}
                 </span>
             )}
         </div>
@@ -431,6 +434,35 @@ function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
                 <span className="mask-choice" role="group" aria-label="Wear a disguise for this round">
                     {curse && <button onClick={() => wear('curse')}>Curse<small>lowest wins</small></button>}
                     {devil && <button onClick={() => wear('devil')}>Devil<small>{state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : turn!.hasRolled ? 'next throw: three 6s' : 'three 6s for you'}</small></button>}
+                </span>
+            )}
+        </span>
+    );
+}
+
+// The Bard's Inspiring Song: right after your first throw of the fight, before you keep a die,
+// it lights up; a tap shows "Throw again" beside it (two taps, so a stray one doesn't spend it).
+function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const run = state.tavernRun!;
+    const turn = snap.turn;
+    const [open, setOpen] = useState(false);
+    const usable = run.bard?.song === 'now' && snap.isMyTurn && !!turn && !turn.finalized && !snap.rolling
+        && turn.dice.every(d => d.status === 'active' || d.mind);
+    useEffect(() => { if (!usable) setOpen(false); }, [usable]);
+    const text = "The Bard's song: right after your first throw this fight, you may throw it all again.";
+    const tap = () => {
+        playSound('click');
+        if (usable) setOpen(!open);
+        else showToast(`${KEEPSAKE_ICONS.inspiringSong} Inspiring Song`, text, 'info', 4200);
+    };
+    return (
+        <span className="mask-keepsake">
+            <button className={`keepsake-icon blessing ${usable ? 'usable' : ''}`} aria-label={`Inspiring Song: ${text}`} onClick={tap}>
+                <span aria-hidden="true">{KEEPSAKE_ICONS.inspiringSong}</span>
+            </button>
+            {open && (
+                <span className="mask-choice" role="group" aria-label="Inspiring Song">
+                    <button onClick={() => { setOpen(false); actions.inspiringSong(); }}>Throw again<small>Inspiring Song</small></button>
                 </span>
             )}
         </span>
@@ -536,7 +568,11 @@ const KEEPSAKE_ICONS: Record<string, string> = {
     potionBelt: '🧪',
     loyaltyCard: '🎫',
     marthasMask: '🎭',
-    brodorsSunglasses: '🕶️'
+    brodorsSunglasses: '🕶️',
+    // The Bard's songs and fealty to Kram (not keepsakes, but shown the same way).
+    cuttingWords: '🗡️',
+    inspiringSong: '🎶',
+    kram: '🔱'
 };
 
 // After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then
@@ -979,7 +1015,8 @@ const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
     thom: { name: "Thom's Thonics", line: '"What ya havin\'?"', offer: 'Buy Thonics with your purse' },
     shrine: { name: 'Shrine to the Lady', line: 'Candles for the Lady, who keeps sailors safe.', offer: 'A blessing from the Lady' },
     diceDen: { name: 'The Dice Den', line: '"Fancy a quick throw, friend?"', offer: 'Bet gold on two dice' },
-    hotTub: { name: 'Wild Magic Hot Tub', line: 'Bubbling, glowing, faintly humming.', offer: 'A wild surge on one of your dice' }
+    hotTub: { name: 'Wild Magic Hot Tub', line: 'Bubbling, glowing, faintly humming.', offer: 'A wild surge on one of your dice' },
+    bard: { name: 'The Bard', line: '"A song for your next fight?"', offer: 'Inspiration for the next fight' }
 };
 
 // Who (or what) is at the spot, in a lit round frame.
@@ -1029,7 +1066,7 @@ function Interlude({ state }: { state: GameState }) {
                             <SpotPicture spot={spot} />
                             <strong>{SPOTS[spot].name}</strong>
                             <span className="line">{spot === 'thom' ? `"${thomLine(!run.thomMet)}"` : SPOTS[spot].line}</span>
-                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : ''}</span>
+                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : spot === 'bard' && run.prices?.bard ? ` · ${coins(run.prices.bard)}` : ''}</span>
                         </button>
                     ))}
                 </div>
@@ -1104,7 +1141,7 @@ function PurseLine({ state }: { state: GameState }) {
 }
 
 // The spots, and the events that find you instead (the pickpocket, the Hooded Stranger).
-type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket' | 'stranger' | 'darren';
+type SceneSpot = Exclude<Spot, 'thom'> | 'pickpocket' | 'stranger' | 'darren' | 'kram';
 
 // Each scene's sign, and what its character says as things happen.
 const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
@@ -1113,7 +1150,9 @@ const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
     diceDen: { name: 'The Dice Den', tag: 'Two dice each. Highest wins.' },
     stranger: { name: 'The Hooded Stranger', tag: 'Keepsakes, for a price' },
     hotTub: { name: 'Wild Magic Hot Tub', tag: 'Soak at your own risk' },
-    darren: { name: 'Darren Snakehands', tag: 'The barman, and his snakes' }
+    darren: { name: 'Darren Snakehands', tag: 'The barman, and his snakes' },
+    bard: { name: 'The Bard', tag: 'Songs to win by' },
+    kram: { name: 'The Cult of Kram', tag: 'Kram abhors an ugly 1' }
 };
 
 function sceneLine(interlude: Interlude, revealed: boolean): string | null {
@@ -1132,6 +1171,8 @@ function sceneLine(interlude: Interlude, revealed: boolean): string | null {
                 : interlude.outcome === 'gift' ? 'Sorry, friend. Have this on the house.'
                     : 'The lads caught the lot! Here, for your trouble.';
         case 'shrine': return null;
+        case 'bard': return 'A song for your next fight, friend?';
+        case 'kram': return 'Swear fealty to Kram, and no ugly 1 shall trouble you.';
         case 'done':
             if (interlude.spot === 'diceDen') {
                 if (!interlude.bet) return 'Suit yourself.';
@@ -1140,6 +1181,8 @@ function sceneLine(interlude: Interlude, revealed: boolean): string | null {
             }
             if (interlude.spot === 'stranger') return interlude.keepsake ? 'A fine choice. Mind your heart.' : 'Another time, then.';
             if (interlude.spot === 'hotTub') return interlude.surge.good ? '*bubble bubble* ✨' : '*glorp*';
+            if (interlude.spot === 'bard') return interlude.song ? 'Go! Let them hear it!' : 'Another time, then.';
+            if (interlude.spot === 'kram') return interlude.sworn ? 'Kram is pleased.' : 'Kram will remember this.';
             return null;
         default: return null;
     }
@@ -1155,14 +1198,14 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
     const firstLine = useRef(line);
     const mood = interlude.stage === 'pickpocket' && interlude.roll !== undefined && revealed ? (interlude.caught ? 'caught' : 'escaped')
         : interlude.stage === 'done' && interlude.spot === 'diceDen' && interlude.bet && revealed ? (interlude.won ? 'lost' : 'won')
-            : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'blessed'
+            : interlude.stage === 'done' && (interlude.spot === 'shrine' || (interlude.spot === 'bard' && interlude.song) || (interlude.spot === 'kram' && interlude.sworn)) ? 'blessed'
                 : interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'blessed surged' : 'escaped surged')
                     : interlude.stage === 'darren' && interlude.roll !== undefined && revealed ? (interlude.outcome === 'smash' ? 'escaped' : 'caught')
                         : '';
     const portrait = SPOT_PORTRAITS[spot];
-    // The hot tub and the Lady's shrine have their own ambience while their scene is up, and a
+    // The hot tub, the Lady's shrine, the Bard and the Cult of Kram have their own ambience while their scene is up, and a
     // sound for what the soak or the candle brings (the user's clips, 27 Oct).
-    useEffect(() => (spot === 'hotTub' || spot === 'shrine' ? startSceneAmbience(spot) : undefined), [spot]);
+    useEffect(() => (spot === 'hotTub' || spot === 'shrine' || spot === 'bard' || spot === 'kram' ? startSceneAmbience(spot) : undefined), [spot]);
     const result = interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'tubGood' : 'tubBad')
         : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'ladyChoice' : null;
     useEffect(() => { if (result) playSound(result); }, [result]);
@@ -1253,6 +1296,45 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
         return <DiceDenTable bet={interlude.bet} throws={interlude.throws} setRevealed={setRevealed} next={null} />;
     }
 
+    // The Bard: one of his songs, for the next fight.
+    if (interlude.stage === 'bard') {
+        const chosen = interlude.songs.find(s => s.id === picked);
+        const price = run.prices?.bard ?? interlude.price;
+        return (
+            <>
+                <p className="scene-text">Pay the Bard, and his song goes with you to the fight with {next}.</p>
+                <div className="keepsake-cards">
+                    {interlude.songs.map((s, i) => (
+                        <button key={s.id} className={`keepsake-card ${picked === s.id ? 'picked' : picked ? 'passed' : ''}`} style={{ animationDelay: `${0.9 + i * 0.15}s` }} onClick={() => setPicked(s.id)}>
+                            <span className="icon" aria-hidden="true">{KEEPSAKE_ICONS[s.id]}</span>
+                            <strong>{s.name}</strong>
+                            <span className="text">{s.text}</span>
+                        </button>
+                    ))}
+                </div>
+                <div className="event-choices">
+                    <button className="primary" disabled={!chosen || run.purse < price} onClick={() => chosen && actions.bardPick(chosen.id)}>
+                        {chosen ? `${chosen.name} · ${coins(price)}` : 'Tap a song'}
+                    </button>
+                    <button className="secondary" onClick={() => actions.bardPick(null)}>No thanks</button>
+                </div>
+            </>
+        );
+    }
+
+    // The Cult of Kram: swear fealty, and your dice never land on 1 for the next fights.
+    if (interlude.stage === 'kram') {
+        return (
+            <>
+                <p className="scene-text">Swear fealty to Kram, and your dice never land on an ugly 1 for your next <strong>{interlude.fights} fights</strong>.</p>
+                <div className="event-choices">
+                    <button className="primary" onClick={() => actions.kram('swear')}>Swear fealty to Kram</button>
+                    <button className="secondary" onClick={() => actions.kram('refuse')}>Refuse</button>
+                </div>
+            </>
+        );
+    }
+
     if (interlude.stage === 'stranger') {
         const chosen = interlude.offers.find(k => k.id === picked);
         return (
@@ -1292,9 +1374,13 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
                         : <><span className="blessing-name">The Lady's Grace</span>The next time you'd lose a heart to dust, she saves you.</>)
                     : interlude.spot === 'stranger'
                         ? (interlude.keepsake ? <><strong>{interlude.keepsake.name}</strong> is yours. The next fight starts on {interlude.hearts} hearts.</> : 'You leave the Stranger to the shadows.')
+                    : interlude.spot === 'bard'
+                        ? (interlude.song ? <><span className="blessing-name">{interlude.song.name}</span>{interlude.song.id === 'cuttingWords' ? <>{next}'s first hand that counts scores 3 less.</> : <>Your first throw against {next}: throw it again if you don't like it.</>}</> : 'You leave the Bard to his lute.')
+                    : interlude.spot === 'kram'
+                        ? (interlude.sworn ? <><span className="blessing-name">Sworn to Kram</span>Your dice never land on 1 for your next {interlude.fights} fights.</> : 'You refuse. The cultists melt back into the crowd.')
                         : 'You leave the dice to others.'}
             </p>
-            <div className="event-choices">{interlude.spot === 'stranger' ? afterEvent : challenge}</div>
+            <div className="event-choices">{interlude.spot === 'stranger' || interlude.spot === 'kram' ? afterEvent : challenge}</div>
         </>
     );
 }

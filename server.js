@@ -300,26 +300,29 @@ const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing
 // The places in the run: what Thom sells there and the spots between fights. (Each opponent
 // names its place.) The hot tub is only at the Ghoul and Gourd (the user's call, 21 Oct); the
 // ship's own spots and events are still to workshop.
+// The Dice Den is out of every place for now (the user, 28 Oct); its code stays.
 const PLACES = {
     ghoulAndGourd: {
         name: 'The Ghoul and Gourd',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
         // Between fights two of these catch your eye, and you go to one, unless the pickpocket,
         // the Hooded Stranger or one of the place's own events finds you first (startInterlude).
-        spots: ['thom', 'shrine', 'diceDen', 'hotTub'],
+        spots: ['thom', 'shrine', 'hotTub'],
         events: ['darren'] // Darren Snakehands is the barman here
     },
     yawningPortal: {
         name: 'The Yawning Portal',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'diceDen'], // the hot tub is the Ghoul and Gourd's (the user's call, 21 Oct)
-        events: []
+        // The hot tub is the Ghoul and Gourd's (the user's call, 21 Oct); the Bard and the Cult of
+        // Kram are the Yawning Portal's own (28 Oct).
+        spots: ['thom', 'shrine', 'bard'],
+        events: ['kram']
     },
     // A ship docked after the Yawning Portal: Klarg's crew, top-tier players.
     saltySwallow: {
         name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'diceDen'],
+        spots: ['thom', 'shrine'],
         events: []
     }
 };
@@ -352,6 +355,7 @@ function noteBought(run, id) {
 const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
 const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
 const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
+const bardPrice = run => risingPrice(run, 'bard', INTERLUDE.bardPrice || 0);
 
 // The Wild Magic Hot Tub's surges (weights in shared/balance.js). The dice ones work on
 // HOT_TUB_DIE, on the player's turns, for the next fight (tavernRun.tubSurge).
@@ -397,14 +401,15 @@ function rollFaceFor(room, turn) {
     let surge = room.tavernRun.tubSurge;
     let effect = room.tavernRun.roundEffect;
     let ink = !!effect && effect.kind === 'ink';
-    if (!loaded && !surge && !ink) return rollFace;
-    let plain = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : rollFace());
+    let kram = !!room.tavernRun.kram; // sworn to Kram: your dice never land on 1
+    if (!loaded && !surge && !ink && !kram) return rollFace;
+    let plain = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : kram ? crypto.randomInt(2, 7) : rollFace());
     let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
     if (!surge) return base;
     return d => {
         if (!d || d.id !== HOT_TUB_DIE) return base(d);
         if (surge === 'noOnes') return crypto.randomInt(2, 7);
-        if (surge === 'soggy') return crypto.randomInt(1, 6);
+        if (surge === 'soggy') return crypto.randomInt(kram ? 2 : 1, 6);
         if (surge === 'lucky') return crypto.randomInt(4, 7);
         if (surge === 'scalding') return 6;
         if (surge === 'twin') {
@@ -480,7 +485,16 @@ function getTavernRunState(room) {
         shelf: room.tavernRun.shelf.map(thonicView),
         shelfSize: shelfSizeOf(room),
         shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
-        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun) },
+        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun) },
+        // The Bard's song for this fight: Inspiring Song ('ready' until your first throw, 'now' while
+        // that throw can be thrown again) or Cutting Words (until it lands); nextSong: bought for the next.
+        bard: {
+            song: room.tavernRun.song === 'ready' ? 'ready' : room.tavernRun.song && room.turn && room.tavernRun.song === room.turn.key && room.turn.rollCount === 1 ? 'now' : null,
+            words: !!room.tavernRun.cuttingWords,
+            nextSong: room.tavernRun.nextFightSong || null
+        },
+        // Sworn to Kram: this fight (now) and how many more after it (more).
+        kram: { now: !!room.tavernRun.kram, more: room.tavernRun.kramFights || 0 },
         thomMet: !!room.tavernRun.thomMet, // you've been to Thom's cart this run
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
@@ -701,6 +715,24 @@ function emitKept(roomCode, result) {
 }
 
 // Returns the roll's animation length in ms, or 0 if the roll wasn't allowed.
+// Dice thrown again mid-turn (Fizzy, the Bard's Inspiring Song): they tumble like any roll, once
+// the moments ahead of them have gone (only those dice are thrown).
+function throwAgain(roomCode, room, turn, rerolled) {
+    let animationMs = 500;
+    let lead = momentsLeft(room), key = turn.key;
+    turn.busyUntil = Date.now() + lead + delay(animationMs);
+    let thrown = { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    setTimeout(() => {
+        if (rooms[roomCode] === room && room.turn && room.turn.key === key) io.to(roomCode).emit('diceRolled', thrown);
+    }, lead);
+}
+
+// The Bard's songs (a spot at the Yawning Portal), each for the next fight.
+const BARD_SONGS = [
+    { id: 'cuttingWords', name: 'Cutting Words', text: `Your opponent's first hand that counts next fight scores ${INTERLUDE.cuttingWords ?? 3} less.` },
+    { id: 'inspiringSong', name: 'Inspiring Song', text: 'Your first throw of the next fight: throw it again if you don\'t like it.' }
+];
+
 function performRoll(roomCode) {
     let room = rooms[roomCode];
     if (!isTurnPlayable(roomCode)) return 0;
@@ -712,6 +744,11 @@ function performRoll(roomCode) {
     room.rollMoments = []; // moments raised while the dice are thrown wait until they land
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
+    // The Bard's Inspiring Song waits for your first throw of the fight; after it, it's gone.
+    let run = room.mode === 'tavern-crawl' ? room.tavernRun : null;
+    let firstThrow = run && turn.playerId !== BOT_ID && run.song === 'ready' && !turn.hasRolled;
+    let songGone = run && turn.playerId !== BOT_ID && run.song && run.song !== 'ready' && Rules.canRoll(turn);
+    if (songGone) run.song = null;
     let result = Rules.rollTurn(turn, {
         rollFace: rollFaceFor(room, turn),
         onRolled: t => {
@@ -722,6 +759,9 @@ function performRoll(roomCode) {
     let moments = room.rollMoments;
     room.rollMoments = null;
     if (!result) return 0;
+    if (firstThrow) run.song = turn.key;
+    // (The strip's song lights up, or goes out: the browsers hear of it.)
+    if (firstThrow || songGone) emitState(roomCode);
     if (flourish) signatureMoves.unshift(flourish);
     if (stars) signatureMoves.unshift(stars);
     // The abilities this throw brings play first, banner and effect, and the dice are thrown once
@@ -812,6 +852,15 @@ function performEndTurn(roomCode) {
             room.players[currentId].score = 24;
             sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
             io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
+        }
+        // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
+        // points (not in a cursed round, where a lower score would help them).
+        if (currentId === BOT_ID && !cursed && !busted && room.players[BOT_ID].score > 0 && room.tavernRun.cuttingWords) {
+            room.tavernRun.cuttingWords = false;
+            let off = INTERLUDE.cuttingWords ?? 3;
+            let was = room.players[BOT_ID].score;
+            score = room.players[BOT_ID].score = Math.max(0, was - off);
+            sendMoment(roomCode, 'keepsakeActivated', { id: 'cuttingWords', name: 'Cutting Words', text: `${encounter.name}'s ${was} becomes ${score}.`, who: 'The Bard' });
         }
 
         // The Hangman's Dead Eye: he shoots your best scoring die (not the 2 and 4 you need) and it
@@ -1207,6 +1256,11 @@ function createTavernRun() {
         nextFightSurge: null, // the hot tub's dice surge for the next fight, then tubSurge during it
         tubSurge: null,
         ladysGrace: false,     // the Lady's Grace: the next dust that would cost a heart doesn't
+        nextFightSong: null,   // the Bard's song for the next fight ('cuttingWords' or 'inspiringSong')
+        song: null,            // Inspiring Song this fight: 'ready', then your first throw's turn key
+        cuttingWords: false,   // Cutting Words this fight, until it lands
+        kramFights: 0,         // sworn to Kram: fights still to come without 1s
+        kram: false,           // ...and this one
         abilityUsed: {},
         abilityRound: 1,
         encounterRound: 1,
@@ -1328,6 +1382,14 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
         // The hot tub's surge lasts this one fight.
         room.tavernRun.tubSurge = room.tavernRun.nextFightSurge || null;
         room.tavernRun.nextFightSurge = null;
+        // The Bard's song, for this one fight.
+        let song = room.tavernRun.nextFightSong;
+        room.tavernRun.nextFightSong = null;
+        room.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
+        room.tavernRun.cuttingWords = song === 'cuttingWords';
+        // Fealty to Kram: each fight sworn takes one off the count.
+        room.tavernRun.kram = room.tavernRun.kramFights > 0;
+        if (room.tavernRun.kram) room.tavernRun.kramFights--;
         room.players[humanId].score = null;
         room.players[humanId].busted = false;
         room.playerOrder = [humanId, BOT_ID];
@@ -1485,7 +1547,8 @@ function sealSave(room, name) {
     let data = {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
-        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet
+        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
+        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0)
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
     let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
@@ -1518,6 +1581,7 @@ function restoreRun(room, data) {
     run.bought = {};
     Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
+    run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
     run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
 }
 
@@ -1544,6 +1608,9 @@ function invitation(room, name) {
 //                                        two dice and the gambler two; a tie rolls again
 //   stranger    { offers, hearts }       a random event, while he has keepsakes left: take one
 //                                        (next fight on `hearts`) or turn him down
+//   bard        { songs, price }         the Bard (Yawning Portal): pay for a song for the next fight
+//   kram        { fights }               the Cult of Kram (a Yawning Portal event): swear fealty and
+//                                        your dice never land on 1 for `fights` fights, or refuse
 //   done        { spot, ... }            what happened, until the player moves on
 
 function shuffled(list) {
@@ -1567,7 +1634,7 @@ function pickSpots(room) {
     let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
     // A spot that costs more than the purse holds isn't offered (the Shrine and the hot tub cost
     // gold since 21 Oct).
-    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun));
+    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
     if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
@@ -1596,6 +1663,8 @@ function startInterlude(room, won) {
         run.interlude = strangerOffer(room);
     } else if ((placeOf(room).events || []).includes('darren') && crypto.randomInt(0, 100) < INTERLUDE.darrenChance) {
         run.interlude = { stage: 'darren', smashOn: INTERLUDE.darrenSmash, giftOn: INTERLUDE.darrenGift };
+    } else if ((placeOf(room).events || []).includes('kram') && !run.kram && !run.kramFights && crypto.randomInt(0, 100) < INTERLUDE.kramChance) {
+        run.interlude = { stage: 'kram', fights: INTERLUDE.kramFights };
     } else {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
     }
@@ -2266,9 +2335,9 @@ io.on('connection', (socket) => {
         let interlude = room && room.tavernRun.interlude;
         if (!interlude) return;
         let finished = ((interlude.stage === 'pickpocket' || interlude.stage === 'darren') && interlude.roll)
-            || (interlude.stage === 'done' && interlude.spot === 'stranger');
+            || (interlude.stage === 'done' && (interlude.spot === 'stranger' || interlude.spot === 'kram'));
         if (!finished) return;
-        room.tavernRun.interlude = { stage: 'choose', spots: pickSpots(room), after: interlude.stage === 'done' ? 'stranger' : interlude.stage };
+        room.tavernRun.interlude = { stage: 'choose', spots: pickSpots(room), after: interlude.stage === 'done' ? interlude.spot : interlude.stage };
         emitState(socket.roomCode);
     });
 
@@ -2288,6 +2357,8 @@ io.on('connection', (socket) => {
             run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
         } else if (spot === 'hotTub') {
             run.interlude = { stage: 'hotTub' };
+        } else if (spot === 'bard') {
+            run.interlude = { stage: 'bard', songs: BARD_SONGS, price: bardPrice(run) };
         }
         emitState(socket.roomCode);
     });
@@ -2361,6 +2432,54 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // The Bard: pay for one of his songs for the next fight (null: walk away, nothing paid).
+    socket.on('bardPick', (songId) => {
+        let room = interludeAt('bard');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (songId === null) {
+            run.interlude = { stage: 'done', spot: 'bard', song: null };
+        } else {
+            let song = BARD_SONGS.find(s => s.id === songId);
+            let price = bardPrice(run);
+            if (!song || run.purse < price) return;
+            noteBought(run, 'bard');
+            run.purse -= price;
+            run.stats.spent += price;
+            run.nextFightSong = song.id;
+            run.interlude = { stage: 'done', spot: 'bard', song };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // The Cult of Kram: 'swear' fealty (no 1s for the next fights) or 'refuse'.
+    socket.on('kram', (action) => {
+        let room = interludeAt('kram');
+        if (!room || (action !== 'swear' && action !== 'refuse')) return;
+        let run = room.tavernRun;
+        let sworn = action === 'swear';
+        if (sworn) run.kramFights = INTERLUDE.kramFights;
+        run.interlude = { stage: 'done', spot: 'kram', sworn, fights: INTERLUDE.kramFights };
+        emitState(socket.roomCode);
+    });
+
+    // The Bard's Inspiring Song: your first throw of the fight, thrown again (before you keep a
+    // die; a die Frak's Mind Whip kept for you stays kept).
+    socket.on('inspiringSong', () => {
+        let room = tavernPlayer();
+        if (!room) return;
+        let roomCode = socket.roomCode;
+        let run = room.tavernRun, turn = room.turn;
+        if (!isTurnPlayable(roomCode) || !isMyTurn() || Date.now() < turn.busyUntil) return;
+        if (!run.song || run.song !== turn.key || turn.rollCount !== 1) return;
+        let rerolled = Rules.rerollActive(turn, rollFaceFor(room, turn), turn.mindDieId);
+        if (!rerolled) return;
+        run.song = null;
+        sendMoment(roomCode, 'keepsakeActivated', { id: 'inspiringSong', name: 'Inspiring Song', text: 'The Bard plays. Your first throw, thrown again.', who: 'The Bard' });
+        throwAgain(roomCode, room, turn, rerolled);
+        emitState(roomCode);
+    });
+
     // Drinking, always on your own turn. When exactly, and what it does, depends on the
     // Thonic; anything not allowed right now changes nothing and the Thonic stays on the shelf.
     //   healing         before you roll, once you've lost a heart: +1 heart
@@ -2411,14 +2530,7 @@ io.on('connection', (socket) => {
         run.stats.thonicsDrunk++;
         sendMoment(roomCode, 'thonicUsed', { id: thonicId, name: thonic.name, text });
         if (rerolled) {
-            // The rerolled dice tumble like any roll (only those dice are thrown).
-            let animationMs = 500;
-            let lead = momentsLeft(room), key = turn.key;
-            turn.busyUntil = Date.now() + lead + delay(animationMs);
-            let thrown = { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
-            setTimeout(() => {
-                if (rooms[roomCode] === room && room.turn && room.turn.key === key) io.to(roomCode).emit('diceRolled', thrown);
-            }, lead);
+            throwAgain(roomCode, room, turn, rerolled);
         } else {
             emitTurn(roomCode, { type: 'toggle' });
         }
@@ -2473,4 +2585,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };

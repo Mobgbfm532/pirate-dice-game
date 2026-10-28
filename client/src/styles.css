@@ -1805,6 +1805,22 @@ button.keepsake.used { opacity: 0.55; }
     75% { transform: translateX(-48%) rotate(3deg); }
 }
 
+/* The Bard (the Yawning Portal): a warm violet stage light; he sways to his own tune. */
+.spot-pic.bard { background: radial-gradient(circle at 50% 40%, rgba(179, 136, 255, 0.45), rgba(30, 16, 44, 0.95) 70%); }
+.spot-scene.bard { --glow: rgba(179, 136, 255, 0.45); }
+.spot-scene.bard .thom-figure { height: min(84%, 470px); }
+.spot-scene.bard.blessed .thom-figure { animation: bard-strum 1.2s ease-in-out 2; }
+@keyframes bard-strum {
+    25% { transform: translateX(-51%) rotate(-2deg); }
+    75% { transform: translateX(-49%) rotate(2deg); }
+}
+
+/* The Cult of Kram: blood-red candlelight. */
+.spot-pic.kram { background: radial-gradient(circle at 50% 40%, rgba(229, 57, 53, 0.45), rgba(40, 8, 8, 0.95) 70%); }
+.spot-scene.kram { --glow: rgba(229, 57, 53, 0.45); }
+.spot-scene.kram .thom-figure { height: min(80%, 450px); }
+.spot-scene.kram.blessed .thom-figure { filter: drop-shadow(0 0 24px rgba(255, 82, 82, 0.8)); }
+
 @media (max-width: 480px) {
     .hint.tub-fight { box-sizing: border-box; min-height: 3.2em; display: inline-flex; align-items: center; justify-content: center; }
 }

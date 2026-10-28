@@ -248,6 +248,19 @@
         return ones.map(d => d.id);
     }
 
+    // The Bard's Inspiring Song: right after the turn's first throw, before any keep, every die in
+    // play rolls again (`stays`: a die already kept for the player, Frak's Mind Whip). Returns
+    // the ids thrown, or null.
+    function rerollActive(turn, rollFace = defaultRollFace, stays = null) {
+        if (!turn.hasRolled || turn.finalized || turn.rollCount !== 1) return null;
+        if (turn.dice.some(d => !isActive(d) && d.id !== stays)) return null;
+        const thrown = turn.dice.filter(isActive);
+        if (thrown.length === 0) return null;
+        thrown.forEach(d => { d.value = rollFace(d); });
+        settleTurn(turn);
+        return thrown.map(d => d.id);
+    }
+
     // Second Thoughts Thonic: a die kept on an earlier roll goes back into play, and the player
     // may roll without keeping another. A finished hand opens up again. Returns true if done.
     // mustRoll: the die can't be kept again until it has been rolled (Sylvester's Back of the Head).
@@ -430,6 +443,6 @@
         formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

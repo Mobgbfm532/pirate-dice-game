@@ -154,7 +154,7 @@ read and follow the file):
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
-`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren`). The pane's launch entry for it is `dev-test-server`.
+`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram). The pane's launch entry for it is `dev-test-server`.
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
@@ -510,7 +510,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (light a candle: a blessing at random,
   her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
-  the Dice Den (bet 5 or 10, only the bets the purse covers are offered, and below 5 gold the
+  the Dice Den (out of every place since 28 Oct, the user's call; its code stays: bet 5 or 10, only the bets the purse covers are offered, and below 5 gold the
   Den isn't one of the spots; then the player taps to roll two dice and the gambler rolls two;
   higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
@@ -534,6 +534,21 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Stranger did: roll one die; 1-2 a Thonic on your shelf smashes (an empty shelf: 2 gold for
   the glass), 3-4 a free Thonic, 5-6 a Thonic and 5 gold (a full shelf: 3 gold instead,
   `darrenOutcome`). The hot tub and the Shrine have the user's sounds (27 Oct): their own ambience loops while the scene is up (`startSceneAmbience` in sounds.ts, `HotTubAmbience.mp3` / `LadyIntro.mp3`, under the music switch, the tavern music fading down meanwhile, fetched only when the scene opens), then `HotTubGood.mp3` or `HotTubBad.mp3` (Soggy Die, Pruney Fingers) for the surge and `LadyChoice.mp3` for the blessing. Both have the user's paintings (since 20 Oct; `hot-tub.webp` is wide, sized by width).
+  **The Yawning Portal's own** (28 Oct, the user's; numbers in `interlude`, first guesses):
+  **the Bard**, a spot there only (`bardPrice` 8, rising): pay for one of two songs for the next
+  fight (`bardPick`, `run.nextFightSong` → at the fight's start `run.song` / `run.cuttingWords`).
+  **Cutting Words**: the opponent's first hand that counts that fight scores `cuttingWords` (3) less,
+  once, not in a cursed round (in `performEndTurn`, after the Ace). **Inspiring Song**: right after
+  your first throw of the fight, before you keep a die (a Mind Whip die may stay kept), the 🎶 on
+  your strip lights up; tap it, then "Throw again", and every die in play is thrown again, once
+  (`inspiringSong`, `Rules.rerollActive`, `throwAgain` shared with Fizzy; `run.song` is 'ready',
+  then the first throw's turn key, gone at the next throw). Both moments are `keepsakeActivated`
+  with `who: 'The Bard'`. **The Cult of Kram**, an event there (`kramChance` 15% of walks no
+  thief, Stranger or Darren found; not while sworn): swear fealty (free) and your dice never land
+  on 1 for the next `kramFights` (2) fights (`run.kramFights` → `run.kram` per fight, in
+  `rollFaceFor`; saved with the run), or refuse; then "Look around" as after any event. The strip
+  shows 🗡️ Cutting Words, 🎶 Inspiring Song and 🔱 Sworn to Kram while they last. Paintings
+  `art/bust-bard.jpg`, `art/bust-kram.jpg` (`SPOT_PORTRAITS` bard, kram). Their scenes loop the user's `ThreeStrings.mp3` (the Bard, volume 0.5) and `Cult.mp3` (Kram, 0.8) like the hot tub's (`startSceneAmbience`).
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
   the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with
@@ -571,8 +586,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 2. **The user's decisions waiting:** names for the ship's new abilities (Written in the Stars,
    Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other abilities
    (Dead Eye, the Ace of Spades, All In) (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
-   the Dice Den rework or a new spot instead (ideas: the Cult of Kram, the Flying Snakes who bring
-   messages to the Ghoul and Gourd); music and ambience from Udio (the plan and prompts were given
+   the Dice Den rework or a new spot instead (the Cult of Kram and the Bard are in, 28 Oct; still
+   an idea: the Flying Snakes who bring messages to the Ghoul and Gourd); music and ambience from Udio (the plan and prompts were given
    26 Oct; nothing is in the game yet).
 3. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
    0.3% and reaches the ship 2.3% (`node balance/experiments/tournament.js`), but it never wears

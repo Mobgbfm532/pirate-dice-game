@@ -107,7 +107,16 @@ module.exports = {
         darrenGift: 4,
         darrenGlass: 2,
         darrenCatchGold: 5,
-        darrenFullShelfGold: 3  // a free Thonic with a full shelf comes as gold instead
+        darrenFullShelfGold: 3, // a free Thonic with a full shelf comes as gold instead
+        // The Yawning Portal's own (28 Oct, the user's): the Bard, a spot, sells a song for the next
+        // fight (Cutting Words: the opponent's first hand that counts scores this much less;
+        // Inspiring Song: your first throw of the fight may be thrown again). The Cult of Kram, an
+        // event (if no thief, Stranger or Darren found you): swear fealty, and your dice never land
+        // on 1 for the next kramFights fights. First guesses, to set by play.
+        bardPrice: 8,           // rising, priceRise
+        cuttingWords: 3,
+        kramChance: 15,
+        kramFights: 2
     },
 
     // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on

@@ -99,6 +99,19 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 - Counter: "Light a candle, and the Lady who keeps sailors safe grants a blessing: an extra heart for your next fight, or her Grace against the dust."
 - Blessings: "The Lady's Favour: You start the fight with [next opponent] on [n] hearts." / "The Lady's Grace: The next time you'd lose a heart to dust, she saves you."
 
+**The Bard** (the Yawning Portal only; sign "The Bard", "Songs to win by")
+- On the choice of spots: ""A song for your next fight?"" / "Inspiration for the next fight"
+- "A song for your next fight, friend?" Bought one: "Go! Let them hear it!" Walked away: "Another time, then."
+- Counter: "Pay the Bard, and his song goes with you to the fight with [next opponent]."
+- Songs: "Cutting Words: Your opponent's first hand that counts next fight scores 3 less." · "Inspiring Song: Your first throw of the next fight: throw it again if you don't like it."
+- When they work: "The Bard / Cutting Words / [opponent]'s [score] becomes [score]." and "The Bard / Inspiring Song / The Bard plays. Your first throw, thrown again."
+- Where: `server.js` (`BARD_SONGS`, the two moments), `client/src/Hud.tsx`
+
+**The Cult of Kram** (a Yawning Portal event; sign "The Cult of Kram", "Kram abhors an ugly 1")
+- "Swear fealty to Kram, and no ugly 1 shall trouble you." Sworn: "Kram is pleased." Refused: "Kram will remember this."
+- Counter: "Swear fealty to Kram, and your dice never land on an ugly 1 for your next 2 fights."
+- Sworn: "Sworn to Kram: Your dice never land on 1 for your next 2 fights." Refused: "You refuse. The cultists melt back into the crowd."
+
 **Wild Magic Hot Tub** ("Soak at your own risk")
 - On the choice of spots: "Bubbling, glowing, faintly humming." / "A wild surge on one of your dice"
 - Counter: "Climb in, and the wild magic surges: most likely one of your dice is blessed for the next fight. Most likely."

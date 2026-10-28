@@ -151,6 +151,8 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
 | The Wild Magic Hot Tub (a spot) | Done | `art/hot-tub.jpg` → `hot-tub.webp` (raspberry background, `cutOutFlat`); a wide painting, sized by width in its scene |
 | Darren Snakehands (the Ghoul and Gourd's barman, an event) | Done | `art/bust-darren.jpg` → `darren.webp` |
+| The Bard (a spot between fights at the Yawning Portal) | Done | `art/bust-bard.jpg` → `bard.webp` (cut out from a flat magenta background) |
+| The Cult of Kram (a random event at the Yawning Portal; a man and a woman) | Done | `art/bust-kram.jpg` → `kram.webp` (one enclosed pocket by her cheek seeded with `holes`) |
 | The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS`, in the game since 21 Oct. Brodor: see his own row |
 | Backdrop: the Salty Swallow | Done (26 Oct) | `art/salty-swallow-backdrop.jpg` → `salty-swallow.webp` (1584×672), the gun deck; the ship's four fights and its scenes between fights |
 

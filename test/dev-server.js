@@ -18,7 +18,7 @@
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
 //   curl "http://localhost:3003/seed?n=42"           every random draw follows a seed (the same throw each time); /seed alone ends it
-//        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands)
+//        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands; &stage=bard|kram for the Yawning Portal's Bard and Cult of Kram)
 //
 // Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
 process.env.LEADERBOARD_READONLY = '1';
@@ -73,6 +73,14 @@ const COMMANDS = {
     },
     // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard, marthasMask, brodorsSunglasses).
     '/keepsakes': (r, q) => { r.tavernRun.keepsakes = (q.get('ids') || '').split(',').filter(Boolean).map(id => ({ id, name: id, text: '' })); },
+    // The Bard's song for this fight (?song=inspiringSong|cuttingWords), as if bought before it.
+    '/song': (r, q) => {
+        const song = q.get('song') || 'inspiringSong';
+        r.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
+        r.tavernRun.cuttingWords = song === 'cuttingWords';
+    },
+    // Sworn to Kram: no 1s for your dice this fight (?more=n fights after it).
+    '/kram': (r, q) => { r.tavernRun.kram = true; r.tavernRun.kramFights = Number(q.get('more') || 0); },
     '/between': (r, q) => {
         const run = r.tavernRun;
         const spots = (q.get('spots') || 'thom,diceDen').split(',');
@@ -82,6 +90,8 @@ const COMMANDS = {
         if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), catchOn: 4 };
         else if (stage === 'shrine' || stage === 'hotTub') run.interlude = { stage };
         else if (stage === 'darren') run.interlude = { stage, smashOn: 2, giftOn: 4 };
+        else if (stage === 'kram') run.interlude = { stage, fights: 2 };
+        else if (stage === 'bard') run.interlude = { stage, songs: server.BARD_SONGS, price: 8 };
         else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100], bet: null, throws: [] };
         else if (stage === 'stranger') run.interlude = server.strangerOffer(r);
         else run.interlude = { stage: 'choose', spots };

@@ -54,7 +54,11 @@ export interface TavernRun {
     shelfSize: number;
     shop: { stock: Thonic[]; free?: boolean; first?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
     thomMet?: boolean; // you've been to Thom's cart this run (his first greeting is different)
-    prices?: { shrine: number; hotTub: number }; // what a candle at the Shrine and a soak in the hot tub cost
+    prices?: { shrine: number; hotTub: number; bard?: number }; // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
+    // The Bard's song this fight: Inspiring Song ('ready' until your first throw, 'now' while it can
+    // be thrown again), Cutting Words (words, until it lands); nextSong: bought for the next fight.
+    bard?: { song: 'ready' | 'now' | null; words: boolean; nextSong: 'cuttingWords' | 'inspiringSong' | null };
+    kram?: { now: boolean; more: number }; // sworn to Kram: no 1s this fight (now), and for `more` after it
     interlude: Interlude | null; // between fights (see server.js startInterlude)
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
@@ -76,15 +80,20 @@ export interface TubSurge { id: 'noOnes' | 'twin' | 'lucky' | 'scalding' | 'sogg
 
 // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots
 // catch your eye and you go to one.
-export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub';
+export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub' | 'bard';
+export interface BardSong { id: 'cuttingWords' | 'inspiringSong'; name: string; text: string }
 export interface DiceThrow { you: [number, number]; them: [number, number] }
 export type Interlude =
     | { stage: 'pickpocket'; steal: number; catchOn: number; roll?: number; caught?: boolean; lost?: number }
-    | { stage: 'choose'; spots: Spot[]; after?: 'pickpocket' | 'stranger' | 'darren' } // after: a random event came first
+    | { stage: 'choose'; spots: Spot[]; after?: 'pickpocket' | 'stranger' | 'darren' | 'kram' } // after: a random event came first
     | { stage: 'shrine' }
     | { stage: 'diceDen'; bets: number[]; bet: number | null; throws: DiceThrow[] }
     | { stage: 'stranger'; offers: Keepsake[]; hearts: number }
     | { stage: 'hotTub' }
+    | { stage: 'bard'; songs: BardSong[]; price: number } // the Bard (Yawning Portal): a song for the next fight
+    | { stage: 'kram'; fights: number } // the Cult of Kram (a Yawning Portal event): swear fealty, no 1s for `fights` fights
+    | { stage: 'done'; spot: 'bard'; song: BardSong | null }
+    | { stage: 'done'; spot: 'kram'; sworn: boolean; fights: number }
     // Darren Snakehands: one die (up to smashOn a Thonic smashes, up to giftOn a free one, else a Thonic and gold).
     | { stage: 'darren'; smashOn: number; giftOn: number; roll?: number; outcome?: 'smash' | 'gift' | 'catch'; smashed?: Thonic; paid?: number; thonic?: Thonic; gold?: number }
     | { stage: 'done'; spot: 'hotTub'; surge: TubSurge; hearts?: number }
@@ -114,7 +123,7 @@ export interface TavernSummary {
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
 // cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
-export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; cancelled?: boolean }
+export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; cancelled?: boolean }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -639,11 +648,12 @@ socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => 
 });
 
 // A keepsake works: its own moment with a fanfare (the user's call, 21 Oct; it was a toast).
-socket.on('keepsakeActivated', (data: { id: string; name: string; text: string }) => {
+// (Also the Bard's songs as they work, with who: 'The Bard'.)
+socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string }) => {
     enqueueMoment(() => {
         if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
         else playChime();
-        update({ ability: { name: 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
+        update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
     });
 });
 
@@ -853,6 +863,20 @@ export const actions = {
     },
     diceRoll() {
         socket.emit('diceRoll');
+    },
+    // The Bard: a song for the next fight (null: walk away).
+    bardPick(id: string | null) {
+        if (id) playChime(); else playSound('click');
+        socket.emit('bardPick', id);
+    },
+    // The Cult of Kram: swear fealty, or refuse.
+    kram(action: 'swear' | 'refuse') {
+        playSound('click');
+        socket.emit('kram', action);
+    },
+    // The Bard's Inspiring Song: your first throw of the fight, thrown again.
+    inspiringSong() {
+        socket.emit('inspiringSong');
     },
     strangerPick(id: string | null) {
         playSound(id ? 'itemPickup' : 'click');

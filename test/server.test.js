@@ -1999,3 +1999,113 @@ test('the hot tub is only at the Ghoul and Gourd', async () => {
     room.tavernRun.encounterIndex = fightOf('frak');
     assert.ok(Array.from({ length: 60 }, () => server.pickSpots(room)).some(s => s.includes('hotTub')));
 });
+
+// ---- The Yawning Portal's Bard and Cult of Kram (28 Oct) ----
+
+test('the Bard and the Cult of Kram are the Yawning Portal’s only', async () => {
+    const { room } = await betweenFights('PortalOnly', { stage: 'choose', spots: [] }, 500);
+    room.tavernRun.encounterIndex = fightOf('frak');
+    for (let i = 0; i < 30; i++) assert.ok(!server.pickSpots(room).includes('bard'));
+    room.tavernRun.encounterIndex = fightOf('vaelin');
+    assert.ok(Array.from({ length: 60 }, () => server.pickSpots(room)).some(s => s.includes('bard')));
+    room.tavernRun.purse = 0;
+    for (let i = 0; i < 30; i++) assert.ok(!server.pickSpots(room).includes('bard'), 'not offered when the purse is short');
+});
+
+test('the Bard sells a song for the next fight; it starts with it', async () => {
+    const { hero, room } = await betweenFights('Listener', { stage: 'choose', spots: ['bard', 'shrine'] }, 20);
+    room.tavernRun.encounterIndex = fightOf('vaelin');
+    hero.emit('chooseSpot', 'bard');
+    await nextState(hero, s => runOf(s).interlude.stage === 'bard');
+    hero.emit('bardPick', 'elixir'); // not one of his
+    await sleep(30);
+    assert.equal(room.tavernRun.interlude.stage, 'bard');
+    hero.emit('bardPick', 'inspiringSong');
+    await nextState(hero, s => runOf(s).interlude.stage === 'done');
+    assert.equal(room.tavernRun.purse, 20 - BALANCE.interlude.bardPrice);
+    assert.equal(room.tavernRun.nextFightSong, 'inspiringSong');
+    hero.emit('moveOn');
+    for (let i = 0; i < 100 && room.tavernRun.song !== 'ready'; i++) await sleep(20);
+    assert.equal(room.tavernRun.song, 'ready');
+    assert.equal(room.tavernRun.nextFightSong, null);
+    assert.equal(room.tavernRun.cuttingWords, false);
+});
+
+test('Inspiring Song: your first throw of the fight, thrown again, once', async () => {
+    const { hero, room } = await tavernTable('Inspired');
+    room.tavernRun.song = 'ready';
+    let unpin = pinFaces([1, 1, 1, 3, 3, 5]);
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    unpin();
+    await sleep(rolled.animationMs * 0.01 + 30);
+    assert.equal(room.tavernRun.song, room.turn.key);
+    unpin = pinFaces([2, 4, 6, 6, 6, 6]);
+    const again = waitFor(hero, 'diceRolled', d => d.rerolled);
+    const sung = waitFor(hero, 'keepsakeActivated', m => m.id === 'inspiringSong');
+    hero.emit('inspiringSong');
+    const thrown = await again;
+    unpin();
+    assert.equal((await sung).who, 'The Bard');
+    assert.equal(thrown.rerolled.length, 6);
+    assert.deepEqual(room.turn.dice.map(d => d.value), [2, 4, 6, 6, 6, 6]);
+    assert.equal(room.tavernRun.song, null, 'spent');
+    hero.emit('inspiringSong');
+    await sleep(40);
+    assert.deepEqual(room.turn.dice.map(d => d.value), [2, 4, 6, 6, 6, 6], 'once only');
+});
+
+test('Inspiring Song is gone once you keep a die or throw again', async () => {
+    const { hero, room } = await tavernTable('Uninspired');
+    room.tavernRun.song = 'ready';
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    await sleep(rolled.animationMs * 0.01 + 30);
+    room.turn.dice.forEach((d, i) => { d.value = [2, 3, 3, 3, 5, 5][i]; });
+    hero.emit('toggleDie', 0);
+    await sleep(40);
+    const before = room.turn.dice.map(d => d.value);
+    hero.emit('inspiringSong');
+    await sleep(40);
+    assert.deepEqual(room.turn.dice.map(d => d.value), before, 'not after a keep');
+    hero.emit('rollDice');
+    await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && !d.rerolled);
+    assert.equal(room.tavernRun.song, null, 'gone after the second throw');
+});
+
+test("Cutting Words: the opponent's first hand that counts scores 3 less, once", async () => {
+    const { hero, room } = await tavernTable('Cutting');
+    room.tavernRun.cuttingWords = true;
+    hero.on('diceRolled', d => {
+        if (d.turn.playerId !== 'BOT_MOLAR' || !room.turn) return;
+        room.turn.dice.forEach(die => { if (die.status === 'active') die.value = [2, 4, 6, 6, 6, 6][die.id]; });
+    });
+    const cut = waitFor(hero, 'keepsakeActivated', m => m.id === 'cuttingWords', 8000);
+    await playHand(hero, room, [2, 4, 1, 1, 1, 1]);
+    const m = await cut;
+    assert.match(m.text, /24 becomes 21/);
+    assert.equal(room.tavernRun.cuttingWords, false);
+});
+
+test('the Cult of Kram: swear fealty and your dice never land on 1 for two fights', async () => {
+    const { hero, room } = await betweenFights('Faithful', { stage: 'kram', fights: BALANCE.interlude.kramFights }, 50);
+    room.tavernRun.encounterIndex = fightOf('vaelin');
+    hero.emit('kram', 'maybe');
+    await sleep(30);
+    assert.equal(room.tavernRun.interlude.stage, 'kram');
+    hero.emit('kram', 'swear');
+    await nextState(hero, s => runOf(s).interlude.stage === 'done');
+    assert.equal(room.tavernRun.interlude.sworn, true);
+    assert.equal(room.tavernRun.kramFights, 2);
+    assert.equal(room.tavernRun.purse, 50, 'free');
+    hero.emit('lookAround');
+    await nextState(hero, s => runOf(s).interlude.stage === 'choose' && runOf(s).interlude.after === 'kram');
+    hero.emit('moveOn');
+    for (let i = 0; i < 100 && !room.tavernRun.kram; i++) await sleep(20);
+    assert.equal(room.tavernRun.kram, true);
+    assert.equal(room.tavernRun.kramFights, 1, 'one more after this one');
+    const face = server.rollFaceFor(room, { playerId: hero.id, dice: [] });
+    for (let i = 0; i < 200; i++) assert.notEqual(face({ id: i % 6 }), 1);
+    const bot = server.rollFaceFor(room, { playerId: 'BOT_MOLAR', dice: [] });
+    assert.ok(Array.from({ length: 300 }, () => bot({ id: 0 })).includes(1), "the opponent's dice still can");
+});
