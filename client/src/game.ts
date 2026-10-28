@@ -4,7 +4,7 @@ import { calloutText, isLocked, onePerfect4Away, perfectHand, type DieStatus, ty
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { lookNext } from './look';
-import { playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
+import { playChime, playDiceImpacts, playSound, startMusic, playThomPurchase, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -114,7 +114,7 @@ export interface TavernSummary {
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
 // cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
-export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; cancelled?: boolean }
+export interface AbilityMoment { name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; cancelled?: boolean }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -626,7 +626,7 @@ socket.on('offerShop', (data: ShopArrival) => {
 socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
     enqueueMoment(() => {
         playSound('drinkPotion'); // the user's clip (28 Oct; it was a synthesized cork pop)
-        update({ ability: { name: "Thom's Thonics", ability: data.name, text: data.text, extra: data.id === 'healing' ? '+1 ♥' : undefined, at: performance.now() } });
+        update({ ability: { name: "Thom's Thonics", ability: data.name, text: data.text, thonic: data.id, extra: data.id === 'healing' ? '+1 ♥' : undefined, at: performance.now() } });
     });
 });
 
@@ -780,7 +780,7 @@ export const actions = {
         }, PENDING_MS + 50);
     },
     buyThonic(id: string) {
-        playSound('click');
+        playThomPurchase();
         socket.emit('buyThonic', id);
     },
     leaveShop() {
@@ -817,7 +817,7 @@ export const actions = {
     },
     // A keepsake from Thom's back shelf.
     buyKeepsake(id: string) {
-        playSound('click');
+        playThomPurchase();
         socket.emit('buyKeepsake', id);
     },
     chooseSpot(spot: Spot) {

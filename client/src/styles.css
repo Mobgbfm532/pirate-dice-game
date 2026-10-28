@@ -1032,11 +1032,52 @@ footer {
 @keyframes usable-pulse { 50% { box-shadow: 0 0 16px rgba(255, 213, 79, 0.75); } }
 
 /* A Thonic's moment: the same banner as an opponent's move, in green. */
+/* A Thonic drunk (28 Oct, the user: "make the banner look better", "Thom's Thonics" off it): its
+   name on a parchment label edged in the Thonic's colour, under its bottle (.potion-moment). */
+.potion-healing { --liquid: #e53935; }
+.potion-lastGasp { --liquid: #90caf9; }
+.potion-fizzy { --liquid: #9ccc65; }
+.potion-secondThoughts { --liquid: #9575cd; }
+.potion-steady { --liquid: #ffb300; }
+.potion-clearEye { --liquid: #4dd0e1; }
 .thonic .ability-banner {
-    background: linear-gradient(#1f4a22, #0f2a12);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 22px rgba(174, 213, 129, 0.4);
+    --liquid-edge: color-mix(in srgb, var(--liquid, #9ccc65) 75%, #3b2a1a);
+    padding: 5px 20px 6px; border-radius: 6px;
+    background: linear-gradient(#f6e7c4, #e3cc9a);
+    border: 2px solid var(--liquid-edge);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 22px color-mix(in srgb, var(--liquid, #9ccc65) 55%, transparent), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
-.thonic .ability-banner .what { color: #c5e1a5; }
+.thonic .ability-banner .what { color: #3b2410; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); letter-spacing: 0.3px; }
+.thonic .ability-banner .plus { color: #c62828; text-shadow: none; }
+.potion-moment { position: absolute; left: var(--table-x, 50%); top: var(--horizon, 30%); width: 0; height: 0; }
+.potion-moment .potion-glow {
+    position: absolute; left: -95px; top: -150px; width: 190px; height: 190px; border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--liquid) 60%, #fff) 0%, color-mix(in srgb, var(--liquid) 45%, transparent) 32%, transparent 68%);
+    mix-blend-mode: screen; animation: potion-glow 1.85s ease-out both;
+}
+@keyframes potion-glow { 0% { opacity: 0; transform: scale(0.4); } 25% { opacity: 1; transform: scale(1.05); } 70% { opacity: 0.8; } 100% { opacity: 0; transform: scale(1.2); } }
+.potion-moment .bottle {
+    position: absolute; left: -11px; top: -84px; transform-origin: 50% 100%;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 8px var(--liquid));
+    animation: potion-tip 1.85s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+/* It rises, the cork pops (a jolt), it tips up to drink, then rights itself and fades. */
+@keyframes potion-tip {
+    0% { opacity: 0; transform: translateY(24px) scale(1.6); }
+    16% { opacity: 1; transform: translateY(0) scale(2.4); }
+    24% { transform: translateY(-6px) scale(2.5); }
+    30% { transform: translateY(0) scale(2.4); }
+    55% { transform: rotate(-38deg) scale(2.4); }
+    80% { opacity: 1; transform: rotate(-4deg) scale(2.3); }
+    100% { opacity: 0; transform: translateY(-10px) scale(2.2); }
+}
+.potion-moment .bubble {
+    position: absolute; left: var(--x); top: -70px; width: var(--s); height: var(--s); border-radius: 50%;
+    border: 1.5px solid color-mix(in srgb, var(--liquid) 55%, #fff);
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85) 0 15%, transparent 22%), color-mix(in srgb, var(--liquid) 30%, transparent);
+    opacity: 0; animation: bubble-up 1.2s ease-out both; animation-delay: var(--d);
+}
+@keyframes bubble-up { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-70px) scale(1.15); } }
 .ability-banner .plus { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ef9a9a; animation: minus-drop 2.6s ease-out forwards; }
 
 /* Thom's cart between fights: a scene of its own over everything (no tavern, no table).
@@ -1589,11 +1630,12 @@ button.keepsake.used { opacity: 0.55; }
     }
     footer .goal { grid-area: goal; }
     footer .turn-score { grid-area: score; }
-    footer .roll { grid-area: roll; justify-self: center; }
+    /* A smaller Roll button on phones (the user's call, 28 Oct): the table gets the room. */
+    footer .roll { grid-area: roll; justify-self: center; min-width: 170px; padding: 7px 22px; font-size: 1.15rem; }
     footer .hint { grid-area: hint; justify-self: center; text-align: center; }
     footer:has(.reactions) .roll.idle { display: none; }
     footer:has(.roll:not(.idle)) .reactions { display: none; }
-    footer .reactions { min-height: 52px; align-items: center; margin-top: -6px; }
+    footer .reactions { min-height: 41px; align-items: center; margin-top: -6px; }
     /* A Tavern Crawl: the purse and shelf beside your chip when they fit (else they wrap). */
     footer { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 10px; }
     footer .tavern-strip { margin-top: 0; }

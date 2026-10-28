@@ -841,12 +841,21 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 </div>
             )}
             {art && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${art}`} alt="" />}
-            <div className="ability-banner">
+            {/* A Thonic drunk (28 Oct, the user: "make it look better"): its bottle, big, pops its cork
+                and tips up in a glow of its own colour while bubbles rise, over its name on a label. */}
+            {moment.thonic && (
+                <div className={`potion-moment potion-${moment.thonic}`} aria-hidden="true">
+                    <span className="potion-glow" />
+                    {Array.from({ length: 9 }, (_, i) => <span key={i} className="bubble" style={{ '--x': `${(i * 23) % 60 - 30}px`, '--s': `${5 + (i * 7) % 9}px`, '--d': `${0.25 + (i * 0.09) % 0.6}s` } as React.CSSProperties} />)}
+                    <Bottle thonic={{ id: moment.thonic } as Thonic} />
+                </div>
+            )}
+            <div className={`ability-banner ${moment.thonic ? `potion-${moment.thonic}` : ''}`}>
                 {/* As it lands: a shockwave ring from its middle (its edges glow and a shine sweeps it, in CSS). */}
                 {surge && <span className="impact" aria-hidden="true" />}
-                {/* An opponent's ability (or your mask) shows its name alone (the user's call, 28 Oct);
-                    keepsakes and Thonics keep who and what. */}
-                {(!takeover || keepsake) && <span className="who">{moment.name}</span>}
+                {/* An opponent's ability (or your mask) shows its name alone (the user's call, 28 Oct), and
+                    so does a Thonic; keepsakes and the Lady keep who and what. */}
+                {(!takeover && !moment.thonic || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
                 {moment.ability === 'Smooth Talk' && fx && /knocks/.test(moment.text ?? '') && <span className="minus">−3</span>}
@@ -892,6 +901,8 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
         setLeaving(true);
         setTimeout(actions.leaveShop, LEAVE_MS);
     };
+    // Thom's cart has its own ambience while it's up (the user's loop, 28 Oct).
+    useEffect(() => startSceneAmbience('thom'), []);
     return (
         <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`Thom's Thonics. Thom: ${thomLine(!!shop.first)}`}>
             <div className="thom-stage" aria-hidden="true">

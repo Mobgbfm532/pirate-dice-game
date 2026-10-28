@@ -75,7 +75,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
-  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinPayout.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused).
+  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinPayout.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); Thom says one of `ThomMmmHm` / `ThomVitality` / `ThomOhYes` (.m4a) at random as you buy from him (`playThomPurchase`). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
 - `tuning.ts` `renderDpr()`: pixels drawn per screen point. Computers with a mouse draw at the
   quality level's dpr (High 2x) even when the screen reports 1x, so the dice are sharp on desktop
@@ -194,7 +194,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   above it). Upright phones (`orientation: portrait`, width up to 600) keep it short: the score to
   beat and the turn score share a line (when everyone else dusted there is nothing to beat and the line stays empty, the user's call 27 Oct), the purse/shelf sit beside your chip when they fit, and
   at tables with reactions the emoji row takes the hidden Roll button's place (same height, so
-  nothing moves between turns). In a Tavern Crawl the bust may rise to 10 px from the top (no
+  nothing moves between turns; since 28 Oct the Roll button is smaller there, 41 px, and the emoji row matches it). In a Tavern Crawl the bust may rise to 10 px from the top (no
   turn banner there). At 412x780 the far edge is at ~240 px (the old, rail-covering layout ~250).
 - **Timers in order:** never rely on two `setTimeout`s with different delays firing in order;
   on a busy event loop they can come out swapped (this stalled the bot). Chain steps instead
@@ -440,6 +440,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   moment event goes through it) and holds `diceRolled` (and the bot) until then; the client's
   `diceRolled` also waits for `momentGoneAt`. The round result shows 2.6 s (`RESULT_SHOW_MS`,
   was 4.2) and the next throw waits for it. Mind Whip's banner no longer names the die.
+- **A Thonic drunk (28 Oct, the user's call):** its own bottle, big, pops its cork and tips up in a glow of its colour with bubbles rising (`.potion-moment`, `moment.thonic`), over its name on a parchment label edged in that colour (`.potion-<id>` sets `--liquid`); no "Thom's Thonics" line.
 - **Keepsakes on screen (21 Oct):** small round icons beside your chip (`KeepsakeIcon`,
   `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
   it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
