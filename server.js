@@ -579,7 +579,8 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     let effect = run.roundEffect;
     let mine = turn.playerId !== BOT_ID;
     let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
-    let sixes = () => shuffled(active).slice(0, 3).forEach(d => { d.value = 6; });
+    // (Three 6s the Devil ability forces: its own moment has just played, so no "Devil's titties" after it.)
+    let sixes = () => { shuffled(active).slice(0, 3).forEach(d => { d.value = 6; }); turn.abilitySixes = true; };
 
     // The Duke's Sympathy for the Devil (or Martha in his face): it waits until he has kept a 2
     // and a 4 with three dice still to throw; that throw comes up three 6s, and the player can't
@@ -737,7 +738,9 @@ function performRoll(roomCode) {
     turn.busyUntil = Date.now() + lead + delay(animationMs);
     let key = turn.key;
     // throwSeed lets every screen simulate the identical tumble (the values are already decided).
-    let thrown = { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let abilitySixes = !!turn.abilitySixes;
+    turn.abilitySixes = false;
+    let thrown = { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil && !abilitySixes, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1850,7 +1853,7 @@ function evaluateTavernRound(roomCode) {
 
     if (enemy.lives <= 0) {
         let stats = room.tavernRun.stats;
-        let winGold = (room.tavernRun.encounterIndex + 1) * GOLD.winPerPlace;
+        let winGold = GOLD.winFirst + GOLD.winStep * room.tavernRun.encounterIndex;
         let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
         stats.encountersDefeated++;
         stats.winGold += winGold;
@@ -1873,7 +1876,7 @@ function evaluateTavernRound(roomCode) {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
             place: room.tavernRun.encounterIndex,
-            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, perPlace: GOLD.winPerPlace },
+            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft },
             at: Date.now()
         };
         let beaten = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];

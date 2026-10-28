@@ -435,6 +435,8 @@ function eraseSmoke(img, mask, bg, { clear, paint }) {
 //   soften     { boxes, radius }: a soft edge fading over that many px in those boxes (feather)
 //   fade       { left, right, top, bottom }: fade out over that many px towards those edges of the
 //              painting, where it crops the character itself (fadeEdges)
+//   glow       { boxes }: a bright glow or flame over the background in those boxes keeps its own
+//              warm colours and turns see-through by how bright it is (glowToAlpha)
 //   smokeMinBlue  grey smoke only: how far blue may sit below green to count as smoke (-25);
 //              raise it to keep skin and leather in the box out (veil)
 // A painting that crops the character at its own edge (Jaguar's cloak running off the right side, 27 Oct)
@@ -448,7 +450,41 @@ function fadeEdges({ data, width, height }, { left = 0, right = 0, top = 0, bott
     }
 }
 
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null } = {}) {
+// A glow painted over the background (the Ridgeler's golden hammer flame, 28 Oct): inside the
+// boxes, every pixel (kept or background) is taken apart as the glow's own colour laid over the
+// background at some opacity: the least opacity that keeps the colour possible (GIMP's "colour to
+// alpha"). Only where that colour comes out warm (red over green over blue: flame, not his grey
+// horns or green coat); bright cores come out opaque, the faint halo nearly clear and gold;
+// leftover pink in the boxes goes.
+// Returns alpha, like veil.
+function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97 }, alpha = new Map()) {
+    const { data, width } = img;
+    for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const p = y * width + x, i = p * 4;
+        if (alpha.has(p)) continue;
+        let a = 0;
+        for (let k = 0; k < 3; k++) {
+            const v = data[i + k], b = bg[k];
+            a = Math.max(a, v > b ? (v - b) / (255 - b) : (b - v) / b);
+        }
+        if (a >= solid) continue;
+        if (a < min) { if (mask[p]) continue; a = min; }
+        const f = [0, 1, 2].map(k => Math.max(0, Math.min(255, Math.round(bg[k] + (data[i + k] - bg[k]) / a))));
+        if (!(f[0] >= f[1] && f[1] >= f[2] - 10 && f[0] - f[2] > 60)) {
+            // Not flame: still pink (blue over green, red well over it) or dusky rose is the background
+            // showing through the faintest wisps; it goes (keep red cloth and leather out of the boxes).
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            if (!mask[p] && ((b > g && r - g > 25) || (r - g > 60 && g < 100 && b >= g - 12))) mask[p] = 1;
+            continue;
+        }
+        for (let k = 0; k < 3; k++) data[i + k] = f[k];
+        mask[p] = 0;
+        alpha.set(p, a);
+    }
+    return alpha;
+}
+
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null } = {}) {
     if (!wanted(name)) return;
     const img = await readRgba(file);
     const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes });
@@ -456,6 +492,7 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     keepMainShape(img, mask, minPiece);
     const boxes = !smokeBox ? null : Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox];
     let smoke = !boxes ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, boxes, tolerance) : veil(img, mask, bg, boxes, smokeMinBlue);
+    if (glow) smoke = glowToAlpha(img, mask, bg, glow, smoke ?? undefined);
     for (const t of trails ? [].concat(trails) : []) smoke = unmixTrails(img, mask, bg, t, smoke ?? undefined);
     if (soften) smoke = feather(img, mask, soften, smoke ?? undefined);
     despill(img, mask, bg, despillRadius, smoke);
@@ -561,6 +598,8 @@ async function surfaces() {
     const planks = await sharp(path.join(ART, 'table-planks.jpg')).metadata();
     const outputs = [
         [sharp(path.join(ART, 'table-planks.jpg')).extract({ left: 0, top: 0, width: planks.width - 6, height: planks.height }), textures, 'table-planks.webp'],
+        // The tabletop since 28 Oct: the user's wide painting, laid once over the table (not tiled).
+        [sharp(path.join(ART, 'table-wide.jpg')), textures, 'table-wide.webp'],
         [sharp(path.join(ART, 'rail-walnut.jpg')).resize({ width: 1024 }), textures, 'rail-walnut.webp'],
         [sharp(path.join(ART, 'parchment.jpg')).resize({ width: 1024 }), OUT, 'parchment.webp']
     ];
@@ -619,3 +658,4 @@ await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight
 await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight: 900, soften: { boxes: [[180, 0, 850, 420]], radius: 12 }, holes: [[839, 728], [221, 751], [951, 800], [122, 857], [247, 863], [749, 890], [135, 832], [903, 819], [312, 845], [762, 832], [32, 723], [996, 741], [739, 865], [136, 792], [886, 798]] });
 await cutOutFlat('ability-smooth-talk.jpg', 'ability-smooth-talk', { maxHeight: 900, tolerance: 30, holes: [[414, 180], [294, 424]], minPiece: 0.00002, trails: [{ colour: [245, 200, 120], reach: 35, boxes: [[90, 320, 325, 660], [520, 420, 660, 525]] }, { colour: [255, 70, 60], reach: 30, boxes: [[565, 120, 640, 330]] }], fade: { bottom: 60 } }); // his golden sparkle swirls and the potion's red glow stay, see-through
 await cutOutFlat('ability-the-cloak.jpg', 'ability-the-cloak', { maxHeight: 900, holes: [[777, 496], [751, 419], [822, 326], [712, 489], [833, 808], [293, 421], [415, 180]], trails: [{ colour: [60, 78, 92], reach: 20, boxes: [[0, 540, 330, 820], [640, 380, 848, 900]] }, { colour: [20, 28, 38], reach: 20, boxes: [[0, 700, 220, 800]] }], fade: { left: 90, right: 40, bottom: 60 } }); // his smoky wisps and the thin cloak's edge stay see-through; background between the folds and the arm
+await cutOutFlat('ability-divine-smite.jpg', 'ability-divine-smite', { maxHeight: 900, holes: [[412, 203], [478, 164], [961, 91], [553, 186], [580, 196], [524, 176], [709, 62]], glow: { boxes: [[590, 0, 1024, 440], [680, 440, 1024, 480]] }, fade: { right: 30, bottom: 60 } }); // the hammer's gold flame stays bright and see-through; background between his arm, head and the handle

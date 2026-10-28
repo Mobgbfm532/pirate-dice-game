@@ -4,7 +4,7 @@ import { calloutText, isLocked, onePerfect4Away, perfectHand, type DieStatus, ty
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { lookNext } from './look';
-import { playChime, playCorkPop, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
+import { playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -436,6 +436,8 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         const durationMs = paceSeconds(pace, track.frames) * 1000;
 
         table.roll = { track, startedAt: performance.now(), speed, pace, hidden: new Set(rolled.filter(d => d.hidden).map(d => d.id)) };
+        // The room holds its breath as the camera leans in on a slow-motion last throw (the user's clip, 28 Oct).
+        if (speed < 1) playSound('gasp');
         // Rokr's blur lifts the moment the next roll starts (not when it lands): the dice already
         // kept show their faces at once, and the stars over the thrown ones go.
         const unblurred = before && before.blurActive && !turn.blurActive
@@ -623,7 +625,7 @@ socket.on('offerShop', (data: ShopArrival) => {
 // A Thonic was drunk, or worked by itself (Last Gasp): shown like an opponent's move.
 socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
     enqueueMoment(() => {
-        playCorkPop(data.id === 'fizzy');
+        playSound('drinkPotion'); // the user's clip (28 Oct; it was a synthesized cork pop)
         update({ ability: { name: "Thom's Thonics", ability: data.name, text: data.text, extra: data.id === 'healing' ? '+1 ♥' : undefined, at: performance.now() } });
     });
 });
@@ -639,7 +641,8 @@ socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => 
 // A keepsake works: its own moment with a fanfare (the user's call, 21 Oct; it was a toast).
 socket.on('keepsakeActivated', (data: { id: string; name: string; text: string }) => {
     enqueueMoment(() => {
-        playChime();
+        if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
+        else playChime();
         update({ ability: { name: 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
     });
 });

@@ -792,7 +792,9 @@ const ABILITY_ART: Record<string, string> = {
     'Written in the Stars': 'ability-written-in-the-stars.webp',
     // 27 Oct: Jaguar's.
     'Smooth Talk': 'ability-smooth-talk.webp',
-    'The Cloak': 'ability-the-cloak.webp'
+    'The Cloak': 'ability-the-cloak.webp',
+    // 28 Oct: the Ridgeler's.
+    'Divine Smite': 'ability-divine-smite.webp'
 };
 Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
 
@@ -822,6 +824,11 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <div className="ability-stage" aria-hidden="true">
                     {/* Light rays turning slowly behind the painting. */}
                     <span className="rays" />
+                    {/* Brodor's Astral Flood: his painting's aurora drifting behind him, and stars. */}
+                    {moment.ability === 'Astral Flood' && <>
+                        <span className="aurora" />
+                        {Array.from({ length: 18 }, (_, i) => <span key={i} className="twinkle" style={{ left: `${(i * 37 + 11) % 97}%`, top: `${(i * 53 + 7) % 72}%`, animationDelay: `${(i * 0.13) % 0.9}s` }} />)}
+                    </>}
                     {Array.from({ length: 14 }, (_, i) => <span key={i} className="mote" style={{ left: `${(i * 7.3 + (i % 4) * 3) % 100}%`, animationDelay: `${(i * 0.11) % 0.8}s` }} />)}
                 </div>
             )}
@@ -837,9 +844,11 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             <div className="ability-banner">
                 {/* As it lands: a shockwave ring from its middle (its edges glow and a shine sweeps it, in CSS). */}
                 {surge && <span className="impact" aria-hidden="true" />}
-                <span className="who">{moment.name}</span>
+                {/* An opponent's ability (or your mask) shows its name alone (the user's call, 28 Oct);
+                    keepsakes and Thonics keep who and what. */}
+                {(!takeover || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
-                {takeover && moment.text && <span className="line">{moment.text}</span>}
+                {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
                 {moment.ability === 'Smooth Talk' && fx && /knocks/.test(moment.text ?? '') && <span className="minus">−3</span>}
                 {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
@@ -1470,7 +1479,7 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     const gold = won.gold;
     const heartsLeft = gold.heartsLeft ?? (gold.perHeart ? Math.round(gold.hearts / gold.perHeart) : 0);
     const rows = [
-        { key: 'win', label: `Beating ${won.defeated}`, detail: won.place && gold.perPlace ? `opponent ${won.place} × ${coins(gold.perPlace)}` : '', amount: gold.win },
+        { key: 'win', label: `Beating ${won.defeated}`, detail: won.place ? `opponent ${won.place}` : '', amount: gold.win },
         ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${coins(gold.perHeart)}` : '', amount: gold.hearts }] : [])
     ];
     const total = gold.win + gold.hearts;
@@ -1480,7 +1489,7 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     useEffect(() => {
         playSound('winner');
         const timers = rows.map((row, i) => setTimeout(() => { setStep(i + 1); playCoins(row.key === 'win' ? 4 : 2); }, 500 + i * WIN_STEP_MS));
-        timers.push(setTimeout(() => { setStep(rows.length + 1); playCoins(6); }, 500 + rows.length * WIN_STEP_MS));
+        timers.push(setTimeout(() => { setStep(rows.length + 1); playSound('coinPayout'); }, 500 + rows.length * WIN_STEP_MS)); // the user's clip as the purse total lands (28 Oct)
         return () => timers.forEach(clearTimeout);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     const counting = step > rows.length;

@@ -1987,13 +1987,43 @@ button.keepsake.used { opacity: 0.55; }
 @keyframes smite-beam { 0% { transform: scaleX(0.1); opacity: 0; } 15% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(2.4); opacity: 0; } }
 
 /* Brodor: Astral Flood. The table floods with white-gold light, then it ebbs away. */
-.astral-flood .ability-banner { background: linear-gradient(#1a3a4a, #0a1820); border-color: #b2ebf2; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 32px rgba(178, 235, 242, 0.7); }
+/* Astral Flood (28 Oct, the user: "improve the look"): the colours of his painting's aurora, teal,
+   violet and gold, in place of the near-white that washed his stage out grey. */
+.astral-flood .ability-banner {
+    background: linear-gradient(100deg, #1b1446, #0d2d3d 50%, #1b1446); border-color: #b2ebf2;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 34px rgba(120, 200, 255, 0.6), 0 0 60px rgba(180, 120, 255, 0.35);
+}
 .astral-flood .ability-banner .what { color: #e0f7fa; }
-.takeover.astral-flood { --flare: rgba(224, 247, 250, 0.75); }
+.takeover.astral-flood .ability-banner .what {
+    background: linear-gradient(90deg, #7ff5e1, #c7a6ff, #ffe08a, #7ff5e1) 0 0 / 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
+    animation: what-in 0.5s 0.12s cubic-bezier(0.2, 0.8, 0.3, 1) both, aurora-text 1.6s linear infinite;
+}
+@keyframes aurora-text { to { background-position: -200% 0; } }
+.takeover.astral-flood { --flare: rgba(140, 110, 255, 0.6); }
+.with-art.astral-flood .ability-art { max-width: 100vw; height: min(62vh, 620px); }
+.ability-stage .aurora {
+    position: absolute; inset: -20%;
+    background:
+        radial-gradient(ellipse 40% 60% at 30% 40%, rgba(64, 224, 208, 0.55), transparent 70%),
+        radial-gradient(ellipse 45% 55% at 70% 35%, rgba(170, 110, 255, 0.55), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 50% 65%, rgba(255, 210, 110, 0.35), transparent 70%);
+    filter: blur(24px); mix-blend-mode: screen; animation: aurora-drift 1.85s ease-in-out both;
+}
+@keyframes aurora-drift {
+    0% { opacity: 0; transform: translateY(8%) rotate(-4deg) scale(0.9); }
+    20% { opacity: 1; }
+    100% { opacity: 0.85; transform: translateY(-6%) rotate(5deg) scale(1.1); }
+}
+.ability-stage .twinkle {
+    position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff;
+    box-shadow: 0 0 6px 2px rgba(200, 230, 255, 0.9); animation: twinkle 0.9s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: 0.1; transform: scale(0.6); } to { opacity: 1; transform: scale(1.3); } }
 .flood-light {
     position: fixed; inset: 0;
-    background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.9), rgba(178, 235, 242, 0.55) 40%, transparent 75%);
-    animation: flood 2s ease-out forwards;
+    background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.7), rgba(150, 230, 255, 0.45) 30%, rgba(170, 110, 255, 0.3) 55%, transparent 75%);
+    animation: flood 1.4s ease-out forwards;
 }
 @keyframes flood { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
 

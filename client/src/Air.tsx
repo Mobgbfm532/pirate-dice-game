@@ -18,8 +18,9 @@ export interface PaintedAir {
     // Smoke rising from a point: its colour, how dark it lays over the painting (normal blend) or
     // how it glows (additive), puffs a second, and how wide the source is.
     smoke?: { at: [number, number]; color: [number, number, number]; alpha: number; rate: number; spread?: number; rise?: number; glowing?: boolean };
-    // A soft glow that pulses with the flame: radius as a fraction of the picture's height.
-    glow?: { at: [number, number]; color: [number, number, number]; radius: number; strength: number; pulse?: number };
+    // A soft glow that pulses with the flame: radius as a fraction of the picture's height. `dark`
+    // lays it over the painting as a shadow instead of adding light (Vaelin's black aura, 28 Oct).
+    glow?: { at: [number, number]; color: [number, number, number]; radius: number; strength: number; pulse?: number; dark?: boolean };
 }
 export interface SceneAir {
     fire?: [number, number];           // embers rise from here
@@ -217,7 +218,7 @@ export class ScreenAir {
                 const r = g.radius * bust.height * 2;
                 // A slow swell with the flame, not a throb (the user's call, 23 Oct).
                 const pulse = 1 + (g.pulse ?? 0.15) * (fl - 1) * 6;
-                this.lights.add(f.map, x, y, r, r, g.color, g.strength * pulse * bust.opacity);
+                (g.dark ? this.puffs : this.lights).add(f.map, x, y, r, r, g.color, g.strength * pulse * bust.opacity);
             }
         }
         this.smoke = this.smoke.filter(p => (p.age += dt) < p.life);

@@ -670,11 +670,11 @@ test('beating an opponent pays for the win and the hearts left, then one event: 
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]); // 20, no perfect-24 gold
     const offer = await won;
     const G = BALANCE.gold;
-    assert.deepEqual(offer.gold, { win: G.winPerPlace, hearts: 2 * G.perHeartLeft, heartsLeft: 2, perHeart: G.perHeartLeft, perPlace: G.winPerPlace }, 'what the summary screen shows');
+    assert.deepEqual(offer.gold, { win: G.winFirst, hearts: 2 * G.perHeartLeft, heartsLeft: 2, perHeart: G.perHeartLeft }, 'what the summary screen shows');
     assert.equal(offer.place, 1);
     assert.ok(offer.at > 0, 'a key, so the summary shows once');
     assert.equal(offer.nextEnemy, 'Frak');
-    assert.equal(room.tavernRun.purse, G.winPerPlace + 2 * G.perHeartLeft);
+    assert.equal(room.tavernRun.purse, G.winFirst + 2 * G.perHeartLeft);
     assert.equal(room.tavernRun.stats.heartsSpared, 2, 'for the points');
     assert.deepEqual(room.tavernRun.lastWin, offer);
     assert.equal(room.tavernRun.shop, null, 'no cart until you go to Thom');

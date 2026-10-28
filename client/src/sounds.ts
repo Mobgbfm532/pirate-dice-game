@@ -29,15 +29,35 @@ const sfx = {
     // Between fights (the user's, 27 Oct): what a soak or a candle brings.
     tubGood: load('HotTubGood.mp3', 0.75),
     tubBad: load('HotTubBad.mp3', 0.75),
-    ladyChoice: load('LadyChoice.mp3', 0.75)
+    ladyChoice: load('LadyChoice.mp3', 0.75),
+    // 28 Oct: the slow-motion last throw, a fight's payout, the Shield, a Thonic drunk.
+    gasp: load('Gasp.wav', 0.75),
+    coinPayout: load('CoinPayout.mp3', 0.7),
+    shield: load('Shield.mp3', 0.75),
+    drinkPotion: load('DrinkPotion.mp3', 0.75)
 };
+// Where each clip's sound really starts (s): these open with silence, which came in late against
+// the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22 };
+// The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
+// asked to, where an <audio> element can lag noticeably on phones.
+const buffers = new Map<keyof typeof sfx, AudioBuffer>();
+let decoding = false;
+function decodeClips(ctx: AudioContext) {
+    if (decoding) return;
+    decoding = true;
+    (Object.entries(sfx) as [keyof typeof sfx, HTMLAudioElement][]).forEach(([name, el]) => {
+        fetch(el.src).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { buffers.set(name, buf); }).catch(() => {});
+    });
+}
 
 const MUSIC_VOLUME = 0.4, AMBIENCE_VOLUME = 0.5;
 const music = load('BackgroundMusic.mp3', MUSIC_VOLUME, true);
 const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
 // The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
 // scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
-const SCENE_VOLUME = 0.6;
+// (The Lady's music a little louder than the hot tub's bubbling: the user, 28 Oct.)
+const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85 };
 const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true) };
 Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
 export type SceneAmbience = keyof typeof sceneAmbience;
@@ -59,6 +79,7 @@ function audio() {
     try {
         if (!audioContext) audioContext = new AudioContext();
         if (audioContext.state === 'suspended') void audioContext.resume();
+        decodeClips(audioContext);
         if (!noise) {
             noise = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
             const data = noise.getChannelData(0);
@@ -312,10 +333,20 @@ Object.values(sceneAmbience).forEach(el => { el.muted = musicOff; });
 
 export function playSound(name: SoundName, playbackRate = 1) {
     if (muted) return;
-    const audio = sfx[name];
-    audio.currentTime = 0;
-    audio.playbackRate = playbackRate;
-    audio.play().catch(() => {});
+    const el = sfx[name], lead = LEAD[name] ?? 0, buffer = buffers.get(name);
+    if (buffer && audioContext && audioContext.state === 'running') {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
+        const level = audioContext.createGain();
+        level.gain.value = el.volume;
+        source.connect(level).connect(audioContext.destination);
+        source.start(0, lead);
+        return;
+    }
+    el.currentTime = lead;
+    el.playbackRate = playbackRate;
+    el.play().catch(() => {});
 }
 
 export const ABILITY_SOUNDS: Record<string, SoundName> = {
@@ -361,7 +392,7 @@ export function startSceneAmbience(name: SceneAmbience) {
     el.currentTime = 0;
     el.volume = 0;
     el.play().catch(() => {});
-    fade(el, SCENE_VOLUME, 700);
+    fade(el, SCENE_VOLUME[name], 700);
     fade(music, MUSIC_VOLUME * 0.25, 700);
     fade(ambience, AMBIENCE_VOLUME * 0.25, 700);
     return () => {

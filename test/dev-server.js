@@ -52,7 +52,7 @@ const COMMANDS = {
         const run = r.tavernRun, place = run.encounterIndex + 1, left = Number(q.get('hearts') || 2);
         const enemy = server.TAVERN_ENCOUNTERS[run.encounterIndex], next = server.TAVERN_ENCOUNTERS[place] || enemy;
         const G = require('../shared/balance').gold;
-        const gold = { win: G.winPerPlace * place, hearts: G.perHeartLeft * left, heartsLeft: left, perHeart: G.perHeartLeft, perPlace: G.winPerPlace };
+        const gold = { win: G.winFirst + G.winStep * (place - 1), hearts: G.perHeartLeft * left, heartsLeft: left, perHeart: G.perHeartLeft };
         run.stats.heartsSpared = (run.stats.heartsSpared || 0) + left;
         run.purse += gold.win + gold.hearts;
         run.encounterIndex = Math.min(place, server.TAVERN_ENCOUNTERS.length - 1);
@@ -67,7 +67,7 @@ const COMMANDS = {
         const run = r.tavernRun, drop = server.BOSS_DROPS[server.TAVERN_ENCOUNTERS[boss].drops];
         run.encounterIndex = boss + 1;
         run.keepsakes = [...run.keepsakes.filter(k => k.id !== drop.id), drop];
-        run.lastWin = { defeated: server.TAVERN_ENCOUNTERS[boss].name, nextEnemy: server.TAVERN_ENCOUNTERS[boss + 1].name, place: boss + 1, drop, gold: { win: require('../shared/balance').gold.winPerPlace * (boss + 1), hearts: 2 * require('../shared/balance').gold.perHeartLeft } };
+        run.lastWin = { defeated: server.TAVERN_ENCOUNTERS[boss].name, nextEnemy: server.TAVERN_ENCOUNTERS[boss + 1].name, place: boss + 1, drop, gold: { win: require('../shared/balance').gold.winFirst + require('../shared/balance').gold.winStep * boss, hearts: 2 * require('../shared/balance').gold.perHeartLeft } };
         run.interlude = server.invitation(r, (human(r) || {}).name || 'Tester');
         r.roundPlayers = [];
     },

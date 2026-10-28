@@ -24,6 +24,7 @@ const ABILITIES = {
     backOfTheHead: { fight: 5, name: 'Back of the Head', who: 'Sylvester Stonefist' },
     inkfire: { fight: 6, name: 'Inkfire Brand', who: 'Vaelin Inkhand' },
     flourish: { fight: 7, name: 'Flourish', who: 'Stason Jatham' },
+    divineSmite: { fight: 8, name: 'Divine Smite', who: 'The Ridgeler' },
     astralFlood: { fight: 9, name: 'Astral Flood', who: 'Brodor' },
     reachAround: { fight: 10, name: 'Reach Around', who: 'Klarg' },
     stars: { fight: 11, name: 'Written in the Stars', who: 'Rokr' },

@@ -75,12 +75,12 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
-  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both).
+  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinPayout.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused).
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
 - `tuning.ts` `renderDpr()`: pixels drawn per screen point. Computers with a mouse draw at the
   quality level's dpr (High 2x) even when the screen reports 1x, so the dice are sharp on desktop
   (24 Oct); phones use their own up to that.
-- `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray,
+- `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray (since 28 Oct the tabletop is the user's wide painting `table-wide.webp`, laid once and not tiled: `tabletopTexture`, clamped at its sides, mirrored past its near edge),
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (on desktop a dock: chips, score, Roll; reactions in a
   column at the left edge); phones on their side use `setViewOffset` to leave a right column
@@ -295,7 +295,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   glowing well, the Salty Swallow's gun deck; the ship has the same four spots and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
   Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
-  the user's for now, balancing later). Gold for a win is 10 x the fight's number (Jaguar 140; a tenth of before since 23 Oct). **Turns alternate**
+  the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
@@ -385,10 +385,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   pushing slowly in, the banner below it (on phones on their side the painting left, the banner
   right), 1.85 s like every moment (turning light rays behind the painting); not when a Clear-Eye cancels it.
   So far Mind Whip, You are Cursed, Sympathy for the Devil, Disguises, Back of the Head, Inkfire
-  Brand, Flourish, Astral Flood, Reach Around, Written in the Stars, and since 27 Oct Jaguar's Smooth Talk and The Cloak (`ABILITY_ART` in Hud,
+  Brand, Flourish, Astral Flood, Reach Around, Written in the Stars, since 27 Oct Jaguar's Smooth Talk and The Cloak, and since 28 Oct the Ridgeler's Divine Smite (`ABILITY_ART` in Hud,
   `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets; `cutOutFlat` also has
   `minPiece` (keep a flying die), `trails` (see-through streaks; a list for several colours), `fade` (fades out where the painting itself crops the character), `soften` (a fading
-  edge) and `smokeMinBlue`). Brodor's bust is a new painting since 26 Oct (the first is
+  edge), `glow` (a bright flame over the background keeps its own warm colours, see-through by brightness; Divine Smite's hammer) and `smokeMinBlue`). Since 28 Oct an ability's screen shows only its name (keepsakes and Thonics keep their lines); Astral Flood's stage has its painting's aurora and stars (`.aurora`, `.twinkle`). Every character's text is listed in `docs/character-text.md` for the user to edit. Brodor's bust is a new painting since 26 Oct (the first is
   `art/bust-brodor-v1.webp`); so is Jaguar's since 27 Oct, his cloak faded where it runs off the painting (the first is `art/bust-jaguar-v1.jpg`). Martha's Disguises
   painting shows ~1.7 s, then the trick she copies with its own painting. Check new ones with
   `node test/ability-shots.mjs <dir> only=<key>` (plays the ability for real headless, holds the
@@ -412,7 +412,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`; the fire sheet, `.devil-surge`, fades at
   both edges: a hard bottom edge showed as a dark line climbing the screen) and a banner says "Devil's titties" (the
   sound is `DevilsTeets.wav`). `DevilSixes` in Hud, `showDevil` / `snapshot.devil` in game.ts,
-  `DEVIL_MS` 1.5 s (the user's, was 2.8); taps go through to the dice, the next moment waits. Dev:
+  `DEVIL_MS` 1.5 s (the user's, was 2.8); taps go through to the dice, the next moment waits. Not after the Devil ability's own forced three 6s (the Duke, Martha as him, your mask: `turn.abilitySixes` → `diceRolled.devil` false; the user's call, 28 Oct). Dev:
   `preview.devil(who, hold)` (hold keeps it up, for stills). Since 24 Oct a **living painting**
   (`LivingPainting.tsx`, a small WebGL shader on its own canvas, a fresh one per showing): the
   flames sway and flicker, a heat shimmer, a slow breath, the green pips pulse, a glint in each eye
@@ -472,7 +472,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   not after a resume). The event scenes show only the purse now.
 - **Money (since 23 Oct, the user's calls: nearer D&D's prices, all in whole gold):** a tenth of
   the old amounts (`Rules.formatGold`, client `coins()`): 10 x the opponent's place per win
-  (Jaguar 140), 2 a heart left, Healing 11, the Shrine 10, a soak 5. **Prices rise**: each
+  (since 28 Oct 10 for the first opponent and 2 more for each after: `gold.winFirst`, `winStep`; Jaguar 36), 2 a heart left, Healing 11, the Shrine 10, a soak 5. **Prices rise**: each
   Thonic of a kind, candle or soak bought costs half its first price more than the last
   (`priceRise` 0.5; `risingPrice`, `run.bought`, saved with the run; `SAVE_VERSION` 2, so older
   saves don't open). Keepsakes are bought once.
@@ -568,8 +568,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 1. **The new look on other phones** (the default since 23 Oct): if Auto quality drops a good
    phone to Low, tune its threshold (`noteFrame`).
 2. **The user's decisions waiting:** names for the ship's new abilities (Written in the Stars,
-   Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other eight
-   abilities (Divine Smite, Dead Eye, the Ace of Spades, All In, and the unused old ones aside) (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
+   Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other abilities
+   (Dead Eye, the Ace of Spades, All In) (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
    the Dice Den rework or a new spot instead (ideas: the Cult of Kram, the Flying Snakes who bring
    messages to the Ghoul and Gourd); music and ambience from Udio (the plan and prompts were given
    26 Oct; nothing is in the game yet).

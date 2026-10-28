@@ -46,7 +46,10 @@ module.exports = {
     // x10 (halves rounded against you).
     // Gold during a run goes into the purse as it is won; it is spent between fights.
     gold: {
-        winPerPlace: 10,    // beating an opponent: 10 x their place in the run (McGrath 10 ... Jaguar 140)
+        // Beating an opponent (since 28 Oct, the user's call): 10 gold for the first, 2 more for each
+        // one after (McGrath 10, Frak 12 ... Jaguar 36). Until then it was 10 x their place (Jaguar 140).
+        winFirst: 10,
+        winStep: 2,
         perHeartLeft: 2,    // for each heart still standing when you win a fight
         perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct); it still restores a heart
         consolation: 0      // (the consolation for a lost run is in points now: points.reachedPerPlace)

@@ -528,7 +528,7 @@ function playRun(policy, opts = {}) {
         log.fights.push(result);
         if (!result.won) break;
         defeated++;
-        const win = N.gold.winPerPlace * (i + 1), hearts = N.gold.perHeartLeft * result.heartsLeft;
+        const win = N.gold.winFirst + N.gold.winStep * i, hearts = N.gold.perHeartLeft * result.heartsLeft;
         run.purse += win + hearts;
         run.stats.winGold += win;
         run.stats.heartGold += hearts;

@@ -162,12 +162,29 @@ function wornPatch() {
     return new THREE.CanvasTexture(canvas);
 }
 
+// The tabletop (28 Oct, the user's wide painting): laid once over the table instead of tiled, so
+// no plank or nick repeats. It spans TABLE_ART_WIDTH across the middle from the far edge back;
+// past its sides the boards run on (its edge pixels stretch along the planks), and past its near
+// edge it mirrors. Its seven planks come out about a die wide each.
+const TABLE_ART_WIDTH = 15.7, TABLE_ART_ASPECT = 1584 / 672;
+const TABLE_DEPTH = 24 - TABLE_FAR_EDGE_Z; // the tabletop plane's depth (its width is 40)
+function tabletopTexture() {
+    const texture = paintedTexture('table-wide.webp', 1);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.MirroredRepeatWrapping;
+    const height = TABLE_ART_WIDTH / TABLE_ART_ASPECT;
+    // The plane's u runs 0..1 over x -20..20, its v 1..0 from the far edge to the near end.
+    texture.repeat.set(40 / TABLE_ART_WIDTH, TABLE_DEPTH / height);
+    texture.offset.set(-(20 - TABLE_ART_WIDTH / 2) / TABLE_ART_WIDTH, 1 - TABLE_DEPTH / height);
+    return texture;
+}
+
 function Tray() {
     // Painted textures (docs/art-direction.md). Each tiles at roughly real-world scale:
     // the felt image covers ~3 units, and the plank image (four rows of planks) ~3.8
     // units deep, so a plank is about one die wide.
     const felt = useMemo(() => paintedTexture('felt.webp', 2.4, 1.4), []);
-    const tabletop = useMemo(() => paintedTexture('table-planks.webp', 40 / (3.8 * 1402 / 768), (24 - TABLE_FAR_EDGE_Z) / 3.8), []);
+    const tabletop = useMemo(tabletopTexture, []);
     const rails = useMemo(() => paintedTexture('rail-walnut.webp', 2, 0.35), []);
     const slotRail = useMemo(() => paintedTexture('rail-walnut.webp', 1.6, 0.3), []);
     const feltWear = useMemo(() => (lookNext ? wornPatch() : null), []);

@@ -62,7 +62,7 @@ export const PORTRAITS: Record<string, Portrait> = {
     // His black flame: dark tongues rising from between his hands, with a violet glow in it.
     'Vaelin Inkhand': {
         ...seated('vaelin-inkhand.webp', [39, 31], 1.1, 759, 720, [-16.6, -11.1]),
-        air: { smoke: { at: [0.71, 0.4], color: [0.07, 0.04, 0.11], alpha: 0.45, rate: 7, spread: 0.12, rise: 48 }, glow: { at: [0.62, 0.47], color: [0.55, 0.3, 0.9], radius: 0.12, strength: 0.22, pulse: 0.4 } }
+        air: { smoke: { at: [0.71, 0.4], color: [0.07, 0.04, 0.11], alpha: 0.45, rate: 7, spread: 0.12, rise: 48 }, glow: { at: [0.62, 0.47], color: [0.03, 0.01, 0.05], radius: 0.12, strength: 0.4, pulse: 0.4, dark: true } }
     },
     'Stason Jatham': seated('stason.webp', [47, 37], 1.45, 991, 720, [-6.2, -3.4]),
     // His hammer's holy light, pulsing.
