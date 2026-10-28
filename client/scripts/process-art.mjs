@@ -167,7 +167,7 @@ function toSharp({ data, width, height }) {
 async function writePreview(name, img) {
     if (!PREVIEW) return;
     mkdirSync(PREVIEW, { recursive: true });
-    await toSharp(img).flatten({ background: '#ff00ff' }).resize({ height: 500 }).jpeg().toFile(path.join(PREVIEW, `${name}.jpg`));
+    await toSharp(img).flatten({ background: '#ff00ff' }).resize({ height: 500 }).jpeg().toFile(path.join(PREVIEW, `${name.replaceAll('/', '-')}.jpg`));
 }
 
 // patches: leftover checkerboard boxed in by the character, as
@@ -191,7 +191,7 @@ async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [
 // checkerboard. Flood-fill from the border through anything close to the border's colour,
 // then take the background's tint out of the edge pixels (wispy hair over magenta would
 // otherwise keep a pink fringe).
-function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [] }) {
+function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOverBlue = -Infinity }) {
     const { data, width, height } = img;
     const border = [];
     for (let x = 0; x < width; x++) border.push(x, (height - 1) * width + x);
@@ -202,7 +202,7 @@ function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [] }) {
     // brown cloth in shadow can come close in plain distance, but their blue sits below green.
     const near = p => {
         const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
-        return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && r - g > minRed && b - g > minBlue;
+        return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && r - g > minRed && b - g > minBlue && r - b > redOverBlue;
     };
     const mask = new Uint8Array(width * height);
     const stack = [];
@@ -437,6 +437,8 @@ function eraseSmoke(img, mask, bg, { clear, paint }) {
 //              painting, where it crops the character itself (fadeEdges)
 //   glow       { boxes }: a bright glow or flame over the background in those boxes keeps its own
 //              warm colours and turns see-through by how bright it is (glowToAlpha)
+//   redOverBlue  how far red must sit above blue to count as background (none): on a crimson
+//              background, keeps violet that has as much blue as red (Purple Haze's smoke)
 //   smokeMinBlue  grey smoke only: how far blue may sit below green to count as smoke (-25);
 //              raise it to keep skin and leather in the box out (veil)
 // A painting that crops the character at its own edge (Jaguar's cloak running off the right side, 27 Oct)
@@ -484,10 +486,18 @@ function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97 }, alpha =
     return alpha;
 }
 
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null } = {}) {
+// Item icons (Thom's Thonics, 28 Oct; Elf Bars, keepsakes next): `icon: 320` fits the trimmed
+// cut-out inside a square of that many px, a few px in from each side, centred on transparency.
+async function squareIcon(trimmed, size, pad = Math.round(size / 40)) {
+    const inner = size - 2 * pad;
+    const fitted = await sharp(trimmed).resize({ width: inner, height: inner, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toBuffer();
+    return sharp(fitted).extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } });
+}
+
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null, icon = null, redOverBlue = -Infinity } = {}) {
     if (!wanted(name)) return;
     const img = await readRgba(file);
-    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes });
+    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes, redOverBlue });
     if (noSmoke) eraseSmoke(img, mask, bg, noSmoke);
     keepMainShape(img, mask, minPiece);
     const boxes = !smokeBox ? null : Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox];
@@ -501,7 +511,9 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     if (fade) fadeEdges(img, fade);
     await writePreview(name, img);
     const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());
-    const info = await sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, `${name}.webp`));
+    const sized = icon ? await squareIcon(trimmed, icon) : sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true });
+    mkdirSync(path.dirname(path.join(OUT, name)), { recursive: true });
+    const info = await sized.webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, `${name}.webp`));
     const removed = Math.round((100 * mask.reduce((s, v) => s + v, 0)) / mask.length);
     console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  background rgb(${bg.join(',')}), ${removed}% removed`);
 }
@@ -662,3 +674,16 @@ await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight
 await cutOutFlat('ability-smooth-talk.jpg', 'ability-smooth-talk', { maxHeight: 900, tolerance: 30, holes: [[414, 180], [294, 424]], minPiece: 0.00002, trails: [{ colour: [245, 200, 120], reach: 35, boxes: [[90, 320, 325, 660], [520, 420, 660, 525]] }, { colour: [255, 70, 60], reach: 30, boxes: [[565, 120, 640, 330]] }], fade: { bottom: 60 } }); // his golden sparkle swirls and the potion's red glow stay, see-through
 await cutOutFlat('ability-the-cloak.jpg', 'ability-the-cloak', { maxHeight: 900, holes: [[777, 496], [751, 419], [822, 326], [712, 489], [833, 808], [293, 421], [415, 180]], trails: [{ colour: [60, 78, 92], reach: 20, boxes: [[0, 540, 330, 820], [640, 380, 848, 900]] }, { colour: [20, 28, 38], reach: 20, boxes: [[0, 700, 220, 800]] }], fade: { left: 90, right: 40, bottom: 60 } }); // his smoky wisps and the thin cloak's edge stay see-through; background between the folds and the arm
 await cutOutFlat('ability-divine-smite.jpg', 'ability-divine-smite', { maxHeight: 900, holes: [[412, 203], [478, 164], [961, 91], [553, 186], [580, 196], [524, 176], [709, 62]], glow: { boxes: [[590, 0, 1024, 440], [680, 440, 1024, 480]] }, fade: { right: 30, bottom: 60 } }); // the hammer's gold flame stays bright and see-through; background between his arm, head and the handle
+// Thom's Thonics (28 Oct): the bottles as square item icons (shelf ~28 px, Thom's cart ~40 px, the drinking moment ~200 px)
+await cutOutFlat('thonic-healing.jpg', 'thonics/healing', { icon: 320 });
+await cutOutFlat('thonic-lastGasp.jpg', 'thonics/lastGasp', { icon: 320 });
+await cutOutFlat('thonic-fizzy.jpg', 'thonics/fizzy', { icon: 320 });
+await cutOutFlat('thonic-secondThoughts.jpg', 'thonics/secondThoughts', { icon: 320, tolerance: 40 });
+await cutOutFlat('thonic-steady.jpg', 'thonics/steady', { icon: 320 });
+await cutOutFlat('thonic-clearEye.jpg', 'thonics/clearEye', { icon: 320 });
+// Johnny Elf Bar's Elf Bars (28 Oct): square item icons like the Thonics. Holes: the background boxed in
+// between the brass frame and the body (and the mouthpiece), and between the vapour swirl's strands.
+await cutOutFlat('elfbar-lemonLevitation.jpg', 'elfbars/lemonLevitation', { icon: 320, holes: [[622, 101], [652, 298], [370, 444]] });
+await cutOutFlat('elfbar-watermelonHindsight.jpg', 'elfbars/watermelonHindsight', { icon: 320, holes: [[614, 97], [654, 294], [354, 445], [462, 445], [273, 554]] });
+await cutOutFlat('elfbar-cottonCandyCloud.jpg', 'elfbars/cottonCandyCloud', { icon: 320, holes: [[611, 95], [658, 286], [336, 445], [466, 445], [591, 557], [244, 948], [235, 1028]] });
+await cutOutFlat('elfbar-purpleHaze.jpg', 'elfbars/purpleHaze', { icon: 320, redOverBlue: 15, holes: [[612, 94], [658, 288], [362, 444]] });

@@ -991,6 +991,13 @@ footer {
 .bottle.steady { --liquid: #ffb300; }
 .bottle.clearEye { --liquid: #4dd0e1; }
 .bottle.empty { opacity: 0.3; }
+/* A painted Thonic (29 Oct): the user's bottle, a little bigger than the drawn one, with a faint
+   glow in its colour. */
+.bottle.painted { width: 36px; height: 36px; }
+.bottle.painted::before { display: none; }
+.bottle.painted img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--liquid) 55%, transparent)); pointer-events: none; }
+.shelf-slot:disabled .bottle.painted { filter: saturate(0.6); }
+.bottle.painted.lastGasp img { transform: scale(1.15); } /* (a tall thin vial: a touch bigger to match the round ones) */
 .bottle.empty .liquid { background: none; box-shadow: none; border-style: dashed; }
 .bottle.empty::before { border-style: dashed; background: none; }
 
@@ -1007,6 +1014,12 @@ footer {
 .vape .puffs { position: absolute; bottom: -4px; display: flex; gap: 2px; }
 .vape .puffs i { width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px var(--flavour); }
 .vape.puffed { filter: saturate(0.4) brightness(0.75); }
+/* The user's painted vapes (29 Oct): the painting, with the puff dots under it. */
+.vape.painted { width: 36px; height: 36px; justify-content: center; }
+.vape.painted img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--flavour) 60%, transparent)); pointer-events: none; }
+.vape.painted .puffs { bottom: -5px; }
+.keepsake-flare.painted { font-size: 4.6rem; }
+.keepsake-flare.painted img { width: 1em; height: 1em; object-fit: contain; display: block; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)); }
 .vape.purpleHaze { --flavour: #8e24aa; }
 .vape.cottonCandyCloud { --flavour: #f48fb1; }
 .vape.lemonLevitation { --flavour: #fdd835; }
@@ -1092,6 +1105,7 @@ footer {
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 8px var(--liquid));
     animation: potion-tip 1.85s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
+.potion-moment .bottle.painted { left: -18px; top: -92px; }
 /* It rises, the cork pops (a jolt), it tips up to drink, then rights itself and fades. */
 @keyframes potion-tip {
     0% { opacity: 0; transform: translateY(24px) scale(1.6); }
@@ -1254,6 +1268,7 @@ footer {
     animation: deal 0.45s ease-out both;
 }
 .thonic-card .bottle { transform: scale(1.4); margin: 4px 0 6px; }
+.thonic-card .bottle.painted { margin: 8px 0 10px; }
 .thonic-card strong { font-size: clamp(0.95rem, 4vw, 1.1rem); color: var(--red); line-height: 1.15; }
 .thonic-card .text { flex: 1; font-size: clamp(0.72rem, 3.2vw, 0.85rem); line-height: 1.3; color: #3b2a1a; }
 .thonic-card .buy {

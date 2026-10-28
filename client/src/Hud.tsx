@@ -470,22 +470,32 @@ function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     );
 }
 
-// A small painted bottle; the colour says which Thonic it is.
+// The Thonics with the user's paintings (29 Oct; art/thonic-<id>.jpg, cut out to art/thonics/<id>.webp).
+const PAINTED_THONICS = new Set(['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye']);
+
+// A Thonic's bottle: its painting, or a small bottle drawn in CSS (the colour says which).
 function Bottle({ thonic }: { thonic: Thonic | null }) {
     if (thonic?.elf) return <Vape bar={thonic} />;
+    if (thonic && PAINTED_THONICS.has(thonic.id)) {
+        return <span className={`bottle painted ${thonic.id}`} aria-hidden="true"><img src={`${import.meta.env.BASE_URL}art/thonics/${thonic.id}.webp`} alt="" draggable={false} /></span>;
+    }
     return <span className={`bottle ${thonic ? thonic.id : 'empty'}`} aria-hidden="true"><span className="liquid" /></span>;
 }
 
 // An Elf Bar: a slim vape in its flavour's colour, with a dot for each puff left (dim once
 // puffed this fight).
 function Vape({ bar }: { bar: Thonic }) {
+    // (The user's paintings since 29 Oct: art/elfbar-<id>.jpg, cut out to art/elfbars/<id>.webp.)
     return (
-        <span className={`vape ${bar.id} ${bar.puffed ? 'puffed' : ''}`} aria-hidden="true">
-            <span className="body" />
+        <span className={`vape ${bar.id} ${bar.puffed ? 'puffed' : ''} painted`} aria-hidden="true">
+            <img src={elfBarArt(bar.id)} alt="" draggable={false} />
             {bar.puffs !== undefined && <span className="puffs">{Array.from({ length: bar.puffs }, (_, i) => <i key={i} />)}</span>}
         </span>
     );
 }
+
+const elfBarArt = (id: string) => `${import.meta.env.BASE_URL}art/elfbars/${id}.webp`;
+const ELF_BARS = new Set(['purpleHaze', 'cottonCandyCloud', 'lemonLevitation', 'watermelonHindsight']);
 
 // When a Thonic can be drunk, always on your own turn (the server checks the same):
 // Healing and Clear-Eye before you roll (Clear-Eye while the opponent's ability has uses left,
@@ -934,7 +944,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {fx && moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
             {fx && moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
             {moment.ability === 'Disguises' && <div className="mask-flare" aria-hidden="true">🎭</div>}
-            {keepsake && <div className="keepsake-flare" aria-hidden="true">{KEEPSAKE_ICONS[keepsake] ?? '✦'}</div>}
+            {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : KEEPSAKE_ICONS[keepsake] ?? '✦'}</div>}
             {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
             {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
             {fx && moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
