@@ -1033,13 +1033,26 @@ footer {
 .thonic-cards.elf-cards .thonic-card { max-width: none; padding: 7px 8px; gap: 3px; }
 .thonic-cards.elf-cards .thonic-card .text { font-size: 0.78rem; line-height: 1.25; }
 .thonic-cards.elf-cards .thonic-card .buy { padding: 5px 10px; }
+/* Upright phones: each Elf Bar a compact row (vape, name and text, buy), so Johnny keeps a stage
+   as big as Thom's (the user, 29 Oct). */
+@media (orientation: portrait) {
+    .thonic-cards.elf-cards { grid-template-columns: 1fr; gap: 5px; }
+    .thonic-cards.elf-cards .thonic-card {
+        display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-areas: "icon name buy" "icon text buy";
+        align-items: center; column-gap: 8px; row-gap: 0; text-align: left; padding: 5px 8px;
+    }
+    .thonic-cards.elf-cards .thonic-card .vape { grid-area: icon; transform: none; margin: 0; width: 32px; height: 36px; }
+    .thonic-cards.elf-cards .thonic-card strong { grid-area: name; font-size: 0.95rem; }
+    .thonic-cards.elf-cards .thonic-card .text { grid-area: text; font-size: 0.74rem; }
+    .thonic-cards.elf-cards .thonic-card .buy { grid-area: buy; white-space: nowrap; }
+}
 /* (Short phones: the counter needs the room, so the kid keeps more of his.) */
 @media (max-height: 680px) { .spot-scene.elfKid .scene-text { display: none; } }
 
 /* Johnny Elf Bar: a violet haze of vapour. */
 .spot-pic.elfKid { background: radial-gradient(circle at 50% 40%, rgba(186, 104, 200, 0.45), rgba(34, 14, 40, 0.95) 70%); }
 .spot-scene.elfKid { --glow: rgba(186, 104, 200, 0.45); }
-.spot-scene.elfKid .thom-figure { height: min(78%, 440px); }
+/* (Framed like Thom, big and cropped at the counter: the user, 29 Oct; he was 78%.) */
 
 /* During a fight: purse and shelf beside the keepsakes, above the player chips. */
 .purse { color: var(--gold-bright); font-weight: 700; font-size: 0.95rem; white-space: nowrap; }

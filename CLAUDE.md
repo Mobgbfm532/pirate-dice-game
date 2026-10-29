@@ -577,7 +577,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
   at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
   with that until the switch-over.
-- **Elf Bars (28 Oct, the user's; no side effects, the user's call):** magic vapes sold by the
+- **Elf Bars (28 Oct, the user's; no side effects, the user's call):** magic vapes sold by
   **Johnny Elf Bar**, one of Frak's street urchins, a spot in every place (`elfKid`, painting
   `art/bust-elf-kid.jpg`; offered when the purse covers the cheapest). They sit on the Thonic
   shelf (`THONICS` entries with `elf: true`) with `elfBarPuffs` (3) puffs each, at most one
@@ -590,7 +590,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   a keep: `turn.freeRoll`), **Watermelon Hindsight** 14 (`Rules.redoThrow`: the last throw's dice,
   `turn.lastThrown`, any kept since put back, thrown again). Puffed through `drinkThonic`; the
   moment is `keepsakeActivated` with `who: 'Elf Bar'` and Martha's puff sound. Jaguar's Smooth
-  Talk never takes one. The shelf draws them as slim vapes with a dot per puff (`Vape` in Hud).
+  Talk never takes one. The shelf draws them as slim vapes with a dot per puff (`Vape` in Hud). Since 29 Oct Johnny is framed like Thom (big, cropped at the counter), and on upright phones his four Elf Bars are compact rows (`.elf-cards`) so his stage stays as big as Thom's.
 - **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
   single last die (Second Thoughts can reopen the hand).
 
