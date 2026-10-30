@@ -109,7 +109,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   start screen sits on the tavern painting (candle smoke between scenes was tried and taken out,
   the user's call, 25 Oct). The loading screen is in `index.html` (`#boot`:
   the tavern, the title, a tumbling die), faded out by main.tsx once the canvas exists.
-- `Hud.tsx`: lobby (invite `?table=CODE`, lives choice), turn banner (not in Tavern Crawl, where
+- `Hud.tsx`: lobby (invite `?table=CODE`, lives choice; since 30 Oct the player picks one of seven painted item icons, Martha's Mask, the Loaded Die, Brodor's Sunglasses, the Shield, Healing, Purple Haze, the Sign of Kram: `ICON_AVATARS` in portraits.ts, one row; the server's `AVATARS` still accepts the classic page's six characters, and the classic page draws the icons from `/next/art`), turn banner (not in Tavern Crawl, where
   the nameplates show whose turn it is), chips, opponent nameplate, score to
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
   and Thonic shelf (`drinkable()`), Thom's full-screen shop scene (`ThomShop`), the choice

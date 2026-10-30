@@ -93,10 +93,23 @@ export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' |
     elfKid: seated('elf-kid.webp', [50, 27], 1.25, 477, 720)
 };
 
-export const AVATAR_IDS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+// What a player picks on the start screen: since 30 Oct seven of the game's painted item icons
+// (the user's call; they were six character portraits, still accepted from older devices and the
+// classic page). Each sits whole in its round frame, a little in from the edge.
+const icon = (path: string): Portrait => ({ src: `${BASE}art/${path}.webp`, face: [50, 50], zoom: 0.84, bust: false, center: [50, 50], aspect: 1 });
+export const ICON_AVATARS: Record<string, Portrait> = {
+    "Martha's Mask": icon('keepsakes/marthasMask'),
+    "Loaded Die": icon('keepsakes/loadedDie'),
+    "Brodor's Sunglasses": icon('keepsakes/brodorsSunglasses'),
+    "Shield": icon('keepsakes/bentCopper'),
+    "Healing Thonic": icon('thonics/healing'),
+    "Purple Haze": icon('elfbars/purpleHaze'),
+    "Sign of Kram": icon('keepsakes/kram')
+};
+export const AVATAR_IDS = Object.keys(ICON_AVATARS);
 
 export function portraitFor(key: string): Portrait {
-    return PORTRAITS[key] ?? PORTRAITS['The Molar'];
+    return PORTRAITS[key] ?? ICON_AVATARS[key] ?? PORTRAITS['The Molar'];
 }
 
 // Inline style for a round avatar showing the face. With a measured `center`, the face's middle

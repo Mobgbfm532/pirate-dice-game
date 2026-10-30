@@ -24,7 +24,9 @@ const rollFace = () => crypto.randomInt(1, 7);
 const EMPTY_TABLE_GRACE_MS = 120000;
 const TURN_RECONNECT_GRACE_MS = 30000;
 
-const AVATARS = ['Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+// The avatars a player may pick: the 3D client's seven item icons (30 Oct), then the classic
+// page's six characters.
+const AVATARS = ["Martha's Mask", "Loaded Die", "Brodor's Sunglasses", "Shield", "Healing Thonic", "Purple Haze", "Sign of Kram", 'Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
 const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross'];
 
 app.use(express.static(path.join(__dirname, 'public')));

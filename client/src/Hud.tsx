@@ -19,11 +19,11 @@ function readPrefs() {
     try {
         return {
             name: localStorage.getItem('tavernName') ?? '',
-            avatar: localStorage.getItem('tavernAvatar') ?? 'Devil',
+            avatar: localStorage.getItem('tavernAvatar') ?? AVATAR_IDS[0],
             code: localStorage.getItem('tavernRoom') ?? ''
         };
     } catch {
-        return { name: '', avatar: 'Devil', code: '' };
+        return { name: '', avatar: AVATAR_IDS[0], code: '' };
     }
 }
 
@@ -45,7 +45,7 @@ function JoinScreen() {
     const prefs = readPrefs();
     const invite = invitedTable();
     const [name, setName] = useState(prefs.name);
-    const [avatar, setAvatar] = useState(AVATAR_IDS.includes(prefs.avatar) ? prefs.avatar : 'Devil');
+    const [avatar, setAvatar] = useState(AVATAR_IDS.includes(prefs.avatar) ? prefs.avatar : AVATAR_IDS[0]);
     const [code, setCode] = useState(invite || (['COMP', 'TAVERN'].includes(prefs.code) ? '' : prefs.code));
     const [lives, setLives] = useState(3);
 

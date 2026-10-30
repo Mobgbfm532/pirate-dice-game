@@ -994,6 +994,8 @@
             if (avatarString === '🧙‍♂️') return `<img src="dicewizard.png" class="${className}" alt="Wizard">`;
             if (avatarString === '🗡️') return `<img src="rapier.png" class="${className}" alt="Rogue">`;
             if (avatarString === '🪕') return `<img src="bard.png" class="${className}" alt="Bard">`;
+            const itemIcons = { "Martha's Mask": 'keepsakes/marthasMask', "Loaded Die": 'keepsakes/loadedDie', "Brodor's Sunglasses": 'keepsakes/brodorsSunglasses', "Shield": 'keepsakes/bentCopper', "Healing Thonic": 'thonics/healing', "Purple Haze": 'elfbars/purpleHaze', "Sign of Kram": 'keepsakes/kram' };
+            if (itemIcons[avatarString]) return imageTag('next/art/' + itemIcons[avatarString] + '.webp', avatarString);
             if (avatarString === 'BOT_MOLAR' || avatarString?.includes('Molar')) return imageTag('Molar.png', 'The Molar');
             return `<span style="font-size: 1.8rem">${avatarString || '👤'}</span>`;
         }

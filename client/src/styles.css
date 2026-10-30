@@ -401,7 +401,9 @@ footer {
 .primary.alt { background: linear-gradient(#5d4037, #3e2723); }
 .secondary { background: #fff3d6; color: var(--ink); white-space: nowrap; }
 
-.avatars { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+/* Seven item icons on one row (30 Oct): each sized from the panel's width. */
+.avatars { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; }
+.panel.join .avatar { width: min(52px, calc((100% - 6 * 6px) / 7)); height: auto; aspect-ratio: 1; flex: none; }
 .avatar {
     width: 52px;
     height: 52px;
@@ -445,9 +447,10 @@ footer {
     .player .name { max-width: 5em; font-size: 0.85rem; }
     .side-players { gap: 5px; }
     .side-players .player { padding: 4px 8px 4px 4px; gap: 6px; }
-    /* All six avatars on one row. */
+    /* All seven on one row. */
     .avatars { gap: 4px; }
     .avatar { width: 42px; height: 42px; }
+    .panel.join .avatar { width: min(46px, calc((100% - 6 * 4px) / 7)); height: auto; }
 }
 
 /* A phone on its side: the start screen is short, so it tightens up to fit without scrolling. */
