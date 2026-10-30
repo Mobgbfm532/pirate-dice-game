@@ -232,10 +232,13 @@ const TAVERN_ENCOUNTERS = [
 ];
 
 const TAVERN_KEEPSAKES = [
+    // `from`: offered only from that place on (the Shield and the Loaded Die from the Yawning
+    // Portal, the user's call, 30 Oct).
     {
         id: 'bentCopper',
         name: 'Shield',
-        text: 'Once per encounter, the first life you would lose is ignored.'
+        text: 'Once per encounter, the first life you would lose is ignored.',
+        from: 'yawningPortal'
     },
     {
         id: 'luckySeat',
@@ -250,7 +253,8 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'loadedDie',
         name: 'Loaded Die',
-        text: 'One of your dice always rolls a 4, 5 or 6.'
+        text: "One of your dice lands only on a 2 or a 4 until you've kept both; after that, only on 4, 5 or 6.",
+        from: 'yawningPortal'
     },
     {
         id: 'potionBelt',
@@ -261,9 +265,29 @@ const TAVERN_KEEPSAKES = [
         id: 'loyaltyCard',
         name: "Thom's Loyalty Card",
         text: "Thom's cart is always one of the spots, and your first Thonic each visit is free."
+    },
+    // 30 Oct, the user's picks.
+    {
+        id: 'misersPurse',
+        name: "Miser's Purse",
+        text: 'Each win pays 1 more gold for every 10 in your purse.'
+    },
+    {
+        id: 'gamblersCharm',
+        name: "Gambler's Charm",
+        text: 'When only one die is left to throw, it is thrown twice and you keep the better.'
+    },
+    {
+        id: 'bottomlessFlask',
+        name: 'Bottomless Flask',
+        text: 'The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf.'
     }
 ];
 const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
+// You carry at most this many keepsakes (the user's call, 30 Oct): with full pockets Thom's back
+// shelf won't sell, the Stranger stays away, and a boss's keepsake means leaving one behind.
+const MAX_KEEPSAKES = BALANCE.maxKeepsakes || 5;
+const pocketsFull = room => room.tavernRun.keepsakes.length >= MAX_KEEPSAKES;
 
 // Martha's mask: dropped by Martha Mystery (never offered by the Stranger). Once a fight, before
 // you roll, you wear one of her disguises for the round (the wearMask handler).
@@ -406,13 +430,39 @@ function rollFaceFor(room, turn) {
     // The rolls that lost, this throw (Double Bubble, Flourish): sent with diceRolled as ghosts.
     turn.ghosts = [];
     if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn) : rollFace;
+    let face = playerFace(room, turn);
+    if (!hasKeepsake(room, 'gamblersCharm')) return face;
+    // The Gambler's Charm: the last die left to throw is thrown twice, and you keep the better (a
+    // 2 or 4 you still need, else the higher; in a cursed round the lower). The other rises as a ghost.
+    return d => {
+        if (!d || turn.dice.filter(x => x.status === Rules.STATUS.ACTIVE).length !== 1) return face(d);
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let a = face(d), b = face(d);
+        let cursed = !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+        let pick = cursed ? Math.min(a, b) : Math.max(a, b);
+        for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
+        let lost = pick === a ? b : a;
+        if (lost !== pick) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        return pick;
+    };
+}
+
+// How your dice land (before the Gambler's Charm): the Loaded Die, the hot tub's surge, Vaelin's
+// Inkfire, fealty to Kram.
+function playerFace(room, turn) {
     let loaded = hasKeepsake(room, 'loadedDie');
     let surge = room.tavernRun.tubSurge;
     let effect = room.tavernRun.roundEffect;
     let ink = !!effect && effect.kind === 'ink';
     let kram = !!room.tavernRun.kram; // sworn to Kram: your dice never land on 1
     if (!loaded && !surge && !ink && !kram) return rollFace;
-    let plain = d => (loaded && d && d.id === LOADED_DIE ? crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7) : kram ? crypto.randomInt(2, 7) : rollFace());
+    // The Loaded Die (reworked 30 Oct): a 2 or a 4 until you've kept both, then 4, 5 or 6.
+    let loadedFace = () => {
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let needed = [2, 4].filter(n => !kept.includes(n));
+        return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7);
+    };
+    let plain = d => (loaded && d && d.id === LOADED_DIE ? loadedFace() : kram ? crypto.randomInt(2, 7) : rollFace());
     let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
     if (!surge) return base;
     return d => {
@@ -497,7 +547,8 @@ function getTavernRunState(room) {
         shelfSize: shelfSizeOf(room),
         shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
         prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun), elfBars: Object.fromEntries(ELF_BARS.map(id => [id, thonicPrice(room.tavernRun, id)])) },
-        cloud: !!room.tavernRun.cloud, // Cotton Candy Cloud: the opponent can't see your score this round
+        cloud: !!room.tavernRun.cloud,
+        maxKeepsakes: MAX_KEEPSAKES, // Cotton Candy Cloud: the opponent can't see your score this round
         // The Bard's song for this fight: Inspiring Song ('ready' until your first throw, 'now' while
         // that throw can be thrown again) or Cutting Words (until it lands); nextSong: bought for the next.
         bard: {
@@ -1571,7 +1622,7 @@ function sealSave(room, name) {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
         shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
-        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), puffs: run.puffs || {}
+        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), puffs: run.puffs || {}, refusedDrops: run.refusedDrops || []
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
     let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
@@ -1604,6 +1655,7 @@ function restoreRun(room, data) {
     run.bought = {};
     Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
+    run.refusedDrops = (data.refusedDrops || []).filter(id => BOSS_DROPS[id]);
     run.puffs = {};
     Object.entries(data.puffs || {}).forEach(([id, n]) => { if (THONICS[id] && THONICS[id].elf && Number.isInteger(n) && n > 0 && n <= ELF_BAR_PUFFS) run.puffs[id] = n; });
     run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
@@ -1615,9 +1667,11 @@ function restoreRun(room, data) {
 function invitation(room, name) {
     let boss = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
     let drop = boss && BOSS_DROPS[boss.drops];
+    // claim: 'open' until you take the boss's keepsake or leave it; full: taking it means giving one up.
+    let claim = !drop ? null : hasKeepsake(room, drop.id) ? 'took' : (room.tavernRun.refusedDrops || []).includes(drop.id) ? 'refused' : 'open';
     return {
         stage: 'invitation', place: placeOf(room).name, from: boss ? PLACES[boss.place].name : null,
-        boss: boss ? boss.name : null, drop: drop || null, save: sealSave(room, name)
+        boss: boss ? boss.name : null, drop: drop || null, claim, full: pocketsFull(room), save: sealSave(room, name)
     };
 }
 
@@ -1648,9 +1702,12 @@ function shuffled(list) {
     return out;
 }
 
+// Keepsakes you don't have that are offered where the run is now (some only from a later place on).
 function unownedKeepsakes(room) {
     let owned = new Set(room.tavernRun.keepsakes.map(k => k.id));
-    return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
+    let order = Object.keys(PLACES);
+    let here = order.indexOf(TAVERN_ENCOUNTERS[Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1)].place);
+    return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id) && (!k.from || order.indexOf(k.from) <= here));
 }
 
 // Two different spots; the Dice Den only if the purse covers its smallest bet. With Thom's
@@ -1685,7 +1742,7 @@ function startInterlude(room, won) {
     let steal = Math.floor(run.purse * INTERLUDE.pickpocketShare);
     if (steal > 0 && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
-    } else if (unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
+    } else if (!pocketsFull(room) && unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
         run.interlude = strangerOffer(room);
     } else if ((placeOf(room).events || []).includes('darren') && crypto.randomInt(0, 100) < INTERLUDE.darrenChance) {
         run.interlude = { stage: 'darren', smashOn: INTERLUDE.darrenSmash, giftOn: INTERLUDE.darrenGift };
@@ -1950,6 +2007,10 @@ function evaluateTavernRound(roomCode) {
         let stats = room.tavernRun.stats;
         let winGold = GOLD.winFirst + GOLD.winStep * room.tavernRun.encounterIndex;
         let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
+        // The Miser's Purse: 1 more gold for every 10 in the purse (before this win's gold).
+        let miserGold = hasKeepsake(room, 'misersPurse') ? Math.floor(room.tavernRun.purse / 10) * (KEEPSAKE_NUMBERS.miserPerTen ?? 1) : 0;
+        stats.miserGold = (stats.miserGold || 0) + miserGold;
+        room.tavernRun.purse += miserGold;
         stats.encountersDefeated++;
         stats.winGold += winGold;
         stats.heartGold += heartGold;
@@ -1971,14 +2032,14 @@ function evaluateTavernRound(roomCode) {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
             place: room.tavernRun.encounterIndex,
-            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft },
+            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, ...(miserGold ? { miser: miserGold } : {}) },
             at: Date.now()
         };
         let beaten = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
         if (beaten.boss) {
-            // A boss's keepsake is the invitation on to the next place (no events on the way there).
+            // A boss's keepsake comes with the invitation on to the next place (no events on the way
+            // there); since 30 Oct you take it or leave it there (claimDrop).
             let drop = BOSS_DROPS[beaten.drops];
-            if (drop && !hasKeepsake(room, drop.id)) room.tavernRun.keepsakes.push(drop);
             won.drop = drop || null;
             room.tavernRun.lastWin = won;
             room.tavernRun.interlude = invitation(room, human.name);
@@ -2274,7 +2335,7 @@ io.on('connection', (socket) => {
         let shelf = run.shop.keepsakes || [];
         let keepsake = shelf.find(k => k.id === keepsakeId);
         let price = keepsake && KEEPSAKE_PRICES[keepsake.id];
-        if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id)) return;
+        if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id) || pocketsFull(room)) return;
         run.purse -= price;
         run.stats.spent += price;
         run.keepsakes.push(keepsake);
@@ -2460,6 +2521,30 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // A boss's keepsake, at the invitation: take it (with full pockets, naming one to leave behind)
+    // or leave it. Either way the invitation (and its save) is sealed afresh.
+    socket.on('claimDrop', (take, giveUp) => {
+        let room = interludeAt('invitation');
+        if (!room) return;
+        let run = room.tavernRun, interlude = run.interlude;
+        let drop = interlude.drop && BOSS_DROPS[interlude.drop.id];
+        if (!drop || interlude.claim !== 'open') return;
+        if (take === true) {
+            if (pocketsFull(room)) {
+                let index = run.keepsakes.findIndex(k => k.id === giveUp);
+                if (index < 0) return;
+                run.keepsakes.splice(index, 1);
+            }
+            run.keepsakes.push(drop);
+        } else if (take === false) {
+            run.refusedDrops = [...(run.refusedDrops || []), drop.id];
+        } else {
+            return;
+        }
+        run.interlude = invitation(room, room.players[socket.id].name);
+        emitState(socket.roomCode);
+    });
+
     // Johnny Elf Bar: an Elf Bar for the shelf (not one you already carry), full of puffs.
     socket.on('buyElfBar', (id) => {
         let room = interludeAt('elfKid');
@@ -2609,9 +2694,16 @@ io.on('connection', (socket) => {
             return;
         }
 
-        run.shelf.splice(slot, 1);
+        // The Bottomless Flask: the first Thonic drunk each fight may stay on the shelf.
+        let refilled = false;
+        if (hasKeepsake(room, 'bottomlessFlask') && !run.encounterKeepsakeUses.bottomlessFlask) {
+            run.encounterKeepsakeUses.bottomlessFlask = true;
+            refilled = crypto.randomInt(0, 100) < (KEEPSAKE_NUMBERS.flaskChance ?? 50);
+        }
+        if (!refilled) run.shelf.splice(slot, 1);
         run.stats.thonicsDrunk++;
         sendMoment(roomCode, 'thonicUsed', { id: thonicId, name: thonic.name, text });
+        if (refilled) emitKeepsakeActivated(roomCode, room, 'bottomlessFlask', `Your ${thonic.name} fills up again.`);
         if (rerolled) {
             throwAgain(roomCode, room, turn, rerolled);
         } else {

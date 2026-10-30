@@ -708,3 +708,7 @@ await cutOutFlat('keepsake-inspiringSong.jpg', 'keepsakes/inspiringSong', { icon
 await cutOutFlat('keepsake-cuttingWords.jpg', 'keepsakes/cuttingWords', { icon: 320 });
 await cutOutFlat('keepsake-ladysGrace.jpg', 'keepsakes/ladysGrace', { icon: 320, holes: [[548, 540]], glow: { boxes: [[575, 70, 850, 294]], colour: 'light', min: 0.12 } }); // the cyan flame keeps a soft see-through glow; the handle's loop
 await cutOutFlat('keepsake-kram.jpg', 'keepsakes/kram', { icon: 320 });
+// Three more keepsakes (30 Oct): the Miser's Purse, the Bottomless Flask, the Gambler's Charm
+await cutOutFlat('keepsake-misersPurse.jpg', 'keepsakes/misersPurse', { icon: 320 });
+await cutOutFlat('keepsake-bottomlessFlask.jpg', 'keepsakes/bottomlessFlask', { icon: 320, holes: [[457, 426]] }); // inside the swirl's curl
+await cutOutFlat('keepsake-gamblersCharm.jpg', 'keepsakes/gamblersCharm', { icon: 320, holes: [[903, 112], [649, 266], [664, 375], [661, 412], [654, 348], [670, 497]] }); // the cord's loop knot, the ring, between the wires, between the die and the clover

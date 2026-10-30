@@ -130,11 +130,16 @@ module.exports = {
     // under what it adds to a run's gold when bought around fight 3, when a purse first reaches a
     // few hundred (balance/experiments/keepsake-when.js; bought later, each is worth less).
     thomKeepsakes: 2,
-    keepsakePrices: { bentCopper: 30, velvetCushion: 15, luckySeat: 15, loyaltyCard: 13, potionBelt: 13, loadedDie: 8 },
+    // (30 Oct: the Miser's Purse, Gambler's Charm and Bottomless Flask, first guesses, and the
+    // reworked Loaded Die's, to set by play and simulation.)
+    keepsakePrices: { bentCopper: 30, velvetCushion: 15, luckySeat: 15, loyaltyCard: 13, potionBelt: 13, loadedDie: 12, misersPurse: 12, gamblersCharm: 14, bottomlessFlask: 12 },
+    maxKeepsakes: 5,        // carried at once (the user's call, 30 Oct)
 
     keepsakes: {
-        loadedDieLow: 4,        // the Loaded Die: one of your dice only rolls this or higher
+        loadedDieLow: 4,        // the Loaded Die: once your 2 and 4 are kept, it rolls this or higher
         beltSlots: 1,           // the Potion Belt: extra shelf slots...
-        beltThonic: 'healing'   // ...and the Thonic it comes with
+        beltThonic: 'healing',  // ...and the Thonic it comes with
+        miserPerTen: 1,         // the Miser's Purse: gold a win adds for every 10 in the purse
+        flaskChance: 50         // the Bottomless Flask: percent the first Thonic each fight stays
     }
 };

@@ -1623,6 +1623,11 @@ button.keepsake.used { opacity: 0.55; }
     background: rgba(20, 12, 6, 0.8); border: 1px solid var(--panel-border); border-radius: 12px;
 }
 .invitation-card .icon { font-size: 2.4rem; }
+/* A boss's keepsake: take it or leave it (30 Oct); with full pockets, which of yours to leave. */
+.invitation-card .drop-choice { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.invitation-card .drop-swap { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 8px 0 4px; }
+.invitation-card .keepsake-ware.swap { display: flex; align-items: center; gap: 6px; padding: 6px 8px; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.invitation-card .keepsake-ware.swap .icon { font-size: 1.4rem; }
 .invitation-card p { margin: 6px 0; }
 .invitation .fine { text-align: center; }
 @media (orientation: landscape) and (max-height: 500px) {

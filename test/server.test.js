@@ -848,20 +848,26 @@ async function takeKeepsake(hero, room, id) {
     return nextState(hero, s => runOf(s).interlude.stage === 'done');
 }
 
-test("the Loaded Die: one of your dice always rolls a 4, 5 or 6; the opponent's dice are fair", async () => {
+// A turn's dice with these values kept (for rollFaceFor in the keepsake tests).
+const keptTurn = (playerId, kept) => ({ playerId, dice: [0, 1, 2, 3, 4, 5].map(id => (id - 1 < kept.length && id > 0 ? { id, value: kept[id - 1], status: Rules.STATUS.LOCKED } : { id, value: 0, status: 'active' })) });
+
+test("the Loaded Die: a 2 or a 4 until you've kept both, then 4, 5 or 6; the opponent's dice are fair", async () => {
     const { hero, room } = await tavernTable('Loaded');
     room.tavernRun.keepsakes.push({ id: 'loadedDie', name: 'Loaded Die', text: '' });
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
-    assert.ok(rolled.turn.dice[0].value >= BALANCE.keepsakes.loadedDieLow, 'on the table');
-    const mine = server.rollFaceFor(room, { playerId: hero.id }), theirs = server.rollFaceFor(room, { playerId: 'BOT_MOLAR' });
-    const seen = new Set(), others = new Set(), bot = new Set();
+    assert.ok([2, 4].includes(rolled.turn.dice[0].value), 'on the table: a 2 or a 4');
+    const faces = (kept, id = 0) => new Set(Array.from({ length: 400 }, () => server.rollFaceFor(room, keptTurn(hero.id, kept))({ id })));
+    assert.deepEqual([...faces([])].sort(), [2, 4], 'both still needed');
+    assert.deepEqual([...faces([2, 6])], [4], 'the 4 still needed');
+    assert.deepEqual([...faces([4])], [2], 'the 2 still needed');
+    assert.deepEqual([...faces([2, 4])].sort(), [4, 5, 6], 'both kept');
+    const mine = server.rollFaceFor(room, keptTurn(hero.id, [])), theirs = server.rollFaceFor(room, { playerId: 'BOT_MOLAR' });
+    const others = new Set(), bot = new Set();
     for (let i = 0; i < 600; i++) {
-        seen.add(mine({ id: 0 }));
         others.add(mine({ id: 3 }));
         bot.add(theirs({ id: 0 }));
     }
-    assert.deepEqual([...seen].sort(), [4, 5, 6]);
     assert.equal(others.size, 6, 'the other five are fair');
     assert.equal(bot.size, 6, "the opponent's first die is fair");
 });
@@ -1158,14 +1164,17 @@ test('the Hooded Stranger finds you now and then, instead of the spots, until hi
     // Then, at the Ghoul and Gourd, Darren 15% of what is left (9%).
     assert.ok(Math.abs(share('darren') - 0.09) < 0.03, `Darren ${share('darren')}`);
 
-    // Take a keepsake from him six times: then they're all yours, and he stops coming.
-    for (let i = 0; i < 6; i++) {
+    // Take a keepsake from him five times: then your pockets are full, and he stops coming. (At the
+    // Ghoul and Gourd he never has the Shield or the Loaded Die.)
+    for (let i = 0; i < 5; i++) {
+        assert.ok(server.strangerOffer(room).offers.every(k => k.id !== 'bentCopper' && k.id !== 'loadedDie'));
         room.tavernRun.interlude = server.strangerOffer(room);
         hero.emit('strangerPick', room.tavernRun.interlude.offers[0].id);
         await nextState(hero, s => runOf(s).interlude.stage === 'done');
     }
-    assert.deepEqual(room.tavernRun.keepsakes.map(k => k.id).sort(), ['bentCopper', 'loadedDie', 'loyaltyCard', 'luckySeat', 'potionBelt', 'velvetCushion'], 'all six, none twice');
-    assert.equal(walks(400).stranger, 0);
+    const ids = room.tavernRun.keepsakes.map(k => k.id);
+    assert.equal(new Set(ids).size, 5, 'five, none twice');
+    assert.equal(walks(400).stranger, 0, 'pockets full');
 });
 
 test('the shelf and purse survive a reconnect', async () => {
@@ -1595,6 +1604,10 @@ test("beating Martha wins her mask and the invitation to the Yawning Portal", as
     assert.equal(run.interlude.place, 'The Yawning Portal');
     assert.equal(run.interlude.boss, 'Martha Mystery');
     assert.equal(run.interlude.drop.id, 'marthasMask');
+    assert.equal(run.interlude.claim, 'open', 'yours to take or leave');
+    assert.ok(!run.keepsakes.some(k => k.id === 'marthasMask'));
+    hero.emit('claimDrop', true);
+    await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.claim === 'took');
     assert.ok(run.keepsakes.some(k => k.id === 'marthasMask'));
     assert.equal(typeof run.interlude.save, 'string');
     hero.emit('moveOn');
@@ -1786,9 +1799,9 @@ test("Vaelin's Inkfire Brand: in his round your dice never land on 6", async () 
     const face = server.rollFaceFor(room, room.turn);
     const faces = new Set(Array.from({ length: 600 }, () => face({ id: 0 })));
     assert.deepEqual([...faces].sort(), [1, 2, 3, 4, 5], 'never a 6');
-    // The Loaded Die lands 4 or 5.
+    // The Loaded Die, once your 2 and 4 are kept, lands 4 or 5.
     room.tavernRun.keepsakes.push({ id: 'loadedDie', name: 'Loaded Die', text: '' });
-    const loaded = server.rollFaceFor(room, room.turn);
+    const loaded = server.rollFaceFor(room, keptTurn(room.turn.playerId, [2, 4]));
     assert.deepEqual([...new Set(Array.from({ length: 200 }, () => loaded({ id: 0 })))].sort(), [4, 5]);
     // The opponent's dice are not burned.
     const theirs = server.rollFaceFor(room, { playerId: 'BOT_MOLAR', dice: [] });
@@ -1875,7 +1888,12 @@ test('beating Brodor wins his Sunglasses and word of the Salty Swallow', async (
     const run = room.tavernRun;
     assert.deepEqual({ stage: run.interlude.stage, place: run.interlude.place, from: run.interlude.from, drop: run.interlude.drop.id },
         { stage: 'invitation', place: 'The Salty Swallow', from: 'The Yawning Portal', drop: 'brodorsSunglasses' });
-    assert.ok(run.keepsakes.some(k => k.id === 'brodorsSunglasses'));
+    hero.emit('claimDrop', false); // left with Brodor
+    await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.claim === 'refused');
+    assert.ok(!run.keepsakes.some(k => k.id === 'brodorsSunglasses'));
+    hero.emit('claimDrop', true); // decided already
+    await sleep(30);
+    assert.ok(!run.keepsakes.some(k => k.id === 'brodorsSunglasses'));
     assert.equal(typeof run.interlude.save, 'string');
     hero.emit('moveOn');
     const fight = await nextState(hero, s => !runOf(s).interlude);
@@ -2193,4 +2211,104 @@ test("Cotton Candy Cloud: the opponent can't see your score this round; the last
     await waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === 'BOT_MOLAR', 4000);
     assert.equal(room.tavernRun.cloud, true);
     assert.notEqual(room.players[hero.id].score, null);
+});
+
+// ---- Keepsakes, 30 Oct: five at most, a boss's to take or leave, three new ones ----
+
+test("with five keepsakes, a boss's means leaving one behind; Thom won't sell a sixth", async () => {
+    const hero = await tavernAgainst(4, 'Pockets');
+    const room = roomOf(hero);
+    const run = room.tavernRun;
+    run.keepsakes = ['luckySeat', 'velvetCushion', 'loyaltyCard', 'potionBelt', 'misersPurse'].map(id => ({ id, name: id, text: '' }));
+    room.players.BOT_MOLAR.lives = 1;
+    run.abilityRound = 99;
+    run.roundEffect = null;
+    opponentAlwaysDusts(hero, room);
+    const won = waitFor(hero, 'offerShop', () => true, 6000);
+    await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
+    await won;
+    assert.equal(run.interlude.full, true);
+    hero.emit('claimDrop', true); // no keepsake named to leave
+    await sleep(30);
+    assert.equal(run.interlude.claim, 'open');
+    hero.emit('claimDrop', true, 'velvetCushion');
+    await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.claim === 'took');
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['luckySeat', 'loyaltyCard', 'potionBelt', 'misersPurse', 'marthasMask']);
+    // Thom's back shelf: full pockets, nothing sold.
+    run.interlude = null;
+    run.purse = 200;
+    run.shop = { stock: ['healing'], keepsakes: [{ id: 'gamblersCharm', name: "Gambler's Charm", text: '' }] };
+    hero.emit('buyKeepsake', 'gamblersCharm');
+    await sleep(40);
+    assert.equal(run.keepsakes.length, 5);
+    assert.equal(run.purse, 200);
+});
+
+test('the Shield and the Loaded Die are only offered from the Yawning Portal on', async () => {
+    const { room } = await betweenFights('Places', { stage: 'choose', spots: [] }, 500);
+    const offered = () => new Set(Array.from({ length: 200 }, () => server.strangerOffer(room).offers.map(k => k.id)).flat());
+    room.tavernRun.encounterIndex = fightOf('frak');
+    let ids = offered();
+    assert.ok(!ids.has('bentCopper') && !ids.has('loadedDie'));
+    assert.ok(ids.has('misersPurse') && ids.has('gamblersCharm') && ids.has('bottomlessFlask'));
+    room.tavernRun.encounterIndex = fightOf('vaelin');
+    ids = offered();
+    assert.ok(ids.has('bentCopper') && ids.has('loadedDie'));
+});
+
+test("the Miser's Purse: a win pays 1 more gold for every 10 in the purse", async () => {
+    const hero = await tavernAgainst(1, 'Miser');
+    const room = roomOf(hero);
+    room.tavernRun.keepsakes.push({ id: 'misersPurse', name: "Miser's Purse", text: '' });
+    room.tavernRun.purse = 47;
+    room.players.BOT_MOLAR.lives = 1;
+    room.tavernRun.abilityRound = 99;
+    room.tavernRun.roundEffect = null;
+    opponentAlwaysDusts(hero, room);
+    const won = waitFor(hero, 'offerShop', () => true, 6000);
+    await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
+    const offer = await won;
+    assert.equal(offer.gold.miser, 4);
+    assert.equal(room.tavernRun.purse, 47 + 4 + offer.gold.win + offer.gold.hearts);
+});
+
+test("the Gambler's Charm: the last die is thrown twice and the better kept", async () => {
+    const { hero, room } = await tavernTable('Gambler');
+    room.tavernRun.keepsakes.push({ id: 'gamblersCharm', name: "Gambler's Charm", text: '' });
+    // The last die, with the 4 still needed: a 4 if either throw is one.
+    const last = kept => ({ playerId: hero.id, dice: [0, 1, 2, 3, 4, 5].map(id => (id < 5 ? { id, value: kept[id], status: Rules.STATUS.LOCKED } : { id, value: 0, status: 'active' })) });
+    let unpin = pinFaces([3, 4]);
+    let t = last([2, 6, 6, 6, 6]);
+    assert.equal(server.rollFaceFor(room, t)(t.dice[5]), 4);
+    unpin();
+    assert.deepEqual(t.ghosts, [{ die: 5, kept: 4, lost: 3, kind: 'plain' }]);
+    // Both kept: the higher.
+    unpin = pinFaces([2, 5]);
+    t = last([2, 4, 6, 6, 6]);
+    assert.equal(server.rollFaceFor(room, t)(t.dice[5]), 5);
+    unpin();
+    // More than one die left: thrown once.
+    unpin = pinFaces([1, 6]);
+    t = keptTurn(hero.id, [2]);
+    assert.equal(server.rollFaceFor(room, t)(t.dice[3]), 1);
+    unpin();
+});
+
+test('the Bottomless Flask: the first Thonic each fight may stay on the shelf, about half the time', async () => {
+    let stayed = 0;
+    for (let n = 0; n < 24; n++) {
+        const { hero, room } = await tavernTable(`Flask${n}`);
+        room.tavernRun.keepsakes.push({ id: 'bottomlessFlask', name: 'Bottomless Flask', text: '' });
+        room.tavernRun.shelf = ['steady', 'steady'];
+        hero.emit('drinkThonic', 0);
+        await nextState(hero, s => runOf(s).encounterKeepsakeUses && runOf(s).encounterKeepsakeUses.bottomlessFlask);
+        if (room.tavernRun.shelf.length === 2) stayed++;
+        room.turn.steady = false;
+        const before = room.tavernRun.shelf.length;
+        hero.emit('drinkThonic', 0); // the second: always used up
+        await sleep(30);
+        assert.equal(room.tavernRun.shelf.length, before - 1);
+        hero.disconnect();
+    }
+    assert.ok(stayed > 3 && stayed < 21, `stayed ${stayed} of 24`);
 });

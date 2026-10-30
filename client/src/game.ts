@@ -56,7 +56,8 @@ export interface TavernRun {
     shop: { stock: Thonic[]; free?: boolean; first?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
     thomMet?: boolean; // you've been to Thom's cart this run (his first greeting is different)
     prices?: { shrine: number; hotTub: number; bard?: number; elfBars?: Record<string, number> };
-    cloud?: boolean; // Cotton Candy Cloud: the opponent can't see your score this round // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
+    cloud?: boolean; // Cotton Candy Cloud: the opponent can't see your score this round
+    maxKeepsakes?: number; // keepsakes you can carry at once // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
     // The Bard's song this fight: Inspiring Song ('ready' until your first throw, 'now' while it can
     // be thrown again), Cutting Words (words, until it lands); nextSong: bought for the next fight.
     bard?: { song: 'ready' | 'now' | null; words: boolean; nextSong: 'cuttingWords' | 'inspiringSong' | null };
@@ -105,7 +106,9 @@ export type Interlude =
     | { stage: 'done'; spot: 'stranger'; keepsake: Keepsake | null; hearts?: number }
     // After a boss (Martha, Brodor): their keepsake (`drop`) and the invitation on to `place`,
     // from `from`. `save` is sealed by the server.
-    | { stage: 'invitation'; place: string; from?: string | null; boss?: string | null; drop?: Keepsake | null; save: string };
+    // claim: the boss's keepsake is 'open' until taken or left ('took', 'refused'); full: taking it
+    // means leaving one of yours behind (five at most).
+    | { stage: 'invitation'; place: string; from?: string | null; boss?: string | null; drop?: Keepsake | null; claim?: 'open' | 'took' | 'refused' | null; full?: boolean; save: string };
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
 // Each name's best run: its points, and the gold it ended with.
@@ -132,7 +135,7 @@ export interface AbilityMoment { who?: string; name: string; ability: string; te
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
 export interface ShopArrival {
     defeated: string; nextEnemy: string; place?: number; at?: number; resumed?: boolean; drop?: Keepsake | null; // drop: a boss's keepsake
-    gold: { win: number; hearts: number; heartsLeft?: number; perHeart?: number; perPlace?: number };
+    gold: { win: number; hearts: number; heartsLeft?: number; perHeart?: number; perPlace?: number; miser?: number }; // miser: the Miser's Purse
 }
 
 export interface GameState {
@@ -814,6 +817,12 @@ export const actions = {
         writeSavedRun(null);
     },
     // At the invitation to the final: keep the run on this device and leave the table.
+    // A boss's keepsake at the invitation: take it (naming one of yours to leave behind when your
+    // pockets are full) or leave it.
+    claimDrop(take: boolean, giveUp?: string) {
+        if (take) playSound('itemPickup'); else playSound('click');
+        socket.emit('claimDrop', take, giveUp);
+    },
     saveAndLeave(save: string, info: Omit<SavedRun, 'save' | 'at'>) {
         writeSavedRun({ save, ...info, at: Date.now() });
         actions.leave();

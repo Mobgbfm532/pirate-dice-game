@@ -394,7 +394,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
 }
 
 // Keepsakes that work once a fight (dimmed once they have).
-const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask']);
+const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask', 'bottomlessFlask']);
 
 function KeepsakeIcon({ icon, name, text, spent = false, blessing = false }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean }) {
     const remind = () => { playSound('click'); showToast(typeof icon === 'string' ? `${icon} ${name}` : name, spent ? `${text} (Used this fight.)` : text, 'info', 4200); };
@@ -599,7 +599,9 @@ function YourTurnBanner({ at }: { at: number }) {
 // The others (the blessings and songs) keep their emoji.
 const PAINTED_KEEPSAKES = new Set(['bentCopper', 'velvetCushion', 'luckySeat', 'loyaltyCard', 'potionBelt', 'loadedDie', 'marthasMask', 'brodorsSunglasses',
     // ...and the blessings and the Bard's songs (shown the same way, on the strip and in their moments).
-    'ladysGrace', 'cuttingWords', 'inspiringSong', 'kram']);
+    'ladysGrace', 'cuttingWords', 'inspiringSong', 'kram',
+    // ...and the three of 30 Oct.
+    'misersPurse', 'gamblersCharm', 'bottomlessFlask']);
 function keepsakeIcon(id: string): React.ReactNode {
     if (PAINTED_KEEPSAKES.has(id)) return <img className="item-art" src={`${import.meta.env.BASE_URL}art/keepsakes/${id}.webp`} alt="" draggable={false} />;
     return KEEPSAKE_ICONS[id] ?? '✦';
@@ -618,6 +620,10 @@ const KEEPSAKE_ICONS: Record<string, string> = {
     cuttingWords: '🗡️',
     inspiringSong: '🎶',
     kram: '🔱',
+    // 30 Oct (their emoji, before the paintings came).
+    misersPurse: '💰',
+    gamblersCharm: '🍀',
+    bottomlessFlask: '⚗️',
     // Elf Bars, as they're puffed.
     purpleHaze: '🌫️',
     cottonCandyCloud: '🍭',
@@ -981,6 +987,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     const shop = run.shop!;
     const arrival = snap.shopArrival;
     const shelfFull = run.shelf.length >= run.shelfSize;
+    const pocketsFull = run.keepsakes.length >= (run.maxKeepsakes ?? 5); // five keepsakes at most
     const [leaving, setLeaving] = useState(false);
     const leave = () => {
         if (leaving) return;
@@ -1033,8 +1040,8 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                     <div key={k.id} className="keepsake-ware" style={{ animationDelay: `${1.3 + i * 0.15}s` }}>
                                         <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
                                         <span className="about"><strong>{k.name}</strong><span className="text">{k.text}</span></span>
-                                        <button className="buy" disabled={short} onClick={() => actions.buyKeepsake(k.id)}>
-                                            {short ? coins(k.price) : `Buy · ${coins(k.price)}`}
+                                        <button className="buy" disabled={short || pocketsFull} onClick={() => actions.buyKeepsake(k.id)}>
+                                            {pocketsFull ? 'Pockets full' : short ? coins(k.price) : `Buy · ${coins(k.price)}`}
                                         </button>
                                     </div>
                                 );
@@ -1154,6 +1161,11 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     // The end of a place (visuals plan step 5, 25 Oct): a sealed letter flutters down, its wax seal
     // cracks and the invitation unfolds out of it (in the new look; a tap skips to it).
     const [skip, setSkip] = useState(!lookNext);
+    // Since 30 Oct the boss's keepsake is yours to take or leave; with five already, taking it
+    // means choosing one of yours to leave behind.
+    const claim = interlude.claim ?? 'took';
+    const [swapping, setSwapping] = useState(false);
+    const take = () => (interlude.full ? setSwapping(true) : actions.claimDrop(true));
     return (
         <div className={`interlude-scene invitation ${lookNext ? 'arriving' : ''} ${skip ? 'skip' : ''} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={story.title}
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${placeBackdrop(state.tavernRun?.place)}")` }} onPointerDown={() => setSkip(true)}>
@@ -1173,7 +1185,32 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
                 <div className="invitation-card">
                     <span className="icon" aria-hidden="true">{keepsakeIcon(drop.id)}</span>
                     <p>{story.line(interlude.place)}</p>
-                    <p className="mask-text"><strong>{drop.name}</strong> {story.gift}</p>
+                    {claim === 'took' && <p className="mask-text"><strong>{drop.name}</strong> {story.gift}</p>}
+                    {claim === 'refused' && <p className="mask-text">You leave <strong>{drop.name}</strong> behind.</p>}
+                    {claim === 'open' && !swapping && (
+                        <>
+                            <p className="mask-text"><strong>{drop.name}</strong>: {drop.text}</p>
+                            {interlude.full && <p className="fine">Your pockets are full: taking it means leaving one of yours behind.</p>}
+                            <div className="drop-choice">
+                                <button className="primary" onClick={take}>Take it</button>
+                                <button className="secondary" onClick={() => actions.claimDrop(false)}>Leave it</button>
+                            </div>
+                        </>
+                    )}
+                    {claim === 'open' && swapping && (
+                        <>
+                            <p className="mask-text">Leave which behind for <strong>{drop.name}</strong>?</p>
+                            <div className="drop-swap">
+                                {run.keepsakes.map(k => (
+                                    <button key={k.id} className="keepsake-ware swap" onClick={() => actions.claimDrop(true, k.id)}>
+                                        <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
+                                        <span className="about"><strong>{k.name}</strong></span>
+                                    </button>
+                                ))}
+                            </div>
+                            <button className="link-button" onClick={() => setSwapping(false)}>Back</button>
+                        </>
+                    )}
                 </div>
                 </div>
                 <div className="event-choices">
@@ -1658,9 +1695,10 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     const heartsLeft = gold.heartsLeft ?? (gold.perHeart ? Math.round(gold.hearts / gold.perHeart) : 0);
     const rows = [
         { key: 'win', label: `Beating ${won.defeated}`, detail: won.place ? `opponent ${won.place}` : '', amount: gold.win },
-        ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${coins(gold.perHeart)}` : '', amount: gold.hearts }] : [])
+        ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${coins(gold.perHeart)}` : '', amount: gold.hearts }] : []),
+        ...(gold.miser ? [{ key: 'miser', label: "Miser's Purse", detail: '1 for every 10 in your purse', amount: gold.miser }] : [])
     ];
-    const total = gold.win + gold.hearts;
+    const total = gold.win + gold.hearts + (gold.miser ?? 0);
     const [before] = useState(() => Math.max(0, run.purse - total));
     // step: how many rows are showing; one more than the rows = the purse counts up.
     const [step, setStep] = useState(0);

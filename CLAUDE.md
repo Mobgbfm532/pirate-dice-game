@@ -570,8 +570,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~16 | 15 |
   | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~14 | 13 |
   | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~15 (mostly the Healing) | 13 |
-  | Loaded Die | die 0 (`LOADED_DIE`) rolls 4-6 (`loadedDieLow`); old gold on your turns | ~4 | 8 |
+  | Loaded Die | die 0 (`LOADED_DIE`) lands only on a 2 or 4 until you've kept both, then 4-6 (`loadedDieLow`; reworked 30 Oct, `playerFace`); old gold on your turns | not yet measured | 12 |
+  | Miser's Purse (30 Oct) | each win pays 1 more gold for every 10 in the purse (`miserPerTen`; `lastWin.gold.miser`, a row on the fight summary) | not yet measured | 12 |
+  | Gambler's Charm (30 Oct) | the last die left to throw is thrown twice, the better kept (a needed 2/4, else higher; lower in a cursed round), the other a ghost (`rollFaceFor`) | not yet measured | 14 |
+  | Bottomless Flask (30 Oct) | the first Thonic drunk each fight stays on the shelf 1 time in 2 (`flaskChance`; `encounterKeepsakeUses.bottomlessFlask`) | not yet measured | 12 |
 
+  **Since 30 Oct (the user's calls):** at most `maxKeepsakes` (5) carried (`pocketsFull`: Thom's back
+  shelf says "Pockets full", the Stranger stays away); the Shield and the Loaded Die are only
+  offered from the Yawning Portal on (`from` on each keepsake, `unownedKeepsakes`); a boss's keepsake
+  is no longer automatic: the invitation offers it to take or leave (`claimDrop`, `interlude.claim`
+  'open'/'took'/'refused', `run.refusedDrops` saved with the run), and with full pockets taking
+  it means choosing one of yours to leave behind. The three new ones have the user's paintings (`art/keepsake-<id>.jpg`, same folder); prices are first guesses, not yet simulated.
   Numbers in `shared/balance.js` (`keepsakes`, `keepsakePrices`, `thomKeepsakes`). Jaguar's drop
   waits for a second place.
   The old keepsake-cards code (`offerKeepsakes`, `KeepsakeCards`) is unused. The classic page
