@@ -6,6 +6,7 @@ import { acrossTheTable, backdropLayout, currentScene } from './Backdrop';
 import { flame, lookNext } from './look';
 import { ScreenAir, type AirFrame } from './Air';
 import { roomWash } from './MomentLight';
+import { PARALLAX, look } from './parallax';
 
 // The tavern behind the table and the opponent's bust, drawn inside the 3D scene (option 1,
 // step A, 23 Oct). They used to be page layers under a see-through canvas; now the glow and
@@ -98,6 +99,9 @@ uniform float flame, lanterns, warmth, rim, hot;
 // A big moment's light washing over the painting (MomentLight's roomWash, step F).
 uniform vec3 wash;
 uniform vec2 px;
+// Depth inside the painting (1 Nov): the sides and the floor are nearer than the far wall, so they
+// shift further as you lean (in the picture's texture coordinates, at full nearness).
+uniform vec2 near;
 varying vec2 vUv;
 // How much of the outline faces a light from direction d: open space beside it that way.
 float edge(vec2 d) {
@@ -107,7 +111,13 @@ float edge(vec2 d) {
 }
 vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
 void main() {
-    vec4 t = texture2D(map, vUv);
+    vec2 uv = vUv;
+    if (near != vec2(0.0)) {
+        float side = smoothstep(0.32, 0.0, min(vUv.x, 1.0 - vUv.x));
+        float floorNear = smoothstep(0.55, 0.0, vUv.y);
+        uv -= near * max(side, floorNear);
+    }
+    vec4 t = texture2D(map, uv);
     float a;
     vec3 c;
     if (glow) {
@@ -162,7 +172,7 @@ function pictureMaterial() {
         uniforms: {
             map: { value: null }, brightness: { value: 1 }, saturation: { value: 1 }, sepia: { value: 0 },
             opacity: { value: 1 }, tint: { value: new THREE.Vector4() }, glow: { value: false }, linearOut: { value: lookNext },
-            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, wash: { value: new THREE.Color(0, 0, 0) }, px: { value: new THREE.Vector2() }
+            flame: { value: 1 }, lanterns: { value: 0 }, warmth: { value: 0 }, rim: { value: 0 }, hot: { value: 0 }, wash: { value: new THREE.Color(0, 0, 0) }, px: { value: new THREE.Vector2() }, near: { value: new THREE.Vector2() }
         },
         // Drawn first, behind everything, whatever the distance: the table simply paints over.
         depthTest: false, depthWrite: false, fog: false, toneMapped: false,
@@ -241,9 +251,21 @@ export function Room() {
             mesh.scale.set(w * sx, -h * sy, 1);
         };
         const L = backdropLayout;
+        // Depth behind the table (1 Nov): how far you're leaning moves the tavern most, the
+        // opponent less, and the table not at all (parallax.ts).
+        const lean = lookNext ? look(now, delta) : { x: 0, y: 0 };
+        const roomDx = lean.x * PARALLAX.room, roomDy = lean.y * PARALLAX.room * 0.5;
+        const bustDx = lean.x * PARALLAX.bust, bustDy = lean.y * PARALLAX.bust * 0.5;
+        // The tavern a little larger than its place, so leaning never shows an edge (enlarged about
+        // its floor line, so where the floor meets the table stays put), shifted with the lean.
+        const over = lookNext ? PARALLAX.room + PARALLAX.roomNear + 2 : 0; // (the classic look stays exactly as it was)
+        const grow = L.roomWidth > 0 ? 1 + (over * 2) / Math.min(L.roomWidth, L.roomHeight) : 1;
+        const floorY = L.roomTop + L.roomHeight * currentScene().floor;
+        const roomW = L.roomWidth * grow, roomH = L.roomHeight * grow;
+        const roomX = L.roomLeft + L.roomWidth / 2 - roomW / 2 + roomDx, roomY = floorY - roomH * currentScene().floor + roomDy;
         const breathe = (bust: AirFrame['bust']) => air?.update({
             map: { x0, y0, sx, sy, depth: DEPTH }, dt: delta, horizon: L.horizon, bust,
-            room: shown.current && L.roomWidth > 0 ? { left: L.roomLeft, top: L.roomTop, width: L.roomWidth, height: L.roomHeight, air: currentScene().air } : null,
+            room: shown.current && L.roomWidth > 0 ? { left: roomX, top: roomY, width: roomW, height: roomH, air: currentScene().air } : null,
             devil: store.get().state?.tavernRun?.roundEffect?.kind === 'devil'
         });
 
@@ -262,7 +284,9 @@ export function Room() {
             if (lookNext) r.wash.value.copy(roomWash);
             r.saturation.value = lookNext ? 1.1 : 0.95;
             r.sepia.value = lookNext ? 0.12 : 0;
-            put(room.current, L.roomLeft, L.roomTop, L.roomWidth, L.roomHeight);
+            // Its near parts (the sides, the floor) shift a little further inside the painting.
+            put(room.current, roomX, roomY, roomW, roomH);
+            r.near.value.set(lean.x * PARALLAX.roomNear / roomW, -lean.y * PARALLAX.roomNear * 0.5 / roomH);
         }
 
         // The opponent. A new face makes an entrance; Martha changing faces swaps with a shimmer.
@@ -317,7 +341,7 @@ export function Room() {
         // The face on the table's centre line, not the middle of the picture (a painting may hold
         // a flame, a sword or a mask off to one side: the user's call, 23 Oct, everyone centred).
         const faceX = (across.portrait.center?.[0] ?? 50) / 100;
-        const centerX = L.tableX + (0.5 - faceX) * w, centerY = L.horizon - L.bustHeight * 0.8 + height / 2 + rise * height;
+        const centerX = L.tableX + (0.5 - faceX) * w + bustDx, centerY = L.horizon - L.bustHeight * 0.8 + height / 2 + rise * height + bustDy;
         const b = materials.bust.uniforms;
         b.map.value = art.texture;
         b.brightness.value = brightness;
