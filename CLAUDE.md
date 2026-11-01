@@ -207,15 +207,29 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (26 October 2026)
+## Status (1 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
-- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site at 1a5c970):**
+- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site at edd769e):**
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 121 server/rules/strategy tests + 16 client tests.
+  keepsakes, gold, saves after each place. 137 server/rules/strategy tests + 16 client tests.
+- **27 Oct - 1 Nov (the user's calls; details in "Tavern Crawl now"):**
+  - abilities rise up the screen like the devil's three 6s, 1.85 s each, showing only their name;
+    paintings for most abilities (all but Dead Eye, the Ace of Spades and All In); new busts for
+    Brodor and Jaguar; the user's sounds for the Ghoul and Gourd's abilities, the hot tub, the
+    Shrine, Thom's cart (a loop), buying, the payout, the Shield, drinking, the gasp;
+  - a new wide tabletop painting; a better Thonic moment (its bottle pops and tips);
+  - gold for a win 10, 12, 14 …; the Dice Den out of every place;
+  - the Yawning Portal's own Bard (a spot) and Cult of Kram (an event), with sounds;
+  - Johnny Elf Bar (a spot everywhere) and four Elf Bars, three puffs each, no side effects;
+  - every item painted: Thonics, Elf Bars, keepsakes, blessings and songs (square icons);
+  - keepsakes reworked: the Loaded Die, three new ones (Miser's Purse, Gambler's Charm,
+    Bottomless Flask), five at most, the Shield and Loaded Die from the Yawning Portal on, a
+    boss's keepsake to take or leave;
+  - the start screen offers seven painted item icons instead of character portraits.
 - **24-26 Oct (the user's calls; details in "Tavern Crawl now" and the 3D client notes):** the
   devil's three 6s as a living painting (1.5 s); Perfect 24 / ...4? on the felt; sharper dice on
   desktop (`renderDpr`); visuals steps 2, 4 and 5 (dice as the star, one painted interface, hearts
@@ -292,7 +306,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). Since 26 Oct each place
   has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
-  glowing well, the Salty Swallow's gun deck; the ship has the same four spots and no events of its
+  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine and Johnny Elf Bar and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
   Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
@@ -489,7 +503,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   shows 3 Thonics (Healing + 2 random, `pickThomStock`) and, since 21 Oct, **his back shelf**: two
   keepsakes you don't have, for gold (`keepsakePrices`: Shield 30, Trap Card and Velvet Cushion
   15, Loyalty Card and Potion Belt 13, Loaded Die 8; priced under what each adds when bought
-  around fight 3, `balance/experiments/keepsake-when.js`; `buyKeepsake`, `pickThomKeepsakes`). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
+  around fight 3, `balance/experiments/keepsake-when.js`; `buyKeepsake`, `pickThomKeepsakes`; since 30 Oct also the Miser's Purse, Gambler's Charm and Bottomless Flask, and the Loaded Die at 12). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
   between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
   handler; the client's `drinkable()` mirrors it), with a cork pop:
 
@@ -507,7 +521,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Between fights** (step 3, `INTERLUDE` = `shared/balance.js` `interlude`, `tavernRun.interlude`; client
   `Interlude` in Hud): in a full-screen tavern scene, **two spots catch your eye** and you go
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
-  fork in the road" in later places). Spots are drawn at random from `PLACES.tavern.spots`:
+  fork in the road" in later places). Spots are drawn at random from the place's `spots`
+  (since 30 Oct: the Ghoul and Gourd Thom, the Shrine, the hot tub, Johnny Elf Bar; the Yawning
+  Portal Thom, the Shrine, the Bard, Johnny; the Salty Swallow Thom, the Shrine, Johnny; events:
+  Darren at the Ghoul and Gourd, the Cult of Kram at the Yawning Portal, none of its own on the ship):
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (light a candle: a blessing at random,
   her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
@@ -558,8 +575,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
   sailors. Game text calls the pickpocket "the thief" (no assumed gender).
 - **Keepsakes:** from the Hooded Stranger (a random event, for a heart) and, since 21 Oct, for gold
-  on Thom's back shelf (two you don't have each visit). Six (the user picked the new three on
-  19 Oct). Gold each adds to a run when bought before fight 3, and its price
+  on Thom's back shelf (two you don't have each visit). Nine since 30 Oct (plus the two bosses'
+  drops). Gold each adds to a run when bought before fight 3, and its price
   (`balance/experiments/keepsake-when.js`; bought later each is worth less, as most runs end in
   the Ghoul and Gourd):
 
@@ -605,28 +622,28 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **The new look on other phones** (the default since 23 Oct): if Auto quality drops a good
-   phone to Low, tune its threshold (`noteFrame`).
-2. **The user's decisions waiting:** names for the ship's new abilities (Written in the Stars,
-   Dead Eye, Smooth Talk, the Cloak, All In are working names); paintings for the other abilities
-   (Dead Eye, the Ace of Spades, All In) (`ABILITY_ART` in Hud.tsx, `art-import` subagent, `test/ability-shots.mjs` to check);
-   the Dice Den rework or a new spot instead (the Cult of Kram and the Bard are in, 28 Oct; still
-   an idea: the Flying Snakes who bring messages to the Ghoul and Gourd); music and ambience from Udio (the plan and prompts were given
-   26 Oct; nothing is in the game yet).
-3. **Difficulty** (the user's to set): with rising prices the simulated sensible player finishes
-   0.3% and reaches the ship 2.3% (`node balance/experiments/tournament.js`), but it never wears
-   Martha's mask or plans its shopping, and the user finds the real game easier. The user plays
-   and decides; change `shared/balance.js` (prices, `priceRise`, hearts, lives, points) and
-   re-run the simulation first. Measured options: `easier.js`, `tournament-lives.js`.
-4. **The tournament, finishing touches:** paintings for the other abilities (the user's; four done,
-   26 Oct); sounds for the Yawning Portal's new abilities (only Back of the Head has one); the ship's own spots and events (to
-   workshop: a card game below deck, a stowaway instead of the thief); uses per fight for the
-   five (first guesses, 1 each). Thom's visits stay as they are (the user, 21 Oct).
-5. **Opponent abilities** (proposed 19 Oct; ask first): Rokr's blur was replaced on 25 Oct; still open, a warning on the
-   nameplate before an ability fires. Re-simulate after any change.
-6. **Keepsakes, more**: ideas left (Lucky Coin, Sailor's Compass, Gambler's Charm, Pickpocket's
-   Glove, Gold Tooth, Hangman's Spare Bullet, Star Chart, Klarg's Mitt). The Dice Den is still
-   even odds (the user asked whether it makes sense, 21 Oct).
+1. **Play-test and set the new numbers** (the user plays, then decides; simulate first with
+   `balance/`): the new keepsakes' prices (Miser's Purse 12, Gambler's Charm 14, Bottomless Flask
+   12, the reworked Loaded Die 12) and whether the Miser's Purse needs a cap (it grows with the
+   purse); the Elf Bars (8-14); the Bard (8); the Cult (15% of walks, 2 fights); uses per fight
+   for the Yawning Portal's five (1 each). Then difficulty overall: the simulator says the game
+   is hard (0.3% finish) but the user finds it easier; options measured in `easier.js`,
+   `tournament-lives.js`. The simulator doesn't know the Elf Bars, the Bard, the Cult or the new
+   keepsakes yet: teach it before trusting its numbers.
+2. **The user's art and sounds waiting:** ability paintings for Dead Eye, the Ace of Spades and
+   All In; sounds for the Yawning Portal's abilities (only Back of the Head has one), the Bard's
+   songs as they work and an Elf Bar's puff (it borrows Martha's); music and ambience from Udio;
+   optional repaints of the Potion Belt and the Sunglasses (thin at 26 px).
+3. **The Salty Swallow's own spots and events** (to workshop; ideas: a card game below deck, a
+   stowaway instead of the thief). Without the Dice Den it offers only Thom, the Shrine and
+   Johnny. Names for the ship's abilities are still working names (Written in the Stars, Dead
+   Eye, Smooth Talk, the Cloak, All In).
+4. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
+   Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
+   Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
+5. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
+6. **The new look on other phones:** if Auto quality drops a good phone to Low, tune its
+   threshold (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
 7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
    the live game); then delete the test service. Old saved runs won't open (money changed); the
@@ -636,10 +653,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    classic page reachable for a while; until then it skips Thom and the events, which the user
    accepted), update the PWA manifest/service worker, retire the old client code in
    `public/index.html`.
-10. **Feel:** tune dice sound, roll length (~2.2 s), camera on other phones.
-11. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship);
-   new places with tougher opponents (the roguelite); optional art (`docs/art-direction.md`
-   "Wanted"; Martha's masked paintings have no moving vape smoke); delete unused code (the old
-   keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`, `shareFlame` and
-   the unused `--flame` CSS variable); a smaller first download (lazy-load three.js, compress
-   the 9.5 MB ambience track); spectator mode; emoji reactions floating over the table.
+10. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship); new
+   places with tougher opponents (the roguelite); delete unused code (the Dice Den if it stays
+   out, the old keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`,
+   `shareFlame`, the unused `--flame` CSS variable, the old Constellation Blur, the synthesized
+   cork pop); a smaller first download (lazy-load three.js, compress the 9.5 MB ambience track);
+   spectator mode; emoji reactions floating over the table.

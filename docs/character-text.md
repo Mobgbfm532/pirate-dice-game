@@ -1,6 +1,6 @@
 # Character text in the Tavern Crawl
 
-Every line the game shows for each character, as of 28 October. Send changes in your own words and
+Every line the game shows for each character, as of 1 November. Send changes in your own words and
 they'll be put in; the "Where" notes say which file holds each line.
 
 Since 28 October an ability's screen shows **only its name**. The longer lines that used to sit
@@ -33,6 +33,7 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 - Entrance card: "Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
 - Ability screens: "Disguises", then the trick she copies ("Mind Whip", "You are Cursed" or "Sympathy for the Devil").
 - Invitation after beating her: title "You qualify for the Yawning Portal"; "Martha Mystery lifts off her mask and presses it into your hand. "You've earned this. Show it at the Yawning Portal."" Her mask "is yours: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round."
+- Since 30 Oct a boss's keepsake is yours to take or leave: "Take it" / "Leave it". With five keepsakes already: "Your pockets are full: taking it means leaving one of yours behind." then "Leave which behind for [keepsake]?" Left: "You leave [keepsake] behind." The same for Brodor's Sunglasses.
 
 ### The Yawning Portal
 
@@ -126,3 +127,20 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 - Its bubble: good surge "*bubble bubble* ✨", bad surge "*glorp*"
 - Surges (name and what it does): Bubbly Die, never rolls a 1 · Double Bubble, rolls twice and keeps the better · Lucky Splash, only rolls 4, 5 or 6 · Scalding Die, always lands on a 6 · Soggy Die, never rolls a 6 · Pruney Fingers, the next fight a heart short
 - Badge in the next fight: "[surge name]: the Wild Magic die …" (for example "Bubbly Die: the Wild Magic die never rolls a 1")
+
+## Keepsakes
+
+Where: `server.js` (`TAVERN_KEEPSAKES`, `MARTHAS_MASK`, `BRODORS_SUNGLASSES`); the line as one works in `emitKeepsakeActivated` calls.
+
+- **Shield:** "Once per encounter, the first life you would lose is ignored." (offered from the Yawning Portal on) When it works: "Shield protects a life."
+- **Trap Card:** "Once per encounter, your first tied round counts as safe for you and a loss for the opponent."
+- **Velvet Cushion:** "Once per encounter, losing by exactly 1 point becomes a tie instead."
+- **Loaded Die:** "One of your dice lands only on a 2 or a 4 until you've kept both; after that, only on 4, 5 or 6." (offered from the Yawning Portal on)
+- **Potion Belt:** "Your shelf holds one more Thonic. Comes with a Healing Thonic."
+- **Thom's Loyalty Card:** "Thom's cart is always one of the spots, and your first Thonic each visit is free."
+- **Miser's Purse:** "Each win pays 1 more gold for every 10 in your purse." On the fight summary: "Miser's Purse · 1 for every 10 in your purse".
+- **Gambler's Charm:** "When only one die is left to throw, it is thrown twice and you keep the better."
+- **Bottomless Flask:** "The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf." When it works: "Your [Thonic] fills up again."
+- **Martha's Mask:** "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you)."
+- **Brodor's Sunglasses:** "A finished 23 restores a heart, like a 24."
+- On Thom's back shelf with five keepsakes, the buttons read "Pockets full".
