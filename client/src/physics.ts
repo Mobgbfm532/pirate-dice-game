@@ -16,11 +16,11 @@ const FLOATS_PER_DIE = 7; // x, y, z, qx, qy, qz, qw
 // user's call; before, a die often turned only once or twice, worst on the last few dice).
 // height: where they start above the felt; lift: their upward speed; spin: the forward roll as
 // a share of the rate that matches rolling on the felt; wobble: spin about the other axes.
-export const THROW = { height: [1.1, 1.4], lift: [0.4, 1.2], spin: [0.8, 1.15], wobble: 9 };
+export const THROW = { height: [1.1, 1.35], lift: [0.3, 1.0], spin: [0.7, 1.0], wobble: 8 };
 // Every die turns over at least this many times (whole turns, 360 degrees) before it stops. A die
 // still short of it (knocked still by the others) gets whole extra turns while it's in the air
 // (addTurns): whole turns end where they began, so how it lands is untouched.
-export const MIN_TURNS = 2.5;
+export const MIN_TURNS = 2;
 
 // Something a die hit during the throw, for the sound: when (frame, 60 per second),
 // how hard (impact speed) and what (another die, the felt, or the wooden rail).

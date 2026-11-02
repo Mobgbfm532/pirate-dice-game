@@ -72,7 +72,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `physics.ts`: each roll is **pre-simulated** (cannon-es, clipped-corner dice) and played back.
   When dice stop, faces are relabelled (`offsets`) so the server's values are on top. Seeded
   by the server's `throwSeed`, so every screen sees the identical tumble. Records `impacts`.
-  Since 2 Nov every die is seen to turn over at least `MIN_TURNS` (2.5) whole times (the user: the
+  Since 2 Nov every die is seen to turn over at least `MIN_TURNS` whole times (2.5, eased to 2 on 3 Nov with a calmer toss: about 2.4 typical, the user asked for slightly fewer) (the user: the
   last dice often turned once or twice): a slightly higher, livelier toss (`THROW`), then `addTurns`
   spins any die still short by whole extra turns about its own tumble axis during its longest
   time in the air, easing in and out (whole turns end where they began, so landings and values are
