@@ -72,18 +72,19 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `physics.ts`: each roll is **pre-simulated** (cannon-es, clipped-corner dice) and played back.
   When dice stop, faces are relabelled (`offsets`) so the server's values are on top. Seeded
   by the server's `throwSeed`, so every screen sees the identical tumble. Records `impacts`.
-  Since 2 Nov every die is seen to turn over at least `MIN_TURNS` whole times (2.5, eased to 2 on 3 Nov with a calmer toss: about 2.4 typical, the user asked for slightly fewer) (the user: the
+  Since 2 Nov every die is seen to turn over at least `MIN_TURNS` (2.5) whole times (the user: the
   last dice often turned once or twice): a slightly higher, livelier toss (`THROW`), then `addTurns`
   spins any die still short by whole extra turns about its own tumble axis during its longest
   time in the air, easing in and out (whole turns end where they began, so landings and values are
   untouched). Always met for 1-3 dice (tested); with 6, a die wedged on the felt the whole throw
-  can still fall short (under 0.5%). `turnsOf` measures it.
+  can still fall short (under 0.5%). `turnsOf` measures it. (On 3 Nov a calmer 2-turn setting was
+  tried and reverted at the user's request: back to 2.5, about 3 turns a roll.)
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
   header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
-- **A richer table** (2 Nov, new look only; `TableDressing.tsx`, in TableScene's `Tray`): rounded, varnished rails (`RoundedBoxGeometry`, 0.42 thick, grown outward so their inner faces stay where the dice bounce) with a darker carved cap and a thin brass inlay along it, brass corner brackets with rivets, a brass front edge on the slot rail, soft canvas-drawn shadows (the tray and slot rail on the tabletop, the felt darkening by the rails), and a few struck gold "24" coins on the table right of the slot rail. The metals carry a little emissive glow, since the room's reflection is faint. The classic look keeps the old box rails.
+- **The table** (`TableDressing.tsx`, in TableScene's `Tray`): **no rails round the tray since 3 Nov** (the user's call, both looks): the felt lies as a mat on the tabletop and the dice still bounce off the same unseen walls (physics.ts). The new look keeps a brass front edge on the slot rail, its soft shadow on the tabletop, and a few struck gold "24" coins right of the slot rail (the metals carry a little emissive glow, since the room's reflection is faint). The richer rails built on 2 Nov (rounded, varnished, a carved cap with a brass inlay, brass corner brackets, the tray's shadow and the felt darkening by them) are still in the file behind `SHOW_RAILS = false`.
 - **Depth behind the table** (1 Nov, new look only; `parallax.ts`, used in `Room.tsx`): leaning (the mouse on a computer, else a slow breathing drift after 4 s; a phone's tilt moved it until 3 Nov, taken out at the user's request) shifts the tavern up to `PARALLAX.room` px and the opponent `PARALLAX.bust` px; the table never moves. Inside the painting its sides and floor shift up to `roomNear` px more than its far wall (the `near` uniform warps the texture). The tavern is drawn enlarged about its floor line so no edge shows. Off with `prefers-reduced-motion`.
 - `tuning.ts` `renderDpr()`: pixels drawn per screen point. Computers with a mouse draw at the
   quality level's dpr (High 2x) even when the screen reports 1x, so the dice are sharp on desktop
@@ -215,15 +216,19 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (1 November 2026)
+## Status (3 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
-- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site at edd769e):**
+- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site; see git log for the latest commit):**
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 137 server/rules/strategy tests + 16 client tests.
+  keepsakes, gold, saves after each place. 137 server/rules/strategy tests + 17 client tests.
+- **1-3 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly,
+  and follow the mouse on a computer; the phone's tilt was tried and taken out); every die turns
+  over at least 2.5 times before it settles; a richer table was built, then its rails taken out
+  (the felt lies on the tabletop; the slot rail's brass edge and gold coins stay).
 - **27 Oct - 1 Nov (the user's calls; details in "Tavern Crawl now"):**
   - abilities rise up the screen like the devil's three 6s, 1.85 s each, showing only their name;
     paintings for most abilities (all but Dead Eye, the Ace of Spades and All In); new busts for
@@ -650,8 +655,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
    Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
 5. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
-6. **The new look on other phones:** if Auto quality drops a good phone to Low, tune its
-   threshold (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
+6. **The look, more** (offered 1 Nov): living backdrops (the fireplace, candles and the Portal's
+   well flicker, by a mask like the devil painting's), light for each place (cool well light at
+   the Yawning Portal, swinging lanterns on the ship), camera work on big moments; the table now
+   has no rails, so if the felt looks unframed a painted mat edge or a felt texture from the user
+   would finish it. Also: if Auto quality drops a good phone to Low, tune its threshold
+   (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
 7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
    the live game); then delete the test service. Old saved runs won't open (money changed); the

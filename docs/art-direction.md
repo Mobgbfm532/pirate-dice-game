@@ -125,7 +125,7 @@ Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's 
 | Asset | Status | File |
 |---|---|---|
 | Table wood | Done | `art/table-planks.jpg` → `textures/table-planks.webp` (first version kept as `art/table-wood-v1.webp`) |
-| Rail wood | Done | `art/rail-walnut.jpg` → `textures/rail-walnut.webp` (tray rails and slot rail) |
+| Rail wood | Done | `art/rail-walnut.jpg` → `textures/rail-walnut.webp` (the slot rail; the tray has had no rails since 3 Nov) |
 | UI parchment | Done | `art/parchment.jpg` → `art/parchment.webp` (dialogs; covers each panel, not tiled) |
 | Felt | Done | `client/public/textures/felt.webp` |
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |

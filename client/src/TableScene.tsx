@@ -193,16 +193,6 @@ function Tray() {
     const depth = TRAY.maxZ - TRAY.minZ;
     const cx = (TRAY.minX + TRAY.maxX) / 2;
     const cz = (TRAY.minZ + TRAY.maxZ) / 2;
-    const rail = 0.35;
-    const h = 0.55;
-
-    const railBoxes: [number, number, number, number][] = [
-        [cx, TRAY.minZ - rail / 2, width + rail * 2, rail],
-        [cx, TRAY.maxZ + rail / 2, width + rail * 2, rail],
-        [TRAY.minX - rail / 2, cz, rail, depth],
-        [TRAY.maxX + rail / 2, cz, rail, depth]
-    ];
-
     return (
         <group>
             {/* Tabletop, ending just beyond the tray so the tavern shows behind it */}
@@ -232,16 +222,9 @@ function Tray() {
                     <meshBasicMaterial map={feltWear} transparent depthWrite={false} toneMapped={false} />
                 </mesh>
             )}
-            {/* Rails (the new look: richer rails and their dressing, TableDressing.tsx) */}
+            {/* No rails round the tray since 3 Nov (the user's call; the walls the dice bounce off stay,
+                unseen). The new look's dressing: the slot rail's brass edge, its shadow and the coins. */}
             {lookNext && <TableDressing railMap={rails} />}
-            {!lookNext && railBoxes.map(([x, z, w, d], i) => (
-                <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
-                    <boxGeometry args={[w, h, d]} />
-                    {lookNext
-                        ? <meshPhysicalMaterial map={rails} roughness={0.5} clearcoat={0.6} clearcoatRoughness={0.3} />
-                        : <meshStandardMaterial map={rails} roughness={0.5} />}
-                </mesh>
-            ))}
             {/* Slot rail in front of the tray */}
             <mesh position={[0.05, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[width + 0.9, 1.25]} />

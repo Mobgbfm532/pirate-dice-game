@@ -3,6 +3,11 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { SLOT_ROW_Z, TRAY } from './layout';
 
+// The rails around the tray were taken out on 3 Nov (the user's call): the felt lies straight on
+// the tabletop, the dice still bounce off the same unseen walls (physics.ts), and SHOW_RAILS brings
+// the rails, their caps, inlay, brackets and shadows back.
+const SHOW_RAILS = false;
+
 // A richer table (2 Nov, the user's call, new look only): the tray's rails get rounded, varnished
 // edges and a carved cap along their tops, brass corner brackets with rivets, the felt darkens
 // softly where it meets the wood, the tray and the slot rail sit on the tabletop with a soft
@@ -154,9 +159,10 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
 
     return (
         <group>
-            {/* Soft shadows: the tray and the slot rail on the tabletop, the felt by the rails. */}
-            <Shadow x={cx} z={cz} y={-0.006} w={width + (RAIL + CAP_OUT) * 2 + 1.4} h={depth + (RAIL + CAP_OUT) * 2 + 1.4} edge={0.7} strength={0.55} />
+            {/* Soft shadows: the slot rail on the tabletop; with rails, the tray too and the felt by them. */}
             <Shadow x={0.05} z={SLOT_ROW_Z} y={-0.006} w={width + 0.9 + 0.8} h={1.25 + 0.7} edge={0.35} strength={0.35} />
+            {SHOW_RAILS && <>
+            <Shadow x={cx} z={cz} y={-0.006} w={width + (RAIL + CAP_OUT) * 2 + 1.4} h={depth + (RAIL + CAP_OUT) * 2 + 1.4} edge={0.7} strength={0.55} />
             <Shadow x={cx} z={cz} y={0.0025} w={width} h={depth} edge={0.55} strength={0.5} inner order={2} />
 
             {/* The rails, rounded and varnished, and their carved caps. */}
@@ -184,6 +190,7 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
                     ))}
                 </group>
             ))}
+            </>}
 
             {/* The slot rail's brass front edge. */}
             <mesh material={mat.brass} position={[0.05, 0.03, SLOT_ROW_Z + 0.65]} castShadow receiveShadow>
