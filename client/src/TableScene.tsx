@@ -12,6 +12,7 @@ import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slot
 import { artTexture, paintedTexture } from './textures';
 import { layoutBackdrop, setRailAnchor } from './Backdrop';
 import { Room } from './Room';
+import { TableDressing } from './TableDressing';
 import { DustMotes } from './Air';
 import { MomentLights } from './MomentLight';
 import { noteFrame, renderDpr, settings, tuneStore, tuning } from './tuning';
@@ -231,8 +232,9 @@ function Tray() {
                     <meshBasicMaterial map={feltWear} transparent depthWrite={false} toneMapped={false} />
                 </mesh>
             )}
-            {/* Rails */}
-            {railBoxes.map(([x, z, w, d], i) => (
+            {/* Rails (the new look: richer rails and their dressing, TableDressing.tsx) */}
+            {lookNext && <TableDressing railMap={rails} />}
+            {!lookNext && railBoxes.map(([x, z, w, d], i) => (
                 <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
                     <boxGeometry args={[w, h, d]} />
                     {lookNext

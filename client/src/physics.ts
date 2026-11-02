@@ -12,6 +12,16 @@ const RECORD_EVERY = 2; // frames are recorded at 60 per second
 const MAX_SECONDS = 4.5;
 const FLOATS_PER_DIE = 7; // x, y, z, qx, qy, qz, qw
 
+// How a throw leaves the hand (2 Nov: every die should be seen to roll over several times, the
+// user's call; before, a die often turned only once or twice, worst on the last few dice).
+// height: where they start above the felt; lift: their upward speed; spin: the forward roll as
+// a share of the rate that matches rolling on the felt; wobble: spin about the other axes.
+export const THROW = { height: [1.1, 1.4], lift: [0.4, 1.2], spin: [0.8, 1.15], wobble: 9 };
+// Every die turns over at least this many times (whole turns, 360 degrees) before it stops. A die
+// still short of it (knocked still by the others) gets whole extra turns while it's in the air
+// (addTurns): whole turns end where they began, so how it lands is untouched.
+export const MIN_TURNS = 2.5;
+
 // Something a die hit during the throw, for the sound: when (frame, 60 per second),
 // how hard (impact speed) and what (another die, the felt, or the wooden rail).
 // For a felt hit, also where on the felt (x, z), for the puff of dust.
@@ -179,15 +189,15 @@ function simulateOnce(count: number, direction: 1 | -1) {
         const cz = (TRAY.minZ + TRAY.maxZ) / 2;
         body.position.set(
             startX + direction * col * 1.3 + rand(-0.1, 0.1),
-            rand(0.85, 1.1),
+            rand(THROW.height[0], THROW.height[1]),
             cz + (row - (rows - 1) / 2) * 1.3 + rand(-0.1, 0.1)
         );
         body.quaternion.setFromEuler(rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2));
         const speed = rand(10, 13);
-        body.velocity.set(direction * speed, rand(-1, 0.3), rand(-1.6, 1.6));
+        body.velocity.set(direction * speed, rand(THROW.lift[0], THROW.lift[1]), rand(-1.6, 1.6));
         // Forward roll: spinning about z at about the rate that matches rolling on the felt
         // (speed / half-size), plus some wobble so it isn't a perfect wheel.
-        body.angularVelocity.set(rand(-7, 7), rand(-7, 7), -direction * (speed / DIE_HALF) * rand(0.5, 0.95));
+        body.angularVelocity.set(rand(-THROW.wobble, THROW.wobble), rand(-THROW.wobble, THROW.wobble), -direction * (speed / DIE_HALF) * rand(THROW.spin[0], THROW.spin[1]));
         world.addBody(body);
         bodies.push(body);
     }
@@ -233,7 +243,76 @@ function simulateOnce(count: number, direction: 1 | -1) {
         world.step(STEP);
     }
 
-    return { recorded, bodies, impacts, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
+    const frames = recorded.length / (count * FLOATS_PER_DIE);
+    return { recorded, bodies, impacts, flat: bodies.every(isFlat), frames };
+}
+
+// How many whole turns each die made over a recorded throw (the angle between each frame's
+// rotation and the next, added up).
+export function turnsOf(data: ArrayLike<number>, count: number, frames: number) {
+    const out: number[] = [];
+    for (let i = 0; i < count; i++) {
+        let total = 0;
+        for (let f = 1; f < frames; f++) {
+            const a = ((f - 1) * count + i) * FLOATS_PER_DIE + 3, b = (f * count + i) * FLOATS_PER_DIE + 3;
+            const dot = Math.abs(data[a] * data[b] + data[a + 1] * data[b + 1] + data[a + 2] * data[b + 2] + data[a + 3] * data[b + 3]);
+            total += 2 * Math.acos(Math.min(1, dot));
+        }
+        out.push(total / (Math.PI * 2));
+    }
+    return out;
+}
+
+// Whole extra turns for any die that turned over fewer than MIN_TURNS times: spun the way it is
+// already tumbling (else forward, as thrown) over its longest time in the air (out of the hand,
+// or a later bounce), easing in and out so its spin meets the real tumble smoothly. One axis per
+// die, fixed from its real tumble (turns about different axes partly undo each other), and as few
+// whole turns as reach the minimum.
+const extra = new THREE.Quaternion(), body = new THREE.Quaternion(), before = new THREE.Quaternion();
+function addTurns(data: number[], count: number, frames: number, direction: 1 | -1) {
+    const turns = turnsOf(data, count, frames);
+    for (let i = 0; i < count; i++) {
+        if (turns[i] >= MIN_TURNS) continue;
+        // Its longest time in the air: frames where no corner could reach the felt (or, for a die
+        // that barely leaves it, its longest small hop).
+        const stretch = (lift: number) => {
+            const high = (f: number) => data[(f * count + i) * FLOATS_PER_DIE + 1] > DIE_HALF * lift;
+            let a = 0, b = 0;
+            for (let f = 0; f < frames; ) {
+                if (!high(f)) { f++; continue; }
+                let g = f;
+                while (g < frames - 1 && high(g + 1)) g++;
+                if (g - f > b - a) { a = f; b = g; }
+                f = g + 1;
+            }
+            return [a, b];
+        };
+        let [from, land] = stretch(1.45);
+        if (land - from < 6) [from, land] = stretch(1.15);
+        if (land - from < 4) continue; // (never off the felt at all)
+        const fromHand = from === 0; // out of the hand it may start fast; after a bounce it eases in
+        // Its tumble over the stretch's first frames, in world terms: q1 = d * q0, so d = q1 * q0^-1.
+        const at = (f: number, q: THREE.Quaternion) => { const o = (f * count + i) * FLOATS_PER_DIE + 3; return q.set(data[o], data[o + 1], data[o + 2], data[o + 3]); };
+        const d = at(Math.min(from + 4, land), body).multiply(at(from, before).invert());
+        const axis = new THREE.Vector3(d.x, d.y, d.z);
+        if (d.w < 0) axis.negate();
+        if (axis.lengthSq() < 1e-6) axis.set(0, 0, -direction);
+        axis.normalize();
+        // Its rotations over the stretch as they were, to try 1, 2, 3 or 4 extra turns on.
+        const original: number[] = [];
+        for (let f = from; f <= land; f++) { const o = (f * count + i) * FLOATS_PER_DIE + 3; original.push(data[o], data[o + 1], data[o + 2], data[o + 3]); }
+        for (let add = Math.max(1, Math.ceil(MIN_TURNS - turns[i])); add <= 4; add++) {
+            for (let f = from; f <= land; f++) {
+                const t = (f - from) / (land - from);
+                const eased = fromHand ? 1 - (1 - t) * (1 - t) : t * t * (3 - 2 * t);
+                extra.setFromAxisAngle(axis, eased * add * Math.PI * 2);
+                const k = (f - from) * 4, o = (f * count + i) * FLOATS_PER_DIE + 3;
+                body.set(original[k], original[k + 1], original[k + 2], original[k + 3]).premultiply(extra);
+                data[o] = body.x; data[o + 1] = body.y; data[o + 2] = body.z; data[o + 3] = body.w;
+            }
+            if (turnsOf(data, count, frames)[i] >= MIN_TURNS) break;
+        }
+    }
 }
 
 // Flat on the felt: one face pointing straight up and not resting on another die.
@@ -246,8 +325,8 @@ function isFlat(b: CANNON.Body) {
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
 export function simulateRoll(dieIds: number[], targetValues: number[], seed?: number): RollTrack {
     random = seed === undefined ? Math.random : seededRandom(seed);
-    // Prefer a throw that ends flat within ~3.2s; otherwise keep the best one seen
-    // (flat beats cocked, then shorter beats longer).
+    // Prefer a throw that ends flat within ~3.2s; otherwise keep the best one seen (flat beats
+    // cocked, then shorter beats longer). A die that turns too little is fixed after (addTurns).
     const QUICK_FRAMES = 3.2 * 60;
     const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
         a.flat !== b.flat ? a.flat : a.frames < b.frames;
@@ -257,6 +336,8 @@ export function simulateRoll(dieIds: number[], targetValues: number[], seed?: nu
         const next = simulateOnce(dieIds.length, direction);
         if (better(next, result)) result = next;
     }
+
+    addTurns(result.recorded, dieIds.length, result.frames, direction);
 
     const offsets = result.bodies.map((b, i) => {
         const q = new THREE.Quaternion(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { paceFrame, paceSeconds, readFrame, simulateRoll, suspensePace, trackDuration } from './physics';
+import { MIN_TURNS, paceFrame, paceSeconds, readFrame, simulateRoll, suspensePace, trackDuration, turnsOf } from './physics';
 import { faceNormal, faceUpQuaternion, valueFacingUp } from './layout';
 
 describe('simulateRoll', () => {
@@ -26,6 +26,17 @@ describe('simulateRoll', () => {
         const quat = new THREE.Quaternion();
         readFrame(track, track.frames - 1, 0, pos, quat);
         expect(valueFacingUp(quat)).toBe(6);
+    });
+});
+
+describe('a full roll', () => {
+    it('every die turns over at least MIN_TURNS times, however few are thrown (the user, 2 Nov)', () => {
+        for (const count of [1, 2, 3]) {
+            for (let seed = 1; seed <= 25; seed++) {
+                const track = simulateRoll([...Array(count).keys()], Array(count).fill(0), seed * 131 + count);
+                turnsOf(track.data, count, track.frames).forEach(t => expect(t).toBeGreaterThanOrEqual(MIN_TURNS));
+            }
+        }
     });
 });
 
