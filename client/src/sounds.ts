@@ -37,7 +37,9 @@ const sfx = {
     drinkPotion: load('DrinkPotion.mp3', 0.75),
     // Buying: a Thonic, and a keepsake from Thom's back shelf or the Stranger (the user's, 28 Oct).
     potionSelect: load('PotionSelector.mp3', 0.9),
-    itemPickup: load('ItemPickup.mp3', 0.8)
+    itemPickup: load('ItemPickup.mp3', 0.8),
+    // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
+    bardTune: load('BardTune.mp3', 0.8)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).

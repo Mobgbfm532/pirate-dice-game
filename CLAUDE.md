@@ -102,7 +102,9 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   (24 Oct); phones use their own up to that.
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray (since 28 Oct the tabletop is the user's wide painting `table-wide.webp`, laid once and not tiled: `tabletopTexture`, clamped at its sides, mirrored past its near edge),
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
-  table centred above the controls (on desktop a dock: chips, score, Roll; reactions in a
+  table centred above the controls (since 3 Nov upright phones keep the whole tray, rails too, in
+  view: `PORTRAIT_HALF_WIDTH` 4.45, was 4.05; the slot row's plates are centred under the tray,
+  `REQUIRED_SLOT_X` and `slotPosition` in layout.ts) (on desktop a dock: chips, score, Roll; reactions in a
   column at the left edge); phones on their side use `setViewOffset` to leave a right column
   for the Roll button.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
@@ -196,7 +198,10 @@ read and follow the file):
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
-`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`.
+`&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`;
+`dev-test-server-portal` starts every crawl at Sylvester; `dev-test-server-b` (:3006, controls :3007) with
+`client-dev-b` (:5175) is a second, separate pair for checks while the user plays on :3002 (the controls change
+every table on their server).
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
@@ -627,7 +632,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   your strip lights up; tap it, then "Throw again", and every die in play is thrown again, once
   (`inspiringSong`, `Rules.rerollActive`, `throwAgain` shared with Fizzy; `run.song` is 'ready',
   then the first throw's turn key, gone at the next throw). Both moments are `keepsakeActivated`
-  with `who: 'The Bard'`. **The Cult of Kram**, an event there (`kramChance` 15% of walks no
+  with `who: 'The Bard'`, and play the user's `BardTune.mp3` (3 Nov, 1.7 s). On upright phones the
+  Bard stands behind the counter like Thom and Johnny (`.spot-scene.bard .thom-figure`; drawn whole
+  and smaller he floated above it). **The Cult of Kram**, an event there (`kramChance` 15% of walks no
   thief, Stranger or Darren found; not while sworn): swear fealty (free) and your dice never land
   on 1 for the next `kramFights` (2) fights (`run.kramFights` → `run.kram` per fight, in
   `rollFaceFor`; saved with the run), or refuse; then "Look around" as after any event. The strip

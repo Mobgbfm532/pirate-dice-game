@@ -12,11 +12,13 @@ export const TABLE_FAR_EDGE_Z = TRAY.minZ - 1.0;
 
 // The rail in front of the tray where locked dice are set down.
 export const SLOT_ROW_Z = 2.55;
-export const REQUIRED_SLOT_X = [-3.0, -2.0];
+// The row of plates is centred under the tray (3 Nov, the user: on a phone it sat left of centre,
+// an empty stretch of rail on the right): the 2 and the 4, a gap, then the four scoring slots.
+export const REQUIRED_SLOT_X = [-2.575, -1.575];
 
 export function slotPosition(slot: number, scoringCount: number): THREE.Vector3 {
     if (slot < 2) return new THREE.Vector3(REQUIRED_SLOT_X[slot], DIE_HALF, SLOT_ROW_Z);
-    const first = -0.85, last = 3.05;
+    const first = -0.425, last = 3.475;
     const step = scoringCount > 1 ? Math.min(1.0, (last - first) / (scoringCount - 1)) : 0;
     return new THREE.Vector3(first + (slot - 2) * step, DIE_HALF, SLOT_ROW_Z);
 }

@@ -25,6 +25,7 @@ const projected = new THREE.Vector3();
 const railEnd = new THREE.Vector3(TRAY.maxX + 0.45, 0, SLOT_ROW_Z);
 const feltMiddle = new THREE.Vector3((TRAY.minX + TRAY.maxX) / 2, 0, (TRAY.minZ + TRAY.maxZ) / 2);
 const leanAim = new THREE.Vector3();
+const PORTRAIT_HALF_WIDTH = 4.45; // (was 4.05, when the rails could crop)
 
 // Frames the table on any screen shape. It solves for the camera distance and aim so the
 // table's far edge sits a set way down the screen (the tavern backdrop fills the space
@@ -60,10 +61,12 @@ function CameraRig() {
         // Keep a sensible amount of table if the controls are very tall: give up tavern first.
         const top = portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
 
-        // On narrow screens the outer rails may crop slightly so the dice stay big enough to tap.
+        // On narrow screens the table is as wide as the screen allows, dice still big enough to tap.
+        // Upright phones show the whole tray, its rails too (3 Nov, the user: the rails ran off both
+        // edges once they were back): PORTRAIT_HALF_WIDTH is the half width the camera keeps in view.
         const vHalf = THREE.MathUtils.degToRad(cam.fov / 2);
         const hHalf = Math.atan(Math.tan(vHalf) * aspect);
-        const minDistance = (portrait ? 4.05 : 4.6) / Math.tan(hHalf);
+        const minDistance = (portrait ? PORTRAIT_HALF_WIDTH : 4.6) / Math.tan(hHalf);
 
         const place = (distance: number) => {
             cam.position.copy(direction).multiplyScalar(distance).add(lookAt.current);
@@ -252,7 +255,7 @@ function Tray() {
                 </mesh>
             ))}
             {/* Slot rail in front of the tray */}
-            <mesh position={[0.05, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <mesh position={[0, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[width + 0.9, 1.25]} />
                 {lookNext
                     ? <meshPhysicalMaterial map={slotRail} color="#e8d6c4" roughness={0.55} clearcoat={0.5} clearcoatRoughness={0.3} />

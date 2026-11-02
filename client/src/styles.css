@@ -1891,7 +1891,9 @@ button.keepsake.used { opacity: 0.55; }
 /* The Bard (the Yawning Portal): a warm violet stage light; he sways to his own tune. */
 .spot-pic.bard { background: radial-gradient(circle at 50% 40%, rgba(179, 136, 255, 0.45), rgba(30, 16, 44, 0.95) 70%); }
 .spot-scene.bard { --glow: rgba(179, 136, 255, 0.45); }
-.spot-scene.bard .thom-figure { height: min(84%, 470px); }
+/* Standing behind the counter like Thom and Johnny, cut off by it below his lute (3 Nov, the user:
+   drawn whole and smaller, he floated above it). (Wide screens: Thom's framing.) */
+@media (orientation: portrait) { .spot-scene.bard .thom-figure { height: min(112%, 620px); } }
 .spot-scene.bard.blessed .thom-figure { animation: bard-strum 1.2s ease-in-out 2; }
 @keyframes bard-strum {
     25% { transform: translateX(-51%) rotate(-2deg); }

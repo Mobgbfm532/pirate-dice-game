@@ -145,7 +145,7 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
         <group>
             {/* Soft shadows: the tray and the slot rail on the tabletop, the felt by the rails. */}
             <Shadow x={cx} z={cz} y={-0.006} w={width + (RAIL + CAP_OUT) * 2 + 1.4} h={depth + (RAIL + CAP_OUT) * 2 + 1.4} edge={0.7} strength={0.55} />
-            <Shadow x={0.05} z={SLOT_ROW_Z} y={-0.006} w={width + 0.9 + 0.8} h={1.25 + 0.7} edge={0.35} strength={0.35} />
+            <Shadow x={0} z={SLOT_ROW_Z} y={-0.006} w={width + 0.9 + 0.8} h={1.25 + 0.7} edge={0.35} strength={0.35} />
             <Shadow x={cx} z={cz} y={0.0025} w={width} h={depth} edge={0.55} strength={0.5} inner order={2} />
 
             {/* The rails, rounded and varnished, and their carved caps. */}
@@ -157,7 +157,7 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
             ))}
 
             {/* The slot rail's brass front edge. */}
-            <mesh material={mat.brass} position={[0.05, 0.03, SLOT_ROW_Z + 0.65]} castShadow receiveShadow>
+            <mesh material={mat.brass} position={[0, 0.03, SLOT_ROW_Z + 0.65]} castShadow receiveShadow>
                 <boxGeometry args={[width + 0.9, 0.07, 0.07]} />
             </mesh>
 

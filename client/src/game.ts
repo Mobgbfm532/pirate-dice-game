@@ -661,6 +661,7 @@ socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => 
 socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string }) => {
     enqueueMoment(() => {
         if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
+        else if (data.who === 'The Bard') playSound('bardTune'); // either song as it works (the user's tune, 3 Nov)
         else if (data.who === 'Elf Bar') playSound('marthaPuff'); // a puff (Martha's own clip)
         else playChime();
         update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
