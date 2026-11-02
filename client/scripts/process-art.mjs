@@ -628,6 +628,148 @@ async function surfaces() {
     }
 }
 
+// A box blur of a one-channel map, done twice (near enough a soft Gaussian).
+function blur(src, size, radius) {
+    let a = src, b = new Float32Array(size * size);
+    for (let pass = 0; pass < 4; pass++) {
+        const horizontal = pass % 2 === 0;
+        for (let j = 0; j < size; j++) {
+            let sum = 0, count = 0;
+            const at = k => (horizontal ? j * size + k : k * size + j);
+            for (let k = 0; k <= radius; k++) { sum += a[at(k)]; count++; }
+            for (let k = 0; k < size; k++) {
+                b[at(k)] = sum / count;
+                if (k + radius + 1 < size) { sum += a[at(k + radius + 1)]; count++; }
+                if (k - radius >= 0) { sum -= a[at(k - radius)]; count--; }
+            }
+        }
+        [a, b] = [b, a];
+    }
+    return a;
+}
+
+// The blobs where a map is over a cut-off, away from the face's rim: each one's middle, its size
+// (the larger of its width and height) and whether it is roundish (fills its box like a circle).
+function blobsOver(map, size, cutoff) {
+    const seen = new Uint8Array(size * size), out = [];
+    const inside = (x, y) => Math.min(x, y, size - 1 - x, size - 1 - y) > size * 0.1;
+    for (let start = 0; start < size * size; start++) {
+        if (seen[start] || map[start] <= cutoff || !inside(start % size, (start / size) | 0)) continue;
+        const stack = [start];
+        seen[start] = 1;
+        let n = 0, sx = 0, sy = 0, x0 = size, y0 = size, x1 = 0, y1 = 0;
+        while (stack.length) {
+            const i = stack.pop(), x = i % size, y = (i / size) | 0;
+            n++; sx += x; sy += y;
+            x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+            for (const j of [i - 1, i + 1, i - size, i + size]) {
+                const jx = j % size, jy = (j / size) | 0;
+                if (j < 0 || j >= size * size || seen[j] || Math.abs(jx - x) > 1 || map[j] <= cutoff || !inside(jx, jy)) continue;
+                seen[j] = 1;
+                stack.push(j);
+            }
+        }
+        const w = x1 - x0 + 1, h = y1 - y0 + 1, fill = n / (w * h);
+        out.push({ x: sx / n, y: sy / n, size: Math.max(w, h), round: fill > 0.6 && fill < 0.92 && Math.max(w, h) / Math.min(w, h) < 1.35 });
+    }
+    return out;
+}
+
+// Opponents' own dice (3 Nov, the user's paintings): art/dice-<id>.jpg, six faces in a 3 by 2 grid
+// (1-2-3, 4-5-6) on a plain background, each opponent's id as in TAVERN_ENCOUNTERS. Each face is
+// found by where it differs from the background, cut to its outer edge and laid out at 512 px in
+// a 3 by 2 sheet (textures/dice/<id>.webp). The pips' engraving can't be guessed from darkness on
+// a coloured die (light pips on dark faces, gold on red), so it is found here: a pip is wherever the
+// face's middle differs from the face's own colour (textures/dice/<id>-cut.webp, white high).
+// (McGrath keeps the Molar's id; his painting is dice-mcgrath.jpg.)
+const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha'];
+const RING_ONE = { duke: [214, 172, 76] }; // his gold
+const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
+async function diceSheets() {
+    const dir = path.resolve(here, '../public/textures/dice');
+    mkdirSync(dir, { recursive: true });
+    const F = 512;
+    const dist = (d, i, c) => Math.hypot(d[i] - c[0], d[i + 1] - c[1], d[i + 2] - c[2]);
+    const median = values => { const s = [...values].sort((a, b) => a - b); return s[s.length >> 1]; };
+    for (const id of DICE_SETS) {
+        const { data, width, height } = await readRgba(diceFile(id));
+        // The background: the median colour along the border.
+        const edge = [[], [], []];
+        for (let x = 0; x < width; x += 3) for (const y of [2, height - 3]) { const i = (y * width + x) * 4; for (let c = 0; c < 3; c++) edge[c].push(data[i + c]); }
+        for (let y = 0; y < height; y += 3) for (const x of [2, width - 3]) { const i = (y * width + x) * 4; for (let c = 0; c < 3; c++) edge[c].push(data[i + c]); }
+        const bg = edge.map(median);
+        const faces = [], cuts = [], found = [];
+        for (let n = 0; n < 6; n++) {
+            const cx0 = Math.round((n % 3) * width / 3), cx1 = Math.round((n % 3 + 1) * width / 3);
+            const cy0 = Math.round(Math.floor(n / 3) * height / 2), cy1 = Math.round((Math.floor(n / 3) + 1) * height / 2);
+            // The face's box: rows and columns with a good run of non-background pixels.
+            const cols = new Array(cx1 - cx0).fill(0), rows = new Array(cy1 - cy0).fill(0);
+            for (let y = cy0; y < cy1; y++) for (let x = cx0; x < cx1; x++) {
+                if (dist(data, (y * width + x) * 4, bg) > 40) { cols[x - cx0]++; rows[y - cy0]++; }
+            }
+            const span = (counts, min) => [counts.findIndex(v => v > min), counts.length - 1 - [...counts].reverse().findIndex(v => v > min)];
+            const [x0, x1] = span(cols, (cy1 - cy0) * 0.15), [y0, y1] = span(rows, (cx1 - cx0) * 0.15);
+            const box = { left: cx0 + x0, top: cy0 + y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+            const face = await sharp(path.join(ART, diceFile(id))).extract(box).resize(F, F, { fit: 'fill' }).removeAlpha().raw().toBuffer();
+            // The face's own colour: the median over a ring between its rim and its pips.
+            const ring = [[], [], []];
+            for (let y = 0; y < F; y += 2) for (let x = 0; x < F; x += 2) {
+                const e = Math.min(x, y, F - 1 - x, F - 1 - y) / F;
+                if (e > 0.1 && e < 0.16) { const i = (y * F + x) * 3; for (let c = 0; c < 3; c++) ring[c].push(face[i + c]); }
+            }
+            const own = ring.map(median);
+            // How far each point is from the face's colour, softened so a pip's highlight counts
+            // as pip; then the highest cut-off that leaves exactly as many round blobs as the face
+            // has pips. Each pip is engraved as a clean disc where its blob is.
+            const far = new Float32Array(F * F);
+            for (let i = 0; i < F * F; i++) far[i] = Math.hypot(face[i * 3] - own[0], face[i * 3 + 1] - own[1], face[i * 3 + 2] - own[2]);
+            const soft = blur(far, F, 6);
+            let pips = null;
+            for (let t = 110; t >= 20 && !pips; t -= 5) {
+                const blobs = blobsOver(soft, F, t).filter(b => b.round && b.size > F * 0.06 && b.size < F * 0.3);
+                if (blobs.length === n + 1) pips = blobs;
+            }
+            // (A 1 painted close to its face's colour, as the Duke's crimson on red, may not stand out
+            // enough: it sits in the middle, the size of the set's other pips.)
+            if (!pips && n > 0) throw new Error(`dice-${id}: couldn't find the ${n + 1} pips on face ${n + 1}`);
+            if (!pips) console.log(`dice ${id}: the 1 blends into its face; engraved in the middle`);
+            found.push(pips);
+            faces.push({ input: face, raw: { width: F, height: F, channels: 3 }, left: (n % 3) * F, top: Math.floor(n / 3) * F });
+        }
+        const r = median(found.flat().filter(Boolean).map(b => b.size)) / 2 * 1.04;
+        // A 1 that blends into its face (the Duke's crimson on red) is repainted brighter red in a
+        // ring of the set's own pip colour (RING_ONE), so it reads from across the table.
+        const ringColour = RING_ONE[id];
+        if (ringColour) {
+            const face = faces[0].input, R = F * 0.15; // (over the whole painted pip)
+            for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) {
+                const d = Math.hypot(x - F / 2, y - F / 2);
+                if (d > R + 1) continue;
+                const edge = Math.min(1, Math.max(0, R + 0.5 - d));
+                const shade = 1 - 0.25 * Math.max(0, (x + y - F) / (2 * R)); // lit from the top left
+                const to = (d < R * 0.72 ? [222, 32, 40] : ringColour).map(c => c * shade);
+                const i = (y * F + x) * 3;
+                for (let c = 0; c < 3; c++) face[i + c] = Math.round(face[i + c] * (1 - edge) + to[c] * edge);
+            }
+        }
+        found.forEach((pips, n) => {
+            pips ??= [{ x: F / 2, y: F / 2 }];
+            const radius = n === 0 && ringColour ? F * 0.15 : r;
+            const cut = Buffer.alloc(F * F);
+            for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) {
+                let pip = 0;
+                for (const b of pips) pip = Math.max(pip, Math.min(1, Math.max(0, (radius - Math.hypot(x - b.x, y - b.y)) / 4 + 0.5)));
+                cut[y * F + x] = Math.round(255 * (1 - pip));
+            }
+            cuts.push({ input: cut, raw: { width: F, height: F, channels: 1 }, left: (n % 3) * F, top: Math.floor(n / 3) * F });
+        });
+        const a = await sharp({ create: { width: F * 3, height: F * 2, channels: 3, background: { r: 0, g: 0, b: 0 } } }).composite(faces).webp({ quality: 88 }).toFile(path.join(dir, `${id}.webp`));
+        await sharp({ create: { width: F * 3, height: F * 2, channels: 3, background: { r: 255, g: 255, b: 255 } } }).composite(cuts).grayscale().webp({ quality: 90 }).toFile(path.join(dir, `${id}-cut.webp`));
+        console.log(`dice ${id}  ${Math.round(a.size / 1024)} KB`);
+    }
+}
+
+if (!ONLY || ONLY.has('dice')) await diceSheets();
 if (!ONLY) {
     await surfaces();
     await backdrop();

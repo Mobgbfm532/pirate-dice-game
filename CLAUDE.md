@@ -106,6 +106,20 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   for the Roll button.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
+- **Opponents' own dice** (3 Nov, the user's paintings): a Tavern Crawl opponent throws their own
+  set on their turns (yours stay ivory). So far the Ghoul and Gourd's five: McGrath yellowed bone,
+  Frak green with violet pips, Danhausen purple, the Duke red with gold pips, Martha mother-of-pearl
+  with purple pips. The user paints `art/dice-<name>.jpg` (six faces 3 by 2, 1-2-3 then 4-5-6, on a
+  plain background; the prompt is in docs/art-direction.md; McGrath's is `dice-mcgrath.jpg`, his id
+  is `molar`); `diceSheets()` in process-art.mjs (`ONLY=dice npm --prefix client run art`, list in
+  `DICE_SETS`) finds each face, cuts it to its edge and writes `client/public/textures/dice/<id>.webp`
+  (512 px faces, 3 by 2) and `<id>-cut.webp`, the engraving: on each face the highest cut-off that
+  leaves exactly as many round blobs as it has pips, each engraved as a disc. A 1 too close to its
+  face's colour is engraved in the middle; `RING_ONE` repaints it bright red in a ring of the set's
+  pip colour (the Duke's crimson on red, a gold ring). Client: `OPPONENT_DICE` and
+  `opponentDiceMaterials` in textures.ts (fetched as the opponent sits down; no ivory tint and no
+  `clearPips`, which would repaint a red or green face), chosen in Dice.tsx when `turn.playerId` is
+  `BOT_ID`. The effect colours (Mind Whip, the hidden "?") still win over a set.
 - **The dice as the star** (visuals plan step 2, 24 Oct, new look only): `Throw.tsx` draws a
   faint puff of dust at each hard felt hit (felt impacts carry `x, z`). A kept die gives a wooden
   clack as it reaches its slot (Dice.tsx `arrival`; the opponent's old toggle click is off in the
@@ -165,6 +179,10 @@ read and follow the file):
   working copy (:5173), the same throw on both, builds side-by-sides, looks at them and reports
   in words (readability of 1s/6s and the plates, anything broken) with the pictures worth sending.
   Keeps dozens of screenshots out of the main session.
+- `dice-import`: when the user has painted dice for more opponents. Finds the sheets (art/ or
+  Downloads), checks them, adds the ids to `DICE_SETS` / `OPPONENT_DICE`, runs the art script,
+  rings a 1 that blends in (`RING_ONE`), checks the dice on the table as that opponent throws,
+  updates this file and reports with previews in `previews/dice/`.
 - `render-deploy`: deploying to the Render test service, only after the user says yes to
   pushing. It tests, pushes `phase-2-3d-prototype`, watches the deploy in Claude in Chrome,
   reads the logs if it fails and smoke-tests `/next`. It never touches `main` or the live service.
@@ -654,7 +672,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    is hard (0.3% finish) but the user finds it easier; options measured in `easier.js`,
    `tournament-lives.js`. The simulator doesn't know the Elf Bars, the Bard, the Cult or the new
    keepsakes yet: teach it before trusting its numbers.
-2. **The user's art and sounds waiting:** ability paintings for Dead Eye, the Ace of Spades and
+2. **The user's art and sounds waiting:** dice sets for the Yawning Portal's and the ship's
+   opponents (add each id to `DICE_SETS` and `OPPONENT_DICE`); ability paintings for Dead Eye, the Ace of Spades and
    All In; sounds for the Yawning Portal's abilities (only Back of the Head has one), the Bard's
    songs as they work and an Elf Bar's puff (it borrows Martha's); music and ambience from Udio;
    optional repaints of the Potion Belt and the Sunglasses (thin at 26 px).

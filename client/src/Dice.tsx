@@ -2,11 +2,11 @@ import { useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 're
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { actions, canPutBack, store, table } from './game';
+import { BOT_ID, actions, canPutBack, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
 import { paceFrame, readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
-import { createDiceMaterials } from './textures';
+import { OPPONENT_DICE, createDiceMaterials, opponentDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
 
@@ -163,6 +163,11 @@ export function Dice() {
     // The Wild Magic Hot Tub: the die its surge works on is aqua on the player's turns.
     const surge = snap.state?.tavernRun?.tubSurge;
     const tubId = turn && turn.playerId !== 'BOT_MOLAR' && surge && surge.id !== 'pruney' ? surge.die : -1;
+    // A Tavern Crawl opponent throws their own dice (the user's paintings, 3 Nov), fetched as they sit down.
+    const run = snap.state?.tavernRun;
+    const across = run ? (run.seated ?? run.enemy).id : null;
+    const theirs = useMemo(() => (across && OPPONENT_DICE.has(across) ? opponentDiceMaterials(across, materials.faces) : null), [across, materials]);
+    const own = turn && turn.playerId === BOT_ID && theirs ? theirs : materials.faces;
     const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);
 
@@ -235,7 +240,7 @@ export function Dice() {
                 }
             }
 
-            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : materials.faces;
+            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : own;
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.

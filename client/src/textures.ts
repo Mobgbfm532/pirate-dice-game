@@ -189,6 +189,45 @@ export function createDiceMaterials() {
     return { faces, hidden, loaded, mind, tub };
 }
 
+// Opponents' own dice (3 Nov, the user's paintings): a sheet per opponent made by the art script
+// (textures/dice/<id>.webp, six 512 px faces in a 3 by 2 grid, 1-2-3 then 4-5-6) and its engraving
+// (<id>-cut.webp, white where the face stands, black in the pips; found there, as the painted
+// colours can't be read the way ivory's can). Their painted colours are kept: no ivory under the
+// paint, and no clearer red and green (on a green or red die that would repaint the face).
+export const OPPONENT_DICE = new Set(['molar', 'frak', 'danhausen', 'duke', 'martha']);
+const opponentDice = new Map<string, THREE.MeshStandardMaterial[]>();
+export function opponentDiceMaterials(id: string, fallback: THREE.MeshStandardMaterial[]) {
+    const known = opponentDice.get(id);
+    if (known) return known;
+    // Until the sheet has loaded the faces are the usual ones (it is fetched as the opponent sits down).
+    const set = FACE_VALUES.map((_, i) => finish(new DiceMaterial({ map: fallback[i].map, ...diceMaterialProps, ...lacquer })));
+    opponentDice.set(id, set);
+    const load = (file: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = `${import.meta.env.BASE_URL}textures/dice/${file}`;
+    });
+    Promise.all([load(`${id}.webp`), load(`${id}-cut.webp`)]).then(([sheet, cut]) => {
+        FACE_VALUES.forEach((value, i) => {
+            const sx = ((value - 1) % 3) * 512, sy = Math.floor((value - 1) / 3) * 512;
+            const map = canvasTexture(ctx => ctx.drawImage(sheet, sx, sy, 512, 512, 0, 0, 512, 512), 512);
+            set[i].map = map;
+            if (lookNext) {
+                // The bevel softened a little, as on the ivory dice.
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 512;
+                const ctx = canvas.getContext('2d')!;
+                ctx.filter = 'blur(2px)';
+                ctx.drawImage(cut, sx, sy, 512, 512, 0, 0, 512, 512);
+                set[i].bumpMap = new THREE.CanvasTexture(canvas);
+            }
+            set[i].needsUpdate = true;
+        });
+    }).catch(() => { /* keep the usual faces */ });
+    return set;
+}
+
 // The painted dice sheet (docs/art-direction.md): six faces in a 3x2 grid, values 1-6
 // row by row. Each rectangle is the outer edge of a face's inked outline.
 const DICE_SHEET_URL = `${import.meta.env.BASE_URL}textures/dice-faces.jpg`;

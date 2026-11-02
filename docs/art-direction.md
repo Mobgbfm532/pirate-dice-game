@@ -92,6 +92,17 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > red and the six pips of the 6 in green, viewed straight on, flat lighting, no shadows.
 > *+ style line*
 
+**An opponent's dice** (3 Nov; `art/dice-<name>.jpg`, one per opponent)
+> A 3 by 2 sprite sheet of six square die faces, evenly spaced on a plain flat background,
+> each face filling its square, row one showing 1, 2, 3 and row two showing 4, 5, 6 pips in
+> standard die layouts. The faces are [MATERIAL AND COLOUR], with [DETAILS / WEAR]. Pips are
+> [PIP COLOUR], except the single pip of the 1 in bright red and the six pips of the 6 in
+> bright green. Every face the same material, viewed straight on, flat even lighting, no
+> shadows, no perspective, no text, no border around the sheet. *+ style line*
+>
+> Keep strong contrast between pips and face; the red 1 must stand out from the face (on a
+> red die, ring it). About 1264 x 848.
+
 **Backdrop**
 > Wide interior view of a cosy fantasy tavern at night seen from a seat at a gaming
 > table, roaring stone fireplace, shelves of bottles, hanging lanterns, out of focus,
