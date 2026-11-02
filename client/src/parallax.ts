@@ -3,30 +3,19 @@
 // never moves (nothing may disturb the dice); the opponent drifts a little, the tavern more, and
 // inside the painting its sides and floor more than its far wall (Room.tsx).
 //
-// What moves it: tilting a phone, or the mouse on a computer; with neither, a slow drift like
-// breathing. `look()` gives where you are leaning, each axis -1..1, eased so nothing jumps.
+// What moves it: the mouse on a computer; otherwise a slow drift like breathing. (Tilting a phone
+// moved it too until 3 Nov; the user wanted no motion from moving the phone.) `look()` gives where
+// you are leaning, each axis -1..1, eased so nothing jumps.
 // Off for people whose device asks for reduced motion.
 
 const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const target = { x: 0, y: 0, at: 0 }; // from tilt or the mouse; at: when last heard from
+const target = { x: 0, y: 0, at: 0 }; // from the mouse; at: when last heard from
 const eased = { x: 0, y: 0 };
-let tiltRest: { beta: number; gamma: number } | null = null; // how the phone was held when we started
 
 const clamp = (v: number) => Math.max(-1, Math.min(1, v));
 
 if (typeof window !== 'undefined' && !still) {
-    // A phone: its tilt from how it was held at first (about 12 degrees is all the way).
-    window.addEventListener('deviceorientation', e => {
-        if (e.beta == null || e.gamma == null) return;
-        if (!tiltRest) tiltRest = { beta: e.beta, gamma: e.gamma };
-        // The resting position follows slowly, so a phone put down at a new angle settles again.
-        tiltRest.beta += (e.beta - tiltRest.beta) * 0.004;
-        tiltRest.gamma += (e.gamma - tiltRest.gamma) * 0.004;
-        target.x = clamp((e.gamma - tiltRest.gamma) / 12);
-        target.y = clamp((e.beta - tiltRest.beta) / 12);
-        target.at = performance.now();
-    });
     // A computer: the mouse across the window.
     window.addEventListener('pointermove', e => {
         if (e.pointerType !== 'mouse') return;
