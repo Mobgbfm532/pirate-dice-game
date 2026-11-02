@@ -683,6 +683,7 @@ function blobsOver(map, size, cutoff) {
 // face's middle differs from the face's own colour (textures/dice/<id>-cut.webp, white high).
 // (McGrath keeps the Molar's id; his painting is dice-mcgrath.jpg.)
 const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha'];
+const LIFT = { power: 1.5, vivid: 1.2 }; // how much lighter (1: as painted) and more vivid
 const RING_ONE = { duke: [214, 172, 76] }; // his gold
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
 async function diceSheets() {
@@ -737,6 +738,27 @@ async function diceSheets() {
             faces.push({ input: face, raw: { width: F, height: F, channels: 3 }, left: (n % 3) * F, top: Math.floor(n / 3) * F });
         }
         const r = median(found.flat().filter(Boolean).map(b => b.size)) / 2 * 1.04;
+        // Lighter faces (the user, 3 Nov: on a phone the coloured dice sank into the dark felt, and
+        // the warm firelight turned Frak's green olive): each face's own colour is lifted, darks
+        // most, and made a little more vivid; the pips (and just round them) are left as painted,
+        // so they stand out more, not less.
+        found.forEach((pips, n) => {
+            const face = faces[n].input;
+            const centres = pips ?? [{ x: F / 2, y: F / 2 }];
+            const keep = n === 0 && RING_ONE[id] ? F * 0.15 + 3 : r * 1.25;
+            for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) {
+                const near = Math.min(...centres.map(b => Math.hypot(x - b.x, y - b.y)));
+                const k = Math.min(1, Math.max(0, (near - keep) / 6)); // 0 on a pip, 1 on the face
+                if (k <= 0) continue;
+                const i = (y * F + x) * 3;
+                const lifted = [0, 1, 2].map(c => 255 * (1 - Math.pow(1 - face[i + c] / 255, LIFT.power)));
+                const grey = 0.299 * lifted[0] + 0.587 * lifted[1] + 0.114 * lifted[2];
+                for (let c = 0; c < 3; c++) {
+                    const v = Math.min(255, Math.max(0, grey + (lifted[c] - grey) * LIFT.vivid));
+                    face[i + c] = Math.round(face[i + c] * (1 - k) + v * k);
+                }
+            }
+        });
         // A 1 that blends into its face (the Duke's crimson on red) is repainted brighter red in a
         // ring of the set's own pip colour (RING_ONE), so it reads from across the table.
         const ringColour = RING_ONE[id];

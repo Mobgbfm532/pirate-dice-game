@@ -195,6 +195,7 @@ export function createDiceMaterials() {
 // colours can't be read the way ivory's can). Their painted colours are kept: no ivory under the
 // paint, and no clearer red and green (on a green or red die that would repaint the face).
 export const OPPONENT_DICE = new Set(['molar', 'frak', 'danhausen', 'duke', 'martha']);
+const OPPONENT_DICE_GLOW = 0.22;
 const opponentDice = new Map<string, THREE.MeshStandardMaterial[]>();
 export function opponentDiceMaterials(id: string, fallback: THREE.MeshStandardMaterial[]) {
     const known = opponentDice.get(id);
@@ -214,6 +215,11 @@ export function opponentDiceMaterials(id: string, fallback: THREE.MeshStandardMa
             const map = canvasTexture(ctx => ctx.drawImage(sheet, sx, sy, 512, 512, 0, 0, 512, 512), 512);
             set[i].map = map;
             if (lookNext) {
+                // A little of the painting's own colour shows whatever the light (the user, 3 Nov: the
+                // fire's orange light turned Frak's green olive and the coloured dice sank into the felt).
+                set[i].emissiveMap = map;
+                set[i].emissive.set('#ffffff');
+                set[i].emissiveIntensity = OPPONENT_DICE_GLOW;
                 // The bevel softened a little, as on the ivory dice.
                 const canvas = document.createElement('canvas');
                 canvas.width = canvas.height = 512;

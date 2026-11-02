@@ -201,7 +201,8 @@ export const table = {
     lockOrder: new Map<number, number>(), // die id -> when it was locked, so slots never reshuffle
     stolenAt: new Map<number, number>(), // die id -> time Klarg took it
     devilAt: 0,
-    celebrateAt: 0
+    celebrateAt: 0,
+    diceSet: null as string | null // development: every die shows this opponent's set (preview.dice)
 };
 
 const socket = io({ transports: ['websocket', 'polling'] });
@@ -937,7 +938,10 @@ export const preview = {
     intro() { update({ introAt: performance.now() }); },
     celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
     // (hold: keep it up that much longer, to look at a still of it)
-    devil(who: string | null = null, hold = 0) { table.devilAt = performance.now(); update({ devil: { at: performance.now() + hold, who } }); }
+    devil(who: string | null = null, hold = 0) { table.devilAt = performance.now(); update({ devil: { at: performance.now() + hold, who } }); },
+    // Every die, yours too, shows an opponent's own dice (an id from OPPONENT_DICE), to look at a set
+    // on the felt without waiting for their turn; null ends it.
+    dice(id: string | null) { table.diceSet = id; }
 };
 
 resetTrayForNewTurn();

@@ -240,7 +240,8 @@ export function Dice() {
                 }
             }
 
-            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : own;
+            const shown = table.diceSet ? opponentDiceMaterials(table.diceSet, materials.faces) : own;
+            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : shown;
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.

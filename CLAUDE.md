@@ -116,7 +116,11 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   (512 px faces, 3 by 2) and `<id>-cut.webp`, the engraving: on each face the highest cut-off that
   leaves exactly as many round blobs as it has pips, each engraved as a disc. A 1 too close to its
   face's colour is engraved in the middle; `RING_ONE` repaints it bright red in a ring of the set's
-  pip colour (the Duke's crimson on red, a gold ring). Client: `OPPONENT_DICE` and
+  pip colour (the Duke's crimson on red, a gold ring). On a phone the coloured sets sank into the
+  dark felt (the user, 3 Nov), so each face (not its pips) is lifted lighter and a little more vivid
+  (`LIFT` in the script) and a little of the painting shows whatever the light
+  (`OPPONENT_DICE_GLOW` 0.22, an emissive map: the fire's orange light had turned Frak's green
+  olive). Dev: `preview.dice(id)` shows a set on every die, yours too (`null` ends it). Client: `OPPONENT_DICE` and
   `opponentDiceMaterials` in textures.ts (fetched as the opponent sits down; no ivory tint and no
   `clearPips`, which would repaint a red or green face), chosen in Dice.tsx when `turn.playerId` is
   `BOT_ID`. The effect colours (Mind Whip, the hidden "?") still win over a set.
