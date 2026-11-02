@@ -3,17 +3,14 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { SLOT_ROW_Z, TRAY } from './layout';
 
-// The rails around the tray were taken out on 3 Nov (the user's call): the felt lies straight on
-// the tabletop, the dice still bounce off the same unseen walls (physics.ts), and SHOW_RAILS brings
-// the rails, their caps, inlay, brackets and shadows back.
-const SHOW_RAILS = false;
-
 // A richer table (2 Nov, the user's call, new look only): the tray's rails get rounded, varnished
-// edges and a carved cap along their tops, brass corner brackets with rivets, the felt darkens
+// edges and a carved cap along their tops, the felt darkens
 // softly where it meets the wood, the tray and the slot rail sit on the tabletop with a soft
 // shadow, the slot rail has a brass edge, and a few gold coins lie on the table beside it.
 // The rails' inner faces stay exactly where the dice bounce off them (physics.ts); everything
 // grows outward or upward, and nothing reaches over the felt or the slots.
+// On 3 Nov the brass on the tray (an inlay along the caps, corner brackets with rivets) was taken
+// out, the user's call: the tray is a plain wooden box again.
 
 const RAIL = 0.42;      // thickness (was 0.35; the extra goes outward)
 const RAIL_H = 0.58;    // height to the top of the rail body
@@ -123,9 +120,7 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
     const geo = useMemo(() => ({
         rails: rails.map(([, , w, d]) => new RoundedBoxGeometry(w, RAIL_H, d, 3, 0.07)),
         caps: caps.map(([, , w, d]) => new RoundedBoxGeometry(w, CAP_H, d, 3, 0.04)),
-        coin: new THREE.CylinderGeometry(0.27, 0.27, 0.05, 32),
-        rivet: new THREE.SphereGeometry(0.035, 12, 8),
-        bracket: new RoundedBoxGeometry(0.62, 0.03, 0.14, 2, 0.012)
+        coin: new THREE.CylinderGeometry(0.27, 0.27, 0.05, 32)
     }), []);
     const mat = useMemo(() => {
         const wood = new THREE.MeshPhysicalMaterial({ map: railMap, roughness: 0.42, clearcoat: 0.75, clearcoatRoughness: 0.22 });
@@ -142,27 +137,15 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
         return { wood, cap, brass, gold };
     }, [railMap]);
 
-    // Brass brackets over the four outer corners of the caps, each an L of two plates and three rivets.
-    const top = RAIL_H + CAP_H + 0.012;
-    const reach = RAIL + CAP_OUT;
-    const corners = [
-        [TRAY.minX - reach, TRAY.minZ - reach, 1, 1],
-        [TRAY.maxX + reach, TRAY.minZ - reach, -1, 1],
-        [TRAY.minX - reach, TRAY.maxZ + reach, 1, -1],
-        [TRAY.maxX + reach, TRAY.maxZ + reach, -1, -1]
-    ];
-    const plate = 0.62 / 2;
-
     // A few coins by the slot rail's right end (on the tabletop, clear of the slots).
     const coinX = TRAY.maxX + 1.25, coinZ = SLOT_ROW_Z - 0.15;
     const stack = [0, 1, 2, 3].map(i => [coinX + Math.sin(i * 2.1) * 0.03, 0.015 + i * 0.05, coinZ + Math.cos(i * 1.7) * 0.03, i * 0.7] as const);
 
     return (
         <group>
-            {/* Soft shadows: the slot rail on the tabletop; with rails, the tray too and the felt by them. */}
-            <Shadow x={0.05} z={SLOT_ROW_Z} y={-0.006} w={width + 0.9 + 0.8} h={1.25 + 0.7} edge={0.35} strength={0.35} />
-            {SHOW_RAILS && <>
+            {/* Soft shadows: the tray and the slot rail on the tabletop, the felt by the rails. */}
             <Shadow x={cx} z={cz} y={-0.006} w={width + (RAIL + CAP_OUT) * 2 + 1.4} h={depth + (RAIL + CAP_OUT) * 2 + 1.4} edge={0.7} strength={0.55} />
+            <Shadow x={0.05} z={SLOT_ROW_Z} y={-0.006} w={width + 0.9 + 0.8} h={1.25 + 0.7} edge={0.35} strength={0.35} />
             <Shadow x={cx} z={cz} y={0.0025} w={width} h={depth} edge={0.55} strength={0.5} inner order={2} />
 
             {/* The rails, rounded and varnished, and their carved caps. */}
@@ -172,25 +155,6 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
             {caps.map(([x, z], i) => (
                 <mesh key={`c${i}`} geometry={geo.caps[i]} material={mat.cap} position={[x, RAIL_H + CAP_H / 2, z]} castShadow receiveShadow />
             ))}
-
-            {/* A thin brass inlay along the middle of each cap. */}
-            {caps.map(([x, z, w, d], i) => (
-                <mesh key={`i${i}`} material={mat.brass} position={[x, RAIL_H + CAP_H + 0.004, z]}>
-                    <boxGeometry args={[w > d ? w - 0.5 : 0.035, 0.012, w > d ? 0.035 : d - 0.1]} />
-                </mesh>
-            ))}
-
-            {/* Brass corner brackets. */}
-            {corners.map(([x, z, sx, sz], i) => (
-                <group key={`b${i}`} position={[x, top, z]}>
-                    <mesh geometry={geo.bracket} material={mat.brass} position={[sx * plate, 0, sz * 0.07]} castShadow />
-                    <mesh geometry={geo.bracket} material={mat.brass} position={[sx * 0.07, 0, sz * plate]} rotation={[0, Math.PI / 2, 0]} castShadow />
-                    {[[0.1, 0.07], [0.48, 0.07], [0.07, 0.48]].map(([a, b], j) => (
-                        <mesh key={j} geometry={geo.rivet} material={mat.brass} position={[sx * a, 0.014, sz * b]} scale={[1, 0.55, 1]} />
-                    ))}
-                </group>
-            ))}
-            </>}
 
             {/* The slot rail's brass front edge. */}
             <mesh material={mat.brass} position={[0.05, 0.03, SLOT_ROW_Z + 0.65]} castShadow receiveShadow>

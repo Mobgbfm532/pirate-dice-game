@@ -7,6 +7,7 @@ import { flame, lookNext } from './look';
 import { ScreenAir, type AirFrame } from './Air';
 import { roomWash } from './MomentLight';
 import { PARALLAX, look } from './parallax';
+import { shake } from './cameraMoves';
 
 // The tavern behind the table and the opponent's bust, drawn inside the 3D scene (option 1,
 // step A, 23 Oct). They used to be page layers under a see-through canvas; now the glow and
@@ -246,8 +247,9 @@ export function Room() {
         const x0 = v.x, y0 = v.y;
         v.set(1, -1, 0.5).applyMatrix4(cam.projectionMatrixInverse).multiplyScalar(DEPTH / -v.z);
         const sx = (v.x - x0) / size.width, sy = (v.y - y0) / size.height;
+        // (A camera shake on a big moment, cameraMoves.ts, moves the pictures with the table.)
         const put = (mesh: THREE.Object3D, left: number, top: number, w: number, h: number) => {
-            mesh.position.set(x0 + (left + w / 2) * sx, y0 + (top + h / 2) * sy, -DEPTH);
+            mesh.position.set(x0 + (left + shake.x + w / 2) * sx, y0 + (top + shake.y + h / 2) * sy, -DEPTH);
             mesh.scale.set(w * sx, -h * sy, 1);
         };
         const L = backdropLayout;

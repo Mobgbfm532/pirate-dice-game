@@ -15,6 +15,7 @@ import { Room } from './Room';
 import { TableDressing } from './TableDressing';
 import { DustMotes } from './Air';
 import { MomentLights } from './MomentLight';
+import { cameraMoves, shake } from './cameraMoves';
 import { noteFrame, renderDpr, settings, tuneStore, tuning } from './tuning';
 
 const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
@@ -107,13 +108,17 @@ function CameraRig() {
         }
 
         // Lean in slowly while dice are in the air during a suspense roll, keeping the slot
-        // rail where it is (zooming about the middle would push it under the controls).
+        // rail where it is (zooming about the middle would push it under the controls). The new
+        // look leans in on a perfect hand too, and shakes on a few big moments (cameraMoves.ts).
         const suspense = table.roll && table.roll.speed < 1 ? 1 : 0;
         drift.current += (suspense - drift.current) * Math.min(1, delta * 2);
-        if (drift.current > 0.001) {
+        const focal = size.height / 2 / Math.tan(vHalf);
+        const moves = lookNext ? cameraMoves(performance.now(), focal) : { push: 0 };
+        const lean = Math.max(drift.current * 0.12, moves.push);
+        if (lean > 0.0001) {
             const nearY = screenY(nearPoint), span = nearY - screenY(farPoint);
             const aim = leanAim.copy(lookAt.current);
-            const leaned = distance * (1 - drift.current * 0.12);
+            const leaned = distance * (1 - lean);
             for (let i = 0; i < 3 && span > 0.01; i++) {
                 cam.position.copy(direction).multiplyScalar(leaned).add(aim);
                 cam.lookAt(aim);
@@ -127,13 +132,19 @@ function CameraRig() {
             place(distance);
         }
 
-        layoutBackdrop(screenY(farPoint) * size.height, size.width, drift.current > 0.001);
+        layoutBackdrop(screenY(farPoint) * size.height, size.width, lean > 0.0001);
         projected.copy(railEnd).project(cam);
         const railX = (projected.x + 1) / 2 * size.width, railY = (1 - projected.y) / 2 * size.height;
         projected.copy(farPoint).project(cam);
         const tableX = (projected.x + 1) / 2 * size.width;
         projected.copy(feltMiddle).project(cam);
         setRailAnchor(railX, railY, tableX, (1 - projected.y) / 2 * size.height);
+        // A shake turns the camera after everything is laid out, so the page's controls stay put.
+        if (shake.pitch || shake.yaw) {
+            cam.rotateY(shake.yaw);
+            cam.rotateX(shake.pitch);
+            cam.updateMatrixWorld();
+        }
 
         // Fog only darkens the far end of the table, whatever the camera distance.
         if (scene.fog instanceof THREE.Fog) {
@@ -193,6 +204,16 @@ function Tray() {
     const depth = TRAY.maxZ - TRAY.minZ;
     const cx = (TRAY.minX + TRAY.maxX) / 2;
     const cz = (TRAY.minZ + TRAY.maxZ) / 2;
+    const rail = 0.35;
+    const h = 0.55;
+
+    const railBoxes: [number, number, number, number][] = [
+        [cx, TRAY.minZ - rail / 2, width + rail * 2, rail],
+        [cx, TRAY.maxZ + rail / 2, width + rail * 2, rail],
+        [TRAY.minX - rail / 2, cz, rail, depth],
+        [TRAY.maxX + rail / 2, cz, rail, depth]
+    ];
+
     return (
         <group>
             {/* Tabletop, ending just beyond the tray so the tavern shows behind it */}
@@ -222,9 +243,14 @@ function Tray() {
                     <meshBasicMaterial map={feltWear} transparent depthWrite={false} toneMapped={false} />
                 </mesh>
             )}
-            {/* No rails round the tray since 3 Nov (the user's call; the walls the dice bounce off stay,
-                unseen). The new look's dressing: the slot rail's brass edge, its shadow and the coins. */}
+            {/* Rails (the new look: wooden rails and their dressing, TableDressing.tsx) */}
             {lookNext && <TableDressing railMap={rails} />}
+            {!lookNext && railBoxes.map(([x, z, w, d], i) => (
+                <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
+                    <boxGeometry args={[w, h, d]} />
+                    <meshStandardMaterial map={rails} roughness={0.5} />
+                </mesh>
+            ))}
             {/* Slot rail in front of the tray */}
             <mesh position={[0.05, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                 <planeGeometry args={[width + 0.9, 1.25]} />
