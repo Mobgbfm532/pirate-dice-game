@@ -410,7 +410,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   "lost 2 lives"); Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he
   heals one). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
   (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
-  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Only Back of the Head has a sound (the swoosh). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaPuff.mp3` with Disguises, `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
+  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Back of the Head has the swoosh; since 3 Nov the other four have the user's clips (`InkfireBrand.mp3` 2.9 s, `Flourish.mp3` 1.7 s, `DivineSmite.mp3` 6.7 s, rings on past its 1.85 s moment, `AstralFlood.mp3` 1.4 s; `ABILITY_SOUNDS`). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaPuff.mp3` with Disguises, `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
   **Mind Whip** (since 20 Oct, replacing Psychic Fog; like the Devil it waits, `pendingMind`, and is spent only as it
   lands, so his ✦ flashes then (21 Oct): on your first throw he keeps one of your dice
@@ -705,8 +705,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    keepsakes yet: teach it before trusting its numbers.
 2. **The user's art and sounds waiting:** dice sets for the Yawning Portal's and the ship's
    opponents (add each id to `DICE_SETS` and `OPPONENT_DICE`); ability paintings for Dead Eye, the Ace of Spades and
-   All In; sounds for the Yawning Portal's abilities (only Back of the Head has one), the Bard's
-   songs as they work and an Elf Bar's puff (it borrows Martha's); music and ambience from Udio;
+   All In; an Elf Bar's puff (it borrows Martha's); music and ambience from Udio;
    optional repaints of the Potion Belt and the Sunglasses (thin at 26 px).
 3. **The Salty Swallow's own spots and events** (to workshop; ideas: a card game below deck, a
    stowaway instead of the thief). Without the Dice Den it offers only Thom, the Shrine and

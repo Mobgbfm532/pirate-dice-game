@@ -39,7 +39,12 @@ const sfx = {
     potionSelect: load('PotionSelector.mp3', 0.9),
     itemPickup: load('ItemPickup.mp3', 0.8),
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
-    bardTune: load('BardTune.mp3', 0.8)
+    bardTune: load('BardTune.mp3', 0.8),
+    // The Yawning Portal's abilities (the user's, 3 Nov).
+    inkfire: load('InkfireBrand.mp3', 0.75),
+    flourish: load('Flourish.mp3', 0.75),
+    smite: load('DivineSmite.mp3', 0.75),
+    astralFlood: load('AstralFlood.mp3', 0.75)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
@@ -359,7 +364,11 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
     'Constellation Blur': 'constellation',
     'The Ace of Spades': 'gunshot',
-    'Back of the Head': 'swoosh', // the Yawning Portal's other four have no sounds of their own yet
+    'Back of the Head': 'swoosh',
+    'Inkfire Brand': 'inkfire',
+    'Flourish': 'flourish',
+    'Divine Smite': 'smite',
+    'Astral Flood': 'astralFlood',
     'Mind Whip': 'mindWhip',
     'You are Cursed': 'cursed',
     'Sympathy for the Devil': 'sympathy',
