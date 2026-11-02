@@ -2312,3 +2312,26 @@ test('the Bottomless Flask: the first Thonic each fight may stay on the shelf, a
     }
     assert.ok(stayed > 3 && stayed < 21, `stayed ${stayed} of 24`);
 });
+
+test('a player meets each opponent as they sit down, remembered by name across runs', async () => {
+    // Joins a Tavern Crawl table and returns who the player has met, once McGrath has sat down.
+    const metAt = async name => {
+        const socket = connect(url, { transports: ['websocket'], forceNew: true });
+        clients.push(socket);
+        const roomCode = `TVRN-T${++tavernTables}`;
+        const state = waitFor(socket, 'gameStateUpdate', s => s.tavernRun?.met.includes('molar'));
+        socket.on('connect', () => socket.emit('joinTavern', { name, roomCode, avatar: 'Devil', token: `${name}-${Math.random()}` }));
+        return { socket, roomCode, met: runOf(await state).met };
+    };
+    const first = await metAt('Rover');
+    assert.ok(!first.met.includes('frak'), 'not yet the next opponent');
+
+    // Frak sits down.
+    server.rooms[first.roomCode].tavernRun.encounterIndex = 1;
+    server.resetTavernEncounter(first.roomCode);
+    await nextState(first.socket, s => runOf(s).met.includes('frak'));
+
+    // The same name at another table, typed differently, has met Frak too; someone else hasn't.
+    assert.ok((await metAt(' rover ')).met.includes('frak'), 'met in an earlier run');
+    assert.ok(!(await metAt('Newcomer')).met.includes('frak'));
+});

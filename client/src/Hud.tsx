@@ -686,7 +686,7 @@ function useCountUp(target: number, ms = 1200) {
 
 // The end of a Tavern Crawl: how far you got, the points, and the leaderboard (by points since
 // 23 Oct: the opponents beaten, the hearts spared, how far a lost run got, and the gold left).
-function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard'] }) {
+function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard']; met?: string[] }) {
     const points = useCountUp(summary.points);
     const b = summary.breakdown;
     const rows: [string, string][] = [
@@ -709,6 +709,15 @@ function TavernOver({ summary, leaderboard }: { summary: TavernSummary; leaderbo
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
                         const state = i < summary.defeated ? 'beaten' : name === summary.fellTo ? 'fell' : 'unmet';
+                        // Someone you have never sat down with (in any run) stays a "?" (the user, 3 Nov).
+                        const id = summary.encounterIds?.[i];
+                        if (met && id && !met.includes(id)) {
+                            return (
+                                <li key={name} className="unmet unknown" title="Not met yet" aria-label="Someone you haven't met yet">
+                                    <span className="mini-portrait unknown-face" />
+                                </li>
+                            );
+                        }
                         return (
                             <li key={name} className={state} title={name} aria-label={`${name}: ${state === 'beaten' ? 'beaten' : state === 'fell' ? 'lost to' : 'not reached'}`}>
                                 <span className="mini-portrait" style={avatarStyle(portraitFor(name))} />
@@ -1773,7 +1782,7 @@ function Modals({ snap }: { snap: Snapshot }) {
     }
     if (!modal) return null;
     if (modal.type === 'keepsakes') return <KeepsakeCards key={modal.nextEnemy} {...modal} />;
-    if (modal.type === 'tavernOver') return <TavernOver summary={modal.summary} leaderboard={snap.leaderboard} />;
+    if (modal.type === 'tavernOver') return <TavernOver summary={modal.summary} leaderboard={snap.leaderboard} met={snap.state?.tavernRun?.met} />;
     return (
         <div className="modal-backdrop">
             <div className="panel">

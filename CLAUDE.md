@@ -48,6 +48,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 | Path | What |
 |---|---|
 | `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, the events between fights, `fireTavernAbility`; its numbers come from `shared/balance.js`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
+| `db.js` | What lasts between restarts (3 Nov): the leaderboard and which opponents each player has met. With `DATABASE_URL` (Neon Postgres) in the database (tables `leaderboard`, `met`, made on start); without it in `leaderboard.json` / `met.json` (gitignored; `LEADERBOARD_READONLY` leaves them alone). The server keeps both in memory and writes through without waiting. `test/db.test.js` checks the SQL on pg-mem. |
 | `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
@@ -199,10 +200,23 @@ against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summa
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
 `TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
+`DATABASE_URL` (the Neon Postgres link: the leaderboard and who has met whom survive deploys and
+sleeps; without it, files),
 `SAVE_SECRET` (seals saved runs; set on the Render test service since 21 Oct; the live service needs
 one too, or saves only last until the server restarts, which on the free tier is every sleep and deploy).
 
 ## Working here: lessons learned
+
+- **Neon (3 Nov):** the Neon CLI is installed globally (`neon`, signed in as the user). This folder
+  is linked to the Neon project `crimson-water-92243343` (`.neon`, gitignored; `neon.ts` holds the
+  project's settings: Postgres only, no auth), branch `production`. `neon deploy` pulls
+  `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` and `NEON_BRANCH` into `.env.local` (gitignored),
+  which `server.js` reads on start, except under `LEADERBOARD_READONLY` (the tests, the dev test
+  server: they never touch the real database). So `npm start` on this PC uses the real Neon
+  database: the same as the test site once Render has the link. The launch entry `neon-server`
+  runs it on :3005. To try something against Neon without touching real data, make a Neon branch
+  (`neon checkout dev --create`, a 7-day copy) first. `db.js` drops the link's `sslmode` and always
+  checks the certificate. Checks used on 3 Nov live in `previews/neon/` (gitignored).
 
 - **The user often has their own `npm start` running on :3000.** Don't kill it. Run test servers
   on another port (`PORT=3002`) and point the dev client at it
@@ -502,6 +516,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   was 4.2) and the next throw waits for it. Mind Whip's banner no longer names the die.
 - **Item icons (29 Oct, the user's paintings):** the six Thonics are painted bottles (`art/thonic-<id>.jpg` → `client/public/art/thonics/<id>.webp`, 320 px square icons via `cutOutFlat`'s `icon` option; `PAINTED_THONICS` in Hud, `.bottle.painted`), on the shelf, Thom's cart and the drinking moment. So are the four Elf Bars (`art/elfbar-<id>.jpg` → `art/elfbars/<id>.webp`; `Vape` in Hud draws the painting with its puff dots, and the puff moment's flare shows it; `cutOutFlat` gained `redOverBlue` for Purple Haze's smoke on crimson). So are the eight keepsakes (`art/keepsake-<id>.jpg` → `art/keepsakes/<id>.webp`; `PAINTED_KEEPSAKES` and `keepsakeIcon()` in Hud draw them on the strip, the Stranger's cards, Thom's back shelf, the invitation and the keepsake's gold burst; `.item-art`). So are the blessing and song icons (the Lady's Grace, Cutting Words, Inspiring Song, Sworn to Kram; the same folder and `PAINTED_KEEPSAKES`; the candle's cyan glow uses `glow`'s `colour: 'light'`). Every item icon is painted now.
 - **A Thonic drunk (28 Oct, the user's call):** its own bottle, big, pops its cork and tips up in a glow of its colour with bubbles rising (`.potion-moment`, `moment.thonic`), over its name on a parchment label edged in that colour (`.potion-<id>` sets `--liquid`); no "Thom's Thonics" line.
+- **Who you've met (3 Nov, the user's call):** on the run-over screen's line of opponents, one you
+  have never sat down with, in any run, shows as a gold "?" in a dark frame (`.unknown-face`; only
+  there: the spot cards between fights keep their faces, the user's call). Kept by player name
+  (trimmed, lower case; `playerKey`), across runs and devices: the server's `meet(room, id)` as an
+  opponent sits down (`resetTavernEncounter`), `loadMet` as a player joins a Tavern Crawl,
+  `tavernRun.met` in the state, `encounterIds` in the run-over summary.
 - **Keepsakes on screen (21 Oct):** small round icons beside your chip (`KeepsakeIcon`,
   `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
   it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
@@ -698,7 +718,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
    the live game); then delete the test service. Old saved runs won't open (money changed); the
    live leaderboard's old gold entries count as points.
-8. **Persistence:** move the leaderboard to a small hosted database so it survives deploys.
+8. **Persistence (built 3 Nov, `db.js`; Neon set up and tested end to end the same day):** the
+   user sets `DATABASE_URL` (Neon's pooled link, the one in `.env.local`) on the Render test service
+   (and later the live one); then check the leaderboard survives a deploy.
 9. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
    classic page reachable for a while; until then it skips Thom and the events, which the user
    accepted), update the PWA manifest/service worker, retire the old client code in

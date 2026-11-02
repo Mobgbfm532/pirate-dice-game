@@ -2,3 +2,7 @@ node_modules/
 .claude/
 previews/
 leaderboard.json
+met.json
+.env
+.env.*
+.neon

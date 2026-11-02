@@ -9,6 +9,15 @@ const os = require('os');
 const Rules = require('./shared/rules');
 const Strategy = require('./shared/strategy');
 const BALANCE = require('./shared/balance');
+// Settings kept on this PC (`neon deploy` writes the database link, DATABASE_URL, to .env.local;
+// never in git). On Render they are set in the service's Environment instead. A setting already
+// given (Render's) wins. The tests and the dev test server (LEADERBOARD_READONLY) skip them, so
+// they never touch the real database.
+if (!process.env.LEADERBOARD_READONLY) for (const file of ['.env.local', '.env']) {
+    const at = path.join(__dirname, file);
+    if (fs.existsSync(at)) process.loadEnvFile(at);
+}
+const { store, playerKey } = require('./db');
 
 const BOT_ID = 'BOT_MOLAR';
 
@@ -45,10 +54,10 @@ app.get('/leaderboard', (req, res) => {
 let rooms = {};
 
 // The Tavern Crawl's leaderboard: each name's best run by points (since 23 Oct; it was gold), with
-// the gold that run ended with. It starts empty (no made-up names) and lives in leaderboard.json
-// (not in git). An older entry with only gold counts that gold as its points.
-const LEADERBOARD_PATH = path.join(__dirname, 'leaderboard.json');
-
+// the gold that run ended with. It starts empty (no made-up names). Since 3 Nov it lives in the
+// database when there is one (db.js; on Render, Neon), else in leaderboard.json (not in git). The
+// server keeps it in memory and saves each change without waiting. An older entry with only gold
+// counts that gold as its points.
 function normalizeLeaderboard(entries) {
     let bestByName = new Map();
     entries.forEach(entry => {
@@ -62,33 +71,45 @@ function normalizeLeaderboard(entries) {
     return Array.from(bestByName.values()).sort((a, b) => b.points - a.points).slice(0, 20);
 }
 
-function loadTavernLeaderboard() {
-    try {
-        if (fs.existsSync(LEADERBOARD_PATH)) {
-            let parsed = JSON.parse(fs.readFileSync(LEADERBOARD_PATH, 'utf8'));
-            return normalizeLeaderboard(parsed);
-        }
-    } catch (error) {
-        console.warn('Could not load leaderboard:', error.message);
-    }
-    return [];
-}
-
-let tavernLeaderboard = loadTavernLeaderboard();
-
-function saveTavernLeaderboard() {
-    if (process.env.LEADERBOARD_READONLY) return;
-    try {
-        fs.writeFileSync(LEADERBOARD_PATH, JSON.stringify(tavernLeaderboard, null, 2));
-    } catch (error) {
-        console.warn('Could not save leaderboard:', error.message);
-    }
-}
+let tavernLeaderboard = [];
+store.loadLeaderboard().then(entries => {
+    // (a score submitted while it loaded is kept)
+    tavernLeaderboard = normalizeLeaderboard([...entries, ...tavernLeaderboard]);
+    io.emit('leaderboardUpdate', tavernLeaderboard);
+}).catch(error => console.warn('Could not load the leaderboard:', error.message));
 
 function submitTavernLeaderboardScore(name, points, gold) {
     tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, points, gold }]);
-    saveTavernLeaderboard();
+    store.saveLeaderboard(tavernLeaderboard, { name: String(name).trim().substring(0, 20), points, gold })
+        .catch(error => console.warn('Could not save the leaderboard:', error.message));
     return tavernLeaderboard;
+}
+
+// Who each player has met (3 Nov, the user's call): opponents they have never sat down with show as
+// a "?" in the run-over screen's line of opponents. Kept by name
+// (db.js `playerKey`), across runs and devices; loaded as a player joins a Tavern Crawl.
+const metByPlayer = new Map(); // player key -> Set of opponents' ids
+function metOf(name) {
+    let key = playerKey(name);
+    if (!metByPlayer.has(key)) metByPlayer.set(key, new Set());
+    return metByPlayer.get(key);
+}
+function loadMet(roomCode, name) {
+    store.loadMet(name).then(ids => {
+        let met = metOf(name);
+        let before = met.size;
+        ids.forEach(id => met.add(id));
+        if (met.size !== before && rooms[roomCode]) emitState(roomCode);
+    }).catch(error => console.warn('Could not load who has been met:', error.message));
+}
+// The player at this Tavern Crawl table meets an opponent (as they sit down).
+function meet(room, who) {
+    let human = Object.values(room.players).find(p => p.id !== BOT_ID);
+    if (!human || !who) return;
+    let met = metOf(human.name);
+    if (met.has(who)) return;
+    met.add(who);
+    store.addMet(human.name, who).catch(error => console.warn('Could not save who has been met:', error.message));
 }
 
 // The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
@@ -561,6 +582,8 @@ function getTavernRunState(room) {
         // Sworn to Kram: this fight (now) and how many more after it (more).
         kram: { now: !!room.tavernRun.kram, more: room.tavernRun.kramFights || 0 },
         thomMet: !!room.tavernRun.thomMet, // you've been to Thom's cart this run
+        // The opponents the player has met, in any run (ids): the rest show as "?" when the run ends.
+        met: [...metOf((Object.values(room.players).find(p => p.id !== BOT_ID) || {}).name)],
         interlude: room.tavernRun.interlude,
         lastWin: room.tavernRun.lastWin,
         nextFightHearts: room.tavernRun.nextFightHearts,
@@ -1410,6 +1433,7 @@ function getTavernOverSummary(room, humanName, scoreSummary, won) {
         name: humanName,
         defeated: room.tavernRun.stats.encountersDefeated,
         encounters: TAVERN_ENCOUNTERS.map(e => e.name),
+        encounterIds: TAVERN_ENCOUNTERS.map(e => e.id),
         fellTo: won ? null : TAVERN_ENCOUNTERS[index].name,
         points: scoreSummary.points,
         gold: scoreSummary.totalGold,
@@ -1485,6 +1509,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.encounterKeepsakeUses = {};
     room.tavernRun.clearEyeArmed = false;
     room.tavernRun.started = true;
+    meet(room, encounter.id);
     // The opponent's entrance first (the name card, INTRO_SHOW_MS): the browsers learn who sits
     // down before anything else, and the round's abilities and the first throw wait until the card
     // has gone (the user's call, 23 Oct: Martha's entrance and her disguise ran together).
@@ -2207,6 +2232,8 @@ io.on('connection', (socket) => {
         }
 
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
+        // Who this name has met before (the "?" portraits); the state goes out again once it's in.
+        if (room.mode === 'tavern-crawl') loadMet(roomCode, room.players[socket.id].name);
 
         emitState(roomCode);
         resumeBot(roomCode);

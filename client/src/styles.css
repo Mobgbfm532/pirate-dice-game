@@ -919,6 +919,19 @@ footer {
 }
 .crawl-path .unmet .mini-portrait { filter: grayscale(1); opacity: 0.55; border-color: #b39461; }
 .crawl-path .fell .mini-portrait { border-color: var(--red); }
+/* Someone not met yet (3 Nov): a dark frame with a gold "?" in its middle. */
+.unknown-face {
+    background: radial-gradient(circle at 50% 40%, #3a2814, #140c06 72%) !important;
+    display: flex; align-items: center; justify-content: center;
+    container-type: size;
+}
+.unknown-face::after {
+    content: '?';
+    font-family: 'Almendra', Georgia, serif; font-weight: 700;
+    font-size: 62cqh; line-height: 1;
+    color: var(--gold-bright, #f3c96b); text-shadow: 0 2px 6px #000, 0 0 12px rgba(243, 201, 107, 0.35);
+}
+.crawl-path .unknown .mini-portrait { filter: none; opacity: 0.9; border-color: #8a6a3a; }
 .crawl-path .mark {
     position: absolute;
     right: -4px;

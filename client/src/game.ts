@@ -55,6 +55,7 @@ export interface TavernRun {
     shelfSize: number;
     shop: { stock: Thonic[]; free?: boolean; first?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
     thomMet?: boolean; // you've been to Thom's cart this run (his first greeting is different)
+    met?: string[]; // the opponents (ids) you, by name, have sat down with in any run; the rest show as "?" when a run ends
     prices?: { shrine: number; hotTub: number; bard?: number; elfBars?: Record<string, number> };
     cloud?: boolean; // Cotton Candy Cloud: the opponent can't see your score this round
     maxKeepsakes?: number; // keepsakes you can carry at once // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
@@ -119,6 +120,7 @@ export interface TavernSummary {
     name: string;
     defeated: number;
     encounters: string[];
+    encounterIds?: string[]; // (the same opponents' ids, for who you've met)
     fellTo: string | null;
     points: number; // the leaderboard's score (since 23 Oct)
     gold: number;    // the purse at the end
