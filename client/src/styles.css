@@ -206,6 +206,42 @@ header {
 .player.out { opacity: 0.45; }
 .player.me .name { color: #aed581; }
 
+/* A multiplayer table (3 Nov): the other players in a bar under the header, where the opponent's
+   portrait would be. One row of up to three on a phone (four: two by two; five or six: three by two);
+   one row on wider screens. The cards are the footer's chips, smaller. */
+.rivals {
+    display: grid; gap: 6px; margin: 8px auto 0; width: 100%; max-width: 980px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rivals.count-1 { grid-template-columns: minmax(0, 220px); justify-content: center; }
+.rivals.count-2, .rivals.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rivals-empty { grid-column: 1 / -1; text-align: center; color: var(--parchment-dim); font-size: 0.9rem; padding: 10px; }
+.player.rival { gap: 6px; padding: 4px 6px 4px 4px; border-radius: 10px; }
+.player.rival .portrait { width: 30px; height: 30px; }
+.player.rival .who { min-width: 0; flex: 1; }
+.player.rival .name { font-size: 0.85rem; max-width: none; }
+.player.rival .hearts { font-size: 0.7rem; white-space: nowrap; letter-spacing: 0; }
+.player.rival .score { font-size: 1.05rem; min-width: 1.7em; margin-left: 0; padding: 0 4px; }
+.player.rival .score.dust { font-size: 0.8rem; }
+.player.rival.current::after { left: 18px; top: -7px; }
+/* Narrow phones: two cards a row (three rows at most); three cut the names to a letter. */
+@media (max-width: 419px) {
+    .rivals.count-3, .rivals.count-5, .rivals.count-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* (Seven or more: back to three a row, smaller, so the bar stays off the table.) */
+    .rivals.many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .rivals.many .player.rival .portrait { width: 22px; height: 22px; }
+    .rivals.many .player.rival .score { font-size: 0.85rem; min-width: 1.4em; }
+}
+/* Wider screens: one row, the cards a comfortable size, centred. */
+@media (min-width: 700px) {
+    .rivals, .rivals.count-1, .rivals.count-2, .rivals.count-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 210px)); justify-content: center; }
+    .player.rival { padding: 5px 10px 5px 5px; gap: 8px; }
+    .player.rival .portrait { width: 36px; height: 36px; }
+    .player.rival .name { font-size: 0.95rem; }
+    .player.rival .hearts { font-size: 0.8rem; }
+    .player.rival .score { font-size: 1.25rem; }
+}
+
 .tavern-strip {
     display: flex;
     flex-wrap: wrap;

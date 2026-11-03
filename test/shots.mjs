@@ -100,11 +100,12 @@ try {
         // Wait for the game to load, join, and wait until the table is there.
         await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game) { clearInterval(t); r(); } }, 100); })`);
         await wait(1000);
-        await evaluate(`window.__game.actions.join('Tester', 'Rokr', 'TAVERN')`);
-        await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game.store.get().state?.tavernRun) { clearInterval(t); r(); } }, 100); })`);
+        // table=<code>: a classic multiplayer table instead of a Tavern Crawl (seat others there first).
+        await evaluate(`window.__game.actions.join('Tester', ${args.table ? `"Martha's Mask"` : `'Rokr'`}, '${args.table ?? 'TAVERN'}')`);
+        await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game.store.get().state${args.table ? '' : '?.tavernRun'}) { clearInterval(t); r(); } }, 100); })`);
         await wait(1500);
         await fetch(`${CONTROLS}/seed?n=${seed}`);
-        await fetch(`${CONTROLS}/fight?n=${fight}`);
+        if (!args.table) await fetch(`${CONTROLS}/fight?n=${fight}`);
         await wait(6000); // the entrance and the intro card settle
         if (roll) {
             await evaluate(`window.__game.actions.roll()`);

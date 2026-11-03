@@ -25,7 +25,9 @@ export function slotPosition(slot: number, scoringCount: number): THREE.Vector3 
 
 // Screen space the on-screen controls take up (px), measured by the HUD. On phones the
 // camera keeps the table above the controls at the bottom.
-export const screenInsets = { bottom: 0 };
+// top: the bottom edge of the rivals bar at a multiplayer table (0 when there is none); the
+// table's far edge goes below it.
+export const screenInsets = { bottom: 0, top: 0 };
 
 // Where unrolled dice wait at the start of a turn.
 export function waitingPosition(id: number): THREE.Vector3 {

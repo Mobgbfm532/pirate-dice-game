@@ -59,7 +59,12 @@ function CameraRig() {
         const controls = (portrait || docked) && measured > 0.05 && measured < 0.6 ? measured : 0.24;
         const bottom = portrait ? Math.min(0.8, 1 - controls) : docked ? Math.min(0.9, 1 - controls) : 0.94;
         // Keep a sensible amount of table if the controls are very tall: give up tavern first.
-        const top = portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
+        // A multiplayer table has no one sitting across, only the rivals bar at the top (3 Nov): the
+        // table's far edge goes just under it, and the table grows into the space.
+        const rivals = screenInsets.top / size.height;
+        const top = rivals > 0.03 && rivals < 0.5
+            ? Math.min(portrait ? 0.32 : 0.33, rivals + (portrait ? 0.015 : 0.03))
+            : portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
 
         // On narrow screens the table is as wide as the screen allows, dice still big enough to tap.
         // Upright phones show the whole tray, its rails too (3 Nov, the user: the rails ran off both

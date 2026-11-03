@@ -274,6 +274,57 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
     );
 }
 
+// Whether a media query matches now, kept up to date.
+function useMedia(query: string) {
+    const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
+    useEffect(() => {
+        const list = matchMedia(query);
+        const changed = () => setMatches(list.matches);
+        list.addEventListener('change', changed);
+        changed();
+        return () => list.removeEventListener('change', changed);
+    }, [query]);
+    return matches;
+}
+
+// A multiplayer table (the user's call, 3 Nov): nobody sits across, so the other players take the
+// space the opponent's portrait had, a row of cards under the header (two rows from five on a
+// phone), in turn order, and your own chip stays in the footer. The camera keeps the table below
+// the bar (screenInsets.top) and lets it grow into the rest.
+function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const bar = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const el = bar.current;
+        if (!el) return;
+        const measure = () => { screenInsets.top = el.getBoundingClientRect().bottom; };
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        window.addEventListener('resize', measure);
+        measure();
+        return () => { observer.disconnect(); window.removeEventListener('resize', measure); screenInsets.top = 0; };
+    }, []);
+    const others = state.playerOrder.filter(id => id !== snap.myId && state.players[id]);
+    return (
+        <div ref={bar} className={`rivals count-${Math.min(others.length, 6)} ${others.length > 6 ? 'many' : ''}`}>
+            {others.length === 0 && <span className="rivals-empty">Waiting for travelers to join…</span>}
+            {others.map(id => {
+                const p = state.players[id];
+                const inRound = state.roundPlayers.includes(id) && p.connected;
+                return (
+                    <div key={id} className={`player rival ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'}`}>
+                        <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
+                        <div className="who">
+                            <div className="name">{p.name}</div>
+                            <Hearts lives={p.lives} starting={state.startingLives} fight={fightKey(state)} />
+                        </div>
+                        <div className={`score ${scoreClass(state, id)}`}>{p.connected ? scoreText(p) : 'Away'}</div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 // The opponent's name, lives and score on the table edge, under their portrait.
 function OpponentPlate({ state }: { state: GameState }) {
     const bot = state.players[BOT_ID];
@@ -1944,13 +1995,17 @@ export function Hud() {
     const [introShowing, setIntroShowing] = useState(false);
     const [tuneOpen, setTuneOpen] = useState(false);
     const footerRef = useFooterInset();
+    // Phones on their side keep every player in the column at the top left (no room for a bar).
+    const sideways = useMedia('(orientation: landscape) and (max-height: 500px)');
 
     if (!snap.joined) return <JoinScreen />;
     const state = snap.state;
     const botAcross = acrossTheTable()?.isBot ?? false;
     // A bot opponent has its nameplate; everyone else gets a chip.
     // You first, so your own chip is always in view; the rest in turn order.
-    const chips = state ? state.playerOrder.filter(id => !(botAcross && id === BOT_ID))
+    // A multiplayer table (no bot, no Tavern Crawl): the others sit in the rivals bar at the top.
+    const multiplayer = !!state && state.mode !== 'tavern-crawl' && !state.players[BOT_ID] && !sideways;
+    const chips = state ? state.playerOrder.filter(id => !(botAcross && id === BOT_ID) && (!multiplayer || id === snap.myId))
         .sort((x, y) => Number(y === snap.myId) - Number(x === snap.myId)) : [];
 
     return (
@@ -1970,6 +2025,7 @@ export function Hud() {
                         aria-label={soundsOff ? 'Game sounds on' : 'Game sounds off'} aria-pressed={!soundsOff} title={soundsOff ? 'Game sounds are off' : 'Game sounds are on'}>🔊</button>
                 </div>
             </header>
+            {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} />}
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
             <AbilityMomentView snap={snap} />

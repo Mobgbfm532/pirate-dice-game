@@ -162,6 +162,15 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   beat, controls, modals; Tavern Crawl: opponent intro card, signature-move banners, the purse
   and Thonic shelf (`drinkable()`), Thom's full-screen shop scene (`ThomShop`), the choice
   between fights (`Interlude`) and each event's scene (`SpotScene`), the run-over screen.
+  **A multiplayer table** (no bot, not a Tavern Crawl; 3 Nov, the user's pick of the multiplayer
+  ideas): the other players sit in a bar of cards under the header (`Rivals`, `.rivals`: a phone
+  shows up to three a row, two below 420 px wide, three small ones from seven players on; wider
+  screens one row), in turn order, gold on whose turn it is; the footer keeps only your chip. The
+  bar's bottom is `screenInsets.top`, and the camera puts the table's far edge just under it, so the
+  table grows where the screen's height was the limit (desktops about a third bigger; upright phones
+  only where the width isn't the limit already, e.g. 360x640). Phones on their side keep every
+  player in the column at the top left instead (`useMedia`). `test/shots.mjs table=<code>` shoots one;
+  seat others there first with a few socket.io clients.
   `Backdrop.tsx`: where the scene behind the table goes and who sits there (`SCENES` by opponent:
   the tavern, or outside the Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`,
   `center`; `backdropLayout` in screen px; multiplayer tables show no one there). `Room.tsx`
