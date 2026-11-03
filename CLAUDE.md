@@ -184,8 +184,11 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   `min-height: 640px`) seats the players in a column either side of the tray, level with the felt
   (`.seat-col`, sized to the space beside the tray from `--table-x`/`--rail-right`), the table then
   fitting under the header. Since 3 Nov its only words in play are "The Early Ross!" and "Didn't Bite!",
-  flashed over the roller's nameplate (`SeatCallout`, `.seat-callout`, `MULTIPLAYER_CALLOUTS` in
-  game.ts) and a perfect hand's celebration; the points, "Dust!", the round result and the server's
+  bursting over the roller's nameplate (`SeatCallout`, `MULTIPLAYER_CALLOUTS` in game.ts; since 3 Nov a
+  layer of its own over the page, `.callout-burst` portalled to the body at the card's middle: a
+  banner slamming in out of a flash with rays, sparks and a shine, rising away after 2.4 s; inside
+  the card the footer's scrolling row clipped it, and the turn's die over a chip, which now has room:
+  `.side-players` padding) and a perfect hand's celebration; the points, "Dust!", the round result and the server's
   messages (+1 life, sudden death) don't show there (`multiplayerTable()`), and the camera keeps only
   a small gap under the bar. `test/shots.mjs table=<code>` shoots one;
   seat others there first with a few socket.io clients.

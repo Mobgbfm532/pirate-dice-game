@@ -249,27 +249,60 @@ header {
 .player.rival .hearts { grid-area: hearts; align-self: center; }
 .player.rival .score { grid-area: score; justify-self: end; line-height: 1.25; }
 .seat-col .player.rival { column-gap: 10px; row-gap: 2px; }
-/* "The Early Ross!" / "Didn't Bite!" flashing over the roller's nameplate (a multiplayer table). */
-.seat-callout {
-    position: absolute; inset: -4px; z-index: 3; pointer-events: none;
-    display: grid; place-items: center; padding: 2px 6px; text-align: center;
-    border-radius: 12px; font-weight: 700; font-size: 1.05rem; line-height: 1.05;
-    color: var(--callout, #ffd54f); background: rgb(22, 12, 5);
-    border: 2px solid var(--callout, #ffd54f);
-    box-shadow: 0 0 18px color-mix(in srgb, var(--callout, #ffd54f) 70%, transparent), 0 6px 14px rgba(0, 0, 0, 0.6);
-    text-shadow: 0 0 10px color-mix(in srgb, var(--callout, #ffd54f) 80%, transparent), 0 2px 3px #000;
-    animation: seat-flash 2.4s ease-out forwards;
+/* "The Early Ross!" / "Didn't Bite!" bursting over the roller's nameplate (a multiplayer table; a
+   layer of its own over the page, Hud's SeatCallout). A flash of light in the callout's colour, rays
+   turning, sparks flying out, and a banner that slams in with a tilt, a shine sweeping across it,
+   then rises away. 2.4 s. */
+.callout-burst { position: fixed; z-index: 40; width: 0; height: 0; pointer-events: none; font-family: 'Almendra', Georgia, serif; }
+.callout-burst .burst-light {
+    position: absolute; left: -110px; top: -70px; width: 220px; height: 140px; border-radius: 50%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--callout) 75%, #fff) 0%, color-mix(in srgb, var(--callout) 45%, transparent) 45%, transparent 100%);
+    mix-blend-mode: screen; animation: burst-light 2.4s ease-out forwards;
 }
-.seat-col .seat-callout { font-size: 1.35rem; }
-@keyframes seat-flash {
-    0% { opacity: 0; transform: scale(0.6); }
-    9% { opacity: 1; transform: scale(1.12); }
-    16% { transform: scale(1); }
-    24%, 40% { filter: brightness(1.5); }
-    32% { filter: brightness(1); }
-    82% { opacity: 1; }
-    100% { opacity: 0; transform: scale(1.04); }
+.callout-burst .burst-rays {
+    position: absolute; left: -95px; top: -95px; width: 190px; height: 190px; border-radius: 50%;
+    background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--callout) 55%, transparent) 0deg 6deg, transparent 6deg 24deg);
+    -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%);
+    animation: burst-rays 2.4s ease-out forwards;
 }
+.callout-burst .burst-spark {
+    position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0 30%, var(--callout) 60%, transparent 72%);
+    box-shadow: 0 0 6px var(--callout); opacity: 0;
+    animation: burst-spark 0.9s 0.08s ease-out forwards;
+}
+.callout-burst .burst-banner {
+    position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+    display: block; padding: 7px 18px 8px; white-space: nowrap; overflow: hidden;
+    border-radius: 10px; border: 2px solid color-mix(in srgb, var(--callout) 70%, #f6d38a);
+    background: linear-gradient(#3a2412, #1c0f06);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 22px color-mix(in srgb, var(--callout) 65%, transparent), 0 8px 20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 236, 179, 0.25);
+    animation: burst-banner 2.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards;
+}
+/* (a shine sweeping across the banner as it lands) */
+.callout-burst .burst-banner::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: skewX(-18deg); animation: burst-shine 0.7s 0.25s ease-out both;
+}
+.callout-burst .burst-text {
+    font-size: clamp(1.3rem, 5.4vw, 1.9rem); font-weight: 700; letter-spacing: 0.5px; line-height: 1.1;
+    background: linear-gradient(#ffffff, color-mix(in srgb, var(--callout) 80%, #fff) 45%, var(--callout));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.85)) drop-shadow(0 0 10px color-mix(in srgb, var(--callout) 70%, transparent));
+}
+@keyframes burst-light { 0% { opacity: 0; transform: scale(0.3); } 10% { opacity: 1; transform: scale(1.15); } 60% { opacity: 0.55; } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes burst-rays { 0% { opacity: 0; transform: scale(0.4) rotate(0deg); } 12% { opacity: 1; } 70% { opacity: 0.5; } 100% { opacity: 0; transform: scale(1.2) rotate(50deg); } }
+@keyframes burst-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateX(10px) scale(1.2); } 100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(0.4); } }
+@keyframes burst-banner {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(2.2) rotate(-8deg); }
+    10% { opacity: 1; transform: translate(-50%, -50%) scale(0.92) rotate(2deg); }
+    16% { transform: translate(-50%, -50%) scale(1.06) rotate(-1deg); }
+    22%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%, -120%) scale(0.96); }
+}
+@keyframes burst-shine { from { left: -40%; } to { left: 130%; } }
+@media (prefers-reduced-motion: reduce) { .callout-burst .burst-rays, .callout-burst .burst-spark { display: none; } }
 /* A finished score: bigger, with a pop as it lands, so what there is to beat reads at a glance. */
 .player.rival .score.final { font-size: 1.35rem; min-width: 2em; animation: score-land 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
 .player.rival .score.final.scored { color: #fff3c4; background: rgba(120, 84, 18, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 213, 79, 0.5); }
@@ -594,12 +627,13 @@ footer {
 
 /* Player chips: a scrolling row above the controls on phones... */
 .side-players {
-    margin-top: 0;
+    /* (room above the chips for the turn's die: the row scrolls sideways, which clips what sticks out) */
+    margin-top: -6px;
     flex-wrap: nowrap;
     overflow-x: auto;
     max-width: 100%;
     justify-content: safe center;
-    padding: 4px 2px;
+    padding: 10px 2px 4px;
     pointer-events: auto;
     scrollbar-width: none;
 }
@@ -713,7 +747,7 @@ footer {
     }
     footer > * + * { position: relative; }
     footer .tavern-strip { margin-top: 0; }
-    .side-players { padding: 2px; }
+    .side-players { padding: 10px 2px 2px; margin-top: -8px; }
     footer .controls {
         display: grid;
         grid-template-areas: "goal roll" "score roll" "hint hint";

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins, type TurnView } from './rules';
@@ -310,10 +311,35 @@ function FitName({ name }: { name: string }) {
 
 // At a multiplayer table "The Early Ross!" and "Didn't Bite!" (only those) flash over the roller's
 // nameplate, theirs or your own chip (the user's call, 3 Nov), instead of over the table.
+// It's drawn on a layer of its own over the whole page, centred on the nameplate and larger than it
+// (inside the card the footer's row clipped it to a sliver, the user saw): a banner bursting out of a
+// flash of light in the callout's colour, with sparks, a shine sweeping over it, then rising away.
 function SeatCallout({ snap, id }: { snap: Snapshot; id: string }) {
+    const anchor = useRef<HTMLSpanElement>(null);
+    const [box, setBox] = useState<{ x: number; y: number } | null>(null);
     const c = snap.callout;
-    if (!c || c.playerId !== id || !MULTIPLAYER_CALLOUTS[c.kind]) return null;
-    return <div key={c.key} className="seat-callout" style={{ '--callout': c.color } as React.CSSProperties} aria-live="polite">{MULTIPLAYER_CALLOUTS[c.kind]}</div>;
+    const text = c && c.playerId === id ? MULTIPLAYER_CALLOUTS[c.kind] : undefined;
+    useLayoutEffect(() => {
+        const card = anchor.current?.parentElement;
+        if (!text || !card) { setBox(null); return; }
+        const r = card.getBoundingClientRect();
+        // (kept on screen: a card at the edge would push half the banner off it)
+        const half = Math.min(150, window.innerWidth / 2 - 8);
+        setBox({ x: Math.min(window.innerWidth - half, Math.max(half, r.left + r.width / 2)), y: r.top + r.height / 2 });
+    }, [text, c?.key]);
+    if (!text || !c) return null;
+    return (
+        <>
+            <span ref={anchor} hidden />
+            {box && createPortal(
+                <div key={c.key} className={`callout-burst ${c.kind}`} style={{ left: box.x, top: box.y, '--callout': c.color } as React.CSSProperties} aria-live="polite">
+                    <span className="burst-light" />
+                    <span className="burst-rays" />
+                    {Array.from({ length: 10 }, (_, i) => <span key={i} className="burst-spark" style={{ '--a': `${i * 36 + 8}deg`, '--d': `${46 + (i * 17) % 34}px` } as React.CSSProperties} />)}
+                    <span className="burst-banner"><span className="burst-text">{text}</span></span>
+                </div>, document.body)}
+        </>
+    );
 }
 
 // Whether a media query matches now, kept up to date.
