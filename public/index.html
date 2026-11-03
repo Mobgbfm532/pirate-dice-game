@@ -1399,7 +1399,7 @@
             
             if (data.emoji === '🧔 Early Ross' || data.emoji === '🧔🏼‍♂️ Early Ross') {
                 reactionDiv.innerHTML = `<span style="font-size: 1.5rem">${data.emoji}</span>`;
-            } else if (['😀', '😂', '😮', '😎', '😭'].includes(data.emoji)) {
+            } else if (['😀', '😂', '😮', '😎', '😭', '🍻', '🃏', '😏', '💔'].includes(data.emoji)) {
                 reactionDiv.innerHTML = `<strong>${escapeHTML(data.name)}</strong> <span style="font-size: 1.8rem">${data.emoji}</span>`;
             } else {
                 // Renders custom inline high fidelity graphics to float up over the felt tray

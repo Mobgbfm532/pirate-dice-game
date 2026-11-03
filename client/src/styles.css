@@ -467,6 +467,51 @@ footer {
     height: 40px;
     font-size: 1.2rem;
 }
+/* The reaction buttons as tavern coins (3 Nov): dark wood in a brass rim, the token inside; a press
+   and a glint when tapped. (Painted tokens fill the coin; emoji sit a little smaller.) */
+.reactions button.reaction-coin {
+    position: relative; display: grid; place-items: center; padding: 0; overflow: hidden;
+    background: radial-gradient(circle at 35% 30%, #5a3a1c, #2a170a 70%);
+    border: 2px solid #c9a14a;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 2px rgba(255, 224, 150, 0.18), inset 0 -3px 5px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.5);
+    transition: transform 0.08s, box-shadow 0.08s;
+}
+.reactions button.reaction-coin .emoji { font-size: 1.15em; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7)); }
+.reactions button.reaction-coin img { width: 86%; height: 86%; object-fit: contain; }
+.reactions button.reaction-coin::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(120deg, transparent 30%, rgba(255, 240, 200, 0.45) 50%, transparent 70%);
+    transform: translateX(-120%);
+}
+.reactions button.reaction-coin:active { transform: translateY(1px) scale(0.92); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(0, 0, 0, 0.6); }
+.reactions button.reaction-coin:active::after { transform: translateX(120%); transition: transform 0.35s ease-out; }
+/* A reaction rising from its sender's nameplate (a layer over the page). */
+.reaction-burst { position: fixed; z-index: 41; width: 0; height: 0; pointer-events: none; animation: reaction-down 2.2s cubic-bezier(0.3, 0.7, 0.4, 1) forwards; }
+.reaction-burst.side { animation-name: reaction-side; }
+.reaction-burst .reaction-glow {
+    position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 224, 150, 0.75), rgba(255, 180, 60, 0.25) 45%, transparent 70%);
+    mix-blend-mode: screen; animation: reaction-glow 2.2s ease-out forwards;
+}
+.reaction-burst .reaction-token {
+    position: absolute; left: 0; top: 0; width: 56px; height: 56px; display: grid; place-items: center;
+    transform: translate(-50%, -50%); filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+    animation: reaction-pop 2.2s cubic-bezier(0.2, 0.9, 0.3, 1.4) forwards;
+}
+.reaction-burst .reaction-token .emoji { font-size: 2.6rem; line-height: 1; }
+.reaction-burst .reaction-token img { width: 100%; height: 100%; object-fit: contain; }
+@keyframes reaction-down { 0% { transform: translateY(0); } 100% { transform: translateY(28px); } }
+@keyframes reaction-side { 0% { transform: translate(-24px, 0); } 100% { transform: translate(14px, -26px); } }
+@keyframes reaction-glow { 0% { opacity: 0; transform: scale(0.3); } 15% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes reaction-pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(-20deg); }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(1.35) rotate(8deg); }
+    24% { transform: translate(-50%, -50%) scale(1) rotate(-4deg); }
+    40% { transform: translate(-50%, -50%) scale(1.05) rotate(3deg); }
+    55% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    78% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+}
 
 /* ---- Panels and modals ---- */
 

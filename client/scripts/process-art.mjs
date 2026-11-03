@@ -871,6 +871,14 @@ await cutOutFlat('thonic-fizzy.jpg', 'thonics/fizzy', { icon: 320 });
 await cutOutFlat('thonic-secondThoughts.jpg', 'thonics/secondThoughts', { icon: 320, tolerance: 40 });
 await cutOutFlat('thonic-steady.jpg', 'thonics/steady', { icon: 320 });
 await cutOutFlat('thonic-clearEye.jpg', 'thonics/clearEye', { icon: 320 });
+// The multiplayer reactions (3 Nov, the user's paintings): square item icons like the Thonics (a coin
+// ~22 px, a pop ~56 px). The tankard keeps its flying ale drops (a low minPiece) and loses the
+// background inside its handle (holes).
+await cutOutFlat('reaction-cheers.jpg', 'reactions/cheers', { icon: 320, minPiece: 0.001, holes: [[634, 480]] });
+await cutOutFlat('reaction-ha.jpg', 'reactions/ha', { icon: 320 });
+await cutOutFlat('reaction-ooh.jpg', 'reactions/ooh', { icon: 320 });
+await cutOutFlat('reaction-smug.jpg', 'reactions/smug', { icon: 320 });
+await cutOutFlat('reaction-woe.jpg', 'reactions/woe', { icon: 320 });
 // Johnny Elf Bar's Elf Bars (28 Oct): square item icons like the Thonics. Holes: the background boxed in
 // between the brass frame and the body (and the mouthpiece), and between the vapour swirl's strands.
 await cutOutFlat('elfbar-lemonLevitation.jpg', 'elfbars/lemonLevitation', { icon: 320, holes: [[622, 101], [652, 298], [370, 444]] });

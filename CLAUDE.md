@@ -190,7 +190,15 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   the card the footer's scrolling row clipped it, and the turn's die over a chip, which now has room:
   `.side-players` padding) and a perfect hand's celebration; the points, "Dust!", the round result and the server's
   messages (+1 life, sudden death) don't show there (`multiplayerTable()`), and the camera keeps only
-  a small gap under the bar. `test/shots.mjs table=<code>` shoots one;
+  a small gap under the bar. Reactions (3 Nov, the user's five: Cheers 🍻, Ha! 🃏, Ooh 😮, Smug 😏,
+  Woe 💔; painted by the user the same day: `art/reaction-<id>.jpg` cut out by `cutOutFlat` with
+  `icon: 320` into `art/reactions/<id>.webp` (the tankard keeps its ale drops, `minPiece`, and a
+  `holes` seed in its handle); `PAINTED_REACTIONS` / `reactionIcon` in Hud; the emoji still travels
+  between players) are brass-rimmed wooden coins (`.reaction-coin`); a reaction
+  pops out of its sender's nameplate (`receiveReaction` carries the sender's `id`; `ReactionBurst`
+  over the page, `data-player` on cards and chips): from a card up top it bobs there and drifts a
+  little down, from a footer chip it pops out beside it, clear of the rail; elsewhere (the Molar's) a
+  toast as before. `test/shots.mjs table=<code>` shoots one;
   seat others there first with a few socket.io clients.
   `Backdrop.tsx`: where the scene behind the table goes and who sits there (`SCENES` by opponent:
   the tavern, or outside the Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`,

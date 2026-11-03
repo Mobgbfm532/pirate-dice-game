@@ -314,7 +314,13 @@ test('unknown reactions are dropped and names are passed through as plain data',
     const first = waitFor(erin, 'receiveReaction');
     erin.emit('sendReaction', '<script>alert(1)</script>');
     erin.emit('sendReaction', '😀');
-    assert.equal((await first).emoji, '😀');
+    const got = await first;
+    assert.equal(got.emoji, '😀');
+    assert.equal(got.id, erin.id, 'who sent it, so it rises from their nameplate');
+    // The tavern's five (3 Nov) are allowed.
+    const cheers = waitFor(erin, 'receiveReaction', r => r.emoji === '🍻');
+    erin.emit('sendReaction', '🍻');
+    await cheers;
 });
 
 test('a solo game against The Molar plays through to game over', async () => {

@@ -169,6 +169,8 @@ export interface Snapshot {
     rolling: boolean;
     endingTurn: boolean;
     callout: { text: string; color: string; key: string; kind: string; playerId: string } | null;
+    // Reactions in flight at a multiplayer table, each rising from its sender's nameplate (Hud).
+    reactions: { key: number; playerId: string; emoji: string }[];
     toasts: Toast[];
     modal: Modal | null;
     leaderboard: LeaderboardEntry[];
@@ -219,6 +221,7 @@ let snapshot: Snapshot = {
     rolling: false,
     endingTurn: false,
     callout: null,
+    reactions: [],
     toasts: [],
     modal: null,
     leaderboard: [],
@@ -699,9 +702,18 @@ socket.on('displayMessage', (data: { text: string }) => {
     if (data.text && !quietTable() && !multiplayerTable()) showToast('', data.text, 'info', 2600);
 });
 
-socket.on('receiveReaction', (data: { name: string; emoji: string }) => {
+// A reaction: at a multiplayer table it rises from the sender's nameplate (no words there, the user's
+// call, 3 Nov); elsewhere (the Molar's) a small toast as before.
+let reactionKey = 0;
+export const REACTION_MS = 2200;
+socket.on('receiveReaction', (data: { name: string; emoji: string; id?: string }) => {
     const labels: Record<string, string> = { hood: '😈', swords: '⚔️', shield: '🛡️', skull: '💀' };
-    showToast(data.name, labels[data.emoji] ?? data.emoji, 'info', 1800);
+    const emoji = labels[data.emoji] ?? data.emoji;
+    if (!multiplayerTable() || !data.id) { showToast(data.name, emoji, 'info', 1800); return; }
+    const key = ++reactionKey;
+    // (at most a handful in the air at once)
+    update({ reactions: [...snapshot.reactions.slice(-5), { key, playerId: data.id, emoji }] });
+    setTimeout(() => update({ reactions: snapshot.reactions.filter(r => r.key !== key) }), REACTION_MS);
 });
 
 socket.on('offerKeepsakes', (data: Omit<Extract<Modal, { type: 'keepsakes' }>, 'type'>) => {
@@ -959,6 +971,8 @@ export const preview = {
     // (hold: keep it up that much longer, to look at a still of it)
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now() }); },
+    // A reaction rising from a player's nameplate (a multiplayer table), e.g. react(id, '🍻').
+    react(playerId: string, emoji: string) { update({ reactions: [...snapshot.reactions, { key: ++reactionKey, playerId, emoji }] }); },
     // The line over the table after a throw (e.g. callout('17 points')); kind and playerId put a
     // multiplayer callout on that player's nameplate (callout('', '#4fc3f7', 'didntBite', id)).
     callout(text: string, color = '#9ccc65', kind = 'result', playerId = '') { update({ callout: { text, color, key: String(performance.now()), kind, playerId } }); },

@@ -11,7 +11,22 @@ import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, scene
 import { lookNext } from './look';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
-const REACTIONS = ['😀', '😂', '😮', '😎', '😭'];
+// The tavern's five reactions (the user's, 3 Nov), painted by the user the same day (art/reaction-<id>.jpg
+// -> art/reactions/<id>.webp). The emoji is what travels between players (and what the classic page shows).
+const REACTIONS: { emoji: string; id: string; name: string }[] = [
+    { emoji: '🍻', id: 'cheers', name: 'Cheers' },
+    { emoji: '🃏', id: 'ha', name: 'Ha!' },
+    { emoji: '😮', id: 'ooh', name: 'Ooh' },
+    { emoji: '😏', id: 'smug', name: 'Smug' },
+    { emoji: '💔', id: 'woe', name: 'Woe' }
+];
+const PAINTED_REACTIONS = new Set(['cheers', 'ha', 'ooh', 'smug', 'woe']);
+const reactionIcon = (emoji: string) => {
+    const r = REACTIONS.find(x => x.emoji === emoji);
+    return r && PAINTED_REACTIONS.has(r.id)
+        ? <img src={`${import.meta.env.BASE_URL}art/reactions/${r.id}.webp`} alt="" draggable={false} />
+        : <span className="emoji">{emoji}</span>;
+};
 
 // The bot's portrait is its name (one per Tavern Crawl encounter); players pick an avatar.
 const playerPortrait = (id: string, name: string, avatar: string) => portraitFor(id === BOT_ID ? opponentPortraitKey(name) : avatar);
@@ -260,7 +275,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                 if (!p) return null;
                 const inRound = state.roundPlayers.includes(id) && p.connected;
                 return (
-                    <div key={id} className={`player ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${id === snap.myId ? 'me' : ''}`}>
+                    <div key={id} data-player={id} className={`player ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${id === snap.myId ? 'me' : ''}`}>
                         <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                         <div>
                             <FitName name={p.name} />
@@ -342,6 +357,34 @@ function SeatCallout({ snap, id }: { snap: Snapshot; id: string }) {
     );
 }
 
+// A reaction rising from its sender's nameplate (a multiplayer table; the user's call, 3 Nov): the
+// token swells out of a little light, bobs and floats up and away; a few at once fan out a little.
+function ReactionBursts({ snap }: { snap: Snapshot }) {
+    return createPortal(<>{snap.reactions.map(r => <ReactionBurst key={r.key} reaction={r} />)}</>, document.body);
+}
+function ReactionBurst({ reaction }: { reaction: Snapshot['reactions'][number] }) {
+    const [at, setAt] = useState<{ x: number; y: number; way: 'down' | 'side' } | null>(null);
+    useLayoutEffect(() => {
+        const card = document.querySelector(`[data-player="${CSS.escape(reaction.playerId)}"]`);
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        const drift = ((reaction.key * 37) % 5 - 2) * 12; // (a few at once don't sit on each other)
+        // From a card up top (the bar, a seat by the tray) it bobs on the card and drifts a little down
+        // (on a computer the bar sits right over the tray); from a chip in the footer it pops out
+        // beside the chip, clear of the slot rail and the dice above.
+        const footer = r.top > window.innerHeight * 0.55;
+        const x = footer ? r.right + 34 : r.left + r.width / 2 + drift;
+        setAt({ x: Math.min(window.innerWidth - 34, Math.max(34, x)), y: r.top + r.height / 2, way: footer ? 'side' : 'down' });
+    }, [reaction]);
+    if (!at) return null;
+    return (
+        <div className={`reaction-burst ${at.way}`} style={{ left: at.x, top: at.y }} aria-hidden="true">
+            <span className="reaction-glow" />
+            <span className="reaction-token">{reactionIcon(reaction.emoji)}</span>
+        </div>
+    );
+}
+
 // Whether a media query matches now, kept up to date.
 function useMedia(query: string) {
     const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
@@ -386,7 +429,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
         const inRound = state.roundPlayers.includes(id) && p.connected;
         const finished = p.connected && p.score !== null && p.lives > 0;
         return (
-            <div key={id} className={`player rival ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${finished ? 'finished' : ''}`}>
+            <div key={id} data-player={id} className={`player rival ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${finished ? 'finished' : ''}`}>
                 <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                 <div className="who">
                     <FitName name={p.name} />
@@ -2118,6 +2161,7 @@ export function Hud() {
                 </div>
             </header>
             {state && multiplayer && <Rivals snap={snap} state={state} />}
+            {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} />}
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
             <AbilityMomentView snap={snap} />
@@ -2156,7 +2200,7 @@ export function Hud() {
                 <TurnControls snap={snap} />
                 {state && state.mode !== 'tavern-crawl' && (
                     <div className="reactions">
-                        {REACTIONS.map(r => <button key={r} onClick={() => actions.react(r)} aria-label={`React ${r}`}>{r}</button>)}
+                        {REACTIONS.map(r => <button key={r.id} className="reaction-coin" onClick={() => actions.react(r.emoji)} aria-label={r.name} title={r.name}>{reactionIcon(r.emoji)}</button>)}
                     </div>
                 )}
             </footer>

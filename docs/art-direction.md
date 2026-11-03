@@ -131,6 +131,24 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 
 Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's Thonics" itself.
 
+**Reaction tokens (multiplayer, five item icons; asked for 3 Nov)**
+> A single [SUBJECT], one object only, centred and filling the frame, bold clear silhouette that
+> reads at a small size, thick dark outline, no text, no lettering, on a plain flat solid magenta
+> background, no checkerboard, no shadow on the background. *+ style line*
+
+| File | Reaction | Subject |
+|---|---|---|
+| `art/reaction-cheers.jpg` | Cheers | wooden tavern tankard raised in a toast, frothy foam spilling over the rim, a splash of ale flying off |
+| `art/reaction-ha.jpg` | Ha! | grinning jester's face, wide toothy grin, red-and-gold jester's cap with jingling bells |
+| `art/reaction-ooh.jpg` | Ooh | cartoon face with its jaw dropped wide open in amazement, eyebrows shot up, wide eyes |
+| `art/reaction-smug.jpg` | Smug | a fan of playing cards held up, one sly winking eye peeking over the top of the cards |
+| `art/reaction-woe.jpg` | Woe | a red heart cracked down the middle, a jagged split, a small tear-drop falling from it |
+
+Done 3 Nov: the user painted all five (Ha! is Frak's grinning face with his cigar). They show
+~22 px in the reaction coins and ~56 px as one rises from a nameplate, so the silhouette
+matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320`) into
+`client/public/art/reactions/<id>.webp`; then add each id to `PAINTED_REACTIONS` in Hud.tsx.
+
 ## Status
 
 | Asset | Status | File |

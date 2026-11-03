@@ -36,6 +36,7 @@ const MOMENTS = {
     // (a multiplayer table: the callout over the first other player's card, or over your own chip)
     ross: `preview.callout('', '#ffb74d', 'earlyRoss', store.get().state.playerOrder.find(i => i !== store.get().myId))`,
     biteme: `preview.callout('', '#4fc3f7', 'didntBite', store.get().myId)`,
+    react: `(() => { const s = store.get(); const o = s.state.playerOrder.filter(i => i !== s.myId); preview.react(o[0], '🍻'); preview.react(o[1] ?? o[0], '💔'); preview.react(s.myId, '🃏'); })()`,
     grace: `preview.ability('Shrine to the Lady', "The Lady's Grace", { text: 'The Lady saves you from the dust', extra: '♥ saved', blessing: 'ladysGrace' })`,
     bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`
 };

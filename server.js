@@ -36,7 +36,8 @@ const TURN_RECONNECT_GRACE_MS = 30000;
 // The avatars a player may pick: the 3D client's seven item icons (30 Oct), then the classic
 // page's six characters.
 const AVATARS = ["Martha's Mask", "Loaded Die", "Brodor's Sunglasses", "Shield", "Healing Thonic", "Purple Haze", "Sign of Kram", 'Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
-const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross'];
+// (The 3D client's five since 3 Nov, the user's: Cheers, Ha!, Ooh, Smug, Woe.)
+const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross', '🍻', '🃏', '😏', '💔'];
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/shared', express.static(path.join(__dirname, 'shared')));
@@ -2320,7 +2321,7 @@ io.on('connection', (socket) => {
         let room = rooms[socket.roomCode];
         if (!room || room.mode === 'tavern-crawl' || !PLAYER_REACTIONS.includes(emoji)) return;
         let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
-        io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
+        io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji, id: socket.id });
     });
 
     const isMyTurn = () => {
