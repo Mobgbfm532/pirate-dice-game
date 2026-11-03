@@ -104,13 +104,14 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (since 3 Nov upright phones keep the whole tray, rails too, in
   view: `PORTRAIT_HALF_WIDTH` 4.45, was 4.05; the slot row's plates are centred under the tray,
-  `REQUIRED_SLOT_X` and `slotPosition` in layout.ts) (on desktop a dock: chips, score, Roll; reactions in a
+  `REQUIRED_SLOT_X` and `slotPosition` in layout.ts; the opponent's nameplate no longer shows the fight's number, 3 Nov) (on desktop a dock: chips, score, Roll; reactions in a
   column at the left edge); phones on their side use `setViewOffset` to leave a right column
   for the Roll button.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
 - **Opponents' own dice** (3 Nov, the user's paintings): a Tavern Crawl opponent throws their own
-  set on their turns (yours stay ivory). So far the Ghoul and Gourd's five: McGrath yellowed bone,
+  set on their turns (yours stay ivory). So far the Ghoul and Gourd's: McGrath's yellowed bone (made, but since 3 Nov he
+  throws your ivory dice, the user's call: not in `OPPONENT_DICE`),
   Frak green with violet pips, Danhausen purple, the Duke red with gold pips, Martha mother-of-pearl
   with purple pips. The user paints `art/dice-<name>.jpg` (six faces 3 by 2, 1-2-3 then 4-5-6, on a
   plain background; the prompt is in docs/art-direction.md; McGrath's is `dice-mcgrath.jpg`, his id
@@ -494,6 +495,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   gets no celebration (a sigh). For anyone at the table, with their name when it isn't you.
   `perfectHand` (rules.ts, tested), `Celebration` (Hud), `snapshot.celebration`; a moment of its
   own (`CELEBRATION_MS` 2.8 s): the round result and the next throw wait. Dev: `preview.celebrate()`.
+  Perfect ...4? is four boxes in a row (`.what-row`): nested in the gradient-filled word, the "..."
+  was drawn over the P on the user's phone (3 Nov). The round result toast sits in the middle of the
+  felt too (`.toasts.felt`, 3 Nov), other toasts higher up.
 - **Three 6s (23 Oct, the user's):** whenever a throw lands three 6s (`diceRolled.devil`, any
   table, anyone's throw) fire surges up the screen, the user's painting of the devil holding three
   6s rises (`art/devil-sixes.jpg` → `devil-sixes.webp`; the fire sheet, `.devil-surge`, fades at
@@ -528,6 +532,15 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `diceRolled` also waits for `momentGoneAt`. The round result shows 2.6 s (`RESULT_SHOW_MS`,
   was 4.2) and the next throw waits for it. Mind Whip's banner no longer names the die.
 - **Item icons (29 Oct, the user's paintings):** the six Thonics are painted bottles (`art/thonic-<id>.jpg` → `client/public/art/thonics/<id>.webp`, 320 px square icons via `cutOutFlat`'s `icon` option; `PAINTED_THONICS` in Hud, `.bottle.painted`), on the shelf, Thom's cart and the drinking moment. So are the four Elf Bars (`art/elfbar-<id>.jpg` → `art/elfbars/<id>.webp`; `Vape` in Hud draws the painting with its puff dots, and the puff moment's flare shows it; `cutOutFlat` gained `redOverBlue` for Purple Haze's smoke on crimson). So are the eight keepsakes (`art/keepsake-<id>.jpg` → `art/keepsakes/<id>.webp`; `PAINTED_KEEPSAKES` and `keepsakeIcon()` in Hud draw them on the strip, the Stranger's cards, Thom's back shelf, the invitation and the keepsake's gold burst; `.item-art`). So are the blessing and song icons (the Lady's Grace, Cutting Words, Inspiring Song, Sworn to Kram; the same folder and `PAINTED_KEEPSAKES`; the candle's cyan glow uses `glow`'s `colour: 'light'`). Every item icon is painted now.
+- **The Lady's Grace and the Bard's songs (3 Nov, the user's call)** play like a Thonic drunk: their
+  painted icon rises big in a glow of its colour and sways, with sparkles (the Lady) or notes (the
+  Bard), over a parchment label (`moment.blessing`, `.blessing-moment`, `--liquid` per id).
+- **Danhausen, wackier (3 Nov, a trial):** once seated his bust bobs to a beat, squashes and stretches
+  on each bounce and every 6.5 s does a springy double take (`danhausenWobble` in Room.tsx; new look,
+  not with reduced motion).
+- **Headless stills of moments:** `test/shots.mjs ... moment=perfect4|grace|bard hold=900` holds a
+  moment at 900 ms (frozen clock and animations); `frames=70,100` saves frames of the table's own
+  motion for an animation; `dice=<id>` shows a set.
 - **A Thonic drunk (28 Oct, the user's call):** its own bottle, big, pops its cork and tips up in a glow of its colour with bubbles rising (`.potion-moment`, `moment.thonic`), over its name on a parchment label edged in that colour (`.potion-<id>` sets `--liquid`); no "Thom's Thonics" line.
 - **Who you've met (3 Nov, the user's call):** on the run-over screen's line of opponents, one you
   have never sat down with, in any run, shows as a gold "?" in a dark frame (`.unknown-face`; only

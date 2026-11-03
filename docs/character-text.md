@@ -137,7 +137,7 @@ Where: `server.js` (`TAVERN_KEEPSAKES`, `MARTHAS_MASK`, `BRODORS_SUNGLASSES`); t
 - **Velvet Cushion:** "Once per encounter, losing by exactly 1 point becomes a tie instead."
 - **Loaded Die:** "One of your dice lands only on a 2 or a 4 until you've kept both; after that, only on 4, 5 or 6." (offered from the Yawning Portal on)
 - **Potion Belt:** "Your shelf holds one more Thonic. Comes with a Healing Thonic."
-- **Thom's Loyalty Card:** "Thom's cart is always one of the spots, and your first Thonic each visit is free."
+- **Thom's Loyalty Card:** "Thom's Cart is always available, and your first Thonic each visit is free."
 - **Miser's Purse:** "Each win pays 1 more gold for every 10 in your purse." On the fight summary: "Miser's Purse · 1 for every 10 in your purse".
 - **Gambler's Charm:** "When only one die is left to throw, it is thrown twice and you keep the better."
 - **Bottomless Flask:** "The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf." When it works: "Your [Thonic] fills up again."

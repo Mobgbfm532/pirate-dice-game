@@ -256,6 +256,7 @@ header {
     align-items: center;
     width: min(92vw, 420px);
 }
+.toasts.felt { left: var(--table-x, 50%); top: var(--felt-y, 45%); transform: translate(-50%, -50%); }
 .toast {
     background: var(--panel);
     border: 1px solid var(--panel-border);
@@ -1155,6 +1156,32 @@ footer {
     opacity: 0; animation: bubble-up 1.2s ease-out both; animation-delay: var(--d);
 }
 @keyframes bubble-up { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-70px) scale(1.15); } }
+/* The Lady's Grace and the Bard's songs (3 Nov): like a Thonic drunk, their painted icon rises big in a
+   glow of its colour, swells as it works and sways, with sparkles (the Lady) or notes (the Bard). */
+.potion-ladysGrace { --liquid: #80deea; }
+.potion-inspiringSong { --liquid: #ffd54f; }
+.potion-cuttingWords { --liquid: #ef5350; }
+.blessing-moment .blessing-icon {
+    position: absolute; left: -26px; top: -98px; width: 52px; height: 52px; transform-origin: 50% 80%;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 10px var(--liquid));
+    animation: blessing-rise 1.85s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.blessing-moment .blessing-icon .item-art { width: 100%; height: 100%; display: block; }
+@keyframes blessing-rise {
+    0% { opacity: 0; transform: translateY(24px) scale(1.2); }
+    16% { opacity: 1; transform: translateY(0) scale(2.1); }
+    26% { transform: translateY(-6px) scale(2.45); }
+    36% { transform: translateY(0) scale(2.2); }
+    55% { transform: rotate(-9deg) scale(2.25); }
+    72% { transform: rotate(7deg) scale(2.25); }
+    86% { opacity: 1; transform: rotate(0deg) scale(2.2); }
+    100% { opacity: 0; transform: translateY(-12px) scale(2.1); }
+}
+.blessing-moment .bubble.sparkle { border: none; border-radius: 50%; background: radial-gradient(circle, #ffffff 0 25%, color-mix(in srgb, var(--liquid) 80%, #fff) 45%, transparent 70%); }
+.blessing-moment .bubble.note {
+    border: none; background: none; width: auto; height: auto; font-size: calc(var(--s) + 8px); line-height: 1;
+    color: color-mix(in srgb, var(--liquid) 70%, #fff); text-shadow: 0 0 6px var(--liquid), 0 1px 2px rgba(0, 0, 0, 0.6);
+}
 .ability-banner .plus { font-size: clamp(1.3rem, 6vw, 1.8rem); font-weight: 700; color: #ef9a9a; animation: minus-drop 2.6s ease-out forwards; }
 
 /* Thom's cart between fights: a scene of its own over everything (no tavern, no table).
@@ -2370,7 +2397,9 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
     filter: drop-shadow(0 3px 0 #2a0b33) drop-shadow(0 0 18px rgba(186, 104, 200, 0.85));
 }
 /* (Animated pieces don't share the word's gradient fill: their own colour.) */
-.perfect4 .celebration-text .dots, .perfect4 .celebration-text .huh { color: #f3e5f5; -webkit-text-fill-color: #f3e5f5; }
+.celebration-text .what-row { display: flex; align-items: baseline; }
+.celebration-text .what-row .what:first-child { margin-right: 0.22em; }
+.perfect4 .celebration-text .dots, .perfect4 .celebration-text .huh { background: none; color: #f3e5f5; -webkit-text-fill-color: #f3e5f5; }
 .perfect4 .celebration-text .dots { display: inline-block; animation: dots-wait 2.8s steps(1) both; }
 .perfect4 .celebration-text .huh { display: inline-block; animation: huh-tilt 2.8s ease-in-out both; }
 .perfect4 .celebration-sparks span { background: radial-gradient(circle, #ffffff, #ce93d8 50%, rgba(142, 36, 170, 0)); }

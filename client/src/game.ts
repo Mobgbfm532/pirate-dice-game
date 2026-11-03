@@ -131,7 +131,7 @@ export interface TavernSummary {
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
 // cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
-export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; cancelled?: boolean; hit?: boolean }
+export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; blessing?: string; cancelled?: boolean; hit?: boolean }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -664,7 +664,7 @@ socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
 socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => {
     enqueueMoment(() => {
         playSound('yay');
-        update({ ability: { name: 'Shrine to the Lady', ability: data.name, text: data.text, extra: '♥ saved', at: performance.now() } });
+        update({ ability: { name: 'Shrine to the Lady', ability: data.name, text: data.text, extra: '♥ saved', blessing: 'ladysGrace', at: performance.now() } });
     });
 });
 
@@ -676,7 +676,9 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
         else if (data.who === 'The Bard') playSound('bardTune'); // either song as it works (the user's tune, 3 Nov)
         else if (data.who === 'Elf Bar') playSound('marthaPuff'); // a puff (Martha's own clip)
         else playChime();
-        update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
+        // The Bard's songs play like a Thonic drunk (the user's call, 3 Nov): their icon, big, in a glow.
+        if (data.who === 'The Bard') update({ ability: { name: 'The Bard', ability: data.name, text: data.text, blessing: data.id, at: performance.now() } });
+        else update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
     });
 });
 

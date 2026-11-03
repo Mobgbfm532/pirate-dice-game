@@ -218,6 +218,24 @@ const BUST_LIGHT = lookNext ? {
 const SWAP_GLOW: Glow = { blur: 30, x: 0, color: [206, 147, 216, 1] }; // Martha's violet
 const GLOW_MESHES = 5;
 
+// Danhausen's wacky idle, t seconds after he sat down: a head bob (tilt, radians), a bounce on each
+// beat (squash and stretch: sx, sy; rise, a share of his height, up is negative) and, every 6.5 s,
+// a springy double take that jumps, stretches and wags.
+const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function danhausenWobble(t: number) {
+    const bounce = Math.abs(Math.sin(t * Math.PI * 1.25)); // two bounces a bob, ~1.25 a second
+    let tilt = 0.04 * Math.sin(t * Math.PI * 0.625);
+    let sy = 1 + 0.02 * bounce, sx = 1 - 0.012 * bounce, rise = -0.012 * bounce;
+    const p = (t % 6.5) / 0.8; // the double take: 0.8 s of every 6.5
+    if (p < 1) {
+        const up = Math.sin(Math.PI * p);
+        rise -= 0.05 * up;
+        sy += 0.05 * up; sx -= 0.03 * up;
+        tilt += 0.14 * Math.sin(Math.PI * 2 * p * 1.5) * (1 - p);
+    }
+    return { tilt, sx, sy, rise };
+}
+
 export function Room() {
     const { camera, size } = useThree();
     const group = useRef<THREE.Group>(null);
@@ -339,7 +357,13 @@ export function Room() {
         // Anchored so the table hides the lower fifth; `seat` draws a cut-out that shows more body larger.
         const height = L.bustHeight * (across.portrait.seat ?? 1);
         const width = height * art.aspect;
-        const w = width * scale, h = height * scale;
+        // Danhausen, wackier (a trial, 3 Nov; the user likes him as he is, so it's gentle): once seated
+        // he bobs his head to a beat only he can hear, squashing and stretching a little on each
+        // bounce, and every few seconds does a sudden springy double take.
+        const wacky = lookNext && !still && across.key === 'Danhausen' && !s.swap && elapsed > ENTRANCE_MS ? danhausenWobble((elapsed - ENTRANCE_MS) / 1000) : null;
+        const w = width * scale * (wacky?.sx ?? 1), h = height * scale * (wacky?.sy ?? 1);
+        if (wacky) rise += wacky.rise;
+        bust.current.rotation.z = wacky?.tilt ?? 0;
         // The face on the table's centre line, not the middle of the picture (a painting may hold
         // a flame, a sword or a mask off to one side: the user's call, 23 Oct, everyone centred).
         const faceX = (across.portrait.center?.[0] ?? 50) / 100;
@@ -379,6 +403,7 @@ export function Room() {
             u.opacity.value = opacity;
             const pad = made.pad * h / natural;
             put(mesh, centerX - w / 2 - pad, centerY - h / 2 - pad, w + pad * 2, h + pad * 2);
+            mesh.rotation.z = wacky?.tilt ?? 0;
             mesh.visible = true;
             n++;
         }

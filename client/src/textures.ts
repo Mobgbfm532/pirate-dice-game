@@ -194,7 +194,8 @@ export function createDiceMaterials() {
 // (<id>-cut.webp, white where the face stands, black in the pips; found there, as the painted
 // colours can't be read the way ivory's can). Their painted colours are kept: no ivory under the
 // paint, and no clearer red and green (on a green or red die that would repaint the face).
-export const OPPONENT_DICE = new Set(['molar', 'frak', 'danhausen', 'duke', 'martha']);
+// (Sperm McGrath throws the player's ivory dice, the user's call, 3 Nov: his set stays on disk.)
+export const OPPONENT_DICE = new Set(['frak', 'danhausen', 'duke', 'martha']);
 const OPPONENT_DICE_GLOW = 0.22;
 const opponentDice = new Map<string, THREE.MeshStandardMaterial[]>();
 export function opponentDiceMaterials(id: string, fallback: THREE.MeshStandardMaterial[]) {

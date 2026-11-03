@@ -283,7 +283,6 @@ function OpponentPlate({ state }: { state: GameState }) {
     const starting = seated ? seated.lives : state.startingLives;
     return (
         <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
-            {state.tavernRun && <span className="encounter">{state.tavernRun.seated?.number ?? state.tavernRun.encounterNumber}/{state.tavernRun.totalEncounters}</span>}
             <span className="name">{name ?? bot.name}</span>
             <Hearts lives={bot.lives} starting={starting} fight={fightKey(state)} />
             {state.tavernRun && <AbilityMarks state={state} />}
@@ -789,7 +788,11 @@ function Celebration({ snap }: { snap: Snapshot }) {
             <div className="celebration-rays" aria-hidden="true" />
             <div className="celebration-text">
                 {c.who && <span className="who">{c.who}</span>}
-                <span className="what">{four ? <>Perfect <span className="dots">...</span>4<span className="huh">?</span></> : 'Perfect 24!'}</span>
+                {/* (Perfect ...4?: each piece its own box in a row. Nested in the gradient-filled word, the
+                    animated "..." was drawn over the P on a phone, the user saw, 3 Nov.) */}
+                {four
+                    ? <span className="what-row"><span className="what">Perfect</span><span className="what dots">...</span><span className="what">4</span><span className="what huh">?</span></span>
+                    : <span className="what">Perfect 24!</span>}
             </div>
             <div className="celebration-sparks" aria-hidden="true">
                 {Array.from({ length: 16 }, (_, i) => (
@@ -913,7 +916,8 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     // banner across it with what happened (the user asked for more flare, 21 Oct). So does a
     // keepsake as it works, with its picture in a burst of gold (the Shield: a force field).
     // Thonics and the Lady keep the small plaque on the table's edge.
-    const takeover = moment.name !== "Thom's Thonics" && moment.name !== 'Shrine to the Lady';
+    // (The Lady's Grace and the Bard's songs: like a Thonic, their icon big over a parchment label, 3 Nov.)
+    const takeover = moment.name !== "Thom's Thonics" && moment.name !== 'Shrine to the Lady' && !moment.blessing;
     const keepsake = moment.keepsake;
     // A Clear-Eye cancelled it: the banner, struck through, and none of the move's effect.
     const fx = !moment.cancelled;
@@ -923,7 +927,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     // shoot up into place. Keepsakes keep their gold burst.
     const surge = takeover && fx && !keepsake;
     return (
-        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''} ${art ? 'with-art' : ''}`} aria-live="polite">
+        <div key={moment.at} className={`ability-moment ${kind} ${moment.name === "Thom's Thonics" || moment.blessing ? 'thonic' : ''} ${keepsake ? 'keepsake-moment' : ''} ${takeover ? 'takeover' : ''} ${moment.cancelled ? 'cancelled' : ''} ${art ? 'with-art' : ''}`} aria-live="polite">
             {/* With a painting the moment is a scene of its own (the user's call, 26 Oct): a stage in
                 its colours over the whole screen, motes of light rising, the painting pushing in. */}
             {art && (
@@ -949,6 +953,15 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {art && <img className="ability-art" src={`${import.meta.env.BASE_URL}art/${art}`} alt="" />}
             {/* A Thonic drunk (28 Oct, the user: "make it look better"): its bottle, big, pops its cork
                 and tips up in a glow of its own colour while bubbles rise, over its name on a label. */}
+            {/* The Lady's Grace or a Bard's song: its icon rises and sways in a glow of its colour, with
+                sparkles (the Lady) or notes (the Bard) drifting up, like a Thonic drunk. */}
+            {moment.blessing && (
+                <div className={`potion-moment blessing-moment potion-${moment.blessing}`} aria-hidden="true">
+                    <span className="potion-glow" />
+                    {Array.from({ length: 9 }, (_, i) => <span key={i} className={moment.blessing === 'ladysGrace' ? 'bubble sparkle' : 'bubble note'} style={{ '--x': `${(i * 23) % 70 - 35}px`, '--s': `${6 + (i * 7) % 9}px`, '--d': `${0.25 + (i * 0.09) % 0.6}s` } as React.CSSProperties}>{moment.blessing === 'ladysGrace' ? '' : i % 2 ? '♪' : '♫'}</span>)}
+                    <span className="blessing-icon">{keepsakeIcon(moment.blessing)}</span>
+                </div>
+            )}
             {moment.thonic && (
                 <div className={`potion-moment potion-${moment.thonic}`} aria-hidden="true">
                     <span className="potion-glow" />
@@ -956,7 +969,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                     <Bottle thonic={{ id: moment.thonic } as Thonic} />
                 </div>
             )}
-            <div className={`ability-banner ${moment.thonic ? `potion-${moment.thonic}` : ''}`}>
+            <div className={`ability-banner ${moment.thonic ? `potion-${moment.thonic}` : moment.blessing ? `potion-${moment.blessing}` : ''}`}>
                 {/* As it lands: a shockwave ring from its middle (its edges glow and a shine sweeps it, in CSS). */}
                 {surge && <span className="impact" aria-hidden="true" />}
                 {/* An opponent's ability (or your mask) shows its name alone (the user's call, 28 Oct), and
@@ -1972,8 +1985,17 @@ export function Hud() {
                 {snap.callout && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}
             </div>
 
+            {/* The round result sits in the middle of the green felt (the user's call, 3 Nov), the rest higher up. */}
+            <div className="toasts felt">
+                {snap.toasts.filter(t => t.tone === 'result').map(t => (
+                    <div key={t.id} className={`toast ${t.tone}`}>
+                        {t.title && <strong>{t.title}</strong>}
+                        <span>{t.text}</span>
+                    </div>
+                ))}
+            </div>
             <div className="toasts">
-                {snap.toasts.map(t => (
+                {snap.toasts.filter(t => t.tone !== 'result').map(t => (
                     <div key={t.id} className={`toast ${t.tone}`}>
                         {t.title && <strong>{t.title}</strong>}
                         <span>{t.text}</span>

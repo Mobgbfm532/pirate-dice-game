@@ -287,7 +287,7 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'loyaltyCard',
         name: "Thom's Loyalty Card",
-        text: "Thom's cart is always one of the spots, and your first Thonic each visit is free."
+        text: "Thom's Cart is always available, and your first Thonic each visit is free."
     },
     // 30 Oct, the user's picks.
     {

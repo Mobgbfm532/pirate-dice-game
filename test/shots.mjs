@@ -7,7 +7,7 @@
 // Each size gets a fresh page that joins a Tavern Crawl, then a fight against opponent `fight`
 // (0 McGrath ... 13 Jaguar); roll=1 throws once, so the dice lie on the felt. seed=42 (the
 // default) makes the server's draws repeat from the fight on: the same throw every time. Files:
-// <out-dir>/<look>-<fight>[-roll][-<moment>]-<w>x<h>.png. moment=devil|ink|smite|flood|keepsake|shield|perfect
+// <out-dir>/<look>-<fight>[-roll][-<moment>]-<w>x<h>.png. moment=devil|ink|smite|flood|keepsake|shield|perfect|perfect4|grace|bard
 // plays that moment (as its banner would) and shoots it at its brightest.
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
@@ -30,7 +30,10 @@ const MOMENTS = {
     flood: `preview.ability('Brodor', 'Astral Flood')`,
     keepsake: `preview.ability('Keepsake', 'Trap Card', { keepsake: 'luckySeat' })`,
     shield: `preview.ability('Keepsake', 'Shield', { keepsake: 'bentCopper' })`,
-    perfect: `table.celebrateAt = performance.now()`
+    perfect: `table.celebrateAt = performance.now()`,
+    perfect4: `preview.celebrate('perfect4')`,
+    grace: `preview.ability('Shrine to the Lady', "The Lady's Grace", { text: 'The Lady saves you from the dust', extra: '♥ saved', blessing: 'ladysGrace' })`,
+    bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`
 };
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
     const [wh, dpr] = s.split('@');
@@ -121,8 +124,27 @@ try {
             await wait(1500); // the sheet loads
         }
         if (moment) {
+            // (hold: a moment's own timers that would hide it, a second and more, never fire.)
+            if (args.hold) await evaluate(`(() => { const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms > 1000 ? 1e9 : ms, ...a); })()`);
             await evaluate(`(({ preview, table }) => { ${MOMENTS[moment]}; })(window.__game)`);
-            await wait(700); // near its brightest (a slow page needs the time to draw the moment)
+            await wait(args.hold ? 50 : 700); // near its brightest (a slow page needs the time to draw the moment)
+            // hold=<ms>: every animation stopped at that point of the moment (a still for slow pages).
+            if (args.hold) { await evaluate(`(() => { const s = window.__game.store.get(); const at = Math.max(s.ability?.at ?? 0, s.celebration?.at ?? 0); performance.now = () => at + ${Number(args.hold)}; document.getAnimations().forEach(a => { a.pause(); a.currentTime = ${Number(args.hold)}; }); })()`); await wait(1500); }
+        }
+        // frames=<n>,<ms>: n stills of the table's own motion (the bust, the light), the page clock set
+        // forward <ms> each time from 8 s on (after the entrance), for a short animation.
+        if (args.frames) {
+            const [n, step] = args.frames.split(',').map(Number);
+            await evaluate('window.__realNow = window.__realNow || performance.now.bind(performance); window.__t0 = window.__realNow()');
+            for (let i = 0; i < n; i++) {
+                await evaluate(`performance.now = () => window.__t0 + 8000 + ${i * step}`);
+                await wait(350);
+                const { data } = await s('Page.captureScreenshot', { format: 'jpeg', quality: 85 });
+                writeFileSync(join(outDir, `frame-${String(i).padStart(3, '0')}.jpg`), Buffer.from(data, 'base64'));
+            }
+            console.log(`${n} frames in ${outDir}`);
+            await cdp.send('Target.closeTarget', { targetId });
+            continue;
         }
         const { data } = await s('Page.captureScreenshot', { format: 'png' });
         const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}${diceSet ? `-${diceSet}` : ''}-${w}x${h}.png`);
