@@ -6,13 +6,17 @@
 module.exports = {
     // Hearts at the start of every fight (3, the user's call, 20 Oct; the Lady's Favour adds one).
     playerHearts: 3,
+    // The player's hearts in particular fights (the rest: playerHearts). The Ghoul and Gourd's first
+    // four are short fights, 2 hearts a side; Martha 3 a side (the user, 3 Nov). The Lady's Favour,
+    // the Stranger's price and Pruney Fingers count from these.
+    fightHearts: { molar: 2, frak: 2, danhausen: 2, duke: 2 },
     // The opponents' lives, in the order you meet them (20 Oct, the user's, for now; balancing
     // later): the Ghoul and Gourd (McGrath the bouncer, who is the Molar renamed and keeps the id
     // 'molar', then the high-roller table), the Yawning Portal (five more, Brodor the boss), then
     // aboard the Salty Swallow (Klarg's four).
     opponentLives: {
-        molar: 1, frak: 2, danhausen: 3, duke: 3, martha: 3, // McGrath 1 since 21 Oct (the user)
-        sylvester: 2, vaelin: 2, stason: 2, ridgeler: 2, brodor: 3, // the Yawning Portal 2, its boss 3 (the user, 3 Nov)
+        molar: 1, frak: 2, danhausen: 2, duke: 2, martha: 3, // McGrath 1, the Ghoul and Gourd 2, Martha 3 (the user, 3 Nov)
+        sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
         klarg: 3, rokr: 3, hangman: 3, jaguar: 4
     },
     // How many times each opponent's ability can be used in a fight (from a random round 1-3).

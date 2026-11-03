@@ -9,6 +9,8 @@ const Rules = require('../shared/rules');
 const server = require('../server');
 const Strategy = require('../shared/strategy');
 const BALANCE = require('../shared/balance');
+// The player's full hearts against the next opponent (Frak, after McGrath's table, is on 2).
+const heartsAt = index => BALANCE.fightHearts[server.TAVERN_ENCOUNTERS[index].id] || BALANCE.playerHearts;
 const PRICE = BALANCE.thonicPrices;
 
 let url;
@@ -133,6 +135,10 @@ async function tavernAgainst(encounterIndex, name) {
     const room = server.rooms[roomCode];
     room.tavernRun.encounterIndex = encounterIndex;
     room.tavernRun.abilityRound = 1;
+    // The player's hearts for that fight (a run starts at McGrath, on 2).
+    const full = BALANCE.fightHearts[server.TAVERN_ENCOUNTERS[encounterIndex].id] || BALANCE.playerHearts;
+    room.startingLives = full;
+    room.players[hero.id].lives = full;
     return hero;
 }
 
@@ -462,7 +468,11 @@ async function tavernTable(name, extra = {}) {
     const roomCode = `TVRN-T${++tavernTables}`;
     const hero = await join(name, roomCode, extra);
     await waitFor(hero, 'gameStateUpdate', s => s.playerOrder.includes(hero.id));
-    return { hero, roomCode, room: server.rooms[roomCode] };
+    // (These tables test how things work, on the usual 3 hearts; McGrath's fight itself is on 2.)
+    const room = server.rooms[roomCode];
+    room.startingLives = BALANCE.playerHearts;
+    room.players[hero.id].lives = BALANCE.playerHearts;
+    return { hero, roomCode, room };
 }
 
 const runOf = state => state.tavernRun;
@@ -579,6 +589,22 @@ test('play again cannot restart a run while Thom\'s cart is open', async () => {
     await sleep(80);
     assert.ok(room.tavernRun.shop, 'still at Thom\'s');
     assert.equal(room.tavernRun.purse, 300);
+});
+
+test('the Ghoul and Gourd: 2 hearts a side (McGrath 1), Martha 3 a side; the Yawning Portal on 3', async () => {
+    const roomCode = `TVRN-H${++tavernTables}`;
+    const hero = await join('Hearty', roomCode);
+    await waitFor(hero, 'gameStateUpdate', s => s.playerOrder.includes(hero.id));
+    const room = server.rooms[roomCode];
+    assert.equal(room.players[hero.id].lives, 2, 'McGrath: you on 2');
+    assert.equal(room.players.BOT_MOLAR.lives, 1, 'and him on 1');
+    for (const [id, you, them] of [['duke', 2, 2], ['martha', 3, 3], ['sylvester', 3, 3], ['brodor', 3, 4]]) {
+        room.tavernRun.encounterIndex = fightOf(id);
+        server.resetTavernEncounter(roomCode);
+        assert.equal(room.players[hero.id].lives, you, `${id}: you`);
+        assert.equal(room.players.BOT_MOLAR.lives, them, `${id}: them`);
+        assert.equal(room.startingLives, you, 'a Healing or a 24 fills up to that');
+    }
 });
 
 test('a Healing Thonic gives back a heart, on your turn before you roll', async () => {
@@ -739,7 +765,7 @@ test('the Shrine to the Lady: light a candle, and she grants a blessing at rando
         if (gift === 'favour') {
             hero.emit('moveOn');
             const fight = await nextState(hero, s => !runOf(s).interlude);
-            assert.equal(fight.players[hero.id].lives, BALANCE.playerHearts + BALANCE.interlude.favourHearts, 'an extra heart this fight');
+            assert.equal(fight.players[hero.id].lives, heartsAt(room.tavernRun.encounterIndex) + BALANCE.interlude.favourHearts, 'an extra heart this fight');
         } else {
             assert.equal(gift, 'grace');
             assert.equal(runOf(after).ladysGrace, true);
@@ -825,7 +851,7 @@ test('the Hooded Stranger: a keepsake, and the next fight starts a heart short',
     assert.deepEqual(room.tavernRun.keepsakes.map(k => k.id), [offers[1].id]);
     hero.emit('moveOn');
     const fight = await nextState(hero, s => !runOf(s).interlude);
-    assert.equal(fight.players[hero.id].lives, BALANCE.interlude.strangerHearts, 'this fight a heart short');
+    assert.equal(fight.players[hero.id].lives, heartsAt(room.tavernRun.encounterIndex) - 1, 'this fight a heart short');
     assert.ok(BALANCE.interlude.strangerHearts < BALANCE.playerHearts);
     assert.equal(room.tavernRun.nextFightHearts, null, 'only this one');
 
@@ -836,7 +862,7 @@ test('the Hooded Stranger: a keepsake, and the next fight starts a heart short',
     await nextState(b.hero, s => runOf(s).interlude.stage === 'done');
     b.hero.emit('moveOn');
     const fight2 = await nextState(b.hero, s => !runOf(s).interlude);
-    assert.equal(fight2.players[b.hero.id].lives, BALANCE.playerHearts);
+    assert.equal(fight2.players[b.hero.id].lives, heartsAt(b.room.tavernRun.encounterIndex));
     assert.equal(b.room.tavernRun.keepsakes.length, 0);
 });
 
@@ -1090,13 +1116,13 @@ test('the Wild Magic Hot Tub: a soak (hotTubPrice) and a wild surge, on one of y
         assert.ok(['noOnes', 'twin', 'lucky', 'scalding', 'soggy', 'pruney'].includes(surge.id));
         assert.ok(surge.name && surge.text);
         assert.equal(room.tavernRun.purse, 100 - BALANCE.interlude.hotTubPrice, 'a soak costs hotTubPrice');
-        if (surge.id === 'pruney') assert.equal(room.tavernRun.nextFightHearts, BALANCE.playerHearts - 1);
+        if (surge.id === 'pruney') assert.equal(room.tavernRun.nextFightHearts, heartsAt(room.tavernRun.encounterIndex) - 1);
         else assert.equal(room.tavernRun.nextFightSurge, surge.id);
         hero.emit('moveOn');
         const fight = await nextState(hero, s => !runOf(s).interlude);
         assert.equal(room.tavernRun.nextFightSurge, null, 'taken up by the fight');
         if (surge.id === 'pruney') {
-            assert.equal(fight.players[hero.id].lives, BALANCE.playerHearts - 1);
+            assert.equal(fight.players[hero.id].lives, heartsAt(room.tavernRun.encounterIndex) - 1);
             assert.equal(runOf(fight).tubSurge, null);
         } else {
             assert.equal(runOf(fight).tubSurge.id, surge.id);
@@ -1466,7 +1492,7 @@ test("the run is fourteen fights: the Ghoul and Gourd, the Yawning Portal, then 
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
         'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4]);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(4).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);

@@ -381,8 +381,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
   glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine and Johnny Elf Bar and no events of its
-  own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
-  Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 2, 2, 2, 2, 3 (since 3 Nov) | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
+  own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3, but 2
+  against the Ghoul and Gourd's first four (`fightHearts`, 3 Nov; the Lady's Favour +1, the Stranger and Pruney
+  Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 2, 2, 3 (since 3 Nov,
+  the user's: 2 a side, McGrath 1, Martha 3 a side) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,

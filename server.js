@@ -1453,12 +1453,17 @@ function pickKeepsakeChoices(room) {
     return pool.slice(0, 3);
 }
 
+// The player's full hearts for a fight (BALANCE.fightHearts, else playerHearts).
+const heartsFor = encounter => (encounter && BALANCE.fightHearts?.[encounter.id]) || BALANCE.playerHearts;
+// ...and for the next fight, from between fights (encounterIndex is already the next opponent).
+const nextHearts = run => heartsFor(TAVERN_ENCOUNTERS[run.encounterIndex]);
+
 function resetTavernEncounter(roomCode, keepHumanLives = true) {
     let room = rooms[roomCode];
     if (!room || room.mode !== 'tavern-crawl') return;
-    room.startingLives = BALANCE.playerHearts;
 
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    room.startingLives = heartsFor(encounter);
     let humanId = getHumanPlayerId(room);
     room.players[BOT_ID] = {
         id: BOT_ID,
@@ -1765,9 +1770,11 @@ function pickThomKeepsakes(room) {
 }
 
 // The Hooded Stranger, with keepsakes you don't have yet.
+// The Stranger's price: the next fight a heart short (strangerHearts is the short count for a 3-heart fight).
+const strangerHearts = run => Math.max(1, nextHearts(run) - (BALANCE.playerHearts - INTERLUDE.strangerHearts));
 function strangerOffer(room) {
     let offers = shuffled(unownedKeepsakes(room)).slice(0, INTERLUDE.strangerOffers);
-    return { stage: 'stranger', offers, hearts: INTERLUDE.strangerHearts };
+    return { stage: 'stranger', offers, hearts: strangerHearts(room.tavernRun) };
 }
 
 function startInterlude(room, won) {
@@ -2429,7 +2436,7 @@ io.on('connection', (socket) => {
         run.purse -= price;
         run.stats.spent += price;
         let surge = pickHotTubSurge();
-        if (surge === 'pruney') run.nextFightHearts = Math.max(1, (run.nextFightHearts || BALANCE.playerHearts) - 1);
+        if (surge === 'pruney') run.nextFightHearts = Math.max(1, (run.nextFightHearts || nextHearts(run)) - 1);
         else run.nextFightSurge = surge;
         run.interlude = { stage: 'done', spot: 'hotTub', surge: { id: surge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[surge] }, hearts: surge === 'pruney' ? run.nextFightHearts : undefined };
         emitState(socket.roomCode);
@@ -2506,7 +2513,7 @@ io.on('connection', (socket) => {
         let gift = INTERLUDE.shrineGifts[crypto.randomInt(0, INTERLUDE.shrineGifts.length)];
         if (gift === 'grace' && run.ladysGrace) gift = 'favour';
         // Her Favour adds to what the next fight would start on (after the Stranger's price, too).
-        if (gift === 'favour') run.nextFightHearts = (run.nextFightHearts || BALANCE.playerHearts) + INTERLUDE.favourHearts;
+        if (gift === 'favour') run.nextFightHearts = (run.nextFightHearts || nextHearts(run)) + INTERLUDE.favourHearts;
         else run.ladysGrace = true;
         run.interlude = { stage: 'done', spot: 'shrine', gift, hearts: gift === 'favour' ? run.nextFightHearts : undefined };
         emitState(socket.roomCode);
@@ -2553,8 +2560,8 @@ io.on('connection', (socket) => {
             run.keepsakes.push(keepsake);
             // The Potion Belt comes with a Thonic, in its new slot.
             if (keepsake.id === 'potionBelt' && run.shelf.length < shelfSizeOf(room)) run.shelf.push(KEEPSAKE_NUMBERS.beltThonic);
-            run.nextFightHearts = INTERLUDE.strangerHearts;
-            run.interlude = { stage: 'done', spot: 'stranger', keepsake, hearts: INTERLUDE.strangerHearts };
+            run.nextFightHearts = strangerHearts(run);
+            run.interlude = { stage: 'done', spot: 'stranger', keepsake, hearts: run.nextFightHearts };
         }
         emitState(socket.roomCode);
     });
