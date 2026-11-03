@@ -1,6 +1,6 @@
 # Character text in the Tavern Crawl
 
-Every line the game shows for each character, as of 1 November. Send changes in your own words and
+Every line the game shows for each character, as of 3 November. Send changes in your own words and
 they'll be put in; the "Where" notes say which file holds each line.
 
 Since 28 October an ability's screen shows **only its name**. The longer lines that used to sit
@@ -38,21 +38,21 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 ### The Yawning Portal
 
 **Sylvester Stonefist**: Back of the Head
-- Entrance card: "Sylvester Stonefist, a brawling monk, never hits you from the front. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
+- Entrance card: "Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
 
 **Vaelin Inkhand**: Inkfire Brand
 - Entrance card: "Vaelin Inkhand, wizard of the inky flame. Inkfire Brand: for a round he burns the 6 into the table, and your dice that land on it roll again."
 - Badge: "Inkfire round: your dice can't land on 6"
 
-**Stason Jatham**: Flourish
-- Entrance card: "Stason Jatham rushes in, rapier first. Flourish: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better."
+**Stason Jatham**: Vexing Rapier
+- Entrance card: "Stason Jatham, action hero, beekeeper. Vexing Rapier: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better."
 
 **The Ridgeler**: Divine Smite
-- Entrance card: "The Ridgeler, dragonborn paladin, and Beakbreaker, his warhammer. Divine Smite: for a round, if he wins it, you lose two hearts."
+- Entrance card: "The Ridgeler, dragonborn paladin and a War Daddy. Divine Smite: for a round, if he wins it, you lose two hearts."
 - Badge: "Divine Smite: lose this round, lose two hearts"
 
 **Brodor**: Astral Flood (boss)
-- Entrance card: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
+- Entrance card: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
 - Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "Keep 'em, champ." Then word reaches the Portal: the Salty Swallow has docked, and her crew are the finest players on the coast." His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow

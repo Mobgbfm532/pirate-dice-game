@@ -172,7 +172,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '👊',
         lives: BALANCE.opponentLives.sylvester,
         ability: 'suckerPunch',
-        intro: 'Sylvester Stonefist, a brawling monk, never hits you from the front. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again.'
+        intro: 'Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again.'
     },
     {
         id: 'vaelin',
@@ -190,7 +190,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🤺',
         lives: BALANCE.opponentLives.stason,
         ability: 'flourish',
-        intro: 'Stason Jatham rushes in, rapier first. Flourish: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better.'
+        intro: 'Stason Jatham, action hero, beekeeper. Vexing Rapier: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better.'
     },
     {
         id: 'ridgeler',
@@ -199,7 +199,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🐉',
         lives: BALANCE.opponentLives.ridgeler,
         ability: 'divineSmite',
-        intro: 'The Ridgeler, dragonborn paladin, and Beakbreaker, his warhammer. Divine Smite: for a round, if he wins it, you lose two hearts.'
+        intro: 'The Ridgeler, dragonborn paladin and a War Daddy. Divine Smite: for a round, if he wins it, you lose two hearts.'
     },
     {
         id: 'brodor',
@@ -210,7 +210,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'astralFlood',
         boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
         drops: 'brodorsSunglasses',
-        intro: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
+        intro: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
     },
     {
         id: 'klarg',

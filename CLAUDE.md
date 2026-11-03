@@ -121,7 +121,10 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   face's colour is engraved in the middle; `RING_ONE` repaints it bright red in a ring of the set's
   pip colour (the Duke's crimson on red, a gold ring). On a phone the coloured sets sank into the
   dark felt (the user, 3 Nov), so each face (not its pips) is lifted lighter and a little more vivid
-  (`LIFT` in the script) and a little of the painting shows whatever the light
+  (`LIFT` in the script) and a little of the painting shows whatever the light. Since 3 Nov each face's
+  surface is redrawn even (`CLEAN`: its own colour plus a trace, `detail` 0.35, of the painting's broad
+  colour changes), as the painted streaks, rims and bevels looked harsh on a lit 3D die ("abrasive",
+  the user); the pips stay as painted
   (`OPPONENT_DICE_GLOW` 0.22, an emissive map: the fire's orange light had turned Frak's green
   olive). Dev: `preview.dice(id)` shows a set on every die, yours too (`null` ends it). Client: `OPPONENT_DICE` and
   `opponentDiceMaterials` in textures.ts (fetched as the opponent sits down; no ivory tint and no
@@ -396,7 +399,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   they win 48% (pure best 53%, the old fixed habits 35%).
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
   Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; the ship since 25 Oct:
-  Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2; Stason's Flourish 2 since 3 Nov). Each use costs the player ~10 points of fight win chance. **The Yawning
+  Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2; Stason's Flourish 2 since 3 Nov, shown as **Vexing Rapier** since 3 Nov; its id stays `flourish`). Each use costs the player ~10 points of fight win chance. **The Yawning
   Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the knocked-loose die must be rolled before it can be kept again, `turn.mustRollId`, 23 Oct; the
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
   hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it

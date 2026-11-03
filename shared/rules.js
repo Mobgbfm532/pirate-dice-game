@@ -49,7 +49,7 @@
         disguises: 'Disguises',
         suckerPunch: 'Back of the Head', // Sylvester's (the id is the simulator's)
         inkfire: 'Inkfire Brand',
-        flourish: 'Flourish',
+        flourish: 'Vexing Rapier', // (Flourish until 3 Nov; the id stays)
         divineSmite: 'Divine Smite',
         astralFlood: 'Astral Flood',
         // The Salty Swallow as the final tier (25 Oct).

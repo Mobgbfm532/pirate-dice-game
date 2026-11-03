@@ -21,6 +21,8 @@ const fight = args.fight ?? '1';
 const roll = args.roll === '1';
 const seed = args.seed ?? '42';
 const moment = args.moment;
+// dice=<id>: every die wears that opponent's set (preview.dice), to judge a set's look.
+const diceSet = args.dice;
 const MOMENTS = {
     devil: `preview.ability('Duke Morrigan', 'Sympathy for the Devil')`,
     ink: `preview.ability('Vaelin Inkhand', 'Inkfire Brand')`,
@@ -114,12 +116,16 @@ try {
             }, 100); })`);
             await wait(4000);
         }
+        if (diceSet) {
+            await evaluate(`window.__game.preview.dice('${diceSet}')`);
+            await wait(1500); // the sheet loads
+        }
         if (moment) {
             await evaluate(`(({ preview, table }) => { ${MOMENTS[moment]}; })(window.__game)`);
             await wait(700); // near its brightest (a slow page needs the time to draw the moment)
         }
         const { data } = await s('Page.captureScreenshot', { format: 'png' });
-        const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}-${w}x${h}.png`);
+        const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}${diceSet ? `-${diceSet}` : ''}-${w}x${h}.png`);
         writeFileSync(file, Buffer.from(data, 'base64'));
         console.log(file);
         await cdp.send('Target.closeTarget', { targetId });

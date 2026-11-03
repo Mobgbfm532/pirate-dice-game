@@ -608,7 +608,7 @@ socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
 const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
-    'Disguises', 'Back of the Head', 'Inkfire Brand', 'Flourish', 'Divine Smite', 'Astral Flood',
+    'Disguises', 'Back of the Head', 'Inkfire Brand', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In']);
 

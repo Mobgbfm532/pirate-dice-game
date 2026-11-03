@@ -892,7 +892,7 @@ const ABILITY_ART: Record<string, string> = {
     // 26 Oct: the Yawning Portal's and the ship's.
     'Back of the Head': 'ability-back-of-the-head.webp',
     'Inkfire Brand': 'ability-inkfire.webp',
-    'Flourish': 'ability-flourish.webp',
+    'Vexing Rapier': 'ability-flourish.webp',
     'Astral Flood': 'ability-astral-flood.webp',
     'Reach Around': 'ability-reach-around.webp',
     'Written in the Stars': 'ability-written-in-the-stars.webp',
@@ -977,7 +977,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) || PAINTED_KEEPSAKES.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : keepsakeIcon(keepsake)}</div>}
             {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
             {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
-            {fx && moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
+            {fx && moment.ability === 'Vexing Rapier' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
             {fx && moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
             {/* The hammer lands (a won Smite round): a white-gold flash and cracks of light from the middle. */}
             {fx && moment.hit && <div className="smite-crash" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <span key={i} style={{ '--a': `${i * 45 + 12}deg` } as React.CSSProperties} />)}</div>}

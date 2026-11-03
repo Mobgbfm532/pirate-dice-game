@@ -1814,7 +1814,7 @@ test("Vaelin's Inkfire Brand: in his round your dice never land on 6", async () 
 test("Stason's Flourish: for his whole turn each die rolls twice and he keeps the better", async () => {
     const hero = await tavernAgainst(fightOf('stason'), 'Flourished');
     const room = roomOf(hero);
-    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Flourish', 6000);
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Vexing Rapier', 6000);
     await playHand(hero, room, [2, 4, 3, 3, 3, 3]);
     assert.match((await move).text, /rolls twice/);
     assert.equal(room.tavernRun.abilityUsed.flourish, 1);

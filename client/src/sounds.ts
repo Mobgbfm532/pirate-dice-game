@@ -366,7 +366,7 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'The Ace of Spades': 'gunshot',
     'Back of the Head': 'swoosh',
     'Inkfire Brand': 'inkfire',
-    'Flourish': 'flourish',
+    'Vexing Rapier': 'flourish',
     'Divine Smite': 'smite',
     'Astral Flood': 'astralFlood',
     'Mind Whip': 'mindWhip',

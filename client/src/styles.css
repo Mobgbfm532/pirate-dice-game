@@ -2102,10 +2102,10 @@ button.keepsake.used { opacity: 0.55; }
     100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); filter: blur(4px); }
 }
 
-/* Stason: Flourish. Two flashes of a rapier across the screen; steel and silver. */
-.flourish .ability-banner { background: linear-gradient(#263238, #0e1417); border-color: #cfd8dc; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(207, 216, 220, 0.5); }
-.flourish .ability-banner .what { color: #eceff1; }
-.takeover.flourish { --flare: rgba(207, 216, 220, 0.55); }
+/* Stason: Vexing Rapier (Flourish until 3 Nov). Two flashes of a rapier across the screen; steel and silver. */
+.vexing-rapier .ability-banner { background: linear-gradient(#263238, #0e1417); border-color: #cfd8dc; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(207, 216, 220, 0.5); }
+.vexing-rapier .ability-banner .what { color: #eceff1; }
+.takeover.vexing-rapier { --flare: rgba(207, 216, 220, 0.55); }
 .rapier-slash span {
     position: fixed; left: -10%; top: 30%; width: 120%; height: 3px;
     background: linear-gradient(90deg, transparent, #fff 40%, #b0bec5 60%, transparent);
