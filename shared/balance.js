@@ -18,9 +18,10 @@ module.exports = {
     // How many times each opponent's ability can be used in a fight (from a random round 1-3).
     // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
     // The Yawning Portal's five: 1 each (first guesses, 20 Oct; Inkfire at 2 cost Vaelin's fight 19 points).
+    // Stason's Flourish 2 since 3 Nov (the user's call).
     abilityUses: {
         mindWhip: 1, cursed: 2, devil: 1, disguises: 2,
-        suckerPunch: 1, inkfire: 1, flourish: 1, divineSmite: 1, astralFlood: 1,
+        suckerPunch: 1, inkfire: 1, flourish: 2, divineSmite: 1, astralFlood: 1,
         reachAround: 2, constellationBlur: 2, deadeye24: 1, smoothTalk: 1,
         // The Salty Swallow as the final tier (25 Oct; balance/experiments/final-ship.js): Rokr's
         // Written in the Stars (turns a fight), the Hangman's Dead Eye, Jaguar's Smooth Talk

@@ -7,6 +7,8 @@
 //        &stock=healing,fizzy,steady to choose what's on it; default: the longest names)
 //   curl "http://localhost:3003/lives?n=1"          the player's hearts
 //   curl "http://localhost:3003/foe?lives=1"        the opponent's lives
+//   curl "http://localhost:3003/opponent-lives?ids=sylvester,vaelin&n=2"   their lives in every fight from now on
+//        (or start the server with OPPONENT_LIVES="sylvester:2,vaelin:2")
 //   curl "http://localhost:3003/surge?id=twin"      a hot tub surge on this fight
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
 //   curl "http://localhost:3003/purse?n=150"
@@ -16,6 +18,7 @@
 //   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the Yawning Portal
 //   curl "http://localhost:3003/invitation?boss=brodor"   Brodor beaten: on to the Salty Swallow
 //   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
+//        (or start the server with START_KEEPSAKES="..." and START_SHELF="healing,healing": every new run gets them)
 //   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
 //   curl "http://localhost:3003/seed?n=42"           every random draw follows a seed (the same throw each time); /seed alone ends it
 //        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands; &stage=bard|kram for the Yawning Portal's Bard and Cult of Kram)
@@ -29,8 +32,38 @@ const PORT = Number(process.env.PORT) || 3002;
 const CONTROL_PORT = Number(process.env.CONTROL_PORT) || 3003;
 server.start(PORT);
 
+// OPPONENT_LIVES="sylvester:2,vaelin:2" (env): those opponents start every fight on that many lives.
+function setOpponentLives(ids, n, room) {
+    server.TAVERN_ENCOUNTERS.filter(e => ids.includes(e.id)).forEach(e => { e.lives = n; });
+    const bot = room && room.players.BOT_MOLAR;
+    const seated = bot && server.TAVERN_ENCOUNTERS.find(e => e.name === bot.name);
+    if (seated && ids.includes(seated.id)) bot.lives = Math.min(bot.lives, n);
+}
+(process.env.OPPONENT_LIVES || '').split(',').filter(Boolean).forEach(pair => {
+    const [id, n] = pair.split(':');
+    setOpponentLives([id], Number(n));
+});
+
 const tavernTables = () => Object.entries(server.rooms).filter(([, r]) => r.mode === 'tavern-crawl');
 const human = r => Object.values(r.players).find(p => p.id !== 'BOT_MOLAR');
+// Keepsakes by id, with their real names and text (the bosses' drops too).
+const keepsakesOf = ids => ids.map(id => server.TAVERN_KEEPSAKES.find(k => k.id === id)
+    || Object.values(server.BOSS_DROPS).find(k => k.id === id) || { id, name: id, text: '' }).map(k => ({ ...k }));
+
+// START_SHELF="healing,healing,healing" and START_KEEPSAKES="bentCopper,loadedDie" (env): every new
+// Tavern Crawl run starts with them, so a reload (a fresh run) gets them again. Each run once.
+const START_SHELF = (process.env.START_SHELF || '').split(',').filter(Boolean);
+const START_KEEPSAKES = (process.env.START_KEEPSAKES || '').split(',').filter(Boolean);
+const kitted = new WeakSet();
+if (START_SHELF.length || START_KEEPSAKES.length) setInterval(() => {
+    tavernTables().forEach(([code, r]) => {
+        if (!r.tavernRun || kitted.has(r.tavernRun)) return;
+        kitted.add(r.tavernRun);
+        if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
+        if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
+        server.emitState(code);
+    });
+}, 300);
 
 const COMMANDS = {
     '/shop': (r, q) => {
@@ -72,8 +105,11 @@ const COMMANDS = {
         run.interlude = server.invitation(r, (human(r) || {}).name || 'Tester');
         r.roundPlayers = [];
     },
+    // Opponents' lives for every fight from now on, on this server only (ids as in TAVERN_ENCOUNTERS):
+    // /opponent-lives?ids=sylvester,vaelin&n=2. One already seated drops to n too.
+    '/opponent-lives': (r, q) => setOpponentLives((q.get('ids') || '').split(',').filter(Boolean), Number(q.get('n') || 2), r),
     // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard, marthasMask, brodorsSunglasses).
-    '/keepsakes': (r, q) => { r.tavernRun.keepsakes = (q.get('ids') || '').split(',').filter(Boolean).map(id => ({ id, name: id, text: '' })); },
+    '/keepsakes': (r, q) => { r.tavernRun.keepsakes = keepsakesOf((q.get('ids') || '').split(',').filter(Boolean)); },
     // The Bard's song for this fight (?song=inspiringSong|cuttingWords), as if bought before it.
     '/song': (r, q) => {
         const song = q.get('song') || 'inspiringSong';

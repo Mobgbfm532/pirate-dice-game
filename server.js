@@ -190,7 +190,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🤺',
         lives: BALANCE.opponentLives.stason,
         ability: 'flourish',
-        intro: 'Stason Jatham rushes in, rapier first. Flourish: for one whole turn, each of his dice rolls twice and he keeps the better.'
+        intro: 'Stason Jatham rushes in, rapier first. Flourish: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better.'
     },
     {
         id: 'ridgeler',
@@ -210,7 +210,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'astralFlood',
         boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
         drops: 'brodorsSunglasses',
-        intro: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light and heals one."
+        intro: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
     },
     {
         id: 'klarg',
@@ -1563,12 +1563,19 @@ function beginTavernRound(roomCode, room) {
     if (!encounter || encounter.ability !== 'jaguarPhases') run.jaguarPhase = null;
     if (!encounter || !encounter.ability) return;
     if (encounter.ability === 'jaguarPhases') { beginJaguarRound(roomCode, room, encounter); return; }
-    // Brodor's Astral Flood: once he has lost a life, he heals one as a round begins.
+    // Brodor's Astral Flood: once he has lost a life, he heals one as a round begins, and takes one
+    // of yours (the user's call, 3 Nov). The Shield still catches it; it never takes your last heart
+    // (a round has to be lost for a run to end).
     let bot = room.players[BOT_ID];
     if (encounter.ability === 'astralFlood') {
         if (bot && bot.lives < encounter.lives && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
             bot.lives++;
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light and heals a life.' });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a life and takes one of yours.' });
+            let human = room.players[getHumanPlayerId(room)];
+            if (human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper) {
+                run.encounterKeepsakeUses.bentCopper = true;
+                emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield protects a life.');
+            } else if (human && human.lives > 1) human.lives--;
         }
         return;
     }
@@ -1979,6 +1986,8 @@ function evaluateTavernRound(roomCode) {
     // caught by the Shield, the Lady's Grace or Last Gasp).
     if (effect && effect.kind === 'smite' && losersThisRound.length === 1 && losersThisRound[0].id === humanId) {
         losersThisRound.push({ id: humanId, reason: 'Divine Smite.' });
+        // The hammer comes down (3 Nov): the moment again, its sound, and the whole screen shakes.
+        sendMoment(roomCode, 'signatureMove', { name: enemy.name, ability: Rules.ABILITY_NAMES.divineSmite, text: 'The hammer falls: you lose two hearts.', hit: true });
     }
     // Jaguar's All In: the round's loser loses two hearts (each can still be caught as above).
     if (room.tavernRun.jaguarPhase === 'allIn') losersThisRound = losersThisRound.flatMap(loser => [loser, { ...loser, reason: 'All In.' }]);
@@ -2789,4 +2798,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, ELF_BARS, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, ELF_BARS, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES };

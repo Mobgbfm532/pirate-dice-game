@@ -131,7 +131,7 @@ export interface TavernSummary {
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
 // cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
-export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; cancelled?: boolean }
+export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; cancelled?: boolean; hit?: boolean }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -615,7 +615,7 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
 // so the name and sound land just as Klarg's hand lifts the die.
-socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null }) => {
+socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean }) => {
     const steal = data.ability === 'Reach Around';
     enqueueMoment(() => {
         const sound = ABILITY_SOUNDS[data.ability];
@@ -624,10 +624,22 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
             playSound('marthaSwitch');
             if (sound) setTimeout(() => playSound(sound), SWITCH_LEAD_MS);
         } else if (sound) playSound(sound);
+        // The Ridgeler's hammer comes down (a won Divine Smite round): the whole screen shakes as it lands.
+        if (data.hit) shakeScreen(250);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
     }, MOMENT_GAP_MS, () => (steal ? Math.max(0, ...table.stolenAt.values()) : 0));
 });
+
+// The whole page shakes (CSS `.screen-shake`, off for reduced motion), `delay` ms from now.
+function shakeScreen(delay: number) {
+    setTimeout(() => {
+        document.body.classList.remove('screen-shake');
+        void document.body.offsetWidth; // (restart the animation)
+        document.body.classList.add('screen-shake');
+        setTimeout(() => document.body.classList.remove('screen-shake'), 1100);
+    }, delay);
+}
 
 // A saved run the server wouldn't open (changed, or opened already): this is a fresh crawl.
 socket.on('resumeFailed', () => {
@@ -937,7 +949,7 @@ export const actions = {
 export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     // (hold: keep it up that much longer, to look at a still of it)
-    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
+    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now() }); },
     celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
     // (hold: keep it up that much longer, to look at a still of it)

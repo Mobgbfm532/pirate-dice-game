@@ -199,7 +199,8 @@ set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`;
-`dev-test-server-portal` starts every crawl at Sylvester; `dev-test-server-b` (:3006, controls :3007) with
+`dev-test-server-portal` starts every crawl at Sylvester, the Yawning Portal's five on 2 lives (`OPPONENT_LIVES`
+env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; this server only, `shared/balance.js` unchanged), and every new run there (a reload starts one) begins with 3 Healings and the Potion Belt, Shield, Loaded Die, Velvet Cushion and Trap Card (`START_SHELF`, `START_KEEPSAKES` env); `dev-test-server-b` (:3006, controls :3007) with
 `client-dev-b` (:5175) is a second, separate pair for checks while the user plays on :3002 (the controls change
 every table on their server).
 
@@ -395,7 +396,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   they win 48% (pure best 53%, the old fixed habits 35%).
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
   Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; the ship since 25 Oct:
-  Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2). Each use costs the player ~10 points of fight win chance. **The Yawning
+  Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2; Stason's Flourish 2 since 3 Nov). Each use costs the player ~10 points of fight win chance. **The Yawning
   Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the knocked-loose die must be rolled before it can be kept again, `turn.mustRollId`, 23 Oct; the
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
   hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it
@@ -407,8 +408,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   the rolls that lost rise as ivory ghost dice, like Double Bubble's);
   the Ridgeler's **Divine Smite** (a round effect `smite`: if he wins the round you lose two
   hearts, each still caught by the Shield, the Lady's Grace or Last Gasp; the round result says
-  "lost 2 lives"); Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he
-  heals one). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
+  "lost 2 lives"; since 3 Nov, the user's: its round glows harder (a stronger gold edge, a shaft of
+  light from the top, sparks down the sides: `.smite-shaft`, `.smite-spark`), and when it lands the
+  hammer comes down: its moment again with `hit: true`, its sound, a white-gold flash with cracks of
+  light (`.smite-crash`) and the whole page shakes (`shakeScreen` in game.ts, `body.screen-shake`));
+  Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he heals one and, since
+  3 Nov, takes one of yours: the Shield catches it, and it never takes your last heart). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
   (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
   glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Back of the Head has the swoosh; since 3 Nov the other four have the user's clips (`InkfireBrand.mp3` 2.9 s, `Flourish.mp3` 1.7 s, `DivineSmite.mp3` 6.7 s, rings on past its 1.85 s moment, `AstralFlood.mp3` 1.4 s; `ABILITY_SOUNDS`). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaPuff.mp3` with Disguises, `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
@@ -633,7 +638,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`inspiringSong`, `Rules.rerollActive`, `throwAgain` shared with Fizzy; `run.song` is 'ready',
   then the first throw's turn key, gone at the next throw). Both moments are `keepsakeActivated`
   with `who: 'The Bard'`, and play the user's `BardTune.mp3` (3 Nov, 1.7 s). On upright phones the
-  Bard stands behind the counter like Thom and Johnny (`.spot-scene.bard .thom-figure`; drawn whole
+  Bard (and since 3 Nov the Cult of Kram, sized by the screen's width as they are two) stands behind the counter like Thom and Johnny (`.spot-scene.bard .thom-figure`; drawn whole
   and smaller he floated above it). **The Cult of Kram**, an event there (`kramChance` 15% of walks no
   thief, Stranger or Darren found; not while sworn): swear fealty (free) and your dice never land
   on 1 for the next `kramFights` (2) fights (`run.kramFights` → `run.kram` per fight, in

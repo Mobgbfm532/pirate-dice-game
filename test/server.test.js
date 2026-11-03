@@ -1831,8 +1831,10 @@ test("the Ridgeler's Divine Smite: if he wins the round, you lose two hearts", a
     room.players[hero.id].lives = 3;
     opponentRollsBig(hero, room);
     const result = waitFor(hero, 'roundResult', () => true, 8000);
+    const hammer = waitFor(hero, 'signatureMove', m => m.ability === 'Divine Smite' && m.hit, 8000);
     await playHand(hero, room, [2, 4, 1, 1, 1, 1]); // 4: he beats it
     assert.match((await result).message, /lost 2 lives/);
+    await hammer; // the hammer lands: its moment again, the sound and the screen shake
     assert.equal(room.players[hero.id].lives, 1);
 });
 
@@ -1855,12 +1857,35 @@ test("Brodor's Astral Flood heals one of his lives once he has lost one", async 
     server.beginTavernRound(code, room);
     assert.equal(room.tavernRun.abilityUsed.astralFlood, undefined, 'nothing to heal yet');
     room.players.BOT_MOLAR.lives = 2;
+    room.players[hero.id].lives = 3;
     const move = waitFor(hero, 'signatureMove', m => m.ability === 'Astral Flood');
     server.beginTavernRound(code, room);
     await move;
     assert.equal(room.players.BOT_MOLAR.lives, 3);
+    assert.equal(room.players[hero.id].lives, 2, 'and takes one of yours');
     server.beginTavernRound(code, room);
     assert.equal(room.players.BOT_MOLAR.lives, 3, 'once a fight');
+    assert.equal(room.players[hero.id].lives, 2);
+});
+
+test("Astral Flood: the Shield catches the life it takes, and it never takes your last", async () => {
+    const hero = await tavernAgainst(fightOf('brodor'), 'Floodproof');
+    const room = roomOf(hero);
+    const code = codeOf(hero);
+    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield', text: '' });
+    room.players.BOT_MOLAR.lives = 2;
+    room.players[hero.id].lives = 3;
+    const shield = waitFor(hero, 'keepsakeActivated', k => k.id === 'bentCopper');
+    server.beginTavernRound(code, room);
+    await shield;
+    assert.equal(room.players[hero.id].lives, 3);
+    // A fresh use with one heart left: he heals, you stay on 1.
+    room.tavernRun.abilityUsed = {};
+    room.players.BOT_MOLAR.lives = 2;
+    room.players[hero.id].lives = 1;
+    server.beginTavernRound(code, room);
+    assert.equal(room.players.BOT_MOLAR.lives, 3);
+    assert.equal(room.players[hero.id].lives, 1);
 });
 
 test("Brodor's Sunglasses: a finished 23 restores a heart", async () => {

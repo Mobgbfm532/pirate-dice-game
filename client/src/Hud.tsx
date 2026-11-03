@@ -870,6 +870,11 @@ function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
             {kind === 'devil' && Array.from({ length: 14 }, (_, i) => <span key={i} className="ember" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.53) % 4}s` }} />)}
             {/* Inkfire's flames keep to the outer tenth of each bottom corner, clear of the badge under Roll and the slot rail. */}
             {kind === 'ink' && Array.from({ length: 10 }, (_, i) => <span key={i} className={`ink-flame ${i % 2 ? 'left' : 'right'}`} style={{ left: i % 2 ? `${(i * 3) % 8}%` : `calc(${92 + (i * 3) % 8}% - 22px)`, animationDelay: `${(i * 0.47) % 2.2}s` }} />)}
+            {/* Divine Smite: holy light pouring down from the top and gold sparks drifting down the edges. */}
+            {kind === 'smite' && <>
+                <span className="smite-shaft" />
+                {Array.from({ length: 16 }, (_, i) => <span key={i} className="smite-spark" style={{ left: i % 2 ? `${(i * 5) % 14}%` : `${86 + (i * 5) % 14}%`, animationDelay: `${(i * 0.41) % 3}s` }} />)}
+            </>}
             {kind === 'stars' && Array.from({ length: 18 }, (_, i) => <span key={i} className="star" style={{ left: `${(i * 53) % 100}%`, top: `${i % 2 ? (i * 29) % 22 : 78 + (i * 17) % 20}%`, animationDelay: `${(i * 0.37) % 2.4}s` }} />)}
         </div>
     );
@@ -974,6 +979,8 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
             {fx && moment.ability === 'Flourish' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
             {fx && moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
+            {/* The hammer lands (a won Smite round): a white-gold flash and cracks of light from the middle. */}
+            {fx && moment.hit && <div className="smite-crash" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <span key={i} style={{ '--a': `${i * 45 + 12}deg` } as React.CSSProperties} />)}</div>}
             {fx && moment.ability === 'Astral Flood' && <div className="flood-light" aria-hidden="true" />}
             {fx && moment.ability === 'The Ace of Spades' && (
                 <>

@@ -45,14 +45,14 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 - Badge: "Inkfire round: your dice can't land on 6"
 
 **Stason Jatham**: Flourish
-- Entrance card: "Stason Jatham rushes in, rapier first. Flourish: for one whole turn, each of his dice rolls twice and he keeps the better."
+- Entrance card: "Stason Jatham rushes in, rapier first. Flourish: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better."
 
 **The Ridgeler**: Divine Smite
 - Entrance card: "The Ridgeler, dragonborn paladin, and Beakbreaker, his warhammer. Divine Smite: for a round, if he wins it, you lose two hearts."
 - Badge: "Divine Smite: lose this round, lose two hearts"
 
 **Brodor**: Astral Flood (boss)
-- Entrance card: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light and heals one."
+- Entrance card: "Brodor, wrestling champion, cleric, and the Yawning Portal's champion. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
 - Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "Keep 'em, champ." Then word reaches the Portal: the Salty Swallow has docked, and her crew are the finest players on the coast." His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow
