@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { SLOT_ROW_Z, TRAY } from './layout';
+import { desktop } from './tuning';
 
 // A richer table (2 Nov, the user's call, new look only): the tray's rails get rounded, varnished
 // edges and a carved cap along their tops, the felt darkens
@@ -161,11 +162,11 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
                 <boxGeometry args={[width + 0.9, 0.07, 0.07]} />
             </mesh>
 
-            {/* Gold coins on the table. */}
-            {stack.map(([x, y, z, r], i) => (
+            {/* Gold coins on the table (not on a computer, the user's call, 3 Nov; a phone's view doesn't reach them). */}
+            {!desktop && stack.map(([x, y, z, r], i) => (
                 <mesh key={`g${i}`} geometry={geo.coin} material={mat.gold} position={[x, y, z]} rotation={[0, r, 0]} castShadow receiveShadow />
             ))}
-            <mesh geometry={geo.coin} material={mat.gold} position={[coinX + 0.55, 0.012, coinZ + 0.42]} rotation={[0.04, 0.3, 0.02]} castShadow receiveShadow />
+            {!desktop && <mesh geometry={geo.coin} material={mat.gold} position={[coinX + 0.55, 0.012, coinZ + 0.42]} rotation={[0.04, 0.3, 0.02]} castShadow receiveShadow />}
         </group>
     );
 }

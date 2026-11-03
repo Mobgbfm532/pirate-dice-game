@@ -1753,7 +1753,6 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
             <div className="interlude-body">
                 <span className="won-portrait" style={avatarStyle(portraitFor(won.defeated))} aria-hidden="true" />
                 <h2 className="interlude-title">{won.defeated} is defeated!</h2>
-                {won.place && <p className="won-fight">Fight {won.place} of {run.totalEncounters}</p>}
                 <ul className="won-rows">
                     {rows.map((row, i) => (
                         <li key={row.key} className={i < step ? 'shown' : ''}>

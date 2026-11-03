@@ -54,8 +54,14 @@ export const settings = () => QUALITY[quality.level];
 // How many pixels to draw per screen point. Phones report 2-3 and get up to the level's dpr; a
 // computer with a mouse usually reports 1, and its dice looked soft (the user, 24 Oct), so it
 // draws at the level's dpr anyway (High twice over), and Auto steps down if that is too slow.
-const desktop = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
-export const renderDpr = () => desktop ? settings().dpr : Math.min(window.devicePixelRatio || 1, settings().dpr);
+export const desktop = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+// A big desktop window at twice over is a lot of pixels (1920x1080: 8.3 million a frame, with the
+// glow and smoothing on top; the user saw ~20 frames a second, 3 Nov), so a computer draws at most
+// DESKTOP_PIXELS a frame: High on 1920x1080 is about 1.3x, a bigger window less, never under 1x.
+const DESKTOP_PIXELS = 3.7e6;
+export const renderDpr = () => desktop
+    ? Math.max(1, Math.min(settings().dpr, Math.sqrt(DESKTOP_PIXELS / Math.max(1, window.innerWidth * window.innerHeight))))
+    : Math.min(window.devicePixelRatio || 1, settings().dpr);
 
 // Frames: the panel's frame rate, and Auto's step down (after a settling time, when frames have
 // stayed slower than ~45 a second for a few seconds; it never steps back up by itself).

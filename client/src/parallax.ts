@@ -8,7 +8,9 @@
 // you are leaning, each axis -1..1, eased so nothing jumps.
 // Off for people whose device asks for reduced motion.
 
-const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+// (A computer with a mouse: the backdrop holds still, the user's call, 3 Nov: no mouse following,
+// no drift.)
+const still = typeof matchMedia !== 'undefined' && (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(pointer: fine)').matches);
 
 const target = { x: 0, y: 0, at: 0 }; // from the mouse; at: when last heard from
 const eased = { x: 0, y: 0 };

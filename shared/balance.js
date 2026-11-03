@@ -12,7 +12,7 @@ module.exports = {
     // aboard the Salty Swallow (Klarg's four).
     opponentLives: {
         molar: 1, frak: 2, danhausen: 3, duke: 3, martha: 3, // McGrath 1 since 21 Oct (the user)
-        sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
+        sylvester: 2, vaelin: 2, stason: 2, ridgeler: 2, brodor: 3, // the Yawning Portal 2, its boss 3 (the user, 3 Nov)
         klarg: 3, rokr: 3, hangman: 3, jaguar: 4
     },
     // How many times each opponent's ability can be used in a fight (from a random round 1-3).

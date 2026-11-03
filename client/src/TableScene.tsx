@@ -179,13 +179,13 @@ function wornPatch() {
 
 // The tabletop (28 Oct, the user's wide painting): laid once over the table instead of tiled, so
 // no plank or nick repeats. It spans TABLE_ART_WIDTH across the middle from the far edge back;
-// past its sides the boards run on (its edge pixels stretch along the planks), and past its near
-// edge it mirrors. Its seven planks come out about a die wide each.
+// past its sides and its near edge it mirrors (until 3 Nov its edge pixels were stretched out
+// sideways, which looked smeared on a wide desktop screen, the user saw). Its seven planks come out about a die wide each.
 const TABLE_ART_WIDTH = 15.7, TABLE_ART_ASPECT = 1584 / 672;
 const TABLE_DEPTH = 24 - TABLE_FAR_EDGE_Z; // the tabletop plane's depth (its width is 40)
 function tabletopTexture() {
     const texture = paintedTexture('table-wide.webp', 1);
-    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapS = THREE.MirroredRepeatWrapping;
     texture.wrapT = THREE.MirroredRepeatWrapping;
     const height = TABLE_ART_WIDTH / TABLE_ART_ASPECT;
     // The plane's u runs 0..1 over x -20..20, its v 1..0 from the far edge to the near end.
@@ -456,7 +456,13 @@ function Finish() {
 function QualityWatch() {
     const { setDpr } = useThree();
     const version = useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
-    useEffect(() => { setDpr(renderDpr()); }, [version, setDpr]);
+    useEffect(() => {
+        setDpr(renderDpr());
+        // (A computer's pixel budget depends on the window's size.)
+        const resized = () => setDpr(renderDpr());
+        window.addEventListener('resize', resized);
+        return () => window.removeEventListener('resize', resized);
+    }, [version, setDpr]);
     useFrame((_, delta) => noteFrame(delta));
     return null;
 }

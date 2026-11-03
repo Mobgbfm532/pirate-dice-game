@@ -1466,7 +1466,7 @@ test("the run is fourteen fights: the Ghoul and Gourd, the Yawning Portal, then 
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
         'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 4]);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(4).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);

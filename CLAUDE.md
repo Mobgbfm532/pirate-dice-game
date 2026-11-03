@@ -86,7 +86,9 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   carved cap, the tray's soft shadow on the tabletop and the felt darkening by the rails; no brass on
   the tray (the inlay and corner brackets of 2 Nov are gone). The new look keeps a brass front edge
   on the slot rail, its soft shadow on the tabletop, and a few struck gold "24" coins right of the
-  slot rail (the metals carry a little emissive glow, since the room's reflection is faint). The
+  slot rail (the metals carry a little emissive glow, since the room's reflection is faint; the coins
+  aren't drawn on a computer since 3 Nov, the user's call). The tabletop painting mirrors past its sides
+  (it was stretched there, which looked smeared on a wide desktop window, 3 Nov). The
   classic look has its plain box rails.
 - **The camera on big moments** (3 Nov, the user's pick, new look only; `cameraMoves.ts`, used by
   TableScene's `CameraRig` and `Room`): a perfect hand (Perfect 24 / ...4?) leans the camera in over
@@ -96,10 +98,12 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   a small turn of the camera after the HUD anchors are measured, and Room moves the tavern and the
   bust by the same px (`shake.x/y`). Abilities with a painting move nothing (their stage covers the
   table). Off with `prefers-reduced-motion`.
-- **Depth behind the table** (1 Nov, new look only; `parallax.ts`, used in `Room.tsx`): leaning (the mouse on a computer, else a slow breathing drift after 4 s; a phone's tilt moved it until 3 Nov, taken out at the user's request) shifts the tavern up to `PARALLAX.room` px and the opponent `PARALLAX.bust` px; the table never moves. Inside the painting its sides and floor shift up to `roomNear` px more than its far wall (the `near` uniform warps the texture). The tavern is drawn enlarged about its floor line so no edge shows. Off with `prefers-reduced-motion`.
+- **Depth behind the table** (1 Nov, new look only; `parallax.ts`, used in `Room.tsx`): leaning (the mouse on a computer, else a slow breathing drift after 4 s; a phone's tilt moved it until 3 Nov, taken out at the user's request) shifts the tavern up to `PARALLAX.room` px and the opponent `PARALLAX.bust` px; the table never moves. Inside the painting its sides and floor shift up to `roomNear` px more than its far wall (the `near` uniform warps the texture). The tavern is drawn enlarged about its floor line so no edge shows. Off with `prefers-reduced-motion`, and since 3 Nov on a computer with a mouse (the user: the backdrop holds still there).
 - `tuning.ts` `renderDpr()`: pixels drawn per screen point. Computers with a mouse draw at the
   quality level's dpr (High 2x) even when the screen reports 1x, so the dice are sharp on desktop
-  (24 Oct); phones use their own up to that.
+  (24 Oct); phones use their own up to that. Since 3 Nov a computer draws at most `DESKTOP_PIXELS`
+  (3.7 million) a frame: High at 2x on a 1920x1080 window was 8.3 million plus glow and smoothing, and
+  the user saw ~20 frames a second; it is worked out again as the window resizes.
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray (since 28 Oct the tabletop is the user's wide painting `table-wide.webp`, laid once and not tiled: `tabletopTexture`, clamped at its sides, mirrored past its near edge),
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (since 3 Nov upright phones keep the whole tray, rails too, in
@@ -203,8 +207,8 @@ set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`;
-`dev-test-server-portal` starts every crawl at Sylvester, the Yawning Portal's five on 2 lives (`OPPONENT_LIVES`
-env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; this server only, `shared/balance.js` unchanged), and every new run there (a reload starts one) begins with 3 Healings and the Potion Belt, Shield, Loaded Die, Velvet Cushion and Trap Card (`START_SHELF`, `START_KEEPSAKES` env); `dev-test-server-b` (:3006, controls :3007) with
+`dev-test-server-portal` starts every crawl at Sylvester (opponents' lives can be changed on a dev server only with the `OPPONENT_LIVES`
+env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; `shared/balance.js` unchanged), and every new run there (a reload starts one) begins with 3 Healings and the Potion Belt, Shield, Loaded Die, Velvet Cushion and Trap Card (`START_SHELF`, `START_KEEPSAKES` env); `dev-test-server-b` (:3006, controls :3007) with
 `client-dev-b` (:5175) is a second, separate pair for checks while the user plays on :3002 (the controls change
 every table on their server).
 
@@ -378,7 +382,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
   glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine and Johnny Elf Bar and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Hearts reset to 3 each fight (20 Oct; 4 after the
-  Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
+  Lady's Favour); the opponents have 1 | 2, 3, 3, 3 | 2, 2, 2, 2, 3 (since 3 Nov) | 3, 3, 3, 4 lives (McGrath 1 since 21 Oct) (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
@@ -535,9 +539,6 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **The Lady's Grace and the Bard's songs (3 Nov, the user's call)** play like a Thonic drunk: their
   painted icon rises big in a glow of its colour and sways, with sparkles (the Lady) or notes (the
   Bard), over a parchment label (`moment.blessing`, `.blessing-moment`, `--liquid` per id).
-- **Danhausen, wackier (3 Nov, a trial):** once seated his bust bobs to a beat, squashes and stretches
-  on each bounce and every 6.5 s does a springy double take (`danhausenWobble` in Room.tsx; new look,
-  not with reduced motion).
 - **Headless stills of moments:** `test/shots.mjs ... moment=perfect4|grace|bard hold=900` holds a
   moment at 900 ms (frozen clock and animations); `frames=70,100` saves frames of the table's own
   motion for an animation; `dice=<id>` shows a set.
