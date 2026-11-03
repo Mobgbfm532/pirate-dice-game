@@ -63,7 +63,8 @@ function CameraRig() {
         // table's far edge goes just under it, and the table grows into the space.
         const rivals = screenInsets.top / size.height;
         const top = rivals > 0.03 && rivals < 0.5
-            ? Math.min(portrait ? 0.32 : 0.33, rivals + (portrait ? 0.015 : 0.03))
+            // (with a band under the bar for the points after a throw, about a line of large text)
+            ? Math.min(portrait ? 0.32 : 0.33, rivals + (portrait ? 46 : 66) / size.height)
             : portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
 
         // On narrow screens the table is as wide as the screen allows, dice still big enough to tap.

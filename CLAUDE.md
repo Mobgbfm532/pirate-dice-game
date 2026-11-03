@@ -169,7 +169,10 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   bar's bottom is `screenInsets.top`, and the camera puts the table's far edge just under it, so the
   table grows where the screen's height was the limit (desktops about a third bigger; upright phones
   only where the width isn't the limit already, e.g. 360x640). Phones on their side keep every
-  player in the column at the top left instead (`useMedia`). `test/shots.mjs table=<code>` shoots one;
+  player in the column at the top left instead (`useMedia`). The points after a throw (the callout)
+  sit in a band between the bar and the table (`.hud.multiplayer .callout`, `--rivals-bottom`; the
+  camera leaves 46 px on phones, 66 px elsewhere): above the far edge they landed on the header.
+  Names shrink to fit their card (`FitName`, down to 62%) before any "…" (all chips and cards). `test/shots.mjs table=<code>` shoots one;
   seat others there first with a few socket.io clients.
   `Backdrop.tsx`: where the scene behind the table goes and who sits there (`SCENES` by opponent:
   the tavern, or outside the Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`,

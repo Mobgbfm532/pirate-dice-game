@@ -261,7 +261,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                     <div key={id} className={`player ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${id === snap.myId ? 'me' : ''}`}>
                         <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                         <div>
-                            <div className="name">{p.name}</div>
+                            <FitName name={p.name} />
                             {/* A Tavern Crawl opponent's hearts are out of their own lives, not yours. */}
                             <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} fight={fightKey(state)} />
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
@@ -272,6 +272,31 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
             })}
         </div>
     );
+}
+
+// A player's name, shrunk to fit its card when it's long (down to MIN_FIT of its size), so all 15
+// letters a name may have show instead of "Barthol…" (the user, 3 Nov). Only past that the "…".
+const MIN_FIT = 0.62;
+function FitName({ name }: { name: string }) {
+    const el = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        const node = el.current;
+        if (!node) return;
+        // (Set on the element itself: measured at its own size from the stylesheet each time.)
+        const fit = () => {
+            node.style.fontSize = '';
+            const room = node.clientWidth, wants = node.scrollWidth;
+            if (!(wants > room + 1 && room > 0)) return;
+            const size = parseFloat(getComputedStyle(node).fontSize);
+            node.style.fontSize = `${(size * Math.max(MIN_FIT, room / wants)).toFixed(2)}px`;
+        };
+        fit();
+        const observer = new ResizeObserver(fit);
+        observer.observe(node.parentElement ?? node);
+        document.fonts?.ready.then(fit); // (the title font arriving changes the widths)
+        return () => observer.disconnect();
+    }, [name]);
+    return <div ref={el} className="name">{name}</div>;
 }
 
 // Whether a media query matches now, kept up to date.
@@ -296,7 +321,10 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
     useEffect(() => {
         const el = bar.current;
         if (!el) return;
-        const measure = () => { screenInsets.top = el.getBoundingClientRect().bottom; };
+        const measure = () => {
+            screenInsets.top = el.getBoundingClientRect().bottom;
+            document.documentElement.style.setProperty('--rivals-bottom', `${Math.round(screenInsets.top)}px`);
+        };
         const observer = new ResizeObserver(measure);
         observer.observe(el);
         window.addEventListener('resize', measure);
@@ -314,7 +342,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
                     <div key={id} className={`player rival ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'}`}>
                         <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                         <div className="who">
-                            <div className="name">{p.name}</div>
+                            <FitName name={p.name} />
                             <Hearts lives={p.lives} starting={state.startingLives} fight={fightKey(state)} />
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{p.connected ? scoreText(p) : 'Away'}</div>
@@ -2009,7 +2037,7 @@ export function Hud() {
         .sort((x, y) => Number(y === snap.myId) - Number(x === snap.myId)) : [];
 
     return (
-        <div className="hud">
+        <div className={`hud ${multiplayer ? 'multiplayer' : ''}`}>
             <header>
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
                 <span className="room">{snap.roomLabel}</span>

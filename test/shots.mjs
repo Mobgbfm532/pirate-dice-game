@@ -32,6 +32,7 @@ const MOMENTS = {
     shield: `preview.ability('Keepsake', 'Shield', { keepsake: 'bentCopper' })`,
     perfect: `table.celebrateAt = performance.now()`,
     perfect4: `preview.celebrate('perfect4')`,
+    points: `preview.callout('17 points')`,
     grace: `preview.ability('Shrine to the Lady', "The Lady's Grace", { text: 'The Lady saves you from the dust', extra: '♥ saved', blessing: 'ladysGrace' })`,
     bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`
 };

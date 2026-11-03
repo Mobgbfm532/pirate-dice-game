@@ -215,6 +215,9 @@ header {
 }
 .rivals.count-1 { grid-template-columns: minmax(0, 220px); justify-content: center; }
 .rivals.count-2, .rivals.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* The points and "Dust!" after a throw, in a band of their own between the bar and the table (it
+   sat just above the table's far edge, which here is right under the bar: over the header). */
+.hud.multiplayer .callout { top: calc((var(--rivals-bottom, 120px) + var(--horizon, 30vh)) / 2); transform: translate(-50%, -50%); font-size: clamp(1.3rem, 4.6vw, 2.1rem); }
 .rivals-empty { grid-column: 1 / -1; text-align: center; color: var(--parchment-dim); font-size: 0.9rem; padding: 10px; }
 .player.rival { gap: 6px; padding: 4px 6px 4px 4px; border-radius: 10px; }
 .player.rival .portrait { width: 30px; height: 30px; }
@@ -555,6 +558,8 @@ footer {
         overflow: visible;
         max-width: none;
     }
+    /* (A narrow column: a long name shrinks to fit instead of the card reaching the dice.) */
+    .side-players .player .name { max-width: 5.6em; }
 }
 
 .mute, .leave {
