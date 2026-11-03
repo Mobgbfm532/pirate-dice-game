@@ -227,14 +227,51 @@ header {
 .player.rival .score { font-size: 1.05rem; min-width: 1.7em; margin-left: 0; padding: 0 4px; }
 .player.rival .score.dust { font-size: 0.8rem; }
 .player.rival.current::after { left: 18px; top: -7px; }
-/* Narrow phones: two cards a row (three rows at most); three cut the names to a letter. */
 @media (max-width: 419px) {
-    .rivals.count-3, .rivals.count-5, .rivals.count-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    /* (Seven or more: back to three a row, smaller, so the bar stays off the table.) */
-    .rivals.many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    /* (Three a row stays two rows deep, off the table; the portraits a little smaller to leave the
+       names room. Seven or more: smaller still.) */
+    .rivals.count-5 .player.rival .portrait, .rivals.count-6 .player.rival .portrait { width: 24px; height: 24px; }
     .rivals.many .player.rival .portrait { width: 22px; height: 22px; }
     .rivals.many .player.rival .score { font-size: 0.85rem; min-width: 1.4em; }
+    /* (Three a row: a finished score a little smaller, so "Dust" leaves the hearts room.) */
+    .rivals:is(.count-3, .count-5, .count-6, .many) .player.rival .score.final { font-size: 1.1rem; }
+    .rivals:is(.count-3, .count-5, .count-6, .many) .player.rival .score.final.dust { font-size: 0.78rem; padding: 0 3px; }
 }
+/* Every card: the name across the whole card, the hearts and the score under it (beside a big
+   score a name had no room left: "Bartholome…"). */
+.player.rival {
+    display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "pic name name" "pic hearts score";
+    column-gap: 6px; row-gap: 0; align-items: center;
+}
+.player.rival .who { display: contents; }
+.player.rival .portrait { grid-area: pic; }
+.player.rival .name { grid-area: name; min-width: 0; line-height: 1.2; }
+.player.rival .hearts { grid-area: hearts; align-self: center; }
+.player.rival .score { grid-area: score; justify-self: end; line-height: 1.25; }
+.seat-col .player.rival { column-gap: 10px; row-gap: 2px; }
+/* A finished score: bigger, with a pop as it lands, so what there is to beat reads at a glance. */
+.player.rival .score.final { font-size: 1.35rem; min-width: 2em; animation: score-land 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+.player.rival .score.final.scored { color: #fff3c4; background: rgba(120, 84, 18, 0.55); box-shadow: inset 0 0 0 1px rgba(255, 213, 79, 0.5); }
+.player.rival.finished:not(.current) { border-color: rgba(255, 213, 79, 0.45); }
+@keyframes score-land { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); } }
+/* Big screens: the players sit either side of the tray (a column each), level with the felt. */
+.rivals.seats { display: block; margin: 0; height: 0; }
+.rivals.seats .rivals-empty { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); }
+.seat-col {
+    position: fixed; top: var(--felt-y, 45%); transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 12px; width: 220px;
+}
+/* (the tray's left edge mirrors its right one, --rail-right, about the table's centre line) */
+.seat-col.left { right: calc(100vw - 2 * var(--table-x, 50vw) + var(--rail-right, 75vw) + 24px); width: min(230px, calc(2 * var(--table-x, 50vw) - var(--rail-right, 75vw) - 40px)); }
+.seat-col.right { left: calc(var(--rail-right, 75vw) + 24px); width: min(230px, calc(100vw - var(--rail-right, 75vw) - 40px)); }
+.seat-col .player.rival { padding: 8px 12px 8px 8px; gap: 10px; border-radius: 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
+
+.seat-col .player.rival .portrait { width: 46px; height: 46px; }
+.seat-col .player.rival .name { font-size: 1.05rem; }
+.seat-col .player.rival .hearts { font-size: 0.9rem; }
+.seat-col .player.rival .score { font-size: 1.3rem; }
+.seat-col .player.rival .score.final { font-size: 1.7rem; }
+.seat-col .player.rival.current::after { left: 32px; top: -6px; }
 /* Wider screens: one row, the cards a comfortable size, centred. */
 @media (min-width: 700px) {
     .rivals, .rivals.count-1, .rivals.count-2, .rivals.count-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 210px)); justify-content: center; }

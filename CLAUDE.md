@@ -172,7 +172,13 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   player in the column at the top left instead (`useMedia`). The points after a throw (the callout)
   sit in a band between the bar and the table (`.hud.multiplayer .callout`, `--rivals-bottom`; the
   camera leaves 46 px on phones, 66 px elsewhere): above the far edge they landed on the header.
-  Names shrink to fit their card (`FitName`, down to 62%) before any "…" (all chips and cards). `test/shots.mjs table=<code>` shoots one;
+  Names shrink to fit their card (`FitName`, down to 62%, measured to the fraction of a pixel and again
+  as fonts load) before any "…" (all chips and cards). Since 3 Nov (the user's picks 3 and 4): each
+  card has the name across the top and hearts + score under it; a finished score is big and pops in
+  (`.score.final`), so what there is to beat reads at a glance; and a big screen (`min-width: 1180px`,
+  `min-height: 640px`) seats the players in a column either side of the tray, level with the felt
+  (`.seat-col`, sized to the space beside the tray from `--table-x`/`--rail-right`), the table then
+  fitting under the header. `test/shots.mjs table=<code>` shoots one;
   seat others there first with a few socket.io clients.
   `Backdrop.tsx`: where the scene behind the table goes and who sits there (`SCENES` by opponent:
   the tavern, or outside the Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`,

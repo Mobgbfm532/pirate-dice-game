@@ -283,18 +283,25 @@ function FitName({ name }: { name: string }) {
         const node = el.current;
         if (!node) return;
         // (Set on the element itself: measured at its own size from the stylesheet each time.)
+        // (The text's own width to the fraction of a pixel: whole-pixel widths let a name that only
+        // just fits tip into "…".)
+        const range = document.createRange();
         const fit = () => {
             node.style.fontSize = '';
-            const room = node.clientWidth, wants = node.scrollWidth;
-            if (!(wants > room + 1 && room > 0)) return;
+            range.selectNodeContents(node);
+            const room = node.clientWidth, wants = range.getBoundingClientRect().width;
+            if (!(wants > room - 0.5 && room > 0)) return;
             const size = parseFloat(getComputedStyle(node).fontSize);
-            node.style.fontSize = `${(size * Math.max(MIN_FIT, room / wants)).toFixed(2)}px`;
+            node.style.fontSize = `${(size * Math.max(MIN_FIT, (room - 1) / wants)).toFixed(2)}px`;
         };
         fit();
         const observer = new ResizeObserver(fit);
-        observer.observe(node.parentElement ?? node);
-        document.fonts?.ready.then(fit); // (the title font arriving changes the widths)
-        return () => observer.disconnect();
+        observer.observe(node); // (its own box: a seat card's .who has none, display: contents)
+        if (node.parentElement) observer.observe(node.parentElement);
+        // (The title font arriving changes the widths: fit again once it has.)
+        document.fonts?.ready.then(fit);
+        document.fonts?.addEventListener('loadingdone', fit);
+        return () => { observer.disconnect(); document.fonts?.removeEventListener('loadingdone', fit); };
     }, [name]);
     return <div ref={el} className="name">{name}</div>;
 }
@@ -317,38 +324,58 @@ function useMedia(query: string) {
 // phone), in turn order, and your own chip stays in the footer. The camera keeps the table below
 // the bar (screenInsets.top) and lets it grow into the rest.
 function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
+    // A big screen seats them round the table instead (the user's pick, 3 Nov): a column of cards
+    // either side of the tray, like people sitting there; the bar only where the sides are too narrow.
+    const seats = useMedia('(min-width: 1180px) and (min-height: 640px)');
     const bar = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const el = bar.current;
         if (!el) return;
+        // The table goes below this: the bar's bottom, or with seats the header's (the points after a
+        // throw still get their band under it).
         const measure = () => {
-            screenInsets.top = el.getBoundingClientRect().bottom;
-            document.documentElement.style.setProperty('--rivals-bottom', `${Math.round(screenInsets.top)}px`);
+            const top = seats ? (document.querySelector('.hud header')?.getBoundingClientRect().bottom ?? 0) : el.getBoundingClientRect().bottom;
+            screenInsets.top = top;
+            document.documentElement.style.setProperty('--rivals-bottom', `${Math.round(top)}px`);
         };
         const observer = new ResizeObserver(measure);
         observer.observe(el);
         window.addEventListener('resize', measure);
         measure();
         return () => { observer.disconnect(); window.removeEventListener('resize', measure); screenInsets.top = 0; };
-    }, []);
+    }, [seats]);
     const others = state.playerOrder.filter(id => id !== snap.myId && state.players[id]);
+    const card = (id: string) => {
+        const p = state.players[id];
+        const inRound = state.roundPlayers.includes(id) && p.connected;
+        const finished = p.connected && p.score !== null && p.lives > 0;
+        return (
+            <div key={id} className={`player rival ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'} ${finished ? 'finished' : ''}`}>
+                <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
+                <div className="who">
+                    <FitName name={p.name} />
+                    <Hearts lives={p.lives} starting={state.startingLives} fight={fightKey(state)} />
+                </div>
+                {/* Their score this round, big once they've finished: what you have to beat (keyed, so
+                    it lands with a pop each time it changes). */}
+                <div key={`${p.score}:${p.busted}`} className={`score ${scoreClass(state, id)} ${finished ? 'final' : ''}`}>{p.connected ? scoreText(p) : 'Away'}</div>
+            </div>
+        );
+    };
+    if (seats) {
+        const half = Math.ceil(others.length / 2);
+        return (
+            <div ref={bar} className="rivals seats">
+                {others.length === 0 && <span className="rivals-empty">Waiting for travelers to join…</span>}
+                <div className="seat-col left">{others.slice(0, half).map(card)}</div>
+                <div className="seat-col right">{others.slice(half).map(card)}</div>
+            </div>
+        );
+    }
     return (
         <div ref={bar} className={`rivals count-${Math.min(others.length, 6)} ${others.length > 6 ? 'many' : ''}`}>
             {others.length === 0 && <span className="rivals-empty">Waiting for travelers to join…</span>}
-            {others.map(id => {
-                const p = state.players[id];
-                const inRound = state.roundPlayers.includes(id) && p.connected;
-                return (
-                    <div key={id} className={`player rival ${id === state.currentTurnId ? 'current' : ''} ${inRound ? '' : 'out'}`}>
-                        <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
-                        <div className="who">
-                            <FitName name={p.name} />
-                            <Hearts lives={p.lives} starting={state.startingLives} fight={fightKey(state)} />
-                        </div>
-                        <div className={`score ${scoreClass(state, id)}`}>{p.connected ? scoreText(p) : 'Away'}</div>
-                    </div>
-                );
-            })}
+            {others.map(card)}
         </div>
     );
 }
