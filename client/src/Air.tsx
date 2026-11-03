@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { flame } from './look';
-import { settings, tuning } from './tuning';
+import { desktop, settings, tuning } from './tuning';
 
 // The look preview's living air (option 1, step E, 23 Oct): what moves in the room besides the
 // dice. Dust drifting in the candlelight over the table (3D, DustMotes); and, on the paintings
@@ -155,7 +155,8 @@ export class ScreenAir {
         const room = f.room;
         if (room && room.air) {
             const scale = room.height / 700;
-            if (room.air.fire) {
+            // (No embers on a computer, the user's call, 3 Nov: frames there count for more.)
+            if (room.air.fire && !desktop) {
                 const [u, v] = room.air.fire;
                 const rate = (f.devil ? 26 : 7) * tuning.air * settings().particles;
                 this.emberDue += dt * rate;

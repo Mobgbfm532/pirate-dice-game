@@ -39,6 +39,21 @@ const write = (key: string, value: unknown) => { try { localStorage.setItem(key,
 // Read every frame by the scene, so it's a plain object; changes notify the panel and the finish.
 export const tuning: Tuning = read('tavernTune', { ...TUNE_DEFAULTS });
 export const quality = read<{ level: Quality; auto: boolean }>('tavernQuality', { level: 'high', auto: true });
+// A computer with a mouse (as opposed to a phone or tablet).
+export const desktop = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+// A computer with built-in Intel graphics starts on Low when Auto (the user's laptop, an Iris Xe on
+// battery, measured 3 Nov at 1920x1080: High 7-32 frames a second, Medium 14-19, Low 25-51).
+const integrated = (() => {
+    if (!desktop || typeof document === 'undefined') return false;
+    try {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        const info = gl?.getExtension('WEBGL_debug_renderer_info');
+        const name = info ? String(gl!.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+        gl?.getExtension('WEBGL_lose_context')?.loseContext();
+        return /intel/i.test(name);
+    } catch { return false; }
+})();
+if (integrated && quality.auto && quality.level !== 'low') quality.level = 'low';
 
 const listeners = new Set<() => void>();
 let version = 0;
@@ -50,17 +65,22 @@ export const tuneStore = {
 export function setTune(key: keyof Tuning, value: number) { tuning[key] = value; write('tavernTune', tuning); changed(); }
 export function resetTune() { Object.assign(tuning, TUNE_DEFAULTS); write('tavernTune', tuning); changed(); }
 export function setQuality(level: Quality, auto = quality.auto) { quality.level = level; quality.auto = auto; write('tavernQuality', quality); changed(); }
-export const settings = () => QUALITY[quality.level];
+// On a computer the edges are smoothed at most twice over (four times over cost more than it gave:
+// it draws at more than 1x already).
+export const settings = (): QualitySettings => {
+    const q = QUALITY[quality.level];
+    return desktop ? { ...q, multisampling: Math.min(q.multisampling, 2) } : q;
+};
 // How many pixels to draw per screen point. Phones report 2-3 and get up to the level's dpr; a
 // computer with a mouse usually reports 1, and its dice looked soft (the user, 24 Oct), so it
 // draws at the level's dpr anyway (High twice over), and Auto steps down if that is too slow.
-export const desktop = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
 // A big desktop window at twice over is a lot of pixels (1920x1080: 8.3 million a frame, with the
 // glow and smoothing on top; the user saw ~20 frames a second, 3 Nov), so a computer draws at most
 // DESKTOP_PIXELS a frame: High on 1920x1080 is about 1.3x, a bigger window less, never under 1x.
-const DESKTOP_PIXELS = 3.7e6;
+// (3 Nov: 3.7 million was still too many for built-in graphics: 2.6 million on High, 2.1 on Medium.)
+const DESKTOP_PIXELS: Record<Quality, number> = { high: 2.6e6, medium: 2.1e6, low: 0 };
 export const renderDpr = () => desktop
-    ? Math.max(1, Math.min(settings().dpr, Math.sqrt(DESKTOP_PIXELS / Math.max(1, window.innerWidth * window.innerHeight))))
+    ? Math.max(1, Math.min(settings().dpr, Math.sqrt(DESKTOP_PIXELS[quality.level] / Math.max(1, window.innerWidth * window.innerHeight))))
     : Math.min(window.devicePixelRatio || 1, settings().dpr);
 
 // Frames: the panel's frame rate, and Auto's step down (after a settling time, when frames have
@@ -70,9 +90,10 @@ export function noteFrame(delta: number) {
     if (!(delta > 0) || delta > 0.25) return; // a hidden tab or a hitch: not the device's pace
     average += (delta - average) * 0.05;
     running += delta;
-    if (!quality.auto || running < 6) return;
+    // (A computer judges sooner: a slow desktop was stuck on High for over 10 s.)
+    if (!quality.auto || running < (desktop ? 4 : 6)) return;
     slowFor = average > 1 / 45 ? slowFor + delta : 0;
-    if (slowFor > 4 && quality.level !== 'low') {
+    if (slowFor > (desktop ? 2.5 : 4) && quality.level !== 'low') {
         setQuality(quality.level === 'high' ? 'medium' : 'low', true);
         slowFor = 0;
         running = 3; // a moment to settle at the new level before judging again

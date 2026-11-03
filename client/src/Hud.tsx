@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -248,6 +248,7 @@ const fightKey = (state: GameState) => (state.tavernRun ? `${(state.tavernRun.se
 function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: GameState; ids: string[]; className?: string }) {
     // On phones the row scrolls sideways: keep whoever is rolling in view.
     const row = useRef<HTMLDivElement>(null);
+    const multiplayer = state.mode !== 'tavern-crawl' && !state.players[BOT_ID];
     useEffect(() => {
         row.current?.querySelector('.player.current')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
     }, [state.currentTurnId]);
@@ -267,6 +268,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
+                        {multiplayer && <SeatCallout snap={snap} id={id} />}
                     </div>
                 );
             })}
@@ -304,6 +306,14 @@ function FitName({ name }: { name: string }) {
         return () => { observer.disconnect(); document.fonts?.removeEventListener('loadingdone', fit); };
     }, [name]);
     return <div ref={el} className="name">{name}</div>;
+}
+
+// At a multiplayer table "The Early Ross!" and "Didn't Bite!" (only those) flash over the roller's
+// nameplate, theirs or your own chip (the user's call, 3 Nov), instead of over the table.
+function SeatCallout({ snap, id }: { snap: Snapshot; id: string }) {
+    const c = snap.callout;
+    if (!c || c.playerId !== id || !MULTIPLAYER_CALLOUTS[c.kind]) return null;
+    return <div key={c.key} className="seat-callout" style={{ '--callout': c.color } as React.CSSProperties} aria-live="polite">{MULTIPLAYER_CALLOUTS[c.kind]}</div>;
 }
 
 // Whether a media query matches now, kept up to date.
@@ -359,6 +369,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
                 {/* Their score this round, big once they've finished: what you have to beat (keyed, so
                     it lands with a pop each time it changes). */}
                 <div key={`${p.score}:${p.busted}`} className={`score ${scoreClass(state, id)} ${finished ? 'final' : ''}`}>{p.connected ? scoreText(p) : 'Away'}</div>
+                <SeatCallout snap={snap} id={id} />
             </div>
         );
     };
@@ -2092,7 +2103,7 @@ export function Hud() {
             {tunePanel && tuneOpen && <TuningPanel onClose={() => setTuneOpen(false)} />}
 
             <div className="callout-area" aria-live="polite">
-                {snap.callout && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}
+                {snap.callout && !multiplayer && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}
             </div>
 
             {/* The round result sits in the middle of the green felt (the user's call, 3 Nov), the rest higher up. */}

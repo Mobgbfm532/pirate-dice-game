@@ -168,7 +168,7 @@ export interface Snapshot {
     isMyTurn: boolean;
     rolling: boolean;
     endingTurn: boolean;
-    callout: { text: string; color: string; key: string } | null;
+    callout: { text: string; color: string; key: string; kind: string; playerId: string } | null;
     toasts: Toast[];
     modal: Modal | null;
     leaderboard: LeaderboardEntry[];
@@ -311,6 +311,11 @@ function computeIsMyTurn(state: GameState | null, turn: TurnView | null) {
 
 // No commentary in a Tavern Crawl: the opponents' signature moves are the show there.
 const quietTable = () => snapshot.state?.mode === 'tavern-crawl';
+// A multiplayer table (no bot, not a Tavern Crawl): its only words in play are the two callouts
+// over the roller's nameplate (the user's call, 3 Nov; Hud's SeatCallout), and a perfect hand's
+// celebration.
+export const multiplayerTable = () => !!snapshot.state && snapshot.state.mode !== 'tavern-crawl' && !snapshot.state.players[BOT_ID];
+export const MULTIPLAYER_CALLOUTS: Record<string, string> = { earlyRoss: 'The Early Ross!', didntBite: "Didn't Bite!" };
 
 function setCallout(turn: TurnView | null, callout: string | null, outcome: TurnOutcome | null) {
     if (!turn || quietTable()) { if (snapshot.callout) update({ callout: null }); return; }
@@ -318,7 +323,7 @@ function setCallout(turn: TurnView | null, callout: string | null, outcome: Turn
     const shown = calloutText(callout, mine, turn.playerId === BOT_ID, outcome);
     const key = `${turn.key}|${callout}`;
     if (snapshot.callout && snapshot.callout.key === key) return;
-    update({ callout: shown ? { ...shown, key } : null });
+    update({ callout: shown && callout ? { ...shown, key, kind: callout, playerId: turn.playerId } : null });
 }
 
 function resetTrayForNewTurn() {
@@ -686,11 +691,12 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
 // the run (ends): the fight summary (or the run-over screen) comes up instead.
 socket.on('roundResult', (data: { message: string; ends?: boolean }) => {
     if (data.ends) return;
-    enqueueMoment(() => showToast('Round result', data.message, 'result', RESULT_SHOW_MS), RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
+    // (At a multiplayer table the cards' hearts tell it: no words, but the same pause.)
+    enqueueMoment(() => { if (!multiplayerTable()) showToast('Round result', data.message, 'result', RESULT_SHOW_MS); }, RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
 });
 
 socket.on('displayMessage', (data: { text: string }) => {
-    if (data.text && !quietTable()) showToast('', data.text, 'info', 2600);
+    if (data.text && !quietTable() && !multiplayerTable()) showToast('', data.text, 'info', 2600);
 });
 
 socket.on('receiveReaction', (data: { name: string; emoji: string }) => {
@@ -953,8 +959,9 @@ export const preview = {
     // (hold: keep it up that much longer, to look at a still of it)
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now() }); },
-    // The line over the table after a throw (e.g. callout('17 points')).
-    callout(text: string, color = '#9ccc65') { update({ callout: { text, color, key: String(performance.now()) } }); },
+    // The line over the table after a throw (e.g. callout('17 points')); kind and playerId put a
+    // multiplayer callout on that player's nameplate (callout('', '#4fc3f7', 'didntBite', id)).
+    callout(text: string, color = '#9ccc65', kind = 'result', playerId = '') { update({ callout: { text, color, key: String(performance.now()), kind, playerId } }); },
     celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
     // (hold: keep it up that much longer, to look at a still of it)
     devil(who: string | null = null, hold = 0) { table.devilAt = performance.now(); update({ devil: { at: performance.now() + hold, who } }); },

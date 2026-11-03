@@ -103,7 +103,12 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   quality level's dpr (High 2x) even when the screen reports 1x, so the dice are sharp on desktop
   (24 Oct); phones use their own up to that. Since 3 Nov a computer draws at most `DESKTOP_PIXELS`
   (3.7 million) a frame: High at 2x on a 1920x1080 window was 8.3 million plus glow and smoothing, and
-  the user saw ~20 frames a second; it is worked out again as the window resizes.
+  the user saw ~20 frames a second; it is worked out again as the window resizes. Since 3 Nov
+  (`DESKTOP_PIXELS` per level: High 2.6 million, Medium 2.1): a computer smooths edges at most 2x
+  (MSAA), draws no fireplace embers (the user's OK), Auto judges sooner there (after 4 s, 2.5 s slow),
+  and with built-in Intel graphics (read from WebGL's renderer name) Auto starts on Low: the user's
+  Iris Xe on battery measured High 7-32 frames a second at 1920x1080, Medium 14-19, Low 25-51
+  (headless Chrome on the real GPU, `--use-angle=d3d11`; the numbers swing a lot on battery).
 - `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray (since 28 Oct the tabletop is the user's wide painting `table-wide.webp`, laid once and not tiled: `tabletopTexture`, clamped at its sides, mirrored past its near edge),
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (since 3 Nov upright phones keep the whole tray, rails too, in
@@ -178,7 +183,11 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   (`.score.final`), so what there is to beat reads at a glance; and a big screen (`min-width: 1180px`,
   `min-height: 640px`) seats the players in a column either side of the tray, level with the felt
   (`.seat-col`, sized to the space beside the tray from `--table-x`/`--rail-right`), the table then
-  fitting under the header. `test/shots.mjs table=<code>` shoots one;
+  fitting under the header. Since 3 Nov its only words in play are "The Early Ross!" and "Didn't Bite!",
+  flashed over the roller's nameplate (`SeatCallout`, `.seat-callout`, `MULTIPLAYER_CALLOUTS` in
+  game.ts) and a perfect hand's celebration; the points, "Dust!", the round result and the server's
+  messages (+1 life, sudden death) don't show there (`multiplayerTable()`), and the camera keeps only
+  a small gap under the bar. `test/shots.mjs table=<code>` shoots one;
   seat others there first with a few socket.io clients.
   `Backdrop.tsx`: where the scene behind the table goes and who sits there (`SCENES` by opponent:
   the tavern, or outside the Ghoul and Gourd for McGrath; each with its own `floor`, `aspect`,
