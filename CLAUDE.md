@@ -395,7 +395,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   - **F (moments as light):** `MomentLight.tsx`: big moments light the table and wash the room in
     their colour (Devil red, Inkfire violet, Smite gold pool, Astral Flood, keepsakes, the Shield,
     perfect 24 gold, Perfect ...4? violet); tuned so the dice stay readable.
-  - **G (tune and prove):** the tuning panel (`?tune=1`, the ⚙ in the header; `tuning.ts`):
+  - **G (tune and prove):** the tuning panel (hidden since 4 Nov, the user's call: only on a visit with `?tune=1` in the address, no longer remembered; the ⚙ in the header; `tuning.ts`):
     sliders for the feel (multipliers saved per device), the frame rate, quality levels (Auto steps
     down from High when frames stay under ~45 a second), "Copy settings"; its Portraits tab (drag
     and zoom every round portrait, "Copy portraits"). On 23 Oct the user found the built-in

@@ -2,8 +2,8 @@
 // how much the device can draw. Each tuning value is a multiplier on the game's own number (1 =
 // as built); a value the user settles on is copied out of the panel and becomes the default here.
 // Saved on the device (localStorage.tavernTune, tavernQuality). The panel (Hud's TuningPanel)
-// shows with ?tune=1 in the address (remembered; ?tune=0 hides it): it's for the test site, not
-// something players come across.
+// shows only with ?tune=1 in the address, for that visit: it's for the test site, not something
+// players come across.
 
 export interface Tuning {
     warmth: number;   // the grade's warmth
@@ -101,11 +101,11 @@ export function noteFrame(delta: number) {
 }
 export const framesPerSecond = () => Math.round(1 / average);
 
-// The panel: on with ?tune=1, off with ?tune=0, remembered.
+// The panel: hidden (the user, 4 Nov), and only there on a visit whose address has ?tune=1. Not
+// remembered any more, and a device's old remembered "on" is cleared.
 export const tunePanel = (() => {
     try {
-        const asked = new URLSearchParams(location.search).get('tune');
-        if (asked) localStorage.setItem('tavernTunePanel', asked);
-        return localStorage.getItem('tavernTunePanel') === '1';
+        localStorage.removeItem('tavernTunePanel');
+        return new URLSearchParams(location.search).get('tune') === '1';
     } catch { return false; }
 })();
