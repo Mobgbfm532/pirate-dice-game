@@ -45,6 +45,10 @@ module.exports = {
     // The Duke's Sympathy for the Devil (and the mask's): the other side can't score above this.
     // null: no cap, the three 6s are the whole of it (the user's call, 21 Oct; it was 18).
     devilCap: null,
+    // The Duke saves his Devil when he doesn't need it (the user's call, 4 Nov): playing second, he
+    // uses it only if his chance of beating your score without it is below this. (He always goes
+    // for it with a 2, a 4 and a 6 kept and three dice to throw: a Perfect 24.)
+    devilWhenBelow: 0.7,
 
     // MONEY: since 23 Oct (the user's calls) every amount here is in whole gold, nearer D&D's
     // prices: beating Jaguar pays 140 gold, a Healing Thonic costs 11. The old numbers were these

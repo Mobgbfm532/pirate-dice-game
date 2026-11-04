@@ -42,7 +42,7 @@ the dice, runs the bots and the Tavern Crawl. Browsers only send requests (`roll
 `toggleDie(id)`, `endTurn`; in a Tavern Crawl also `buyThonic(id)`, `drinkThonic(slot, dieId?)`
 and, between fights, `pickpocket`, `darren`, `strangerPick`, `lookAround` (after a random event,
 on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePick`, `hotTub`,
-`diceBet`, `diceRoll`, `moveOn` (`leaveShop` is its older name); `wearMask(curse|devil)` for Martha's mask;
+`diceBet`, `diceRoll`, `moveOn` (`leaveShop` is its older name); `puffMystery` for Martha's Elf Bar (`wearMask(curse|devil)`, the old mask, is dormant);
 `joinTavern` may carry `resume`, a saved run) and render what comes back. Two clients share one server:
 
 | Path | What |
@@ -118,7 +118,9 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   for the Roll button.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
-- **Opponents' own dice** (3 Nov, the user's paintings): a Tavern Crawl opponent throws their own
+- **Opponents' own dice** (3 Nov, the user's paintings; **switched off since 4 Nov**, the user's call:
+  everyone throws the default ivory dice for now; all the code and sets stay, `OPPONENT_DICE_ON` in
+  textures.ts brings them back, `PAINTED_DICE` lists them): a Tavern Crawl opponent throws their own
   set on their turns (yours stay ivory). So far the Ghoul and Gourd's: McGrath's yellowed bone (made, but since 3 Nov he
   throws your ivory dice, the user's call: not in `OPPONENT_DICE`),
   Frak green with violet pips, Danhausen purple, the Duke red with gold pips, Martha mother-of-pearl
@@ -239,7 +241,7 @@ read and follow the file):
 
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
-`/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,marthasMask`, `/fight?n=2` (a fight
+`/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,mysteryFlavour`, `/fight?n=2` (a fight
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`;
 `dev-test-server-portal` starts every crawl at Sylvester (opponents' lives can be changed on a dev server only with the `OPPONENT_LIVES`
@@ -319,7 +321,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 142 server/rules/strategy/database tests + 16 client tests.
+  keepsakes, gold, saves after each place. 146 server/rules/strategy/database tests + 16 client tests.
 - **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
   a phone; a computer holds still since 3 Nov; the phone's tilt was tried and taken out); extra dice spin
   was tried and reverted (it looked unreal); a richer table was built; on 3 Nov the tray lost its
@@ -465,7 +467,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he heals one and, since
   3 Nov, takes one of yours: the Shield catches it, and it never takes your last heart). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
   (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
-  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Back of the Head has the swoosh; since 3 Nov the other four have the user's clips (`InkfireBrand.mp3` 2.9 s, `Flourish.mp3` 1.7 s, `DivineSmite.mp3` 6.7 s, rings on past its 1.85 s moment, `AstralFlood.mp3` 1.4 s; `ABILITY_SOUNDS`). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaPuff.mp3` with Disguises, `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
+  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Back of the Head has the swoosh; since 3 Nov the other four have the user's clips (`InkfireBrand.mp3` 2.9 s, `Flourish.mp3` 1.7 s, `DivineSmite.mp3` 6.7 s, rings on past its 1.85 s moment, `AstralFlood.mp3` 1.4 s; `ABILITY_SOUNDS`). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaAbility.mp3` with Disguises since 4 Nov (4.9 s, rings on under the copied trick; it was `MarthaPuff.mp3`), `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
   **Mind Whip** (since 20 Oct, replacing Psychic Fog; like the Devil it waits, `pendingMind`, and is spent only as it
   lands, so his ✦ flashes then (21 Oct): on your first throw he keeps one of your dice
@@ -477,8 +479,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
   with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s and the devil effect
   plays; since 21 Oct no cap on your score (`devilCap: null`; a number brings the cap back, the
-  solver's `cap`); never fires if he doesn't get there; while it waits, the simple-playing Duke keeps only the 2
-  and 4 he needs, `Rules.devilWaitLocks`, or it hardly ever fired);
+  solver's `cap`); never fires if he doesn't get there; since 4 Nov (the user's call) he uses it only when it helps (`devilPlan` in
+  server.js, decided after each of his throws, `turn.devilPlan`): a 2, 4 and 6 to keep with three dice
+  left always (a Perfect 24); you dusted, never; you've played, only if his chance without it
+  (`Strategy.chanceAfterKeep`) is under `devilWhenBelow` (0.7 in balance.js: about your 18 and up);
+  first to play, always. Going for it he keeps only the 2 and 4 he needs (`Rules.devilWaitLocks`),
+  plus a 5 or 6 if three dice stay to throw; otherwise he plays his usual way and saves it);
   Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
   shows a takeover (since 21 Oct: a flash in the ability's colours, `--flare`, and a banner across
   the screen with who, what and the move's text; since 26 Oct, the user's call, it rises like the devil's
@@ -528,8 +534,21 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `node test/ability-shots.mjs <dir> only=<key>` (plays the ability for real headless, holds the
   moment, shoots it at phone sizes and checks it stays above the rail; works with the pane hidden;
   dev `preview.ability(name, ability, more, hold)`).
-- **Martha's mask** (`marthasMask`, dropped by Martha, not in the Stranger's pool): once a fight,
-  in a round with no effect yet, wear Danhausen's Curse (before you roll) or the Duke's Devil
+- **Mystery Flavour** (4 Nov, the user's pick; `mysteryFlavour`, `MYSTERY_FLAVOUR`): Martha's drop
+  now, her own Elf Bar. A keepsake (not on the shelf): it never runs out, one puff a fight, and each
+  fight it tastes of one of Johnny's four at random (`run.mysteryFlavour`, drawn as the fight
+  starts; `mystery: { flavour, ready }` in the state). The `puffMystery` handler and the shelf's
+  Elf Bars share `elfPuff` in server.js. On the strip (`MysteryKeepsake` in Hud) it shows that
+  flavour's painting with a violet "?" (`.mystery-art`; drifting through the colours where no fight
+  has chosen one, as on the invitation), lights when the flavour could be puffed, and a tap shows
+  "Puff"; its moment is `keepsakeActivated` with `who: "Martha's Elf Bar"`, `mystery: true`, `id`
+  `mysteryFlavour` and `flavour`. The user's painting of Martha's brass vape with violet smoke
+  (`art/keepsake-mysteryFlavour.jpg`, painted on lime green: `cutOutFlat`'s `green` option, new 4
+  Nov, with a green despill that fades the smoke's edge) shows on the strip with a dot in the
+  fight's flavour's colour (`.flavour-dot`). Old saves carrying the mask get it (`OLD_DROPS`). The
+  simulator doesn't know it.
+- **Martha's mask** (`marthasMask`; Martha's drop until 4 Nov, nothing gives it now, its code
+  stays dormant): once a fight, in a round with no effect yet, wear Danhausen's Curse (before you roll) or the Duke's Devil
   (any time in your turn with 3+ dice to throw, since 21 Oct: the next throw lands three 6s)
   yourself (`wearMask`, `by: 'player'`). On the strip it lights up and shows its choices inline
   (never over the rail); when it can't be worn a tap is a reminder. Martha herself shows a
@@ -595,7 +614,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
   it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
   and a synthesized chime (`playChime`); the Shield's is a force-field dome over the table
-  (`.forcefield`), its line "Shield protects a life."
+  (`.forcefield`), its line "Shield protects a life." The Lady's Grace moment shows only its name and "♥ saved" (no
+  "Shrine to the Lady" over it since 4 Nov, the user's call).
 - **Hearts that react, and the end of a place** (visuals plan step 5, 25 Oct): a heart that's lost
   swells, cracks along a jagged line and its halves fall away; one that comes back pops in with a
   pink glow (`Hearts` in Hud, `HEART_MS` 0.9 s, `.heart.breaking` / `.healing`; a new fight resets
@@ -752,7 +772,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   undefined so they play for their best; a badge), **Lemon Levitation** 8 (after a throw, before
   a keep: `turn.freeRoll`), **Watermelon Hindsight** 14 (`Rules.redoThrow`: the last throw's dice,
   `turn.lastThrown`, any kept since put back, thrown again). Puffed through `drinkThonic`; the
-  moment is `keepsakeActivated` with `who: 'Elf Bar'` and Martha's puff sound. Jaguar's Smooth
+  moment is `keepsakeActivated` with `who: 'Elf Bar'` and the user's `Vape.mp3` (4 Nov; it borrowed Martha's puff before). Jaguar's Smooth
   Talk never takes one. The shelf draws them as slim vapes with a dot per puff (`Vape` in Hud). Since 29 Oct Johnny is framed like Thom (big, cropped at the counter), and on upright phones his four Elf Bars are compact rows (`.elf-cards`) so his stage stays as big as Thom's.
 - **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
   single last die (Second Thoughts can reopen the hand).
@@ -770,7 +790,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    yet: teach it before trusting its numbers.
 2. **The user's art and sounds waiting:** dice sets for the Yawning Portal's and the ship's
    opponents (add each id to `DICE_SETS` and `OPPONENT_DICE`); ability paintings for Dead Eye, the Ace of Spades and
-   All In; an Elf Bar's puff (it borrows Martha's); music and ambience from Udio;
+   All In; music and ambience from Udio;
    optional repaints of the Potion Belt and the Sunglasses (thin at 26 px).
 3. **The Salty Swallow's own spots and events** (to workshop; ideas: a card game below deck, a
    stowaway instead of the thief). Without the Dice Den it offers only Thom, the Shrine and

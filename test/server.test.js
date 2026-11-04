@@ -1585,6 +1585,46 @@ test("the Duke's Devil: once he holds a 2 and a 4, three 6s, and you can't score
     assert.equal(room.tavernRun.abilityUsed.devil, 1);
 });
 
+// The Duke's first throw pinned to these faces (his later throws as they come). Returns his
+// finished hand's faces, sorted, once he has finished.
+function dukeFirstThrow(hero, room, faces) {
+    hero.on('diceRolled', d => {
+        if (d.turn.playerId === 'BOT_MOLAR' && d.turn.rollCount === 1) room.turn.dice.forEach((x, i) => { x.value = faces[i]; });
+    });
+    return waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === 'BOT_MOLAR' && d.turn.finalized, 8000)
+        .then(() => room.turn.dice.map(x => x.value).sort((a, b) => a - b));
+}
+
+test("the Duke saves his Devil when he doesn't need it: your 13 against his 2, 4, 5, 5, 5, 1", async () => {
+    const hero = await tavernAgainst(3, 'Thirteen');
+    const room = roomOf(hero);
+    room.tavernRun.roundEffect = null;
+    room.tavernRun.pendingDevil = { as: null };
+    room.tavernRun.abilityUsed = {};
+    const hand = dukeFirstThrow(hero, room, [2, 4, 5, 5, 5, 1]);
+    const result = waitFor(hero, 'roundResult', () => true, 6000);
+    await playHand(hero, room, [2, 4, 3, 3, 3, 4]); // 13
+    assert.deepEqual(await hand, [1, 2, 4, 5, 5, 5], 'he kept the lot: 16 beats 13');
+    assert.match((await result).message, /Dust: Thirteen/, 'you lose the life');
+    assert.ok(!room.tavernRun.abilityUsed.devil, 'his Devil saved for a round that needs it');
+});
+
+test("the Duke goes for a Perfect 24 with a 2, a 4 and a 6, even against a 13", async () => {
+    const hero = await tavernAgainst(3, 'Perfect');
+    const room = roomOf(hero);
+    room.tavernRun.roundEffect = null;
+    room.tavernRun.pendingDevil = { as: null };
+    room.tavernRun.abilityUsed = {};
+    const hand = dukeFirstThrow(hero, room, [2, 4, 6, 1, 1, 1]);
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Sympathy for the Devil', 6000);
+    const result = waitFor(hero, 'roundResult', () => true, 8000);
+    await playHand(hero, room, [2, 4, 3, 3, 3, 4]); // 13
+    await move;
+    assert.deepEqual(await hand, [2, 4, 6, 6, 6, 6], 'a Perfect 24');
+    await result;
+    assert.equal(room.tavernRun.abilityUsed.devil, 1);
+});
+
 test("the Duke's Devil doesn't cap your score (since 21 Oct): his three 6s are the whole of it", async () => {
     const hero = await tavernAgainst(3, 'Uncapped');
     const room = roomOf(hero);
@@ -1619,7 +1659,7 @@ test("Martha's disguises: Frak's, Danhausen's or the Duke's trick at random, twi
     }
 });
 
-test("beating Martha wins her mask and the invitation to the Yawning Portal", async () => {
+test("beating Martha wins her Elf Bar and the invitation to the Yawning Portal", async () => {
     const hero = await tavernAgainst(4, 'Qualifier');
     const room = roomOf(hero);
     room.players.BOT_MOLAR.lives = 1;
@@ -1630,23 +1670,24 @@ test("beating Martha wins her mask and the invitation to the Yawning Portal", as
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     const offer = await won;
     assert.equal(offer.nextEnemy, 'Sylvester Stonefist');
-    assert.equal(offer.drop.id, 'marthasMask');
+    assert.equal(offer.drop.id, 'mysteryFlavour');
     const run = room.tavernRun;
     assert.equal(run.interlude.stage, 'invitation');
     assert.equal(run.interlude.place, 'The Yawning Portal');
     assert.equal(run.interlude.boss, 'Martha Mystery');
-    assert.equal(run.interlude.drop.id, 'marthasMask');
+    assert.equal(run.interlude.drop.id, 'mysteryFlavour');
     assert.equal(run.interlude.claim, 'open', 'yours to take or leave');
-    assert.ok(!run.keepsakes.some(k => k.id === 'marthasMask'));
+    assert.ok(!run.keepsakes.some(k => k.id === 'mysteryFlavour'));
     hero.emit('claimDrop', true);
     await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.claim === 'took');
-    assert.ok(run.keepsakes.some(k => k.id === 'marthasMask'));
+    assert.ok(run.keepsakes.some(k => k.id === 'mysteryFlavour'));
     assert.equal(typeof run.interlude.save, 'string');
     hero.emit('moveOn');
     const fight = await nextState(hero, s => !runOf(s).interlude);
     assert.equal(runOf(fight).enemy.name, 'Sylvester Stonefist');
     assert.equal(runOf(fight).place, 'The Yawning Portal');
-    assert.equal(runOf(fight).maskReady, true);
+    assert.equal(runOf(fight).mystery.ready, true);
+    assert.ok(server.ELF_BARS.includes(runOf(fight).mystery.flavour), 'it tastes of one of the four');
 });
 
 test("Martha's mask: once a fight, before you roll, the Devil (or the Curse) is yours", async () => {
@@ -1697,7 +1738,7 @@ test('a saved run carries on at the invitation to the Yawning Portal', async () 
     assert.equal(run.interlude.stage, 'invitation');
     assert.equal(run.enemy.name, 'Sylvester Stonefist');
     assert.equal(run.purse, 1234);
-    assert.deepEqual(run.keepsakes.map(k => k.id), ['marthasMask', 'bentCopper']);
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['mysteryFlavour', 'bentCopper'], "an old save's mask comes back as Martha's Elf Bar");
     assert.deepEqual(run.shelf.map(t => t.id), ['healing']);
     assert.equal(state.players[back.id].name, 'Traveller');
     // The same save again: refused, and that table starts a fresh crawl.
@@ -1962,7 +2003,7 @@ test('a run saved after the Yawning Portal carries on at the Salty Swallow', asy
     const { room } = await tavernTable('Sailor');
     room.tavernRun.encounterIndex = fightOf('klarg');
     room.tavernRun.purse = 2500;
-    room.tavernRun.keepsakes = [{ id: 'marthasMask', name: "Martha's Mask", text: '' }, { id: 'brodorsSunglasses', name: "Brodor's Sunglasses", text: '' }];
+    room.tavernRun.keepsakes = [{ id: 'mysteryFlavour', name: 'Mystery Flavour', text: '' }, { id: 'brodorsSunglasses', name: "Brodor's Sunglasses", text: '' }];
     const save = server.sealSave(room, 'Sailor');
     const back = await join('Someone', 'TVRN-SV3', { resume: save });
     const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).interlude);
@@ -1970,7 +2011,7 @@ test('a run saved after the Yawning Portal carries on at the Salty Swallow', asy
     assert.equal(run.interlude.place, 'The Salty Swallow');
     assert.equal(run.interlude.drop.id, 'brodorsSunglasses');
     assert.equal(run.enemy.name, 'Klarg');
-    assert.deepEqual(run.keepsakes.map(k => k.id), ['marthasMask', 'brodorsSunglasses']);
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['mysteryFlavour', 'brodorsSunglasses']);
 });
 
 test('the Yawning Portal and the ship play their best; every ability has a name and uses', () => {
@@ -2242,6 +2283,38 @@ test('Purple Haze: a 1 becomes the 2 you still need', async () => {
     assert.equal(room.turn.dice[0].value, 2);
 });
 
+test("Mystery Flavour: Martha's Elf Bar works as this fight's flavour, once a fight, and never runs out", async () => {
+    const { hero, room } = await puffing('Mystery', 'healing', [1, 3, 3, 5, 5, 6]);
+    const run = room.tavernRun;
+    run.keepsakes.push({ ...server.MYSTERY_FLAVOUR });
+    run.mysteryFlavour = 'purpleHaze';
+    const moment = waitFor(hero, 'keepsakeActivated', m => m.mystery);
+    const thrown = waitFor(hero, 'diceRolled', d => d.rerolled);
+    hero.emit('puffMystery');
+    const m = await moment;
+    assert.equal(m.id, 'mysteryFlavour');
+    assert.equal(m.flavour, 'purpleHaze', 'its moment names the flavour');
+    assert.match(m.text, /Purple Haze/);
+    assert.deepEqual((await thrown).rerolled, [0]);
+    assert.equal(room.turn.dice[0].value, 2);
+    assert.equal(run.encounterKeepsakeUses.mysteryFlavour, true);
+    assert.deepEqual(run.shelf, ['healing'], 'nothing taken off the shelf');
+    room.turn.dice[1].value = 1;
+    hero.emit('puffMystery'); // once a fight
+    await sleep(40);
+    assert.equal(room.turn.dice[1].value, 1);
+});
+
+test('Mystery Flavour: nothing happens when its flavour has nothing to do', async () => {
+    const { hero, room } = await puffing('Mystery2', 'healing', [3, 3, 3, 5, 5, 6]);
+    const run = room.tavernRun;
+    run.keepsakes.push({ ...server.MYSTERY_FLAVOUR });
+    run.mysteryFlavour = 'purpleHaze'; // no 1 showing
+    hero.emit('puffMystery');
+    await sleep(40);
+    assert.ok(!run.encounterKeepsakeUses.mysteryFlavour, 'not spent');
+});
+
 test('Watermelon Hindsight: a die kept since goes back and the last throw is thrown again', async () => {
     const { hero, room } = await puffing('Melon', 'watermelonHindsight', [2, 3, 3, 5, 5, 6]);
     hero.emit('toggleDie', 0);
@@ -2290,7 +2363,7 @@ test("with five keepsakes, a boss's means leaving one behind; Thom won't sell a 
     assert.equal(run.interlude.claim, 'open');
     hero.emit('claimDrop', true, 'velvetCushion');
     await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.claim === 'took');
-    assert.deepEqual(run.keepsakes.map(k => k.id), ['luckySeat', 'loyaltyCard', 'potionBelt', 'misersPurse', 'marthasMask']);
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['luckySeat', 'loyaltyCard', 'potionBelt', 'misersPurse', 'mysteryFlavour']);
     // Thom's back shelf: full pockets, nothing sold.
     run.interlude = null;
     run.purse = 200;

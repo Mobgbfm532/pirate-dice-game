@@ -1217,6 +1217,16 @@ footer {
 /* A painted keepsake (29 Oct): sized like the emoji it replaces, a touch bigger. */
 .item-art { width: 1.3em; height: 1.3em; object-fit: contain; display: inline-block; vertical-align: middle; pointer-events: none; }
 .keepsake-flare.painted .item-art { width: 1em; height: 1em; display: block; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)); }
+/* Mystery Flavour (Martha's Elf Bar): her vape, with a dot in this fight's flavour's colour. */
+.mystery-art { position: relative; display: inline-block; line-height: 0; }
+.mystery-art .flavour-dot {
+    position: absolute; right: -0.05em; bottom: 0; width: 0.42em; height: 0.42em; border-radius: 50%;
+    border: 1px solid rgba(20, 10, 5, 0.85); box-shadow: 0 0 4px currentColor; pointer-events: none;
+}
+.flavour-dot.purpleHaze { background: #a15cff; color: #a15cff; }
+.flavour-dot.cottonCandyCloud { background: #ff9fd6; color: #ff9fd6; }
+.flavour-dot.lemonLevitation { background: #ffe24a; color: #ffe24a; }
+.flavour-dot.watermelonHindsight { background: #ff5a6e; color: #5fd36a; }
 .keepsake-flare.painted img { width: 1em; height: 1em; object-fit: contain; display: block; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)); }
 .vape.purpleHaze { --flavour: #8e24aa; }
 .vape.cottonCandyCloud { --flavour: #f48fb1; }

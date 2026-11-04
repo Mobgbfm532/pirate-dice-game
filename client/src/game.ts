@@ -45,7 +45,8 @@ export interface TavernRun {
     place: string; // The Ghoul and Gourd, the Yawning Portal, then the Salty Swallow
     roundEffect?: RoundEffect | null;
     devilCap?: number | null; // null: no cap (since 21 Oct)
-    maskReady?: boolean; // Martha's mask can be worn this fight
+    maskReady?: boolean; // Martha's mask can be worn this fight (nothing gives it since 4 Nov)
+    mystery?: { flavour: string; ready: boolean } | null; // Mystery Flavour, Martha's Elf Bar: this fight's flavour
     enemy: Enemy;
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
@@ -682,7 +683,7 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
     enqueueMoment(() => {
         if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
         else if (data.who === 'The Bard') playSound('bardTune'); // either song as it works (the user's tune, 3 Nov)
-        else if (data.who === 'Elf Bar') playSound('marthaPuff'); // a puff (Martha's own clip)
+        else if (data.who?.endsWith('Elf Bar')) playSound('vape'); // a puff (the user's clip, 4 Nov), Martha's Mystery Flavour too
         else playChime();
         // The Bard's songs play like a Thonic drunk (the user's call, 3 Nov): their icon, big, in a glow.
         if (data.who === 'The Bard') update({ ability: { name: 'The Bard', ability: data.name, text: data.text, blessing: data.id, at: performance.now() } });
@@ -931,6 +932,10 @@ export const actions = {
     // The Bard's Inspiring Song: your first throw of the fight, thrown again.
     inspiringSong() {
         socket.emit('inspiringSong');
+    },
+    // Mystery Flavour: one puff a fight, working as this fight's flavour does.
+    puffMystery() {
+        socket.emit('puffMystery');
     },
     strangerPick(id: string | null) {
         playSound(id ? 'itemPickup' : 'click');

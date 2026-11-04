@@ -195,7 +195,11 @@ export function createDiceMaterials() {
 // colours can't be read the way ivory's can). Their painted colours are kept: no ivory under the
 // paint, and no clearer red and green (on a green or red die that would repaint the face).
 // (Sperm McGrath throws the player's ivory dice, the user's call, 3 Nov: his set stays on disk.)
-export const OPPONENT_DICE = new Set(['frak', 'danhausen', 'duke', 'martha']);
+// Off for now (the user, 4 Nov: everyone throws the default ivory dice); the sets and this code
+// stay. OPPONENT_DICE_ON = true brings them back. (Dev: preview.dice(id) still shows a set.)
+export const OPPONENT_DICE_ON = false;
+export const PAINTED_DICE = new Set(['frak', 'danhausen', 'duke', 'martha']);
+export const OPPONENT_DICE: Set<string> = OPPONENT_DICE_ON ? PAINTED_DICE : new Set();
 const OPPONENT_DICE_GLOW = 0.22;
 const opponentDice = new Map<string, THREE.MeshStandardMaterial[]>();
 export function opponentDiceMaterials(id: string, fallback: THREE.MeshStandardMaterial[]) {

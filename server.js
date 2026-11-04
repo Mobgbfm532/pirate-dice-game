@@ -162,8 +162,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🎭',
         lives: BALANCE.opponentLives.martha,
         ability: 'disguises',
-        boss: true, // beating her wins her mask and the invitation to the Yawning Portal
-        drops: 'marthasMask',
+        boss: true, // beating her wins her Elf Bar, Mystery Flavour, and the invitation to the Yawning Portal
+        drops: 'mysteryFlavour',
         intro: 'Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick.'
     },
     {
@@ -313,8 +313,9 @@ const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
 const MAX_KEEPSAKES = BALANCE.maxKeepsakes || 5;
 const pocketsFull = room => room.tavernRun.keepsakes.length >= MAX_KEEPSAKES;
 
-// Martha's mask: dropped by Martha Mystery (never offered by the Stranger). Once a fight, before
-// you roll, you wear one of her disguises for the round (the wearMask handler).
+// Martha's mask: Martha's drop until 4 Nov (the user's call: her Elf Bar instead). Nothing gives
+// it now; its code stays (the wearMask handler) in case it comes back. Once a fight, before you
+// roll, you wear one of her disguises for the round. Old saves carrying it get Mystery Flavour.
 const MARTHAS_MASK = {
     id: 'marthasMask',
     name: "Martha's Mask",
@@ -327,8 +328,18 @@ const BRODORS_SUNGLASSES = {
     name: "Brodor's Sunglasses",
     text: 'A finished 23 restores a heart, like a 24.'
 };
+// Mystery Flavour (4 Nov, the user's pick): Martha's own Elf Bar, dropped by her. A keepsake, not
+// a shelf item: it never runs out, one puff a fight, and each fight it tastes of one of Johnny's
+// four Elf Bars, drawn at random as the fight starts (run.mysteryFlavour; the puffMystery handler).
+const MYSTERY_FLAVOUR = {
+    id: 'mysteryFlavour',
+    name: 'Mystery Flavour',
+    text: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random."
+};
 // What each boss drops (TAVERN_ENCOUNTERS `drops`).
-const BOSS_DROPS = { marthasMask: MARTHAS_MASK, brodorsSunglasses: BRODORS_SUNGLASSES };
+const BOSS_DROPS = { mysteryFlavour: MYSTERY_FLAVOUR, brodorsSunglasses: BRODORS_SUNGLASSES };
+// Saves from before 4 Nov may carry Martha's mask: it comes back as her Elf Bar.
+const OLD_DROPS = { marthasMask: 'mysteryFlavour' };
 const LOADED_DIE = 0; // the die the Loaded Die keepsake loads (marked on the table)
 
 // Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
@@ -564,6 +575,8 @@ function getTavernRunState(room) {
         roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Mind Whip (see beginTavernRound)
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
+        // Mystery Flavour: this fight's flavour (an Elf Bar id) and whether it can still be puffed.
+        mystery: hasKeepsake(room, MYSTERY_FLAVOUR.id) ? { flavour: mysteryFlavourOf(room.tavernRun), ready: !room.tavernRun.encounterKeepsakeUses.mysteryFlavour } : null,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
         purse: room.tavernRun.purse,
@@ -690,7 +703,8 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     // score above devilCap this round (capped when the round is judged if they played first).
     let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
     // (Not in a round the player's mask already claimed.)
-    if (!mine && run.pendingDevil && !run.roundEffect && kept.includes(2) && kept.includes(4) && active.length >= 3) {
+    // Since 4 Nov only when his last decision said he wants it (turn.devilPlan, devilPlan).
+    if (!mine && run.pendingDevil && turn.devilPlan && !run.roundEffect && kept.includes(2) && kept.includes(4) && active.length >= 3) {
         let as = run.pendingDevil.as;
         run.pendingDevil = null;
         if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
@@ -1124,6 +1138,47 @@ function tavernRoundLost(turn, toBeat, aceAt16, { low = false, cap = null } = {}
     return toBeat !== null && best < toBeat;
 }
 
+// The Duke's Sympathy for the Devil, decided after each of his throws while it waits (the user's
+// calls, 4 Nov). It lands three 6s on the throw after he has kept a 2 and a 4 with three or more
+// dice still to throw, so:
+//   1. A 2, a 4 and a 6 kept (or showing to keep) with three dice left: go for it, a Perfect 24.
+//   2. You dusted: any valid hand wins, so he saves it.
+//   3. You've played: only if his chance of beating your score without it is below
+//      devilWhenBelow; otherwise he plays normally (`normal`, his usual keep) and saves it.
+//   4. He's first: he goes for it, for the best score he can get.
+// Going for it, he keeps the 2 and 4 he still needs (else his highest die), and once he has
+// both, his best other die if three are still left to throw. Returns { use, locks }.
+function devilPlan(turn, toBeat, normal) {
+    let A = Rules.STATUS.ACTIVE;
+    let active = turn.dice.filter(d => d.status === A).sort((a, b) => b.value - a.value);
+    let kept = turn.dice.filter(d => d.status !== A && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+    // 1. The Perfect 24: kept and kept-now exactly a 2, a 4 and a 6, with three dice left.
+    let perfect = [];
+    let ok = kept.every(v => [2, 4, 6].includes(v)) && new Set(kept).size === kept.length;
+    for (let v of [2, 4, 6]) {
+        if (!ok || kept.includes(v)) continue;
+        let die = active.find(d => d.value === v);
+        if (die) perfect.push(die.id); else ok = false;
+    }
+    if (ok && perfect.length > 0 && active.length - perfect.length === 3) return { use: true, locks: perfect };
+    // 2-3. Does he need it?
+    let need = toBeat === undefined ? true
+        : toBeat === null ? false
+        : Strategy.chanceAfterKeep(turn.dice, normal, toBeat) < (BALANCE.devilWhenBelow ?? 0.7);
+    if (!need) return { use: false, locks: normal };
+    // 4. Going for it.
+    let locks = Rules.devilWaitLocks(turn);
+    let valueOf = id => turn.dice.find(d => d.id === id).value;
+    let has = v => kept.includes(v) || locks.some(id => valueOf(id) === v);
+    let left = active.length - locks.length;
+    let extras = kept.filter(v => v !== 2 && v !== 4).length + locks.filter(id => ![2, 4].includes(valueOf(id))).length;
+    if (has(2) && has(4) && left > 3 && extras === 0) {
+        let best = active.find(d => !locks.includes(d.id) && d.value >= 5);
+        if (best) locks.push(best.id);
+    }
+    return { use: true, locks };
+}
+
 function runBotDecision(roomCode) {
     let room = rooms[roomCode];
     let turn = room.turn;
@@ -1141,9 +1196,13 @@ function runBotDecision(roomCode) {
     let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
-    // The Duke (or Martha in his face) waiting on his Devil keeps only what he needs, so it has
-    // three dice to land on (with the simple habits he used to keep 5s and 6s too, and it never fired).
-    if (simple && room.mode === 'tavern-crawl' && room.tavernRun.pendingDevil) toLock = Rules.devilWaitLocks(turn);
+    // The Duke (or Martha in his face) with his Devil waiting: he goes for it only when it helps
+    // (devilPlan), keeping then only what it needs, so it has three dice to land on.
+    if (simple && room.mode === 'tavern-crawl' && room.tavernRun.pendingDevil) {
+        let plan = devilPlan(turn, toBeat, toLock);
+        turn.devilPlan = plan.use;
+        toLock = plan.locks;
+    }
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
     // keep everything left at once and end the turn.
     let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
@@ -1184,6 +1243,46 @@ function runBotDecision(roomCode) {
 }
 
 // ---- Tavern Crawl ----
+
+// What an Elf Bar's puff does (a bar on the shelf, or Mystery Flavour tasting of it), always on
+// the player's own turn. Returns { text, rerolled } (rerolled: dice to throw again), or null when
+// it can't be puffed right now (nothing changes then).
+function elfPuff(room, turn, id) {
+    let run = room.tavernRun;
+    let A = Rules.STATUS.ACTIVE;
+    if (id === 'purpleHaze') {
+        // A 1 just thrown becomes the 2 or 4 you still need (it tumbles onto it).
+        if (!turn.hasRolled || turn.finalized) return null;
+        let kept = turn.dice.filter(d => d.status !== A && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+        let need = !kept.includes(2) ? 2 : !kept.includes(4) ? 4 : null;
+        let one = turn.dice.find(d => d.status === A && d.value === 1 && !(turn.boundIds || []).includes(d.id));
+        if (!need || !one) return null;
+        one.value = need;
+        return { text: `A 1 becomes your ${need}`, rerolled: [one.id] };
+    }
+    if (id === 'cottonCandyCloud') {
+        let bot = room.players[BOT_ID];
+        if (run.cloud || turn.finalized || !bot || !room.roundPlayers.includes(BOT_ID) || bot.score !== null) return null;
+        run.cloud = true;
+        return { text: "This round your opponent can't see your score", rerolled: null };
+    }
+    if (id === 'lemonLevitation') {
+        if (!turn.hasRolled || turn.finalized || turn.locksThisRoll > 0 || turn.freeRoll) return null;
+        turn.freeRoll = true;
+        return { text: 'Throw again without keeping a die', rerolled: null };
+    }
+    if (id === 'watermelonHindsight') {
+        let rerolled = Rules.redoThrow(turn, turn.lastThrown, rollFaceFor(room, turn), turn.mindDieId);
+        return rerolled ? { text: 'Your last throw, thrown again', rerolled } : null;
+    }
+    return null;
+}
+
+// This fight's Mystery Flavour (drawn as the fight starts; drawn now if a fight began without one).
+function mysteryFlavourOf(run) {
+    if (!ELF_BARS.includes(run.mysteryFlavour)) run.mysteryFlavour = ELF_BARS[crypto.randomInt(0, ELF_BARS.length)];
+    return run.mysteryFlavour;
+}
 
 function hasKeepsake(room, keepsakeId) {
     return room.mode === 'tavern-crawl' && room.tavernRun.keepsakes.some(k => k.id === keepsakeId);
@@ -1489,8 +1588,9 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
         room.tavernRun.nextFightSong = null;
         room.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
         room.tavernRun.cuttingWords = song === 'cuttingWords';
-        // Each Elf Bar may be puffed once a fight.
+        // Each Elf Bar may be puffed once a fight; Mystery Flavour tastes of a new one each fight.
         room.tavernRun.puffed = {};
+        room.tavernRun.mysteryFlavour = ELF_BARS[crypto.randomInt(0, ELF_BARS.length)];
         room.tavernRun.cloud = false;
         // Fealty to Kram: each fight sworn takes one off the count.
         room.tavernRun.kram = room.tavernRun.kramFights > 0;
@@ -1687,7 +1787,7 @@ function openSave(text) {
 function restoreRun(room, data) {
     let run = room.tavernRun;
     run.encounterIndex = data.encounterIndex;
-    run.keepsakes = (data.keepsakes || []).map(keepsakeById).filter(Boolean);
+    run.keepsakes = (data.keepsakes || []).map(id => OLD_DROPS[id] || id).map(keepsakeById).filter(Boolean);
     run.purse = Math.max(0, Number(data.purse) || 0);
     run.shelf = (data.shelf || []).filter(id => THONICS[id]).slice(0, SHELF_SIZE + KEEPSAKE_NUMBERS.beltSlots);
     run.stats = { ...run.stats, ...(data.stats || {}) };
@@ -1695,15 +1795,15 @@ function restoreRun(room, data) {
     run.bought = {};
     Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
-    run.refusedDrops = (data.refusedDrops || []).filter(id => BOSS_DROPS[id]);
+    run.refusedDrops = (data.refusedDrops || []).map(id => OLD_DROPS[id] || id).filter(id => BOSS_DROPS[id]);
     run.puffs = {};
     Object.entries(data.puffs || {}).forEach(([id, n]) => { if (THONICS[id] && THONICS[id].elf && Number.isInteger(n) && n > 0 && n <= ELF_BAR_PUFFS) run.puffs[id] = n; });
     run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
     run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
 }
 
-// After a boss, the invitation on to the next place: their keepsake is yours (Martha's mask,
-// Brodor's Sunglasses); go on now, or save and come back. `boss`: who was just beaten.
+// After a boss, the invitation on to the next place: their keepsake is yours (Martha's Mystery
+// Flavour, Brodor's Sunglasses); go on now, or save and come back. `boss`: who was just beaten.
 function invitation(room, name) {
     let boss = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
     let drop = boss && BOSS_DROPS[boss.drops];
@@ -2358,6 +2458,25 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
+    // Mystery Flavour, Martha's Elf Bar: once a fight, it works as this fight's flavour does.
+    socket.on('puffMystery', () => {
+        let room = tavernPlayer();
+        if (!room || !isMyTurn() || !isTurnPlayable(socket.roomCode)) return;
+        let run = room.tavernRun;
+        let turn = room.turn;
+        if (!hasKeepsake(room, MYSTERY_FLAVOUR.id) || run.encounterKeepsakeUses.mysteryFlavour || Date.now() < turn.busyUntil) return;
+        let flavour = mysteryFlavourOf(run);
+        let puff = elfPuff(room, turn, flavour);
+        if (!puff) return;
+        run.encounterKeepsakeUses.mysteryFlavour = true;
+        run.stats.keepsakesActivated++;
+        let taste = THONICS[flavour].name.replace(/ Elf Bar$/, '');
+        sendMoment(socket.roomCode, 'keepsakeActivated', { id: MYSTERY_FLAVOUR.id, flavour, name: MYSTERY_FLAVOUR.name, text: `Tastes of ${taste}: ${puff.text}`, who: 'Martha\'s Elf Bar', mystery: true });
+        if (puff.rerolled) throwAgain(socket.roomCode, room, turn, puff.rerolled);
+        else emitTurn(socket.roomCode, { type: 'toggle' });
+        emitState(socket.roomCode);
+    });
+
     socket.on('buyThonic', (thonicId) => {
         let room = tavernPlayer();
         if (!room || !room.tavernRun.shop) return;
@@ -2680,33 +2799,9 @@ io.on('connection', (socket) => {
 
         if (thonic.elf) {
             if (run.puffed[thonicId]) return; // once a fight
-            let A = Rules.STATUS.ACTIVE;
-            if (thonicId === 'purpleHaze') {
-                // A 1 just thrown becomes the 2 or 4 you still need (it tumbles onto it).
-                if (!turn.hasRolled || turn.finalized) return;
-                let kept = turn.dice.filter(d => d.status !== A && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
-                let need = !kept.includes(2) ? 2 : !kept.includes(4) ? 4 : null;
-                let one = turn.dice.find(d => d.status === A && d.value === 1 && !(turn.boundIds || []).includes(d.id));
-                if (!need || !one) return;
-                one.value = need;
-                rerolled = [one.id];
-                text = `A 1 becomes your ${need}`;
-            } else if (thonicId === 'cottonCandyCloud') {
-                let bot = room.players[BOT_ID];
-                if (run.cloud || turn.finalized || !bot || !room.roundPlayers.includes(BOT_ID) || bot.score !== null) return;
-                run.cloud = true;
-                text = "This round your opponent can't see your score";
-            } else if (thonicId === 'lemonLevitation') {
-                if (!turn.hasRolled || turn.finalized || turn.locksThisRoll > 0 || turn.freeRoll) return;
-                turn.freeRoll = true;
-                text = 'Throw again without keeping a die';
-            } else if (thonicId === 'watermelonHindsight') {
-                rerolled = Rules.redoThrow(turn, turn.lastThrown, rollFaceFor(room, turn), turn.mindDieId);
-                if (!rerolled) return;
-                text = 'Your last throw, thrown again';
-            } else {
-                return;
-            }
+            let puff = elfPuff(room, turn, thonicId);
+            if (!puff) return;
+            ({ text, rerolled } = puff);
             run.puffed[thonicId] = true;
             run.puffs[thonicId] = (run.puffs[thonicId] || ELF_BAR_PUFFS) - 1;
             if (run.puffs[thonicId] <= 0) { run.shelf.splice(slot, 1); delete run.puffs[thonicId]; }
@@ -2806,4 +2901,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, ELF_BARS, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES };

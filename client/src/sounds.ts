@@ -24,7 +24,10 @@ const sfx = {
     mindWhip: load('MindWhip.mp3', 0.75),
     cursed: load('YouAreCursed.mp3', 0.75),
     sympathy: load('SympathyForTheDevil.mp3', 0.75),
-    marthaPuff: load('MarthaPuff.mp3', 0.75),
+    marthaPuff: load('MarthaPuff.mp3', 0.75), // (unused since 4 Nov: Disguises has the user's MarthaAbility.mp3)
+    marthaAbility: load('MarthaAbility.mp3', 0.75),
+    // An Elf Bar's puff (the user's, 4 Nov; it borrowed Martha's puff before).
+    vape: load('Vape.mp3', 0.75),
     marthaSwitch: load('MarthaSwitch.mp3', 0.75),
     // Between fights (the user's, 27 Oct): what a soak or a candle brings.
     tubGood: load('HotTubGood.mp3', 0.75),
@@ -372,7 +375,7 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Mind Whip': 'mindWhip',
     'You are Cursed': 'cursed',
     'Sympathy for the Devil': 'sympathy',
-    'Disguises': 'marthaPuff' // Martha's vape; her switch of faces comes with the trick she copies
+    'Disguises': 'marthaAbility' // the user's clip (4 Nov); her switch of faces comes with the trick she copies
 };
 // A face put on (Martha's copied trick, or your mask): her switch sound, then the trick's own
 // sound this long after it starts.

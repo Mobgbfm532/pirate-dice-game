@@ -191,7 +191,7 @@ async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [
 // checkerboard. Flood-fill from the border through anything close to the border's colour,
 // then take the background's tint out of the edge pixels (wispy hair over magenta would
 // otherwise keep a pink fringe).
-function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOverBlue = -Infinity }) {
+function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOverBlue = -Infinity, green = false }) {
     const { data, width, height } = img;
     const border = [];
     for (let x = 0; x < width; x++) border.push(x, (height - 1) * width + x);
@@ -202,6 +202,9 @@ function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOve
     // brown cloth in shadow can come close in plain distance, but their blue sits below green.
     const near = p => {
         const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+        // A green screen (`green`, 4 Nov: Mystery Flavour's lime): green well above red and blue
+        // instead (brass sits close in plain distance, but its red is above its green).
+        if (green) return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && g - r > 8 && g - b > 60;
         return Math.hypot(r - bg[0], g - bg[1], b - bg[2]) < tolerance && r - g > minRed && b - g > minBlue && r - b > redOverBlue;
     };
     const mask = new Uint8Array(width * height);
@@ -236,6 +239,35 @@ function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOve
 // and blue in the background's own proportions, so the blue excess (which skin, hair and
 // cloth don't have) measures how much background is mixed in, and the matching share of
 // red comes off with it. (Taking equal amounts off left reddish tips on stray hairs.)
+// Over a green screen the spill is green. Near the edge, a pixel whose green stands above its red
+// (brass and wood keep red above green) is part background: how much, from how far green sits
+// above blue against the background's own; that share turns see-through and is taken out of its
+// colour (the violet smoke's soft edge). Returns the alpha to apply after applyMask.
+function despillGreen(img, mask, bg, radius) {
+    const alpha = new Map();
+    const span = Math.max(1, bg[1] - bg[2]);
+    const { data, width, height } = img;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const p = y * width + x;
+        if (mask[p]) continue;
+        let edge = false;
+        for (let dy = -radius; dy <= radius && !edge; dy++) for (let dx = -radius; dx <= radius; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < width && ny < height && mask[ny * width + nx]) { edge = true; break; }
+        }
+        if (!edge) continue;
+        const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+        if (g <= r + 2) continue;
+        const t = Math.min(1, Math.max(0, (g - b) / span));
+        if (t <= 0) continue;
+        const a = 1 - t;
+        alpha.set(p, a < 0.15 ? 0 : a);
+        if (a >= 0.15) for (let c = 0; c < 3; c++) data[i + c] = Math.max(0, Math.min(255, Math.round((data[i + c] - t * bg[c]) / a)));
+        data[i + 1] = Math.min(data[i + 1], Math.max(data[i], data[i + 2]));
+    }
+    return alpha;
+}
+
 function despill(img, mask, bg, radius, skip = null) {
     const redPerBlue = (bg[0] - bg[1]) / Math.max(1, bg[2] - bg[1]);
     const { data, width, height } = img;
@@ -501,10 +533,10 @@ async function squareIcon(trimmed, size, pad = Math.round(size / 40)) {
     return sharp(fitted).extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } });
 }
 
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null, icon = null, redOverBlue = -Infinity } = {}) {
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null, icon = null, redOverBlue = -Infinity, green = false } = {}) {
     if (!wanted(name)) return;
     const img = await readRgba(file);
-    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes, redOverBlue });
+    const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes, redOverBlue, green });
     if (noSmoke) eraseSmoke(img, mask, bg, noSmoke);
     keepMainShape(img, mask, minPiece);
     const boxes = !smokeBox ? null : Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox];
@@ -512,7 +544,8 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     if (glow) smoke = glowToAlpha(img, mask, bg, glow, smoke ?? undefined);
     for (const t of trails ? [].concat(trails) : []) smoke = unmixTrails(img, mask, bg, t, smoke ?? undefined);
     if (soften) smoke = feather(img, mask, soften, smoke ?? undefined);
-    despill(img, mask, bg, despillRadius, smoke);
+    if (green) { const a = despillGreen(img, mask, bg, despillRadius); a.forEach((v, p) => { smoke = smoke ?? new Map(); smoke.set(p, Math.min(smoke.get(p) ?? 1, v)); }); }
+    else despill(img, mask, bg, despillRadius, smoke);
     applyMask(img, mask);
     smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
     if (fade) fadeEdges(img, fade);
@@ -902,4 +935,7 @@ await cutOutFlat('keepsake-kram.jpg', 'keepsakes/kram', { icon: 320 });
 // Three more keepsakes (30 Oct): the Miser's Purse, the Bottomless Flask, the Gambler's Charm
 await cutOutFlat('keepsake-misersPurse.jpg', 'keepsakes/misersPurse', { icon: 320 });
 await cutOutFlat('keepsake-bottomlessFlask.jpg', 'keepsakes/bottomlessFlask', { icon: 320, holes: [[457, 426]] }); // inside the swirl's curl
+// Martha's Mystery Flavour (4 Nov), painted on lime green (its smoke is violet): `green`, and a
+// `holes` seed for each pocket inside the smoke's question-mark curl.
+await cutOutFlat('keepsake-mysteryFlavour.jpg', 'keepsakes/mysteryFlavour', { icon: 320, green: true, holes: [[596, 59], [623, 237], [454, 78]] });
 await cutOutFlat('keepsake-gamblersCharm.jpg', 'keepsakes/gamblersCharm', { icon: 320, holes: [[903, 112], [649, 266], [664, 375], [661, 412], [654, 348], [670, 497]] }); // the cord's loop knot, the ring, between the wires, between the die and the clover

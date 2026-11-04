@@ -196,6 +196,19 @@ function bestKeeps(dice, toBeat, options = {}) {
     return active.filter(d => (want[d.value - 1] > 0 ? (want[d.value - 1]--, true) : false)).map(d => d.id);
 }
 
+// The chance of a good finish once these dice (ids, from those in play) are kept, playing on as
+// well as possible: the Duke's check on whether he needs his Devil.
+function chanceAfterKeep(dice, keepIds, toBeat, options = {}) {
+    const { V } = tableFor(toBeat, options);
+    let s = 0, h = 0, n = 0;
+    dice.forEach(d => {
+        if (d.status === 'stolen') return;
+        if (d.status === 'active' && !keepIds.includes(d.id)) { n++; return; }
+        ({ s, h } = afterKeeping(s, h, [1, 2, 3, 4, 5, 6].map(v => (v === d.value ? 1 : 0))));
+    });
+    return V[at(n, s, h)];
+}
+
 // The chance of a good finish from the start of a turn (for tests and tuning).
 function chanceFromStart(toBeat, options = {}) {
     return tableFor(toBeat, options).V[at(6, 0, 0)];
@@ -221,4 +234,4 @@ function setTakeNeeded(on) {
     tables.clear();
 }
 
-module.exports = { setTakeNeeded, bestKeeps, chanceFromStart, sensiblePlayerScores, firstMoverValue, warmUp };
+module.exports = { setTakeNeeded, bestKeeps, chanceAfterKeep, chanceFromStart, sensiblePlayerScores, firstMoverValue, warmUp };

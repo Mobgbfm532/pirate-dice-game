@@ -567,6 +567,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
                 <span className="keepsake-row">
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
+                        : k.id === 'mysteryFlavour' ? <MysteryKeepsake key={k.id} snap={snap} state={state} />
                         : <KeepsakeIcon key={k.id} icon={keepsakeIcon(k.id)} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
                     {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." blessing />}
                     {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} blessing />}
@@ -579,7 +580,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
 }
 
 // Keepsakes that work once a fight (dimmed once they have).
-const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask', 'bottomlessFlask']);
+const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask', 'bottomlessFlask', 'mysteryFlavour']);
 
 function KeepsakeIcon({ icon, name, text, spent = false, blessing = false }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean }) {
     const remind = () => { playSound('click'); showToast(typeof icon === 'string' ? `${icon} ${name}` : name, spent ? `${text} (Used this fight.)` : text, 'info', 4200); };
@@ -622,6 +623,55 @@ function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
                     {devil && <button onClick={() => wear('devil')}>Devil<small>{state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : turn!.hasRolled ? 'next throw: three 6s' : 'three 6s for you'}</small></button>}
                 </span>
             )}
+        </span>
+    );
+}
+
+// Mystery Flavour, Martha's Elf Bar (4 Nov): once a fight it works as this fight's flavour does
+// (one of Johnny's four, drawn as the fight starts; its painting shows which). Lit when that
+// flavour could be puffed now; a tap shows "Puff" beside it (two taps, like the shelf).
+const ELF_BAR_NAMES: Record<string, string> = { purpleHaze: 'Purple Haze', cottonCandyCloud: 'Cotton Candy Cloud', lemonLevitation: 'Lemon Levitation', watermelonHindsight: 'Watermelon Hindsight' };
+const ELF_BAR_TEXT: Record<string, string> = {
+    purpleHaze: 'after a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it',
+    cottonCandyCloud: "on your turn, while your opponent is still to throw: they play this round without seeing your score",
+    lemonLevitation: 'after a throw: throw again without keeping a die',
+    watermelonHindsight: 'undo your last throw: those dice are thrown again'
+};
+
+function MysteryKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const run = state.tavernRun!;
+    const mystery = run.mystery;
+    const [open, setOpen] = useState(false);
+    const flavour = mystery?.flavour ?? 'purpleHaze';
+    const usable = !!mystery?.ready && drinkable({ id: flavour, name: '', text: '', price: 0, drink: true, elf: true } as Thonic, snap, state);
+    useEffect(() => { if (!usable) setOpen(false); }, [usable]);
+    const text = `Martha's Elf Bar. One puff a fight; this fight it tastes of ${ELF_BAR_NAMES[flavour]}: ${ELF_BAR_TEXT[flavour]}.`;
+    const tap = () => {
+        playSound('click');
+        if (usable) setOpen(!open);
+        else showToast('Mystery Flavour', mystery?.ready ? text : `${text} (Used this fight.)`, 'info', 5200);
+    };
+    return (
+        <span className="mask-keepsake">
+            <button className={`keepsake-icon ${usable ? 'usable' : ''} ${mystery?.ready ? '' : 'spent'}`} aria-label={`Mystery Flavour: ${text}`} onClick={tap}>
+                <span aria-hidden="true">{mysteryIcon(flavour)}</span>
+            </button>
+            {open && (
+                <span className="mask-choice" role="group" aria-label="Mystery Flavour">
+                    <button onClick={() => { setOpen(false); actions.puffMystery(); }}>Puff<small>{ELF_BAR_NAMES[flavour]}</small></button>
+                </span>
+            )}
+        </span>
+    );
+}
+
+// Mystery Flavour's picture: the user's painting of Martha's brass vape (4 Nov), with a dot in
+// this fight's flavour's colour on the strip (none on the invitation, where no fight has chosen one).
+function mysteryIcon(flavour?: string) {
+    return (
+        <span className="mystery-art">
+            <img className="item-art" src={`${import.meta.env.BASE_URL}art/keepsakes/mysteryFlavour.webp`} alt="" draggable={false} />
+            {flavour && <i className={`flavour-dot ${flavour}`} />}
         </span>
     );
 }
@@ -785,9 +835,10 @@ function YourTurnBanner({ at }: { at: number }) {
 const PAINTED_KEEPSAKES = new Set(['bentCopper', 'velvetCushion', 'luckySeat', 'loyaltyCard', 'potionBelt', 'loadedDie', 'marthasMask', 'brodorsSunglasses',
     // ...and the blessings and the Bard's songs (shown the same way, on the strip and in their moments).
     'ladysGrace', 'cuttingWords', 'inspiringSong', 'kram',
-    // ...and the three of 30 Oct.
-    'misersPurse', 'gamblersCharm', 'bottomlessFlask']);
+    // ...and the three of 30 Oct, and Martha's Elf Bar (4 Nov).
+    'misersPurse', 'gamblersCharm', 'bottomlessFlask', 'mysteryFlavour']);
 function keepsakeIcon(id: string): React.ReactNode {
+    if (id === 'mysteryFlavour') return mysteryIcon();
     if (PAINTED_KEEPSAKES.has(id)) return <img className="item-art" src={`${import.meta.env.BASE_URL}art/keepsakes/${id}.webp`} alt="" draggable={false} />;
     return KEEPSAKE_ICONS[id] ?? '✦';
 }
@@ -1159,8 +1210,9 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {/* As it lands: a shockwave ring from its middle (its edges glow and a shine sweeps it, in CSS). */}
                 {surge && <span className="impact" aria-hidden="true" />}
                 {/* An opponent's ability (or your mask) shows its name alone (the user's call, 28 Oct), and
-                    so does a Thonic; keepsakes and the Lady keep who and what. */}
-                {(!takeover && !moment.thonic || keepsake) && <span className="who">{moment.name}</span>}
+                    so does a Thonic, and the Lady's Grace (no "Shrine to the Lady" over it, the user, 4 Nov);
+                    keepsakes keep who and what. */}
+                {(!takeover && !moment.thonic && moment.name !== 'Shrine to the Lady' || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
                 {moment.ability === 'Smooth Talk' && fx && /knocks/.test(moment.text ?? '') && <span className="minus">−3</span>}
@@ -1355,7 +1407,7 @@ function Interlude({ state }: { state: GameState }) {
 const INVITATIONS: Record<string, { title: string; line: (place: string) => string; gift: string }> = {
     'Martha Mystery': {
         title: 'You qualify for the Yawning Portal',
-        line: place => `Martha Mystery lifts off her mask and presses it into your hand. "You've earned this. Show it at ${inSentence(place)}."`,
+        line: place => `Martha Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at ${inSentence(place)}."`,
         gift: "is yours: once a fight, before you roll, wear Danhausen's Curse or the Duke's Devil for the round."
     },
     Brodor: {
@@ -1371,7 +1423,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     const run = state.tavernRun!;
     const me = Object.values(state.players).find(p => p.id !== BOT_ID);
     const story = INVITATIONS[interlude.boss ?? ''] ?? INVITATIONS['Martha Mystery'];
-    const drop = interlude.drop ?? { id: 'marthasMask', name: "Martha's Mask", text: '' };
+    const drop = interlude.drop ?? { id: 'mysteryFlavour', name: 'Mystery Flavour', text: '' };
     const save = () => actions.saveAndLeave(interlude.save, { name: me?.name ?? 'Traveller', place: interlude.place, next, purse: run.purse });
     // The end of a place (visuals plan step 5, 25 Oct): a sealed letter flutters down, its wax seal
     // cracks and the invitation unfolds out of it (in the new look; a tap skips to it).
