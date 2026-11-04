@@ -153,11 +153,13 @@ matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320
 
 | Asset | Status | File |
 |---|---|---|
-| Table wood | Done | `art/table-planks.jpg` → `textures/table-planks.webp` (first version kept as `art/table-wood-v1.webp`) |
-| Rail wood | Done | `art/rail-walnut.jpg` → `textures/rail-walnut.webp` (the slot rail; the tray has had no rails since 3 Nov) |
+| Table wood | Done | Since 28 Oct the tabletop is `art/table-wide.jpg` → `textures/table-wide.webp`, laid once across the table (mirrored past its sides since 3 Nov); before it `art/table-planks.jpg` → `textures/table-planks.webp`, and the first version `art/table-wood-v1.webp` |
+| Rail wood | Done | `art/rail-walnut.jpg` → `textures/rail-walnut.webp` (the slot rail and the tray's rails: a wooden box again since 3 Nov, no brass on it) |
 | UI parchment | Done | `art/parchment.jpg` → `art/parchment.webp` (dialogs; covers each panel, not tiled) |
 | Felt | Done | `client/public/textures/felt.webp` |
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
+| Opponents' dice (the Ghoul and Gourd) | Done, 3 Nov | `art/dice-mcgrath.jpg` (made, but McGrath throws your ivory dice since 3 Nov), `dice-frak.jpg`, `dice-danhausen.jpg`, `dice-duke.jpg` (its 1 ringed in gold, `RING_ONE`), `dice-martha.jpg` → `textures/dice/<id>.webp` and `<id>-cut.webp` (`diceSheets()`: faces redrawn even, lifted lighter; pips as painted). Still wanted: the Yawning Portal's and the ship's nine (prompt above; the `dice-import` subagent brings them in) |
+| Multiplayer reactions (five item icons) | Done, 3 Nov | `art/reaction-cheers.jpg`, `reaction-ha.jpg`, `reaction-ooh.jpg`, `reaction-smug.jpg`, `reaction-woe.jpg` (flat magenta, `cutOutFlat` with `icon: 320`; the tankard keeps its ale drops and has `holes` in its handle) → `client/public/art/reactions/<id>.webp` |
 | Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
 | Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
 | Backdrop: the Yawning Portal | Done (26 Oct) | `art/yawning-portal-backdrop.jpg` → `yawning-portal.webp` (1584×672), the hall with its well; the Portal's five fights and its scenes |

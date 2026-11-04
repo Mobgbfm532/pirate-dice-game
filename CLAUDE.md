@@ -109,7 +109,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   and with built-in Intel graphics (read from WebGL's renderer name) Auto starts on Low: the user's
   Iris Xe on battery measured High 7-32 frames a second at 1920x1080, Medium 14-19, Low 25-51
   (headless Chrome on the real GPU, `--use-angle=d3d11`; the numbers swing a lot on battery).
-- `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray (since 28 Oct the tabletop is the user's wide painting `table-wide.webp`, laid once and not tiled: `tabletopTexture`, clamped at its sides, mirrored past its near edge),
+- `TableScene.tsx`: camera solve (fits table between tavern band and controls), lights, tray (since 28 Oct the tabletop is the user's wide painting `table-wide.webp`, laid once and not tiled: `tabletopTexture`, mirrored past its sides (since 3 Nov) and its near edge),
   brass plates. Portrait phones and desktops/tablets on their side (height > 500) keep the
   table centred above the controls (since 3 Nov upright phones keep the whole tray, rails too, in
   view: `PORTRAIT_HALF_WIDTH` 4.45, was 4.05; the slot row's plates are centred under the tray,
@@ -169,15 +169,12 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   between fights (`Interlude`) and each event's scene (`SpotScene`), the run-over screen.
   **A multiplayer table** (no bot, not a Tavern Crawl; 3 Nov, the user's pick of the multiplayer
   ideas): the other players sit in a bar of cards under the header (`Rivals`, `.rivals`: a phone
-  shows up to three a row, two below 420 px wide, three small ones from seven players on; wider
-  screens one row), in turn order, gold on whose turn it is; the footer keeps only your chip. The
+  shows up to three a row, so six players are two rows, with smaller portraits from five and smaller
+  still from seven; wider screens one row), in turn order, gold on whose turn it is; the footer keeps only your chip. The
   bar's bottom is `screenInsets.top`, and the camera puts the table's far edge just under it, so the
   table grows where the screen's height was the limit (desktops about a third bigger; upright phones
   only where the width isn't the limit already, e.g. 360x640). Phones on their side keep every
-  player in the column at the top left instead (`useMedia`). The points after a throw (the callout)
-  sit in a band between the bar and the table (`.hud.multiplayer .callout`, `--rivals-bottom`; the
-  camera leaves 46 px on phones, 66 px elsewhere): above the far edge they landed on the header.
-  Names shrink to fit their card (`FitName`, down to 62%, measured to the fraction of a pixel and again
+  player in the column at the top left instead (`useMedia`). Names shrink to fit their card (`FitName`, down to 62%, measured to the fraction of a pixel and again
   as fonts load) before any "…" (all chips and cards). Since 3 Nov (the user's picks 3 and 4): each
   card has the name across the top and hearts + score under it; a finished score is big and pops in
   (`.score.final`), so what there is to beat reads at a glance; and a big screen (`min-width: 1180px`,
@@ -314,7 +311,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (3 November 2026)
+## Status (4 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -322,12 +319,17 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 137 server/rules/strategy tests + 17 client tests.
-- **1-3 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly,
-  and follow the mouse on a computer; the phone's tilt was tried and taken out); extra dice spin
+  keepsakes, gold, saves after each place. 142 server/rules/strategy/database tests + 16 client tests.
+- **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
+  a phone; a computer holds still since 3 Nov; the phone's tilt was tried and taken out); extra dice spin
   was tried and reverted (it looked unreal); a richer table was built; on 3 Nov the tray lost its
   brass and stayed a wooden box, and the camera got moves for big moments (a push-in on a perfect
-  hand, a rumble for three 6s, the Hangman's recoil, All In's thud).
+  hand, a rumble for three 6s, the Hangman's recoil, All In's thud). Also 3-4 Nov: opponents' own painted
+  dice (the Ghoul and Gourd), the Neon database, faster desktops, the multiplayer table rebuilt (player
+  cards, seats beside the tray, two callouts over nameplates, the user's painted reactions), the
+  Ghoul and Gourd's hearts, the Yawning Portal's abilities and sounds. Both shared docs were brought
+  up to date on 4 Nov (the visuals plan's "Where it stands" and "What's left for the look"; the
+  Tavern Crawl design doc's "Where the game stands" table).
 - **27 Oct - 1 Nov (the user's calls; details in "Tavern Crawl now"):**
   - abilities rise up the screen like the devil's three 6s, 1.85 s each, showing only their name;
     paintings for most abilities (all but Dead Eye, the Ace of Spades and All In); new busts for
@@ -443,7 +445,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   looked like mistakes). That costs up to 5 points of win chance at high targets: to beat 20
   they win 48% (pure best 53%, the old fixed habits 35%).
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
-  Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each, first guesses; the ship since 25 Oct:
+  Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each (Stason 2), first guesses; the ship since 25 Oct:
   Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2; Stason's Flourish 2 since 3 Nov, shown as **Vexing Rapier** since 3 Nov; its id stays `flourish`). Each use costs the player ~10 points of fight win chance. **The Yawning
   Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the knocked-loose die must be rolled before it can be kept again, `turn.mustRollId`, 23 Oct; the
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
@@ -761,10 +763,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    `balance/`): the new keepsakes' prices (Miser's Purse 12, Gambler's Charm 14, Bottomless Flask
    12, the reworked Loaded Die 12) and whether the Miser's Purse needs a cap (it grows with the
    purse); the Elf Bars (8-14); the Bard (8); the Cult (15% of walks, 2 fights); uses per fight
-   for the Yawning Portal's five (1 each). Then difficulty overall: the simulator says the game
+   for the Yawning Portal's five (1 each, Stason 2); the Ghoul and Gourd on 2 hearts a side (3 Nov). Then difficulty overall: the simulator says the game
    is hard (0.3% finish) but the user finds it easier; options measured in `easier.js`,
-   `tournament-lives.js`. The simulator doesn't know the Elf Bars, the Bard, the Cult or the new
-   keepsakes yet: teach it before trusting its numbers.
+   `tournament-lives.js`. The simulator doesn't know the Elf Bars, the Bard, the Cult, the new
+   keepsakes, `fightHearts` (the Ghoul and Gourd's 2-heart fights) or Astral Flood taking a heart
+   yet: teach it before trusting its numbers.
 2. **The user's art and sounds waiting:** dice sets for the Yawning Portal's and the ship's
    opponents (add each id to `DICE_SETS` and `OPPONENT_DICE`); ability paintings for Dead Eye, the Ace of Spades and
    All In; an Elf Bar's puff (it borrows Martha's); music and ambience from Udio;
@@ -777,11 +780,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
    Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
 5. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
-6. **The look, more** (offered 1 Nov): living backdrops (the fireplace, candles and the Portal's
-   well flicker, by a mask like the devil painting's), light for each place (cool well light at
-   the Yawning Portal, swinging lanterns on the ship); more camera moves if the user likes the
-   first ones (a lurch for Klarg's steal, a thud as a heart is lost). Also: if Auto quality drops a good phone to Low, tune its threshold
-   (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
+6. **The look, more** (listed in the visuals plan's "What's left for the look", 4 Nov): living
+   backdrops (the fireplace, candles and the Portal's well flicker, by a mask like the devil
+   painting's); light for each place (cool well light at the Yawning Portal, swinging lanterns on the
+   ship) and music per place; more camera moves if the user likes the first ones (a lurch for Klarg's
+   steal, a thud as a heart is lost); on a computer's multiplayer table the cards could move up into
+   the header (the "X is rolling" banner repeats their gold glow). Check the frame rate on the user's
+   PC and phone after the 3 Nov speed-ups; if Auto quality drops a good phone to Low, tune its
+   threshold (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
 7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
    command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
    the live game); then delete the test service. Old saved runs won't open (money changed); the
@@ -798,4 +804,4 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    out, the old keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`,
    `shareFlame`, the unused `--flame` CSS variable, the old Constellation Blur, the synthesized
    cork pop); a smaller first download (lazy-load three.js, compress the 9.5 MB ambience track);
-   spectator mode; emoji reactions floating over the table.
+   spectator mode.

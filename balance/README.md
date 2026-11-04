@@ -231,3 +231,13 @@ the hand at 18), his second only once hurt or at his last life ~21-23%; Dead Eye
 once 20%; rerolled twice 20%; Rokr's stars 2 turns 34%; Jaguar's Smooth Talk every round 11% (it
 fired every round, and an empty shelf cost 3 each time), The Cloak hidden only ~0 points, All In ~1-2.
 Whole runs barely change (few runs reach the ship): sensible finish 0.3% → 0.1%.
+
+### The Ghoul and Gourd on 2 hearts a side (the user's call, 3 Nov)
+
+Set by hand, not simulated: you start on 2 hearts against McGrath, Frak, Danhausen and the Duke and
+on 3 against Martha (`fightHearts` in `shared/balance.js`), and the opponents have 1, 2, 2, 2, 3 lives
+there; the Yawning Portal is back on 3, 3, 3, 3, 4. Stason's Flourish has 2 uses, and Brodor's Astral
+Flood now also takes one of your hearts (never your last). **The simulator doesn't know `fightHearts`
+or the Astral Flood change yet** (it starts every fight on `playerHearts`): teach it before trusting its
+numbers for the Ghoul and Gourd.
+

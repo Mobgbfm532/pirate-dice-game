@@ -1,6 +1,6 @@
 # Character text in the Tavern Crawl
 
-Every line the game shows for each character, as of 3 November. Send changes in your own words and
+Every line the game shows for each character, as of 4 November (checked against the game). Send changes in your own words and
 they'll be put in; the "Where" notes say which file holds each line.
 
 Since 28 October an ability's screen shows **only its name**. The longer lines that used to sit
@@ -144,3 +144,13 @@ Where: `server.js` (`TAVERN_KEEPSAKES`, `MARTHAS_MASK`, `BRODORS_SUNGLASSES`); t
 - **Martha's Mask:** "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you)."
 - **Brodor's Sunglasses:** "A finished 23 restores a heart, like a 24."
 - On Thom's back shelf with five keepsakes, the buttons read "Pockets full".
+
+## Multiplayer tables
+
+Not the Tavern Crawl, but the only words a multiplayer table shows during play (3 Nov), so they're
+here too. Where: `MULTIPLAYER_CALLOUTS` in `client/src/game.ts`.
+
+- "The Early Ross!": after the first throw, a 2 or a 4 is kept together with a 1, 3, 5 or 6.
+- "Didn't Bite!": after the first throw, just a 2 or a 4 is kept while a 6 is left to roll again.
+- "Perfect 24!" when a hand finishes on 24 (with the player's name when it isn't you).
+- The reactions have names only as tooltips on their coins: Cheers, Ha!, Ooh, Smug, Woe.
