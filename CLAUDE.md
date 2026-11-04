@@ -82,7 +82,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
-  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `CoinTally.mp3` on a fight's summary (once for the win's gold, once for each heart left, 160 ms apart; 4 Nov), `TavernCrawlVictory.mp3` as a fight's summary opens and when a whole crawl is won, `MultiplayerVictory.mp3` on the winner's screen when a multiplayer table ends (`gameOver.winnerId`), `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
+  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `CoinTally.mp3` on a fight's summary (once for the win's gold, once for each heart left, 160 ms apart; 4 Nov), `TavernCrawlVictory.mp3` as a fight's summary opens and when a whole crawl is won, `MultiplayerVictory.mp3` on the winner's screen when a multiplayer table ends (`gameOver.winnerId`), `Whoa.mp3` as any slow-motion last throw lands and on a Perfect ...4?, on top of its yay, oh well or aww (`slowThrow` in game.ts; 4 Nov), `ThiefLaugh.mp3` as the thief gets away (it was the aww), `LadyChoice.mp3` when the Lady's Grace saves you too (it was the yay), `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
 - **The table** (`TableDressing.tsx`, in TableScene's `Tray`): a wooden box again (the user, 3 Nov:
   "get rid of the rails" meant only the brass): the new look's rails are rounded and varnished with a
@@ -324,7 +324,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 146 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 16 client tests.
+  keepsakes, gold, saves after each place. 147 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 16 client tests.
 - **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
   a phone; a computer holds still since 3 Nov; the phone's tilt was tried and taken out); extra dice spin
   was tried and reverted (it looked unreal); a richer table was built; on 3 Nov the tray lost its
@@ -691,8 +691,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
   brings the two spots, or "Or challenge X right away" skips them. The random events: about 1
-  walk in 4 a **pickpocket** strikes first: roll one die, a 4+ catches the thief
-  (`pickpocketCatch`), else they take half the purse (a quarter until 21 Oct). Else, 20% of the
+  walk in 4 a **pickpocket** strikes first, at most twice at any one place (`pickpocketMaxPerPlace`, `run.thieves`; 4 Nov, the user's call): roll one die, a 4+ catches the thief
+  (`pickpocketCatch`; the text says "to spot them"), else they take half the purse (a quarter until 21 Oct). Else, 20% of the
   time (`strangerChance`), the **Hooded Stranger** finds you (a random event since 19 Oct, no
   longer a spot): one of two keepsakes, the next fight a heart short (on 2), or turn him
   down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The Lady's Favour adds

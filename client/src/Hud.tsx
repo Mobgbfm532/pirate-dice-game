@@ -940,7 +940,7 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
             <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
                 <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
                 <p className="subtitle">
-                    {summary.won ? 'You won the final aboard the Salty Swallow.' : `${summary.fellTo} ended your run.`}
+                    {summary.won ? 'You won the final aboard the Salty Swallow.' : summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
                 </p>
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
@@ -1079,7 +1079,7 @@ function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: bo
     const ability = enemy.ability ? Rules.ABILITY_NAMES[enemy.ability as keyof typeof Rules.ABILITY_NAMES] : null;
     return (
         <button key={snap.introAt} className="encounter-intro" onClick={dismiss}>
-            <span className="encounter">{run.place} · Opponent {run.encounterNumber} of {run.totalEncounters}</span>
+            <span className="encounter">{run.place}</span>
             <span className="name">{enemy.name}</span>
             <Hearts lives={enemy.lives} starting={enemy.lives} />
             {ability && <span className="ability">{ability}</span>}
@@ -1815,7 +1815,7 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
         const timer = setTimeout(() => {
             setRolling(false);
             setRevealed(true);
-            playSound(interlude.caught ? 'yay' : 'aww');
+            playSound(interlude.caught ? 'yay' : 'thiefLaugh'); // (the thief's laugh as they get away: the user's clip, 4 Nov)
         }, DIE_ROLL_MS);
         return () => clearTimeout(timer);
     }, [rolled, interlude.roll, interlude.caught, setRevealed]);
@@ -1823,7 +1823,7 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
     const done = rolled && !rolling;
     return (
         <>
-            {!rolled && <p className="scene-text">The thief is making off with <strong>{coins(interlude.steal)}</strong>. Roll a {catchFaces} to catch them.</p>}
+            {!rolled && <p className="scene-text">The thief is making off with <strong>{coins(interlude.steal)}</strong>. Roll a {catchFaces} to spot them.</p>}
             {rolled && (
                 <div className={`dice-row single ${done ? (interlude.caught ? 'good' : 'bad') : ''}`}>
                     <Die value={interlude.roll!} rolling={rolling} />

@@ -117,7 +117,7 @@ test('a browser cannot report its own score', async () => {
     const complete = waitFor(current, 'turnState', d => d.turn && d.turn.complete);
     rolled.turn.dice.forEach(d => current.emit('toggleDie', d.id));
     await complete;
-    const dice = Rules.scoreDice(rolled.turn.dice);
+    const dice = Rules.scoreDice(rolled.turn.dice.map(d => ({ ...d, status: Rules.STATUS.LOCKED_THIS_ROLL })));
     const expected = { busted: !dice.has2 || !dice.has4, score: dice.has2 && dice.has4 ? dice.score : 0 };
     // First turn of the round, so the score stays on the board while the other player goes.
     const scored = waitFor(current, 'gameStateUpdate', s => s.currentTurnId !== current.id);
@@ -1180,6 +1180,7 @@ test('the Hooded Stranger finds you now and then, instead of the spots, until hi
     const walks = n => {
         const seen = { pickpocket: 0, stranger: 0, darren: 0, choose: 0 };
         for (let i = 0; i < n; i++) {
+            room.tavernRun.thieves = {}; // (the odds of each event; the cap per place has its own test)
             server.startInterlude(room, null);
             seen[room.tavernRun.interlude.stage]++;
             if (room.tavernRun.interlude.stage === 'choose') assert.ok(!room.tavernRun.interlude.spots.includes('stranger'));
@@ -1367,6 +1368,23 @@ test('keeping your last die waits for End Turn: until then a die kept this throw
     hero.emit('endTurn');
     const st = await scored;
     assert.equal(st.players[hero.id].score, 18);
+});
+
+test('a thief strikes at most twice at any one place', async () => {
+    const { room } = await tavernTable('Robbed');
+    const run = room.tavernRun;
+    const thievesAt = fight => {
+        run.encounterIndex = fight;
+        let seen = 0;
+        for (let i = 0; i < 300; i++) {
+            run.purse = 100;
+            server.startInterlude(room, { defeated: 'Someone', nextEnemy: 'Someone', gold: { win: 0, hearts: 0 } });
+            if (run.interlude.stage === 'pickpocket') seen++;
+        }
+        return seen;
+    };
+    assert.equal(thievesAt(fightOf('frak')), 2, 'the Ghoul and Gourd');
+    assert.equal(thievesAt(fightOf('vaelin')), 2, 'the Yawning Portal starts afresh');
 });
 
 test('Second Thoughts reopens a finished hand', async () => {

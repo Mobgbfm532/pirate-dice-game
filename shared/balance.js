@@ -94,6 +94,7 @@ module.exports = {
         pickpocketChance: 25,   // percent of walks across the room
         pickpocketShare: 0.5,   // of the purse, if they get away (half since 21 Oct, the user's call; it was a quarter)
         pickpocketCatch: 4,     // roll this or higher on one die to catch them
+        pickpocketMaxPerPlace: 2, // a thief strikes at most this often at any one place (the user's call, 4 Nov)
         shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
         shrinePrice: 10,        // a candle for the Lady (rising, priceRise)
         hotTubPrice: 5,         // a soak (rising, priceRise)

@@ -16,6 +16,7 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 
 **Sperm McGrath** (no ability)
 - Entrance card: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
+- Run-over screen, if he beats you: "You couldn't beat Sperm?" (everyone else: "[name] ended your run.")
 
 **Frak**: Mind Whip
 - Entrance card: "Frak, a repugnant ne'er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep one of your dice, at random."
@@ -82,7 +83,7 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 
 **The thief** (sign "Stop, thief!", "A hand in your purse")
 - "Finders keepers!" Caught: "Alright, alright! Have it back!" Got away: "Too slow!"
-- Counter: "The thief is making off with [gold]. Roll a [4, 5 or 6] to catch them."
+- Counter: "The thief is making off with [gold]. Roll a [4, 5 or 6] to spot them."
 
 **The Hooded Stranger** (sign "Keepsakes, for a price")
 - "I have something for you… for a price." Took one: "A fine choice. Mind your heart." Turned down: "Another time, then."

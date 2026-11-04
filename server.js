@@ -1892,7 +1892,12 @@ function startInterlude(room, won) {
     let run = room.tavernRun;
     run.lastWin = won;
     let steal = Math.floor(run.purse * INTERLUDE.pickpocketShare);
-    if (steal > 0 && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+    // (At most pickpocketMaxPerPlace thieves at one place. A save is made as a place ends, so this
+    // count needn't travel with it: the next place starts afresh.)
+    let place = TAVERN_ENCOUNTERS[run.encounterIndex].place;
+    run.thieves = run.thieves || {};
+    if (steal > 0 && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+        run.thieves[place] = (run.thieves[place] || 0) + 1;
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
     } else if (!pocketsFull(room) && unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
         run.interlude = strangerOffer(room);

@@ -44,6 +44,9 @@ const sfx = {
     // The user's, 4 Nov: a fight's summary tallies its gold (once for the win, once a heart left),
     // a Tavern Crawl fight (and a whole crawl) won, a multiplayer table won.
     coinTally: load('CoinTally.mp3', 0.8),
+    // The user's, 4 Nov: a slow-motion last throw lands (with its yay or oh well), and the thief gets away.
+    whoa: load('Whoa.mp3', 0.8),
+    thiefLaugh: load('ThiefLaugh.mp3', 0.8),
     tavernVictory: load('TavernCrawlVictory.mp3', 0.8),
     multiplayerVictory: load('MultiplayerVictory.mp3', 0.8),
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
@@ -56,7 +59,7 @@ const sfx = {
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
-const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05 };
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1 };
 // The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
 // asked to, where an <audio> element can lag noticeably on phones.
 const buffers = new Map<keyof typeof sfx, AudioBuffer>();

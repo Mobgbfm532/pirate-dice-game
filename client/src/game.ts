@@ -403,6 +403,7 @@ function showDevil(turn: TurnView) {
     momentGoneAt = Math.max(momentGoneAt, gone);
 }
 
+let slowThrow = false; // the throw on the table was a slow-motion last one
 function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null, turn: TurnView | null) {
     if (!event) return;
     const mine = snapshot.isMyTurn;
@@ -414,6 +415,9 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
     // wins: four 1s with the 2 and 4 is its perfect hand, and a 24 its worst.
     const cursed = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse';
     const perfect = perfectHand(event.outcome, cursed);
+    // The user's Whoa (4 Nov), on top of the rest: a Perfect ...4?, and any slow-motion last throw as it lands.
+    if (slowThrow || perfect === 'perfect4') playSound('whoa');
+    slowThrow = false;
     if (perfect) {
         playSound('yay');
         if (perfect === 'perfect24') table.celebrateAt = performance.now();
@@ -465,6 +469,7 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         table.roll = { track, startedAt: performance.now(), speed, pace, hidden: new Set(rolled.filter(d => d.hidden).map(d => d.id)) };
         // The room holds its breath as the camera leans in on a slow-motion last throw (the user's clip, 28 Oct).
         if (speed < 1) playSound('gasp');
+        slowThrow = speed < 1; // (its landing gets the user's Whoa: playOutcomeSounds)
         // Rokr's blur lifts the moment the next roll starts (not when it lands): the dice already
         // kept show their faces at once, and the stars over the thrown ones go.
         const unblurred = before && before.blurActive && !turn.blurActive
@@ -672,7 +677,7 @@ socket.on('thonicUsed', (data: { id: string; name: string; text: string }) => {
 // The Lady's Grace saves a dust: her moment on the table, like a Thonic's (no cork).
 socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => {
     enqueueMoment(() => {
-        playSound('yay');
+        playSound('ladyChoice'); // the sound of choosing her blessing (the user's call, 4 Nov; it was the yay)
         update({ ability: { name: 'Shrine to the Lady', ability: data.name, text: data.text, extra: '♥ saved', blessing: 'ladysGrace', at: performance.now() } });
     });
 });
