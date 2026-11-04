@@ -1440,23 +1440,45 @@ footer {
 
 /* Thom's line, in a speech bubble by his head once he has risen into view. Placed in the
    screen's corner of his area (he is wider than a phone), so it is never cut off. */
+/* (4 Nov, the user: "make them look the best they can"): warm parchment in a dark-wood rim, the
+   words in Alegreya italic, and a tail at the bottom left pointing down to the speaker. */
 .thom-speech {
     position: absolute;
     right: 12px;
     top: max(14px, calc(env(safe-area-inset-top) + 8px));
     max-width: calc(100% - 24px);
-    z-index: 1;
-    padding: 7px 14px;
-    border-radius: 16px 16px 16px 4px;
-    background: #fffaf0;
-    color: var(--ink);
+    box-sizing: border-box;
+    z-index: 3;
+    padding: 9px 17px 10px;
+    border-radius: 20px;
+    border: 2px solid #6b4423;
+    background: radial-gradient(ellipse at 30% 20%, #fffaf0, #f3e4c2 70%, #e8d3a6);
+    color: #2b1708;
+    font-family: var(--read, Georgia, serif);
+    font-style: italic;
     font-size: clamp(1rem, 4.5vw, 1.3rem);
     font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.005em;
     white-space: nowrap;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-    transform-origin: 0% 100%;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 236, 190, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    transform-origin: 26px calc(100% + 12px);
     animation: speech-pop 0.35s 1.15s cubic-bezier(0.3, 1.5, 0.5, 1) both;
 }
+/* The tail: a rounded wedge in the same rim and fill, tucked under the bubble's edge. */
+.thom-speech::before, .thom-speech::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    bottom: -13px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 14px 16px 0 0;
+    border-color: #6b4423 transparent transparent transparent;
+    transform: skewX(18deg);
+}
+.thom-speech::after { left: 20.5px; bottom: -9.5px; border-width: 11px 12.5px 0 0; border-color: #ead6aa transparent transparent transparent; }
 @keyframes speech-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
 
 /* The counter: dark walnut with a brass edge, holding the sign, purse and Thonics. */
@@ -2261,8 +2283,10 @@ button.keepsake.used { opacity: 0.55; }
 .keepsake-ware .about strong { font-size: 0.95rem; }
 .keepsake-ware .about .text { font-size: 0.75rem; opacity: 0.85; line-height: 1.2; }
 .keepsake-ware .buy { white-space: nowrap; }
-@media (max-height: 700px) {
-    /* Short phones: Thom keeps some room above his counter; the back shelf shows names and prices. */
+@media (max-height: 700px) and (orientation: portrait), (max-height: 500px) {
+    /* Short phones: Thom keeps some room above his counter; the back shelf shows names and prices.
+       (Upright phones and phones on their side only: a short computer window keeps what each
+       keepsake does, its counter has room beside Thom; the user, 4 Nov.) */
     .keepsake-ware .about .text { display: none; }
     .keepsake-ware { padding: 4px 8px; }
     .back-shelf h3 { margin: 2px 0; }
@@ -2939,4 +2963,62 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
     22% { transform: translate(0, -50%) scale(1); }
     86% { opacity: 1; transform: translate(0, -50%) scale(1.04); }
     100% { opacity: 0; transform: translate(-3%, -50%) scale(1.05); }
+}
+
+
+/* ---- The scenes between fights on wide screens (4 Nov, the user: Thom and the thief looked
+   like they floated, badly cut out). Each character now stands behind a counter of their own
+   across the bottom of the stage, which hides where their painting stops; they are sized to the
+   stage (container units) rather than fixed pixels, and where a painting crops them at a side
+   that side fades out. The speech bubble sits above and right of their face (stageVars in Hud
+   gives the face and the picture's shape). Phones on their side keep the old framing. ---- */
+@media (orientation: landscape) and (min-height: 501px) {
+    .thom-scene:not(.hotTub):not(.shrine) .thom-stage {
+        container-type: size;
+        --fig-h: 88cqh;
+        --sink: 9cqh;
+        --h: min(var(--fig-h), calc(94cqw / var(--aspect)));
+    }
+    .thom-scene.stranger .thom-stage, .thom-scene.diceDen .thom-stage { --fig-h: 82cqh; }
+    .thom-scene.darren .thom-stage { --fig-h: 86cqh; }
+    .thom-scene.kram .thom-stage { --fig-h: 84cqh; --bubble-dx: 0.4; } /* (its face point is between the two) */
+    .thom-scene.pickpocket .thom-stage { --fig-h: 94cqh; --sink: 4cqh; }
+    .thom-scene:not(.hotTub):not(.shrine) .thom-stage .thom-figure {
+        top: auto;
+        bottom: var(--sink);
+        height: var(--h);
+    }
+    /* The counter in front: dark walnut planks with a brass rail along the top. */
+    .thom-scene:not(.hotTub):not(.shrine) .thom-stage::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: calc(var(--sink) + 7cqh);
+        z-index: 2;
+        border-top: 4px solid transparent;
+        border-image: linear-gradient(90deg, #7a5318, #f6dc8e 30%, #c9973a 60%, #7a5318) 1;
+        background:
+            linear-gradient(rgba(255, 210, 140, 0.14), transparent 22%),
+            repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 160px),
+            repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 5px),
+            linear-gradient(#4a2a12, #2b1708 60%, #1a0e05);
+        box-shadow: 0 -14px 30px rgba(0, 0, 0, 0.55);
+        animation: fade-up 0.4s 0.15s both;
+    }
+    /* His bubble by his face, never off the stage. */
+    .thom-scene:not(.hotTub):not(.shrine) .thom-stage .thom-speech {
+        right: auto;
+        top: auto;
+        max-width: min(340px, calc(100cqw - 32px));
+        left: max(16px, min(calc(50cqw + (var(--face-x) - 50) / 100 * var(--h) * var(--aspect) + var(--bubble-dx, 0.19) * var(--h)), calc(100cqw - 356px)));
+        bottom: min(calc(var(--sink) + var(--h) * (1 - var(--face-y) / 100) + 0.07 * var(--h)), calc(100cqh - 90px));
+    }
+}
+/* Where a painting itself crops the character (measured from the cut-outs: Thom's right side, the
+   Cult's two sides), that edge fades out on wide screens instead of ending in a straight line. */
+@media (orientation: landscape) {
+    .thom-scene:not(.spot-scene) .thom-bust { -webkit-mask-image: linear-gradient(to left, transparent, #000 16%); mask-image: linear-gradient(to left, transparent, #000 16%); }
+    .spot-scene.kram .thom-bust { -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
 }

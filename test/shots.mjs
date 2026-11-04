@@ -14,7 +14,8 @@ import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const args = Object.fromEntries(process.argv.slice(3).map(a => a.split('=')));
+// (Split at the first "=" only: scene=between?spots=thom,shrine&stage=bard keeps its own.)
+const args = Object.fromEntries(process.argv.slice(3).map(a => [a.slice(0, a.indexOf('=')), a.slice(a.indexOf('=') + 1)]));
 const outDir = process.argv[2] ?? 'previews';
 const look = args.look ?? 'classic';
 const fight = args.fight ?? '1';
@@ -125,6 +126,17 @@ try {
             }, 100); })`);
             await wait(4000);
         }
+        // scene=<control>: a scene between fights from the dev controls (e.g. shop?purse=200,
+        // between?pickpocket=1, between?stage=bard); pick=<spot> then goes to that spot (elfKid, thom).
+        if (args.scene) {
+            await fetch(`${CONTROLS}/${args.scene}`);
+            await wait(2500);
+            // (The fight's summary comes first: past it.)
+            for (let i = 0; i < 12; i++) { if (!await evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Next'); b?.click(); return !!b; })()`) && i > 2) break; await wait(500); }
+            await wait(1200);
+            if (args.pick) { await evaluate(`window.__game.actions.chooseSpot('${args.pick}')`); await wait(500); }
+            await wait(3500); // the character rises, the speech bubble pops
+        }
         if (diceSet) {
             await evaluate(`window.__game.preview.dice('${diceSet}')`);
             await wait(1500); // the sheet loads
@@ -153,7 +165,7 @@ try {
             continue;
         }
         const { data } = await s('Page.captureScreenshot', { format: 'png' });
-        const file = join(outDir, `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}${diceSet ? `-${diceSet}` : ''}-${w}x${h}.png`);
+        const file = join(outDir, `${args.name ?? `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}${diceSet ? `-${diceSet}` : ''}`}-${w}x${h}.png`);
         writeFileSync(file, Buffer.from(data, 'base64'));
         console.log(file);
         await cdp.send('Target.closeTarget', { targetId });

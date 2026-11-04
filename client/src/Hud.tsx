@@ -1265,7 +1265,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     useEffect(() => startSceneAmbience('thom'), []);
     return (
         <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`Thom's Thonics. Thom: ${thomLine(!!shop.first)}`}>
-            <div className="thom-stage" aria-hidden="true">
+            <div className="thom-stage" aria-hidden="true" style={stageVars(SPOT_PORTRAITS.thom)}>
                 <div className="thom-lantern" />
                 <div className="thom-speech">{thomLine(!!shop.first)}</div>
                 <div className="thom-figure">
@@ -1569,7 +1569,7 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
     return (
         <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
             <div className="thom-stage" aria-hidden="true"
-                style={spot === 'shrine' ? { backgroundImage: `url("${portrait.src}")` } : undefined}>
+                style={spot === 'shrine' ? { backgroundImage: `url("${portrait.src}")` } : stageVars(portrait)}>
                 <div className="thom-lantern" />
                 {spot === 'stranger' && <div className="spot-mist" />}
                 {spot === 'shrine' && <div className="shrine-candles" />}
@@ -1590,6 +1590,12 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
             </div>
         </div>
     );
+}
+
+// Where the character's face is in their picture, and its shape: on a wide screen the speech
+// bubble is placed by the face (styles.css, the stage's container units), 4 Nov.
+function stageVars(p: { face: [number, number]; aspect?: number }) {
+    return { '--face-x': p.face[0], '--face-y': p.face[1], '--aspect': p.aspect ?? 0.7 } as React.CSSProperties;
 }
 
 // What you can do at the spot, on its counter.

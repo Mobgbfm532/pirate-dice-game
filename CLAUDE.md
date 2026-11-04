@@ -726,7 +726,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `art/bust-bard.jpg`, `art/bust-kram.jpg` (`SPOT_PORTRAITS` bard, kram). Their scenes loop the user's `ThreeStrings.mp3` (the Bard, volume 0.5) and `Cult.mp3` (Kram, 0.8) like the hot tub's (`startSceneAmbience`).
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
-  the Shrine's painting is its stage). Their dice are 2D (`Die` in Hud: red 1, green 6) with
+  the Shrine's painting is its stage). **On wide screens (landscape, taller than 500 px; 4 Nov, the
+  user: Thom and the thief floated, badly cut out)** each character stands behind a walnut counter
+  with a brass rail across the bottom of their stage (`.thom-stage::after`), sized to the stage in
+  container units (`--fig-h` 88cqh, per spot; `--sink`), and the side a painting crops fades out
+  (Thom's right, the Cult's two sides; measured from the cut-outs' edges); not the hot tub or the
+  Shrine. The speech bubbles are parchment in a dark-wood rim, Alegreya italic, with a tail at the
+  bottom left; on wide screens each sits above and right of its speaker's face (`stageVars` in
+  Hud passes the portrait's `face` and `aspect`), on phones in the stage's top corner as before.
+  Thom's back shelf keeps what each keepsake does on a short computer window (only short phones
+  hide it). `test/shots.mjs` takes `scene=<control>` (e.g. `between?stage=bard`), `pick=<spot>` and
+  `name=` to shoot these scenes; `previews/scenes/shoot.sh` (gitignored) shoots them all. Their dice are 2D (`Die` in Hud: red 1, green 6) with
   the real dice sound (`simulateRoll` impacts). Gold won or lost here is
   `stats.eventGold` ("Between fights" on the run-over screen). Numbers set by simulation.
   Each spot has painted art in a round frame (`SPOT_PORTRAITS`); the Lady is the goddess of
