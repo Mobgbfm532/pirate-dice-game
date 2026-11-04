@@ -92,6 +92,11 @@ export function calloutText(callout: string | null, mine: boolean, botTurn: bool
     return { text, color };
 }
 
+// A multiplayer hand that finishes on exactly 20 (its nameplate flashes "Dirty 20!"; the user's, 4 Nov).
+export function dirtyTwenty(outcome: { busted: boolean; score: number }): boolean {
+    return !outcome.busted && outcome.score === 20;
+}
+
 // A perfect hand, for its celebration: a 24, or in a cursed round (the lowest valid hand wins)
 // four 1s with the 2 and 4, which scores 4. A dust hand is never perfect, nor a cursed 24.
 export function perfectHand(outcome: { busted: boolean; score: number }, cursed: boolean): 'perfect24' | 'perfect4' | null {

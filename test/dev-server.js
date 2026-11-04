@@ -141,6 +141,16 @@ const COMMANDS = {
 // seed, so the same steps give the same throw (before/after screenshots). /seed alone: random again.
 const crypto = require('crypto');
 const realRandomInt = crypto.randomInt;
+// /faces?f=2,4,5,5,5,0: the next dice thrown land on these faces, whoever throws, at any table (0: at random).
+function pinFaces(faces) {
+    const before = crypto.randomInt;
+    crypto.randomInt = (a, b, ...rest) => {
+        if (a !== 1 || b !== 7 || !faces.length) return before(a, b, ...rest);
+        const face = faces.shift();
+        if (!faces.length) crypto.randomInt = before;
+        return face || before(a, b, ...rest);
+    };
+}
 function seedRandom(seed) {
     if (seed === null) { crypto.randomInt = realRandomInt; return; }
     let s = Number(seed) >>> 0;
@@ -160,6 +170,11 @@ http.createServer((req, res) => {
     if (url.pathname === '/seed') {
         seedRandom(url.searchParams.get('n'));
         res.end(`ok: seed ${url.searchParams.get('n') ?? 'off'}\n`);
+        return;
+    }
+    if (url.pathname === '/faces') {
+        pinFaces((url.searchParams.get('f') || '').split(',').filter(Boolean).map(Number));
+        res.end('ok: faces pinned\n');
         return;
     }
     const command = COMMANDS[url.pathname];

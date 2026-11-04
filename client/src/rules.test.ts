@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignSlots, onePerfect4Away, perfectHand, type Die, type DieStatus } from './rules';
+import { assignSlots, dirtyTwenty, onePerfect4Away, perfectHand, type Die, type DieStatus } from './rules';
 
 const die = (id: number, value: number, status: DieStatus = 'permanentlyLocked'): Die => ({ id, value, status });
 
@@ -51,6 +51,15 @@ describe('perfectHand', () => {
         expect(perfectHand({ busted: true, score: 4 }, true)).toBe(null);
         expect(perfectHand({ busted: false, score: 18 }, false)).toBe(null);
         expect(perfectHand({ busted: false, score: 9 }, true)).toBe(null);
+    });
+});
+
+describe('dirtyTwenty', () => {
+    it('is a finished 20 that counts, and nothing else', () => {
+        expect(dirtyTwenty({ busted: false, score: 20 })).toBe(true);
+        expect(dirtyTwenty({ busted: false, score: 19 })).toBe(false);
+        expect(dirtyTwenty({ busted: false, score: 21 })).toBe(false);
+        expect(dirtyTwenty({ busted: true, score: 20 })).toBe(false);
     });
 });
 

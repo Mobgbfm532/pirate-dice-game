@@ -16,6 +16,8 @@ round, dust loses a life and the lowest valid score loses a life; ties go to sud
 A 24 restores a life (Tavern Crawl opponents too, since 18 Oct: a rolled 24, up to their lives for
 the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with lives wins.
 
+**The league (4 Nov, the user's call):** at table code `JUGS` (`LEAGUE_ROOMS` in server.js; add a code there for another) every finished multiplayer game counts, by player name (trimmed, any case): games played and won (`recordLeagueGame`, `leagueUpdate`). It shows on the game-over screen and behind a 🏆 in the header (`LeagueTable` in Hud), most wins first, then fewest games. A table of one doesn't count; `previews/scenes/jugs-player.cjs` seats a second player for trying it. (Kram was given one win and one game by hand on the real database, the user's call, 4 Nov.)
+
 Table codes: any code = classic multiplayer (`COMP`, solo vs The Molar, was taken out on 4 Nov, the user's call; a bot sits only at a Tavern Crawl table now); `TAVERN` = Tavern
 Crawl (since 21 Oct a tournament of fourteen fights across three places: the Ghoul and Gourd, a
 qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal
@@ -51,7 +53,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 | Path | What |
 |---|---|
 | `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, the events between fights, `fireTavernAbility`; its numbers come from `shared/balance.js`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
-| `db.js` | What lasts between restarts (3 Nov): the leaderboard and which opponents each player has met. With `DATABASE_URL` (Neon Postgres) in the database (tables `leaderboard`, `met`, made on start); without it in `leaderboard.json` / `met.json` (gitignored; `LEADERBOARD_READONLY` leaves them alone). The server keeps both in memory and writes through without waiting. `test/db.test.js` checks the SQL on pg-mem. |
+| `db.js` | What lasts between restarts (3 Nov): the leaderboard, which opponents each player has met, and the league (4 Nov). With `DATABASE_URL` (Neon Postgres) in the database (tables `leaderboard`, `met`, `league`, made on start); without it in `leaderboard.json` / `met.json` / `league.json` (gitignored; `LEADERBOARD_READONLY` leaves them alone). The server keeps both in memory and writes through without waiting. `test/db.test.js` checks the SQL on pg-mem. |
 | `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
@@ -82,7 +84,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
-  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `CoinTally.mp3` on a fight's summary (once for the win's gold, once for each heart left, 160 ms apart; 4 Nov), `TavernCrawlVictory.mp3` as a fight's summary opens and when a whole crawl is won, `MultiplayerVictory.mp3` on the winner's screen when a multiplayer table ends (`gameOver.winnerId`), `Whoa.mp3` as any slow-motion last throw lands and on a Perfect ...4?, on top of its yay, oh well or aww (`slowThrow` in game.ts; 4 Nov), `ThiefLaugh.mp3` as the thief gets away (it was the aww), `LadyChoice.mp3` when the Lady's Grace saves you too (it was the yay), `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
+  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `CoinTally.mp3` on a fight's summary (once for the win's gold, once for each heart left, 160 ms apart; 4 Nov), `TavernCrawlVictory.mp3` as a fight's summary opens and when a whole crawl is won, `MultiplayerVictory.mp3` on the winner's screen when a multiplayer table ends (`gameOver.winnerId`), `Whoa.mp3` (**off since 4 Nov until the user reworks it**: `WHOA_ON` in game.ts; when on, it plays as any slow-motion last throw lands and on a Perfect ...4?, on top of its yay, oh well or aww), `ThiefLaugh.mp3` as the thief gets away (it was the aww), `LadyChoice.mp3` when the Lady's Grace saves you too (it was the yay), `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
 - **The table** (`TableDressing.tsx`, in TableScene's `Tray`): a wooden box again (the user, 3 Nov:
   "get rid of the rails" meant only the brass): the new look's rails are rounded and varnished with a
@@ -190,9 +192,11 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   layer of its own over the page, `.callout-burst` portalled to the body at the card's middle: a
   banner slamming in out of a flash with rays, sparks and a shine, rising away after 2.4 s; inside
   the card the footer's scrolling row clipped it, and the turn's die over a chip, which now has room:
-  `.side-players` padding) and a perfect hand's celebration; the points, "Dust!", the round result and the server's
+  `.side-players` padding) and a perfect hand's celebration; the points, "Dust!" and the server's
   messages (+1 life, sudden death) don't show there (`multiplayerTable()`), and the camera keeps only
-  a small gap under the bar. Reactions (3 Nov, the user's five: Cheers 🍻, Ha! 🃏, Ooh 😮, Smug 😏,
+  a small gap under the bar. Since 4 Nov (the user: "a proper round result") each round ends with a card on the felt
+  (`RoundResultCard`, `roundResult.results`, 4 s, `TABLE_RESULT_SHOW_MS` on both sides): everyone's score best first, Dust,
+  who loses a heart, a sudden death; the winner's screen waits for the last one. A hand finishing on exactly 20 at a multiplayer table bursts "Dirty 20!" over its player's nameplate (4 Nov, the user's; `dirtyTwenty` in rules.ts, `showSeatFlash` in game.ts: its own 2.6 s timer, as End Turn changes the turn at once; `SeatCallout` draws it). Dev control `/faces?f=2,4,5,5,5,0` pins the next dice thrown. Reactions (3 Nov, the user's five: Cheers 🍻, Ha! 🃏, Ooh 😮, Smug 😏,
   Woe 💔; painted by the user the same day: `art/reaction-<id>.jpg` cut out by `cutOutFlat` with
   `icon: 320` into `art/reactions/<id>.webp` (the tankard keeps its ale drops, `minPiece`, and a
   `holes` seed in its handle); `PAINTED_REACTIONS` / `reactionIcon` in Hud; the emoji still travels
@@ -324,7 +328,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 147 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 16 client tests.
+  keepsakes, gold, saves after each place. 150 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 16 client tests.
 - **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
   a phone; a computer holds still since 3 Nov; the phone's tilt was tried and taken out); extra dice spin
   was tried and reverted (it looked unreal); a richer table was built; on 3 Nov the tray lost its

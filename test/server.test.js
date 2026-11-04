@@ -327,6 +327,45 @@ test('unknown reactions are dropped and names are passed through as plain data',
     await cheers;
 });
 
+test('the JUGS league counts each finished game by name; other tables have none', async () => {
+    const ann = await join('Ann', 'JUGS');
+    const bo = await join('Bo', 'JUGS');
+    const updated = waitFor(ann, 'leagueUpdate', rows => rows.length === 2, 20000);
+    autoPlay(ann);
+    autoPlay(bo);
+    ann.emit('rollDice'); bo.emit('rollDice'); // (in case the first turn was announced before autoPlay listened)
+    const rows = await updated;
+    assert.deepEqual(rows.map(r => r.games), [1, 1]);
+    assert.deepEqual(rows.map(r => r.wins).sort(), [0, 1]);
+    assert.equal(rows[0].wins, 1, 'the winner on top');
+    ann.disconnect();
+    bo.disconnect();
+    let told = false;
+    const cy = await join('Cy', 'NOTLEAGUE');
+    cy.on('leagueUpdate', () => { told = true; });
+    await sleep(60);
+    assert.equal(told, false);
+    cy.disconnect();
+});
+
+test('a multiplayer round ends with everyone\'s score, best first, and who lost a life', async () => {
+    const ann = await join('Ann', 'RESULTS');
+    const bo = await join('Bo', 'RESULTS');
+    const room = await (async () => { await waitFor(bo, 'gameStateUpdate', s => s.playerOrder.length === 2); return server.rooms.RESULTS; })();
+    room.players[ann.id].lives = 3; room.players[bo.id].lives = 3;
+    const first = room.playerOrder[room.currentTurnIndex] === ann.id || room.roundPlayers[room.currentTurnIndex] === ann.id ? ann : bo;
+    const second = first === ann ? bo : ann;
+    const result = waitFor(ann, 'roundResult', () => true, 6000);
+    await playHand(first, room, [2, 4, 6, 6, 5, 5]); // 22
+    await waitFor(second, 'gameStateUpdate', s => s.currentTurnId === second.id, 3000);
+    await playHand(second, room, [2, 4, 1, 1, 1, 1]); // 4
+    const { results, message } = await result;
+    assert.deepEqual(results.map(r => [r.id, r.score, r.busted, r.lost]), [[first.id, 22, false, false], [second.id, 4, false, true]]);
+    assert.match(message, /loses a life/);
+    ann.disconnect();
+    bo.disconnect();
+});
+
 test('a Tavern Crawl run plays through to the end', async () => {
     const hero = await join('Hero', 'TVRN-1');
     autoPlay(hero, () => hero.emit('leaveShop'));

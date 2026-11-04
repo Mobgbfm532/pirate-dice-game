@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
-import { calloutText, isLocked, onePerfect4Away, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
+import { calloutText, dirtyTwenty, isLocked, onePerfect4Away, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
 import { waitingPosition } from './layout';
 import { lookNext } from './look';
@@ -25,6 +25,8 @@ export interface Keepsake { id: string; name: string; text: string }
 
 // One of Thom's Thonics. `drink`: tapped by the player (the others work by themselves).
 // (An Elf Bar is on the shelf like a Thonic: elf, with its puffs left and whether it was puffed this fight.)
+export interface LeagueRow { name: string; wins: number; games: number }
+export interface RoundResultRow { id: string; name: string; score: number; busted: boolean; lost: boolean; tied: boolean }
 export interface Thonic { id: string; name: string; text: string; price: number; drink: boolean; elf?: boolean; puffs?: number; puffed?: boolean }
 
 // A round changed by an ability (server.js beginTavernRound): Mind Whip, the Curse (lowest valid
@@ -175,6 +177,9 @@ export interface Snapshot {
     toasts: Toast[];
     modal: Modal | null;
     leaderboard: LeaderboardEntry[];
+    league: LeagueRow[] | null; // this table's league (a league table only, e.g. JUGS)
+    seatFlash: { playerId: string; text: string; kind: string; color: string; key: string } | null; // "Dirty 20!" over a nameplate
+    roundResult: { rows: RoundResultRow[]; at: number } | null; // a multiplayer round's result card
     roomCode: string;
     waiting: boolean; // a classic table with nobody to play yet
     yourTurnAt: number; // when play last came round to you (for the banner)
@@ -226,6 +231,9 @@ let snapshot: Snapshot = {
     toasts: [],
     modal: null,
     leaderboard: [],
+    league: null,
+    seatFlash: null,
+    roundResult: null,
     roomCode: '',
     waiting: false,
     yourTurnAt: 0,
@@ -288,6 +296,7 @@ function runNext() {
 const MOMENT_GAP_MS = 1700;
 export const MOMENT_SHOW_MS = 1850; // an ability's banner (useMoment in Hud), a move's toast (3.6 s until 26 Oct, 2.6 s until 27 Oct)
 const RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600; // the round's result
+const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card (the server's too)
 let momentFreeAt = 0;
 let momentGoneAt = 0;
 // earliest: when it may show at the soonest, apart from the gap (Klarg's steal waits for his hand).
@@ -403,6 +412,13 @@ function showDevil(turn: TurnView) {
     momentGoneAt = Math.max(momentGoneAt, gone);
 }
 
+const WHOA_ON = false; // the user's Whoa is off until they rework it (4 Nov); true brings it back
+const SEAT_FLASH_MS = 2600; // a little longer than the burst's own animation
+function showSeatFlash(playerId: string, text: string, kind: string, color: string) {
+    const key = `${kind}|${performance.now()}`;
+    update({ seatFlash: { playerId, text, kind, color, key } });
+    setTimeout(() => { if (snapshot.seatFlash?.key === key) update({ seatFlash: null }); }, SEAT_FLASH_MS);
+}
 let slowThrow = false; // the throw on the table was a slow-motion last one
 function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null, turn: TurnView | null) {
     if (!event) return;
@@ -411,12 +427,15 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
     if (event.type === 'toggle' && !mine && !lookNext) playSound('click');
     if (event.type !== 'finalized' || !event.outcome) return;
     const { busted, score, suspense } = event.outcome;
+    // A multiplayer hand finishing on 20 (the user's, 4 Nov). Its own timer: pressing End Turn fixes the
+    // hand and changes the turn at once, which would clear an ordinary callout before it was seen.
+    if (turn && multiplayerTable() && dirtyTwenty(event.outcome)) showSeatFlash(turn.playerId, 'Dirty 20!', 'dirty20', '#c5d04a');
     // In a cursed round (Danhausen's, or his face on Martha or your mask) the lowest valid hand
     // wins: four 1s with the 2 and 4 is its perfect hand, and a 24 its worst.
     const cursed = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse';
     const perfect = perfectHand(event.outcome, cursed);
     // The user's Whoa (4 Nov), on top of the rest: a Perfect ...4?, and any slow-motion last throw as it lands.
-    if (slowThrow || perfect === 'perfect4') playSound('whoa');
+    if (WHOA_ON && (slowThrow || perfect === 'perfect4')) playSound('whoa');
     slowThrow = false;
     if (perfect) {
         playSound('yay');
@@ -616,6 +635,10 @@ export function inviteLink(code: string) {
     return `${location.origin}${import.meta.env.BASE_URL}?table=${encodeURIComponent(code)}`;
 }
 
+socket.on('leagueUpdate', (rows: LeagueRow[]) => {
+    update({ league: Array.isArray(rows) ? rows : [] });
+});
+
 socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
     update({ leaderboard: Array.isArray(entries) ? entries : [] });
 });
@@ -698,8 +721,18 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
 
 // After the round's last roll has played out. Not when the round ended a Tavern Crawl fight or
 // the run (ends): the fight summary (or the run-over screen) comes up instead.
-socket.on('roundResult', (data: { message: string; ends?: boolean }) => {
+socket.on('roundResult', (data: { message: string; ends?: boolean; results?: RoundResultRow[] }) => {
     if (data.ends) return;
+    // A multiplayer table: a card with everyone's score (the user's call, 4 Nov).
+    if (data.results) {
+        const results = data.results;
+        enqueueMoment(() => {
+            const at = performance.now();
+            update({ roundResult: { rows: results, at } });
+            setTimeout(() => { if (snapshot.roundResult?.at === at) update({ roundResult: null }); }, TABLE_RESULT_SHOW_MS);
+        }, RESULT_GAP_MS, () => 0, TABLE_RESULT_SHOW_MS);
+        return;
+    }
     // (At a multiplayer table the cards' hearts tell it: no words, but the same pause.)
     enqueueMoment(() => { if (!multiplayerTable()) showToast('Round result', data.message, 'result', RESULT_SHOW_MS); }, RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
 });
@@ -732,8 +765,11 @@ socket.on('gameOver', (data: { message: string; tavern?: TavernSummary; winnerId
         playSound(data.tavern.won ? 'tavernVictory' : 'aww'); // (the user's Tavern Crawl Victory, 4 Nov)
         update({ modal: { type: 'tavernOver', summary: data.tavern } });
     } else {
-        if (data.winnerId && data.winnerId === snapshot.myId) playSound('multiplayerVictory'); // you won the table (the user's clip, 4 Nov)
-        update({ modal: { type: 'gameOver', message: data.message } });
+        // (After the last round's result card has been read.)
+        enqueueMoment(() => {
+            if (data.winnerId && data.winnerId === snapshot.myId) playSound('multiplayerVictory'); // you won the table (the user's clip, 4 Nov)
+            update({ modal: { type: 'gameOver', message: data.message } });
+        }, 0, () => momentGoneAt, 0);
     }
 });
 
@@ -987,6 +1023,8 @@ export const preview = {
     // (hold: keep it up that much longer, to look at a still of it)
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now() }); },
+    // A multiplayer round result card, held up until the next call (null ends it).
+    roundResult(rows: RoundResultRow[] | null) { update({ roundResult: rows ? { rows, at: performance.now() } : null }); },
     // A reaction rising from a player's nameplate (a multiplayer table), e.g. react(id, '🍻').
     react(playerId: string, emoji: string) { update({ reactions: [...snapshot.reactions, { key: ++reactionKey, playerId, emoji }] }); },
     // The line over the table after a throw (e.g. callout('17 points')); kind and playerId put a

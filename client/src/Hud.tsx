@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, readSavedRun, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -332,8 +332,9 @@ function FitName({ name }: { name: string }) {
 function SeatCallout({ snap, id }: { snap: Snapshot; id: string }) {
     const anchor = useRef<HTMLSpanElement>(null);
     const [box, setBox] = useState<{ x: number; y: number } | null>(null);
-    const c = snap.callout;
-    const text = c && c.playerId === id ? MULTIPLAYER_CALLOUTS[c.kind] : undefined;
+    const flash = snap.seatFlash?.playerId === id ? snap.seatFlash : null;
+    const c = flash ?? snap.callout;
+    const text = flash ? flash.text : c && c.playerId === id ? MULTIPLAYER_CALLOUTS[c.kind] : undefined;
     useLayoutEffect(() => {
         const card = anchor.current?.parentElement;
         if (!text || !card) { setBox(null); return; }
@@ -2059,11 +2060,58 @@ function Modals({ snap }: { snap: Snapshot }) {
         <div className="modal-backdrop">
             <div className="panel">
                 <p className="game-over">{modal.message}</p>
+                {snap.league && <LeagueTable rows={snap.league} room={snap.roomCode} me={snap.state && snap.myId ? snap.state.players[snap.myId]?.name : undefined} />}
                 <div className="row">
                     <button className="primary" onClick={actions.playAgain}>Play again</button>
                     <button className="secondary" onClick={actions.dismissModal}>Close</button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// A multiplayer round's result (4 Nov, the user's call): everyone's score, best first, and who lost a
+// heart or goes to sudden death. On the felt, for a few seconds; taps go through to the table.
+function RoundResultCard({ rows, myId }: { rows: RoundResultRow[]; myId: string | null }) {
+    const tied = rows.filter(r => r.tied).map(r => r.name);
+    const nobodyLost = !rows.some(r => r.lost) && tied.length === 0;
+    return (
+        <div className="round-card" role="status">
+            <strong className="round-card-title">Round result</strong>
+            <ol>
+                {rows.map(r => (
+                    <li key={r.id} className={`${r.lost ? 'lost' : ''} ${r.id === myId ? 'me' : ''}`}>
+                        <span className="who">{r.name}</span>
+                        <span className={`score ${r.busted ? 'dust' : ''}`}>{r.busted ? 'Dust' : r.score}</span>
+                        <span className="heart-lost" aria-label={r.lost ? 'loses a life' : undefined}>{r.lost ? '−1 ♥' : r.tied ? 'tied' : ''}</span>
+                    </li>
+                ))}
+            </ol>
+            {tied.length > 1 && <p className="round-card-note">Sudden death: {tied.join(' and ')}</p>}
+            {nobodyLost && <p className="round-card-note">No lives lost</p>}
+        </div>
+    );
+}
+
+// A league table (4 Nov: table code JUGS): every finished game there, by player name.
+function LeagueTable({ rows, room, me }: { rows: LeagueRow[]; room: string; me?: string }) {
+    const mine = (me ?? '').trim().toLowerCase();
+    return (
+        <div className="leaderboard league">
+            <h2>{room} league</h2>
+            {rows.length === 0 ? <p className="fine">No games finished yet.</p> : (
+                <ol>
+                    <li className="heads" aria-hidden="true"><span className="rank" /><span className="who" /><span className="num">Won</span><span className="num">Played</span></li>
+                    {rows.map((r, i) => (
+                        <li key={r.name} className={r.name.trim().toLowerCase() === mine ? 'me' : ''}>
+                            <span className="rank">{i + 1}</span>
+                            <span className="who">{r.name}</span>
+                            <span className="num wins">{r.wins}</span>
+                            <span className="num">{r.games}</span>
+                        </li>
+                    ))}
+                </ol>
+            )}
         </div>
     );
 }
@@ -2196,6 +2244,7 @@ export function Hud() {
     const [soundsOff, setSoundsOffState] = useState(areSoundsOff());
     const [introShowing, setIntroShowing] = useState(false);
     const [tuneOpen, setTuneOpen] = useState(false);
+    const [leagueOpen, setLeagueOpen] = useState(false);
     const footerRef = useFooterInset();
     // Phones on their side keep every player in the column at the top left (no room for a bar).
     const sideways = useMedia('(orientation: landscape) and (max-height: 500px)');
@@ -2214,6 +2263,7 @@ export function Hud() {
         <div className={`hud ${multiplayer ? 'multiplayer' : ''}`}>
             <header>
                 <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
+                {snap.league && <button className="mute league-button" onClick={() => setLeagueOpen(true)} aria-label="League table" title="League table">🏆</button>}
                 <span className="room">{snap.roomLabel}</span>
                 {/* While an ability lasts, the screen's edges glow in its colours (pointer-free, clear of the dice). */}
                 {state && <AbilityAura snap={snap} state={state} />}
@@ -2238,6 +2288,14 @@ export function Hud() {
             {/* (Not over an opponent's entrance card: the card comes first.) */}
             {!introShowing && <YourTurnBanner at={snap.yourTurnAt} />}
             {tunePanel && tuneOpen && <TuningPanel onClose={() => setTuneOpen(false)} />}
+            {leagueOpen && snap.league && (
+                <div className="modal-backdrop" onClick={() => setLeagueOpen(false)}>
+                    <div className="panel" onClick={e => e.stopPropagation()}>
+                        <LeagueTable rows={snap.league} room={snap.roomCode} me={state && snap.myId ? state.players[snap.myId]?.name : undefined} />
+                        <div className="row"><button className="secondary" onClick={() => setLeagueOpen(false)}>Close</button></div>
+                    </div>
+                </div>
+            )}
 
             <div className="callout-area" aria-live="polite">
                 {snap.callout && !multiplayer && <div key={snap.callout.key} className="callout" style={{ color: snap.callout.color }}>{snap.callout.text}</div>}
@@ -2245,6 +2303,7 @@ export function Hud() {
 
             {/* The round result sits in the middle of the green felt (the user's call, 3 Nov), the rest higher up. */}
             <div className="toasts felt">
+                {snap.roundResult && <RoundResultCard key={snap.roundResult.at} rows={snap.roundResult.rows} myId={snap.myId} />}
                 {snap.toasts.filter(t => t.tone === 'result').map(t => (
                     <div key={t.id} className={`toast ${t.tone}`}>
                         {t.title && <strong>{t.title}</strong>}

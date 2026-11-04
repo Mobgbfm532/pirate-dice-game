@@ -33,3 +33,14 @@ test('who a player has met is kept by name, whatever its case or spaces, once ea
     assert.deepEqual(await store.loadMet('Bo'), ['frak']);
     assert.deepEqual(await store.loadMet('Cy'), []);
 });
+
+test('a league counts games and wins per table, by name whatever its case', async () => {
+    const store = freshStore();
+    await store.addLeagueResult('JUGS', ['Ann', 'Bo'], 'Ann');
+    await store.addLeagueResult('JUGS', ['ann ', 'Bo', 'Cy'], 'Bo');
+    await store.addLeagueResult('JUGS', ['ANN', 'Bo'], null); // no one survived
+    await store.addLeagueResult('OTHER', ['Ann', 'Bo'], 'Ann');
+    const rows = (await store.loadLeague('JUGS')).sort((a, b) => a.name.localeCompare(b.name));
+    assert.deepEqual(rows.map(r => [r.name.trim().toLowerCase(), r.wins, r.games]), [['ann', 1, 3], ['bo', 1, 3], ['cy', 0, 1]]);
+    assert.equal((await store.loadLeague('NONE')).length, 0);
+});

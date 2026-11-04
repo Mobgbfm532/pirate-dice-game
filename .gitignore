@@ -3,6 +3,7 @@ node_modules/
 previews/
 leaderboard.json
 met.json
+league.json
 .env
 .env.*
 .neon

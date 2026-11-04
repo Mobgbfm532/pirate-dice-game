@@ -86,6 +86,47 @@ function submitTavernLeaderboardScore(name, points, gold) {
     return tavernLeaderboard;
 }
 
+// The league (4 Nov, the user's call): at these multiplayer tables every finished game is counted,
+// by player name (trimmed, any case): games played and games won. Kept in the database (db.js).
+const LEAGUE_ROOMS = new Set(['JUGS']);
+const leagues = new Map(); // room -> player key -> { name, wins, games }
+function leagueTable(roomCode) {
+    return [...(leagues.get(roomCode) || new Map()).values()]
+        .sort((a, b) => b.wins - a.wins || a.games - b.games || a.name.localeCompare(b.name));
+}
+LEAGUE_ROOMS.forEach(roomCode => {
+    store.loadLeague(roomCode).then(rows => {
+        let table = leagues.get(roomCode) || new Map();
+        // (a game finished while it loaded is added to what was saved)
+        rows.forEach(row => {
+            let key = playerKey(row.name), now = table.get(key);
+            table.set(key, { name: now ? now.name : row.name, wins: row.wins + (now ? now.wins : 0), games: row.games + (now ? now.games : 0) });
+        });
+        leagues.set(roomCode, table);
+        io.to(roomCode).emit('leagueUpdate', leagueTable(roomCode));
+    }).catch(error => console.warn('Could not load the league:', error.message));
+});
+// A multiplayer game has ended at a league table. (winnerId null: no one survived. A table of one isn't a game.)
+function recordLeagueGame(roomCode, room, winnerId) {
+    if (!LEAGUE_ROOMS.has(roomCode)) return;
+    let seen = new Set();
+    let names = room.playerOrder.map(id => room.players[id] && String(room.players[id].name).trim().substring(0, 20))
+        .filter(name => name && !seen.has(playerKey(name)) && seen.add(playerKey(name)));
+    if (names.length < 2) return;
+    let winner = winnerId && room.players[winnerId] ? String(room.players[winnerId].name).trim().substring(0, 20) : null;
+    let table = leagues.get(roomCode) || new Map();
+    leagues.set(roomCode, table);
+    names.forEach(name => {
+        let key = playerKey(name), row = table.get(key) || { name, wins: 0, games: 0 };
+        row.name = name;
+        row.games++;
+        if (winner !== null && key === playerKey(winner)) row.wins++;
+        table.set(key, row);
+    });
+    store.addLeagueResult(roomCode, names, winner).catch(error => console.warn('Could not save the league:', error.message));
+    io.to(roomCode).emit('leagueUpdate', leagueTable(roomCode));
+}
+
 // Who each player has met (3 Nov, the user's call): opponents they have never sat down with show as
 // a "?" in the run-over screen's line of opponents. Kept by name
 // (db.js `playerKey`), across runs and devices; loaded as a player joins a Tavern Crawl.
@@ -1364,6 +1405,7 @@ function emitMoment(roomCode, room, event, data) {
 // before the dice are thrown). The server keeps the same clock, so a throw (and the bot's next
 // step) waits for it too: momentsLeft.
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
+const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card, with a line per player (the client's too)
 const INTRO_SHOW_MS = 4500; // an opponent's entrance (the client's INTRO_MS)
 function sendMoment(roomCode, event, data) {
     let room = rooms[roomCode];
@@ -1372,7 +1414,7 @@ function sendMoment(roomCode, event, data) {
         let result = event === 'roundResult';
         let start = Math.max(Date.now(), room.momentNext || 0);
         room.momentNext = start + delay(result ? RESULT_GAP_MS : MOMENT_GAP_MS);
-        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? RESULT_SHOW_MS : MOMENT_SHOW_MS));
+        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : MOMENT_SHOW_MS));
     }
     io.to(roomCode).emit(event, data);
 }
@@ -1401,7 +1443,8 @@ function scoringDice(turn) {
 
 // ends: this round ended a Tavern Crawl fight (or the run); the browser skips the pop-up then,
 // since the fight summary (or the run-over screen) takes its place.
-function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false) {
+// results (a multiplayer round, 4 Nov): a line per player, best first; the 3D client draws them as a card.
+function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false, results = null) {
     let message;
     let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
     // A player can lose two lives in one round (the Ridgeler's Divine Smite): named once.
@@ -1432,7 +1475,12 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
     } else {
         message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
     }
-    sendMoment(roomCode, 'roundResult', { message, ends });
+    if (results) {
+        let tied = results.filter(r => r.tied).map(r => r.name).join(' and ');
+        message = results.map(r => `${r.name}: ${r.busted ? 'dust' : r.score}${r.lost ? ' (loses a life)' : ''}`).join('\n')
+            + (tied ? `\n${tied} tied: sudden death.` : lifeLosers.length ? '' : '\nNo lives lost.');
+    }
+    sendMoment(roomCode, 'roundResult', results ? { message, ends, results } : { message, ends });
 }
 
 function getHumanPlayerId(room) {
@@ -1992,7 +2040,12 @@ function evaluateRound(roomCode) {
         }
     }
 
-    emitRoundLifeResult(roomCode, room, losersThisRound.map(l => l.id), tiedPlayers);
+    let lostIds = losersThisRound.map(l => l.id);
+    let results = room.roundPlayers.filter(id => room.players[id]).map(id => {
+        let player = room.players[id];
+        return { id, name: player.name, score: player.score ?? 0, busted: !!player.busted, lost: lostIds.includes(id), tied: tiedPlayers.includes(id) };
+    }).sort((a, b) => Number(a.busted) - Number(b.busted) || b.score - a.score);
+    emitRoundLifeResult(roomCode, room, lostIds, tiedPlayers, false, results);
 
     let humanLost = losersThisRound.some(l => l.id !== BOT_ID);
     if (room.players[BOT_ID] && humanLost) {
@@ -2011,6 +2064,7 @@ function evaluateRound(roomCode) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
         // Sync the final scoreboard before ending the game
         emitState(roomCode);
+        recordLeagueGame(roomCode, room, survivors.length === 1 ? survivors[0] : null);
         // (winnerId: the winner's screen plays the victory fanfare, 4 Nov.)
         io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆`, winnerId: survivors.length === 1 ? survivors[0] : null });
         room.roundPlayers = [];
@@ -2252,6 +2306,7 @@ io.on('connection', (socket) => {
 
         socket.roomCode = roomCode;
         socket.join(roomCode);
+        if (LEAGUE_ROOMS.has(roomCode)) socket.emit('leagueUpdate', leagueTable(roomCode));
 
         let requestedLives = parseInt(data.startingLives) || 3;
         requestedLives = Math.max(1, Math.min(5, requestedLives));
