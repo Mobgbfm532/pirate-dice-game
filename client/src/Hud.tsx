@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, readSavedRun, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -93,8 +93,8 @@ function JoinScreen() {
                         <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
                     </div>
                 )}
-                <button className={invite ? 'secondary' : 'primary'} onClick={() => join('COMP')}>Solo vs The Molar</button>
-                <button className={invite ? 'secondary' : 'primary alt'} onClick={() => join('TAVERN')}>Tavern Crawl</button>
+                {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
+                <button className={invite ? 'secondary' : 'primary'} onClick={() => join('TAVERN')}>Tavern Crawl</button>
                 <div className="row">
                     <input value={code} maxLength={10} placeholder="Table code" onChange={e => setCode(e.target.value.toUpperCase())} />
                     <button className="secondary" onClick={() => join(code)}>Join table</button>
@@ -516,7 +516,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     let label = 'Roll Dice';
     let disabled = !turn.canRoll;
     if (snap.rolling) { label = 'Rolling…'; disabled = true; }
-    else if (turn.finalized) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
+    else if (turn.finalized || handComplete(turn)) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
 
     const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : { text: '', kind: '' };
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
@@ -542,7 +542,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 <span className={`value ${dust ? 'dust' : standing}`}>{scoreText}</span>
             </div>
             <button
-                className={`roll ${turn.finalized ? 'end' : ''} ${snap.isMyTurn ? '' : 'idle'}`}
+                className={`roll ${turn.finalized || handComplete(turn) ? 'end' : ''} ${snap.isMyTurn ? '' : 'idle'}`}
                 disabled={disabled || !snap.isMyTurn}
                 onClick={actions.roll}
                 aria-hidden={!snap.isMyTurn}
@@ -1957,6 +1957,7 @@ function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; th
 // coins, then the purse counting up to its new total. Shown once per win (remembered on this
 // device); a resumed run's last win was shown before it was saved.
 const WIN_STEP_MS = 700;
+const HEART_TALLY_MS = 160; // between the coin tallies for each heart left
 const winKey = (won: ShopArrival) => String(won.at ?? won.defeated);
 function readSeenWin() {
     try { return localStorage.getItem('tavernWinSeen') ?? ''; } catch { return ''; }
@@ -1976,8 +1977,16 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     // step: how many rows are showing; one more than the rows = the purse counts up.
     const [step, setStep] = useState(0);
     useEffect(() => {
-        playSound('winner');
-        const timers = rows.map((row, i) => setTimeout(() => { setStep(i + 1); playCoins(row.key === 'win' ? 4 : 2); }, 500 + i * WIN_STEP_MS));
+        // The user's sounds (4 Nov): Tavern Crawl Victory as the summary opens; the coin tally once
+        // for the win's gold and once for each heart left, in quick succession (the Miser's Purse once).
+        playSound('tavernVictory');
+        const timers: ReturnType<typeof setTimeout>[] = [];
+        rows.forEach((row, i) => {
+            const at = 500 + i * WIN_STEP_MS;
+            timers.push(setTimeout(() => setStep(i + 1), at));
+            const tallies = row.key === 'hearts' ? Math.max(1, heartsLeft) : 1;
+            for (let n = 0; n < tallies; n++) timers.push(setTimeout(() => playSound('coinTally'), at + n * HEART_TALLY_MS));
+        });
         timers.push(setTimeout(() => { setStep(rows.length + 1); playSound('coinPayout'); }, 500 + rows.length * WIN_STEP_MS)); // the user's clip as the purse total lands (28 Oct)
         return () => timers.forEach(clearTimeout);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps

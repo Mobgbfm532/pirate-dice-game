@@ -6,14 +6,17 @@ bitten us before, and what comes next. Keep it current when something important 
 
 ## The game
 
-Roll six dice; after every roll lock at least one. You must end with a **2** and a **4**
+Roll six dice; after every roll lock at least one. Keeping your last die by a tap doesn't end the
+hand (4 Nov, the user's call): it waits, complete, for End Turn, and until then a die kept this throw
+can go back (`toggleDie(..., { hold })`, `turn.complete` in the view, `Rules.finishTurn` in
+`performEndTurn`; Sylvester's Back of the Head now comes at End Turn; the bots finish at once). You must end with a **2** and a **4**
 locked; the other four dice are your score (max 24). Missing the 2 or 4 is **dust**. Each
 round, dust loses a life and the lowest valid score loses a life; ties go to sudden death
 (in a Tavern Crawl a tie costs no one a heart).
 A 24 restores a life (Tavern Crawl opponents too, since 18 Oct: a rolled 24, up to their lives for
 the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with lives wins.
 
-Table codes: any code = classic multiplayer; `COMP` = solo vs The Molar; `TAVERN` = Tavern
+Table codes: any code = classic multiplayer (`COMP`, solo vs The Molar, was taken out on 4 Nov, the user's call; a bot sits only at a Tavern Crawl table now); `TAVERN` = Tavern
 Crawl (since 21 Oct a tournament of fourteen fights across three places: the Ghoul and Gourd, a
 qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal
 (Sylvester Stonefist, Vaelin Inkhand, Stason Jatham, The Ridgeler, Brodor), then the final aboard
@@ -79,7 +82,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two
-  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
+  header buttons; `localStorage.tavernMusicOff` / `tavernSoundsOff`; `tavernMuted = "1"` silences both). Since 28 Oct the mp3/wav clips are decoded for Web Audio once the audio context runs and play from buffers (an <audio> element lagged on phones), each from its `LEAD` (where its sound starts: the Devil's two clips open with ~0.7-0.9 s of silence). The user's clips: `Gasp.wav` as a slow-motion last throw starts, `CoinWinning.mp3` when a fight's purse total lands, `Shield.mp3` for the Shield, `DrinkPotion.mp3` for a Thonic (the synthesized cork pop is unused); `PotionSelector.mp3` as you buy a Thonic, `CoinTally.mp3` on a fight's summary (once for the win's gold, once for each heart left, 160 ms apart; 4 Nov), `TavernCrawlVictory.mp3` as a fight's summary opens and when a whole crawl is won, `MultiplayerVictory.mp3` on the winner's screen when a multiplayer table ends (`gameOver.winnerId`), `ItemPickup.mp3` as you take a keepsake (Thom's back shelf, the Stranger). Thom's spoken purchase lines were taken out (the user, 28 Oct). Scene loops (Thom's cart `ThomAmbience.mp3`, the hot tub, the Shrine) play through Web Audio when it runs, seamlessly (`startSceneLoop`), else an <audio> element.
 - `look.ts` (the new look, the default since 23 Oct; see Status: Visuals): the `?look=classic` switch and the shared flame.
 - **The table** (`TableDressing.tsx`, in TableScene's `Tray`): a wooden box again (the user, 3 Nov:
   "get rid of the rails" meant only the brass): the new look's rails are rounded and varnished with a
@@ -321,7 +324,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 146 server/rules/strategy/database tests + 16 client tests.
+  keepsakes, gold, saves after each place. 146 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 16 client tests.
 - **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
   a phone; a computer holds still since 3 Nov; the phone's tilt was tried and taken out); extra dice spin
   was tried and reverted (it looked unreal); a richer table was built; on 3 Nov the tray lost its

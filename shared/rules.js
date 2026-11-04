@@ -198,7 +198,10 @@
     }
 
     // Locks or unlocks a die rolled this roll. Returns { finalizedNow } or null if not allowed.
-    function toggleDie(turn, dieId) {
+    // hold (a player's own tap, 4 Nov, the user's call): keeping the last die doesn't end the hand;
+    // it waits, complete, for End Turn (finishTurn), and until then a die kept this throw can still
+    // go back (a slip of the finger with a throw still to come). The bots finish at once.
+    function toggleDie(turn, dieId, { hold = false } = {}) {
         if (!turn.hasRolled || turn.finalized) return null;
         const die = turn.dice.find(d => d.id === dieId);
         if (!die || die.status === STATUS.LOCKED || die.status === STATUS.STOLEN) return null;
@@ -212,8 +215,17 @@
         else { die.status = STATUS.ACTIVE; turn.locksThisRoll--; }
 
         let wasFinalized = turn.finalized;
-        settleTurn(turn);
+        turn.complete = hold && !turn.dice.some(isActive);
+        if (!turn.complete) settleTurn(turn);
         return { finalizedNow: !wasFinalized && turn.finalized };
+    }
+
+    // End Turn on a hand held complete: it is fixed now. Returns true if it was.
+    function finishTurn(turn) {
+        if (!turn.hasRolled || turn.finalized || turn.dice.some(isActive)) return false;
+        turn.complete = false;
+        settleTurn(turn);
+        return turn.finalized;
     }
 
     // Updates "Phew!" and, once every die is locked, fixes the turn's outcome.
@@ -288,10 +300,11 @@
         const die = turn.dice.find(d => d.id === dieId);
         // A die kept on an earlier roll; or, once the hand is finished (nothing left to tap), any
         // kept die, including those kept this roll.
-        const keptThisRoll = die && die.status === STATUS.LOCKED_THIS_ROLL && turn.finalized;
+        const keptThisRoll = die && die.status === STATUS.LOCKED_THIS_ROLL && (turn.finalized || turn.complete);
         if (!die || (die.status !== STATUS.LOCKED && !keptThisRoll)) return false;
         if (keptThisRoll) turn.locksThisRoll--;
         die.status = STATUS.ACTIVE;
+        turn.complete = false;
         if (turn.finalized) {
             turn.finalized = false;
             turn.outcome = null;
@@ -355,6 +368,9 @@
             suspense: turn.suspense,
             callout: turn.callout,
             finalized: turn.finalized,
+            // Every die kept by the player's own taps: End Turn fixes it (finishTurn); until then a
+            // die kept this throw can go back.
+            complete: !turn.finalized && !!turn.complete && !turn.dice.some(isActive),
             outcome: turn.outcome,
             canRoll: canRoll(turn),
             steady: !!turn.steady,
@@ -462,6 +478,6 @@
         formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        finishTurn, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

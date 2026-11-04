@@ -1176,9 +1176,7 @@
             const chosenName = nameInput.value;
             let chosenRoom = roomInput.value.trim().toUpperCase();
             
-            if (chosenRoom === "COMP") {
-                chosenRoom = "COMP-" + Math.floor(1000 + Math.random() * 9000);
-            } else if (chosenRoom === "TAVERN") {
+            if (chosenRoom === "TAVERN") { // (COMP, solo vs The Molar, was taken out on 4 Nov)
                 chosenRoom = "TVRN-" + Math.floor(1000 + Math.random() * 9000);
                 myStartingLives = 3;
             }
@@ -1621,7 +1619,7 @@
         rollBtn.onclick = () => {
             if (!turn || !isMyTurn || isAnimating || endingTurn) return;
             triggerGlobalMusic();
-            if (turn.finalized) {
+            if (turn.finalized || turn.complete) { // (complete: every die kept, waiting for End Turn)
                 endingTurn = true;
                 renderDice();
                 socket.emit('endTurn');
@@ -1686,7 +1684,7 @@
             if (turn.finalized && turn.outcome.busted) currentScoreSpan.innerText = 'X';
             else currentScoreSpan.innerText = remainingLocked.some(d => d.hidden) ? '?' : score;
 
-            if (turn.finalized) {
+            if (turn.finalized || turn.complete) {
                 rollBtn.innerText = endingTurn ? "Ending..." : "End Turn";
                 rollBtn.disabled = endingTurn;
             } else {

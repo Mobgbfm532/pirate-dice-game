@@ -65,7 +65,9 @@ function autoPlay(socket, onShop = null) {
             const free = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !d.bound);
             if (!keep.length && free.length && !turn.canRoll) keep = [free[0].id];
             keep.forEach(id => socket.emit('toggleDie', id));
-            socket.emit('rollDice');
+            // Keeping every die left holds the hand complete (4 Nov): End Turn, not another throw.
+            const left = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !keep.includes(d.id));
+            socket.emit(left.length ? 'rollDice' : 'endTurn');
         }
     };
     socket.on('turnState', ({ turn, event }) => {
@@ -112,9 +114,11 @@ test('a browser cannot report its own score', async () => {
     await sleep(rolled.animationMs * 0.01 + 10);
 
     // Lock every die, then end the turn: the score must be whatever the dice say.
+    const complete = waitFor(current, 'turnState', d => d.turn && d.turn.complete);
     rolled.turn.dice.forEach(d => current.emit('toggleDie', d.id));
-    const finished = await waitFor(current, 'turnState', d => d.event && d.event.type === 'finalized');
-    const expected = finished.event.outcome;
+    await complete;
+    const dice = Rules.scoreDice(rolled.turn.dice);
+    const expected = { busted: !dice.has2 || !dice.has4, score: dice.has2 && dice.has4 ? dice.score : 0 };
     // First turn of the round, so the score stays on the board while the other player goes.
     const scored = waitFor(current, 'gameStateUpdate', s => s.currentTurnId !== current.id);
     current.emit('endTurn', { score: 24, busted: false });
@@ -179,7 +183,7 @@ test('Klarg waits for a 2 or 4 you need, snatches it and starts his turn with it
     // His turn begins with it already kept.
     await sleep(rolled.animationMs * 0.01 + 30);
     const his = nextState(hero, st => st.currentTurnId === 'BOT_MOLAR');
-    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 4000);
+    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && (d.turn.complete || d.turn.finalized), 4000);
     room.turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).forEach(d => hero.emit('toggleDie', d.id));
     await finished;
     hero.emit('endTurn');
@@ -231,7 +235,7 @@ test("the Hangman's Dead Eye shoots your best die as you finish and it rolls aga
         const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
         room.turn.dice.forEach((d, i) => { d.value = [2, 4, 6, 5, 5, 5][i]; }); // 21
         await sleep(rolled.animationMs * 0.01 + 30);
-        const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 4000);
+        const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && (d.turn.complete || d.turn.finalized), 4000);
         room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
         await finished;
         const scored = nextState(hero, st => st.currentTurnId !== hero.id);
@@ -323,13 +327,6 @@ test('unknown reactions are dropped and names are passed through as plain data',
     await cheers;
 });
 
-test('a solo game against The Molar plays through to game over', async () => {
-    const solo = await join('Solo', 'COMP-1');
-    autoPlay(solo);
-    const over = await waitFor(solo, 'gameOver', () => true, 20000);
-    assert.match(over.message, /wins the table/);
-});
-
 test('a Tavern Crawl run plays through to the end', async () => {
     const hero = await join('Hero', 'TVRN-1');
     autoPlay(hero, () => hero.emit('leaveShop'));
@@ -406,20 +403,20 @@ test('if they do not come back while others wait, their turn is dust', async () 
 });
 
 test('a bot waits for you instead of playing to an empty room', async () => {
-    const g = await join('Gil', 'COMP-GRACE', { token: 'gil-token' });
+    const g = await join('Gil', 'TVRN-GRACE', { token: 'gil-token' });
     await waitFor(g, 'gameStateUpdate');
     g.disconnect();
     await sleep(400);
-    const room = server.rooms['COMP-GRACE'];
+    const room = server.rooms['TVRN-GRACE'];
     assert.ok(room);
     const rollsBefore = room.turn ? room.turn.rollCount : 0;
     await sleep(400);
     assert.equal(room.turn ? room.turn.rollCount : 0, rollsBefore, 'the bot is paused');
 
-    const g2 = await join('Gil', 'COMP-GRACE', { token: 'gil-token' });
-    autoPlay(g2);
-    const over = await waitFor(g2, 'gameOver', () => true, 20000);
-    assert.match(over.message, /wins the table/);
+    const g2 = await join('Gil', 'TVRN-GRACE', { token: 'gil-token' });
+    autoPlay(g2, () => g2.emit('leaveShop'));
+    const over = await waitFor(g2, 'gameOver', () => true, 60000);
+    assert.match(over.message, /Points: [0-9]+/);
 });
 
 test('the last die goes into its slot by itself once it lands', async () => {
@@ -451,15 +448,15 @@ test('bots finish their turns even when the server is too busy to keep its timer
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     const hog = setInterval(() => { const end = Date.now() + 5 + rnd() * 35; while (Date.now() < end) { /* busy */ } }, 3);
     try {
-        const games = [1, 2, 3, 4, 5, 6].map(async n => {
-            const solo = await join(`Busy${n}`, `COMP-BUSY${n}`);
-            const over = waitFor(solo, 'gameOver', () => true, 60000);
-            autoPlay(solo);
+        const games = [1, 2, 3].map(async n => {
+            const solo = await join(`Busy${n}`, `TVRN-BUSY${n}`);
+            const over = waitFor(solo, 'gameOver', () => true, 90000);
+            autoPlay(solo, () => solo.emit('leaveShop'));
             solo.emit('rollDice'); // in case the first turn was announced before autoPlay listened
             return over;
         });
         const results = await Promise.all(games);
-        results.forEach(over => assert.match(over.message, /wins the table/));
+        results.forEach(over => assert.match(over.message, /Points: [0-9]+/));
     } finally {
         clearInterval(hog);
     }
@@ -500,9 +497,10 @@ async function playHand(hero, room, values) {
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
     room.turn.dice.forEach((d, i) => { d.value = values[i]; });
     await sleep(rolled.animationMs * 0.01 + 20);
-    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized);
+    // (Since 4 Nov keeping the last die holds the hand complete; End Turn fixes and ends it.)
+    const complete = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && (d.turn.complete || d.turn.finalized));
     room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
-    await finished;
+    await complete;
     hero.emit('endTurn');
 }
 
@@ -1350,16 +1348,38 @@ test('Second Thoughts puts back a kept die, which may then be rolled without kee
     assert.deepEqual(shelfOf(room), []);
 });
 
+test('keeping your last die waits for End Turn: until then a die kept this throw can go back', async () => {
+    const { hero, room } = await tavernTable('Slip');
+    await rollWith(hero, room, [2, 4, 6, 6, 5, 1]);
+    const complete = waitFor(hero, 'turnState', d => d.turn && d.turn.complete);
+    await keep(hero, [0, 1, 2, 3, 4, 5]);
+    await complete;
+    assert.equal(room.turn.finalized, false, 'not fixed yet');
+    hero.emit('toggleDie', 5); // a slip: the 1 goes back
+    await sleep(40);
+    assert.equal(room.turn.dice[5].status, 'active');
+    assert.equal(room.turn.complete, false);
+    assert.equal(Rules.canRoll(room.turn), true, 'and the last die can be thrown');
+    // Kept again, End Turn fixes the hand and ends the turn.
+    hero.emit('toggleDie', 5);
+    await sleep(40);
+    const scored = nextState(hero, st => st.currentTurnId !== hero.id);
+    hero.emit('endTurn');
+    const st = await scored;
+    assert.equal(st.players[hero.id].score, 18);
+});
+
 test('Second Thoughts reopens a finished hand', async () => {
     const { hero, room } = await tavernTable('Reopener');
     room.tavernRun.shelf = ['secondThoughts'];
     await rollWith(hero, room, [1, 1, 1, 1, 1, 1]);
-    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.finalized);
-    await keep(hero, [0, 1, 2, 3, 4, 5]); // dust
-    assert.equal((await finished).turn.outcome.busted, true);
+    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.complete);
+    await keep(hero, [0, 1, 2, 3, 4, 5]); // dust, held for End Turn
+    await finished;
     hero.emit('drinkThonic', 0, 5);
     await sleep(60);
     assert.equal(room.turn.finalized, false, 'the hand is open again');
+    assert.equal(room.turn.complete, false);
     assert.equal(room.turn.outcome, null);
     assert.equal(room.turn.dice[5].status, 'active');
     assert.equal(Rules.canRoll(room.turn), true);
@@ -1374,7 +1394,7 @@ test('Steady Thonic: a dust hand scores its dice as they lie, drunk before or af
         room.tavernRun.shelf = ['steady', 'steady'];
         if (when === 'before') { hero.emit('drinkThonic', 0); await sleep(50); }
         await rollWith(hero, room, [1, 6, 5, 1, 3, 6]);
-        const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.finalized);
+        const finished = waitFor(hero, 'turnState', d => d.turn && (d.turn.complete || d.turn.finalized));
         await keep(hero, [0, 1, 2, 3, 4, 5]);
         await finished;
         if (when === 'after') { hero.emit('drinkThonic', 0); await sleep(50); }
@@ -1832,7 +1852,10 @@ test("Sylvester's Back of the Head knocks your best kept die loose from a finish
     await sleep(rolled.animationMs * 0.01 + 20);
     const punched = waitFor(hero, 'turnState', d => d.event && d.event.type === 'punched');
     const punch = waitFor(hero, 'signatureMove', m => m.ability === 'Back of the Head');
+    const complete = waitFor(hero, 'turnState', d => d.turn && d.turn.complete);
     room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
+    await complete;
+    hero.emit('endTurn'); // the punch comes as the hand is fixed (since 4 Nov, at End Turn)
     assert.match((await punch).text, /knocks your 6 loose/);
     const knocked = (await punched).event.die;
     assert.equal(room.turn.dice[knocked].value, 6, 'his best die');
@@ -1860,8 +1883,11 @@ test('Back of the Head waits for a hand that counts (not dust)', async () => {
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
     room.turn.dice.forEach(d => { d.value = 1; });
     await sleep(rolled.animationMs * 0.01 + 20);
+    const complete = waitFor(hero, 'turnState', d => d.turn && d.turn.complete);
     const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.finalized);
     room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
+    await complete;
+    hero.emit('endTurn');
     assert.equal((await finished).turn.outcome.busted, true);
     assert.equal(room.tavernRun.abilityUsed.suckerPunch, undefined, 'still in his pocket');
 });

@@ -537,7 +537,7 @@ function takeSeat(seat: Seat) {
 }
 
 function roomLabel(code: string) {
-    return code.startsWith('COMP-') ? 'Solo vs The Molar' : code.startsWith('TVRN-') ? 'House Table' : `Table ${code}`;
+    return code.startsWith('TVRN-') ? 'House Table' : `Table ${code}`;
 }
 
 socket.on('connect', () => {
@@ -722,11 +722,12 @@ socket.on('offerKeepsakes', (data: Omit<Extract<Modal, { type: 'keepsakes' }>, '
     update({ modal: { type: 'keepsakes', ...data } });
 });
 
-socket.on('gameOver', (data: { message: string; tavern?: TavernSummary }) => {
+socket.on('gameOver', (data: { message: string; tavern?: TavernSummary; winnerId?: string | null }) => {
     if (data.tavern) {
-        playSound(data.tavern.won ? 'winner' : 'aww');
+        playSound(data.tavern.won ? 'tavernVictory' : 'aww'); // (the user's Tavern Crawl Victory, 4 Nov)
         update({ modal: { type: 'tavernOver', summary: data.tavern } });
     } else {
+        if (data.winnerId && data.winnerId === snapshot.myId) playSound('multiplayerVictory'); // you won the table (the user's clip, 4 Nov)
         update({ modal: { type: 'gameOver', message: data.message } });
     }
 });
@@ -761,15 +762,20 @@ function getSessionToken() {
 
 // Which dice a Second Thoughts Thonic can put back: those kept on an earlier roll, or any kept
 // die once the hand is finished (the server applies the same rule).
+// Every die kept by your own taps, the hand not yet fixed: End Turn does that (4 Nov; until then a
+// die kept this throw can go back). Worked out here too, so a tap still on its way shows it at once.
+export function handComplete(turn: TurnView) {
+    return turn.hasRolled && !turn.finalized && !turn.dice.some(d => d.status === 'active');
+}
+
 export function canPutBack(turn: TurnView, status: string) {
-    return turn.hasRolled && (status === 'permanentlyLocked' || (turn.finalized && status === 'lockedThisTurn'));
+    return turn.hasRolled && (status === 'permanentlyLocked' || ((turn.finalized || handComplete(turn)) && status === 'lockedThisTurn'));
 }
 
 export const actions = {
     join(name: string, avatar: string, tableCode: string, lives = 3) {
         let roomCode = tableCode.trim().toUpperCase();
-        if (roomCode === 'COMP') roomCode = `COMP-${Math.floor(1000 + Math.random() * 9000)}`;
-        else if (roomCode === 'TAVERN') roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
+        if (roomCode === 'TAVERN') roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
         if (!roomCode) roomCode = 'PUBLIC';
 
         startMusic();
@@ -799,7 +805,7 @@ export const actions = {
         const { turn, isMyTurn, rolling } = snapshot;
         if (!turn || !isMyTurn || rolling) return;
         startMusic();
-        if (turn.finalized) {
+        if (turn.finalized || handComplete(turn)) {
             update({ endingTurn: true });
             socket.emit('endTurn');
         } else if (turn.canRoll) {

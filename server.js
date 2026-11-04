@@ -622,8 +622,10 @@ function getTavernRunState(room) {
 // The server owns the dice. Browsers ask to roll, lock or end; the server decides
 // what happens and broadcasts the result, so every screen shows the same board.
 
+// (Solo vs The Molar, the COMP- tables, was taken out on 4 Nov, the user's call: a bot sits only
+// at a Tavern Crawl table now; a code typed as COMP is an ordinary table.)
 function isBotRoom(roomCode) {
-    return roomCode.startsWith('COMP') || roomCode.startsWith('TVRN');
+    return roomCode.startsWith('TVRN');
 }
 
 function getTurnKey(room) {
@@ -924,14 +926,22 @@ function performToggle(roomCode, dieId) {
     let turn = room.turn;
     if (Date.now() < turn.busyUntil) return;
 
-    let result = Rules.toggleDie(turn, dieId);
+    // (A player's keep of their last die waits for End Turn, so it can still go back; the bots finish at once.)
+    let result = Rules.toggleDie(turn, dieId, { hold: turn.playerId !== BOT_ID });
     if (!result) return;
     emitKept(roomCode, result);
 }
 
 function performEndTurn(roomCode) {
     let room = rooms[roomCode];
-    if (!isTurnPlayable(roomCode) || !room.turn.finalized) return;
+    if (!isTurnPlayable(roomCode)) return;
+    // A hand held complete (every die kept by the player's taps) is fixed as they end the turn:
+    // its outcome first (and Sylvester's Back of the Head, which reopens it), then the end.
+    if (!room.turn.finalized && Date.now() >= room.turn.busyUntil && Rules.finishTurn(room.turn)) {
+        if (suckerPunch(roomCode, room)) return;
+        emitTurn(roomCode, { type: 'finalized', outcome: room.turn.outcome });
+    }
+    if (!room.turn.finalized) return;
     room.turn.ended = true;
 
     let currentId = room.roundPlayers[room.currentTurnIndex];
@@ -1996,7 +2006,8 @@ function evaluateRound(roomCode) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
         // Sync the final scoreboard before ending the game
         emitState(roomCode);
-        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
+        // (winnerId: the winner's screen plays the victory fanfare, 4 Nov.)
+        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆`, winnerId: survivors.length === 1 ? survivors[0] : null });
         room.roundPlayers = [];
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
@@ -2251,13 +2262,7 @@ io.on('connection', (socket) => {
                 tavernRun: isTavernCrawl ? createTavernRun() : null
             };
 
-            if (roomCode.startsWith("COMP")) {
-                rooms[roomCode].players[BOT_ID] = {
-                    id: BOT_ID, token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true
-                };
-                rooms[roomCode].playerOrder.push(BOT_ID);
-                rooms[roomCode].roundPlayers.push(BOT_ID);
-            } else if (isTavernCrawl) {
+            if (isTavernCrawl) {
                 rooms[roomCode].players[BOT_ID] = {
                     id: BOT_ID, token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
                 };

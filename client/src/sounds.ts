@@ -41,6 +41,11 @@ const sfx = {
     // Buying: a Thonic, and a keepsake from Thom's back shelf or the Stranger (the user's, 28 Oct).
     potionSelect: load('PotionSelector.mp3', 0.9),
     itemPickup: load('ItemPickup.mp3', 0.8),
+    // The user's, 4 Nov: a fight's summary tallies its gold (once for the win, once a heart left),
+    // a Tavern Crawl fight (and a whole crawl) won, a multiplayer table won.
+    coinTally: load('CoinTally.mp3', 0.8),
+    tavernVictory: load('TavernCrawlVictory.mp3', 0.8),
+    multiplayerVictory: load('MultiplayerVictory.mp3', 0.8),
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
     bardTune: load('BardTune.mp3', 0.8),
     // The Yawning Portal's abilities (the user's, 3 Nov).
