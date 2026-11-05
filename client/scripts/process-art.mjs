@@ -716,7 +716,7 @@ function blobsOver(map, size, cutoff) {
 // face's middle differs from the face's own colour (textures/dice/<id>-cut.webp, white high).
 // (McGrath keeps the Molar's id; his painting is dice-mcgrath.jpg.)
 const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha'];
-const LIFT = { power: 1.5, vivid: 1.2 }; // how much lighter (1: as painted) and more vivid
+const LIFT = { power: 1.25, vivid: 1.05 }; // how much lighter (1: as painted) and more vivid (1.5 and 1.2 until 5 Nov: neon on the table)
 const CLEAN = { detail: 0.35, radius: 40 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
 const RING_ONE = { duke: [214, 172, 76] }; // his gold
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
@@ -779,7 +779,8 @@ async function diceSheets() {
         // painting's broad colour changes (CLEAN.detail: Martha's mother-of-pearl, a bone's yellowing),
         // and the 3D die adds the light and the worn edges as on the ivory dice. Lighter too (the
         // user, 3 Nov: on a phone the coloured dice sank into the dark felt): the colour is lifted,
-        // darks most, and made a little more vivid. The pips (and just round them) stay as painted.
+        // darks most, and made a little more vivid. Since 5 Nov (the user: as with the ivory dice) each pip
+        // is redrawn too, a clean disc of its own colour: the painted ones had pale halos and smudges.
         const lift = rgb => {
             const lifted = rgb.map(v => 255 * (1 - Math.pow(1 - v / 255, LIFT.power)));
             const grey = 0.299 * lifted[0] + 0.587 * lifted[1] + 0.114 * lifted[2];
@@ -788,7 +789,7 @@ async function diceSheets() {
         found.forEach((pips, n) => {
             const face = faces[n].input;
             const centres = pips ?? [{ x: F / 2, y: F / 2 }];
-            const keep = n === 0 && RING_ONE[id] ? F * 0.15 + 3 : r * 1.25;
+            const keep = n === 0 && RING_ONE[id] ? F * 0.15 + 3 : r * 0.96;
             const weight = new Float32Array(F * F); // 0 on a pip, 1 on the surface
             for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) {
                 const near = Math.min(...centres.map(b => Math.hypot(x - b.x, y - b.y)));
@@ -803,6 +804,16 @@ async function diceSheets() {
                 return blur(ch, F, CLEAN.radius);
             });
             const mid = [0, 1, 2].map(c => median(Array.from({ length: F * F }, (_, i) => i).filter(i => weight[i] > 0.99 && i % 7 === 0).map(i => face[i * 3 + c])));
+            // Each pip's own colour, from its middle (read before the surface is redrawn).
+            const pipColours = n === 0 && RING_ONE[id] ? [] : centres.map(b => {
+                const inside = [[], [], []];
+                for (let y = Math.round(b.y - r * 0.6); y <= b.y + r * 0.6; y++) for (let x = Math.round(b.x - r * 0.6); x <= b.x + r * 0.6; x++) {
+                    if (Math.hypot(x - b.x, y - b.y) > r * 0.6) continue;
+                    const i = (y * F + x) * 3;
+                    for (let c = 0; c < 3; c++) inside[c].push(face[i + c]);
+                }
+                return inside.map(median);
+            });
             for (let i = 0; i < F * F; i++) {
                 const k = weight[i];
                 if (k <= 0) continue;
@@ -810,6 +821,15 @@ async function diceSheets() {
                 const v = lift(even);
                 for (let c = 0; c < 3; c++) face[i * 3 + c] = Math.round(face[i * 3 + c] * (1 - k) + v[c] * k);
             }
+            pipColours.forEach((colour, p) => {
+                const b = centres[p];
+                for (let y = Math.max(0, Math.floor(b.y - r - 2)); y <= Math.min(F - 1, b.y + r + 2); y++) for (let x = Math.max(0, Math.floor(b.x - r - 2)); x <= Math.min(F - 1, b.x + r + 2); x++) {
+                    const edge = Math.min(1, Math.max(0, r + 0.75 - Math.hypot(x - b.x, y - b.y)));
+                    if (edge <= 0) continue;
+                    const i = (y * F + x) * 3;
+                    for (let c = 0; c < 3; c++) face[i + c] = Math.round(face[i + c] * (1 - edge) + colour[c] * edge);
+                }
+            });
         });
         // A 1 that blends into its face (the Duke's crimson on red) is repainted brighter red in a
         // ring of the set's own pip colour (RING_ONE), so it reads from across the table.

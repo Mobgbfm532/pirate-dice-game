@@ -125,9 +125,8 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
 - **The dice faces (5 Nov, the user's call, new look, every table):** the painted sheet draws a brown line round each face, which read as a cartoon outline on the 3D die: `FACE_INSET` and `clearFaceEdge` in textures.ts cut inside it and paint the corners over.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
-- **Opponents' own dice** (3 Nov, the user's paintings; **switched off since 4 Nov**, the user's call:
-  everyone throws the default ivory dice for now; all the code and sets stay, `OPPONENT_DICE_ON` in
-  textures.ts brings them back, `PAINTED_DICE` lists them): a Tavern Crawl opponent throws their own
+- **Opponents' own dice** (3 Nov, the user's paintings; off on 4 Nov, **on again since 5 Nov**, the user's calls, `OPPONENT_DICE_ON` in
+  textures.ts, `PAINTED_DICE` lists them; on 5 Nov each pip was redrawn as a clean disc of its own colour, `LIFT` eased to 1.25 and 1.05 and `OPPONENT_DICE_GLOW` to 0.16: Frak still leans olive and Danhausen pink in the fire's light): a Tavern Crawl opponent throws their own
   set on their turns (yours stay ivory). So far the Ghoul and Gourd's: McGrath's yellowed bone (made, but since 3 Nov he
   throws your ivory dice, the user's call: not in `OPPONENT_DICE`),
   Frak green with violet pips, Danhausen purple, the Duke red with gold pips, Martha mother-of-pearl
@@ -338,7 +337,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   - keeping your last die waits for End Turn, so a die kept this throw can go back; Solo vs The Molar is gone;
   - multiplayer: the JUGS league (Kram given one win by hand), a round result card, Dirty 20!;
   - the scenes between fights on a computer: characters behind a counter, parchment speech bubbles by their
-    faces, keepsake descriptions on short windows; the opponents' painted dice switched off; the tuning panel hidden;
+    faces, keepsake descriptions on short windows; the opponents' painted dice switched off (back on 5 Nov); the tuning panel hidden;
   - abilities louder, the screen shaking for Sylvester, Vaelin and the Ridgeler, Astral Flood's wave after its banner;
   - the user's sounds: Elf Bar puff, Martha's Disguises, coin tally, two victories, thief's laugh, Sylvester's punch
     (Whoa is in but off); new lines for Sperm and Brodor, "to spot them" for the thief; no "1 of 14" on intro cards;
@@ -835,8 +834,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    taking a heart: teach it before trusting its numbers.
 6. **The user's art and sounds waiting:** ability paintings for Dead Eye, the Ace of Spades and All In; music and
    ambience from Udio; optional repaints of the Potion Belt and the Sunglasses (thin at 26 px). Dice sets for the
-   Yawning Portal's and the ship's opponents only if the painted dice come back on (`OPPONENT_DICE_ON`; add each id to
-   `DICE_SETS` and `PAINTED_DICE`).
+   Yawning Portal's and the ship's opponents if wanted (add each id to `DICE_SETS` and `PAINTED_DICE`).
 7. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
    Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
