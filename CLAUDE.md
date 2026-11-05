@@ -53,7 +53,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 | Path | What |
 |---|---|
 | `server.js` | Express + Socket.IO. Rooms, turns (`room.turn`), rounds, Tavern Crawl (`TAVERN_ENCOUNTERS`, `THONICS`, `PLACES`, the events between fights, `fireTavernAbility`; its numbers come from `shared/balance.js`), bots, reconnection grace, leaderboard. Exports `start`, `rooms`, `io`, `emitState` for tests. |
-| `db.js` | What lasts between restarts (3 Nov): the leaderboard, which opponents each player has met, and the league (4 Nov). With `DATABASE_URL` (Neon Postgres) in the database (tables `leaderboard`, `met`, `league`, made on start); without it in `leaderboard.json` / `met.json` / `league.json` (gitignored; `LEADERBOARD_READONLY` leaves them alone). The server keeps both in memory and writes through without waiting. `test/db.test.js` checks the SQL on pg-mem. |
+| `db.js` | What lasts between restarts (3 Nov): the leaderboard, which opponents each player has met, and the league (4 Nov). With `DATABASE_URL` (Neon Postgres) in the database (tables `leaderboard`, `met`, `league`, made on start); without it in `leaderboard.json` / `met.json` / `league.json` (gitignored; `LEADERBOARD_READONLY` leaves them alone). The server keeps them in memory and writes through without waiting. `test/db.test.js` checks the SQL on pg-mem. |
 | `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
 | `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
@@ -271,7 +271,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` and `NEON_BRANCH` into `.env.local` (gitignored),
   which `server.js` reads on start, except under `LEADERBOARD_READONLY` (the tests, the dev test
   server: they never touch the real database). So `npm start` on this PC uses the real Neon
-  database: the same as the test site once Render has the link. The launch entry `neon-server`
+  database: the same one as the test site. The launch entry `neon-server`
   runs it on :3005. To try something against Neon without touching real data, make a Neon branch
   (`neon checkout dev --create`, a 7-day copy) first. `db.js` drops the link's `sslmode` and always
   checks the certificate. Checks used on 3 Nov live in `previews/neon/` (gitignored).
@@ -320,7 +320,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (4 November 2026)
+## Status (5 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -328,7 +328,18 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 150 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 16 client tests.
+  keepsakes, gold, saves after each place. 150 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+- **4-5 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
+  - Martha drops Mystery Flavour, her own Elf Bar, not her mask; the Duke saves his Devil unless it helps;
+    the Ghoul and Gourd on 3 hearts against 1, 2, 3, 3, 3; at most two thieves at a place;
+  - keeping your last die waits for End Turn, so a die kept this throw can go back; Solo vs The Molar is gone;
+  - multiplayer: the JUGS league (Kram given one win by hand), a round result card, Dirty 20!;
+  - the scenes between fights on a computer: characters behind a counter, parchment speech bubbles by their
+    faces, keepsake descriptions on short windows; the opponents' painted dice switched off; the tuning panel hidden;
+  - abilities louder, the screen shaking for Sylvester, Vaelin and the Ridgeler, Astral Flood's wave after its banner;
+  - the user's sounds: Elf Bar puff, Martha's Disguises, coin tally, two victories, thief's laugh, Sylvester's punch
+    (Whoa is in but off); new lines for Sperm and Brodor, "to spot them" for the thief; no "1 of 14" on intro cards;
+  - the Neon database's link went on the Render test service (the user, 4 Nov).
 - **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
   a phone; a computer holds still since 3 Nov; the phone's tilt was tried and taken out); extra dice spin
   was tried and reverted (it looked unreal); a richer table was built; on 3 Nov the tray lost its
@@ -407,9 +418,9 @@ one too, or saves only last until the server restarts, which on the free tier is
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
   `npm install && npm run build`, start `npm start`) is at
   https://pirate-dice-next.onrender.com/next and has every pushed commit (a deploy takes about a
-  minute). Free tier: it sleeps after ~15 min idle (first visit then takes up to ~50 s); the
-  leaderboard (`leaderboard.json`, not in git) starts empty after each deploy. `SAVE_SECRET` is set
-  there (the live service will need its own).
+  minute). Free tier: it sleeps after ~15 min idle (first visit then takes up to ~50 s). `SAVE_SECRET` and,
+  since 4 Nov, `DATABASE_URL` are set there, so the leaderboard, who you've met and the league live in Neon
+  (the live service will need its own of each).
 
 ## Tavern Crawl now
 
@@ -430,10 +441,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
   glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine and Johnny Elf Bar and no events of its
-  own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3, but 2
-  against the Ghoul and Gourd's first four (`fightHearts`, 3 Nov; the Lady's Favour +1, the Stranger and Pruney
-  Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 2, 2, 3 (since 3 Nov,
-  the user's: 2 a side, McGrath 1, Martha 3 a side) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
+  own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
+  Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
+  the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
@@ -545,9 +555,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   now, her own Elf Bar. A keepsake (not on the shelf): it never runs out, one puff a fight, and each
   fight it tastes of one of Johnny's four at random (`run.mysteryFlavour`, drawn as the fight
   starts; `mystery: { flavour, ready }` in the state). The `puffMystery` handler and the shelf's
-  Elf Bars share `elfPuff` in server.js. On the strip (`MysteryKeepsake` in Hud) it shows that
-  flavour's painting with a violet "?" (`.mystery-art`; drifting through the colours where no fight
-  has chosen one, as on the invitation), lights when the flavour could be puffed, and a tap shows
+  Elf Bars share `elfPuff` in server.js. On the strip (`MysteryKeepsake` in Hud) it lights when the
+  flavour could be puffed, and a tap shows
   "Puff"; its moment is `keepsakeActivated` with `who: "Martha's Elf Bar"`, `mystery: true`, `id`
   `mysteryFlavour` and `flavour`. The user's painting of Martha's brass vape with violet smoke
   (`art/keepsake-mysteryFlavour.jpg`, painted on lime green: `cutOutFlat`'s `green` option, new 4
@@ -644,8 +653,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   shows an empty table and then the next opponent's entrance. The summary fades straight into
   the event underneath (Modals renders both while it leaves).
 - **After each win** a summary screen (`FightWon` in Hud, before the event or the invitation):
-  the opponent's portrait, the gold for the win and for each heart left, one line at a time with
-  synthesized coin clinks (`playCoins`), the purse counting up, then "Next" (`lastWin` carries
+  the opponent's portrait (Sperm McGrath says "Alright then, in you go" in a bubble under his, `WON_LINES`, 5 Nov), the gold for the win and for each heart left, one line at a time with
+  the user's coin tally (once for the win, once per heart left), Tavern Crawl Victory as it opens, the purse counting up, then "Next" (`lastWin` carries
   `place`, `gold.heartsLeft/perHeart/perPlace` and `at`; shown once, `localStorage.tavernWinSeen`;
   not after a resume). The event scenes show only the purse now.
 - **Money (since 23 Oct, the user's calls: nearer D&D's prices, all in whole gold):** a tenth of
@@ -796,49 +805,70 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Play-test and set the new numbers** (the user plays, then decides; simulate first with
-   `balance/`): the new keepsakes' prices (Miser's Purse 12, Gambler's Charm 14, Bottomless Flask
-   12, the reworked Loaded Die 12) and whether the Miser's Purse needs a cap (it grows with the
-   purse); the Elf Bars (8-14); the Bard (8); the Cult (15% of walks, 2 fights); uses per fight
-   for the Yawning Portal's five (1 each, Stason 2); the Ghoul and Gourd on 2 hearts a side (3 Nov). Then difficulty overall: the simulator says the game
-   is hard (0.3% finish) but the user finds it easier; options measured in `easier.js`,
-   `tournament-lives.js`. The simulator doesn't know the Elf Bars, the Bard, the Cult, the new
-   keepsakes, `fightHearts` (the Ghoul and Gourd's 2-heart fights) or Astral Flood taking a heart
-   yet: teach it before trusting its numbers.
-2. **The user's art and sounds waiting:** dice sets for the Yawning Portal's and the ship's
-   opponents (add each id to `DICE_SETS` and `OPPONENT_DICE`); ability paintings for Dead Eye, the Ace of Spades and
-   All In; music and ambience from Udio;
-   optional repaints of the Potion Belt and the Sunglasses (thin at 26 px).
-3. **The Salty Swallow's own spots and events** (to workshop; ideas: a card game below deck, a
-   stowaway instead of the thief). Without the Dice Den it offers only Thom, the Shrine and
-   Johnny. Names for the ship's abilities are still working names (Written in the Stars, Dead
-   Eye, Smooth Talk, the Cloak, All In).
-4. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
+1. **Commit and push what's waiting** (ask first): the Ghoul and Gourd's lives (you 3; 1, 2, 3, 3, 3),
+   Sperm's line, and these document updates.
+2. **The intro cinematic** (proposed 5 Nov; the user's "ok", waiting on their art): a skippable, painted
+   25-second film on a device's first crawl, with a "Watch the intro" button on the start screen. Five shots:
+   black with one die, the town at night, the Portal and the ship glimpsed, the real 3D dice teaching
+   "Find a 2. Find a 4. Chase 24.", then the door and into Sperm's entrance card. Layers drifting at
+   different speeds for depth, black bars, words one at a time. The prompts are in `docs/art-direction.md`
+   ("The intro cinematic"): `intro-town.jpg` is essential; `intro-foreground.jpg`, `intro-door.jpg`, music,
+   street sound and a narrator are optional. The words are a draft for the user to rewrite.
+3. **The Salty Swallow sets sail** (brainstormed 4 Nov, nothing decided or built): the ship leaves port during
+   its four fights, with environmental effects instead of the thief and the Stranger. Spots the user named:
+   Jorvash the manservant (in place of Thom), Yvesil the oracle, a smaller Shrine to the Lady (same effect), and a
+   fourth still to choose. Ideas offered: weather that hits both sides shown as a badge, a voyage in stages (casting
+   off for Klarg, a clear starry night for Rokr, a squall for the Hangman, the eye of the storm for Jaguar), the
+   Swell tipping a die to a neighbouring face, Yvesil selling the forecast or turning the wind, the Galley's stew
+   giving sea legs; events like a wave over the deck, flotsam, gulls, seasickness. To decide: both sides or only
+   the player, a fixed voyage or random weather. The ship's ability names are still working names (Written in
+   the Stars, Dead Eye, Smooth Talk, the Cloak, All In).
+4. **Small things waiting on the user's word:**
+   - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
+   - The thief's button and result still say "catch" ("Roll to catch the thief"); the sentence above says "spot".
+   - Brodor's invitation is still titled "Word from the docks", though his new line no longer mentions the docking.
+   - Leaving the Potion Belt behind for a boss's keepsake with 3 Thonics carried hides the third (read in the code,
+     not reproduced): `claimDrop` doesn't trim the shelf, and `Shelf` draws only `shelfSize` slots.
+   - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
+   - The Dirty 20! colour (`#c5d04a`) hasn't been seen by eye; a sound for it, and for Astral Flood's wave, if wanted.
+5. **Play-test and set the numbers** (the user plays, then decides; simulate first with `balance/`): the Ghoul
+   and Gourd's new lives; the Duke's `devilWhenBelow` (0.7); the keepsake prices (Miser's Purse 12, Gambler's Charm 14,
+   Bottomless Flask 12, the reworked Loaded Die 12) and whether the Miser's Purse needs a cap; the Elf Bars (8-14); the
+   Bard (8); the Cult (15% of walks, 2 fights); uses per fight for the Yawning Portal's five (1 each, Stason 2).
+   Then difficulty overall: the simulator says the game is hard (0.3% finish) but the user finds it easier; options
+   measured in `easier.js`, `tournament-lives.js`. The simulator doesn't know Mystery Flavour (and no longer wears a
+   mask), the Elf Bars, the Bard, the Cult, the new keepsakes, the two-thief limit, the Duke's `devilPlan` or Astral Flood
+   taking a heart: teach it before trusting its numbers.
+6. **The user's art and sounds waiting:** ability paintings for Dead Eye, the Ace of Spades and All In; music and
+   ambience from Udio; optional repaints of the Potion Belt and the Sunglasses (thin at 26 px). Dice sets for the
+   Yawning Portal's and the ship's opponents only if the painted dice come back on (`OPPONENT_DICE_ON`; add each id to
+   `DICE_SETS` and `PAINTED_DICE`).
+7. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
    Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
-5. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
-6. **The look, more** (listed in the visuals plan's "What's left for the look", 4 Nov): living
+8. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
+9. **The look, more** (listed in the visuals plan's "What's left for the look"): living
    backdrops (the fireplace, candles and the Portal's well flicker, by a mask like the devil
    painting's); light for each place (cool well light at the Yawning Portal, swinging lanterns on the
-   ship) and music per place; more camera moves if the user likes the first ones (a lurch for Klarg's
-   steal, a thud as a heart is lost); on a computer's multiplayer table the cards could move up into
-   the header (the "X is rolling" banner repeats their gold glow). Check the frame rate on the user's
-   PC and phone after the 3 Nov speed-ups; if Auto quality drops a good phone to Low, tune its
-   threshold (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
-7. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
-   command to `npm install && npm run build` and a `SAVE_SECRET`; the user merges (that deploys
-   the live game); then delete the test service. Old saved runs won't open (money changed); the
-   live leaderboard's old gold entries count as points.
-8. **Persistence (built 3 Nov, `db.js`; Neon set up and tested end to end the same day):** the
-   user sets `DATABASE_URL` (Neon's pooled link, the one in `.env.local`) on the Render test service
-   (and later the live one); then check the leaderboard survives a deploy.
-9. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
-   classic page reachable for a while; until then it skips Thom and the events, which the user
-   accepted), update the PWA manifest/service worker, retire the old client code in
-   `public/index.html`.
-10. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship); new
-   places with tougher opponents (the roguelite); delete unused code (the Dice Den if it stays
-   out, the old keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`,
-   `shareFlame`, the unused `--flame` CSS variable, the old Constellation Blur, the synthesized
-   cork pop); a smaller first download (lazy-load three.js, compress the 9.5 MB ambience track);
-   spectator mode.
+   ship, which belongs with step 3) and music per place; more camera moves if the user likes the first ones (a lurch
+   for Klarg's steal, a thud as a heart is lost); on a computer's multiplayer table the cards could move up into
+   the header. Check the frame rate on the user's PC and phone after the 3 Nov speed-ups (`?tune=1`); if Auto quality
+   drops a good phone to Low, tune its threshold (`noteFrame`); feel: dice sound, roll length (~2.2 s), camera on other phones.
+10. **Check the database across a deploy:** `DATABASE_URL` has been on the Render test service since 4 Nov (the user
+    added it), and Kram's row went in by script, but nobody has yet confirmed on the site that the leaderboard and
+    the JUGS league survive a deploy.
+11. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+    command to `npm install && npm run build`, a `SAVE_SECRET` and `DATABASE_URL`; the user merges (that deploys
+    the live game); then delete the test service. Old saved runs won't open (money changed); the
+    live leaderboard's old gold entries count as points.
+12. **Switch over:** once `/next` beats the classic page everywhere, serve it at `/` (keep the
+    classic page reachable for a while; until then it skips Thom and the events, which the user
+    accepted), update the PWA manifest/service worker, retire the old client code in
+    `public/index.html`.
+13. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship); new
+    places with tougher opponents (the roguelite); delete unused code (the Dice Den if it stays
+    out, the old keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`,
+    `shareFlame`, the unused `--flame` CSS variable, the old Constellation Blur, the synthesized
+    cork pop, Martha's mask if it stays out); a smaller first download (lazy-load three.js, compress the 9.5 MB
+    ambience track); spectator mode; find why a few server tests fail now and then in a full run (Inspiring
+    Song, Rokr's stars, Clear-Eye: each passes alone, and they did before these changes too).

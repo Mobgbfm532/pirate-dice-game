@@ -149,6 +149,49 @@ Done 3 Nov: the user painted all five (Ha! is Frak's grinning face with his ciga
 matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320`) into
 `client/public/art/reactions/<id>.webp`; then add each id to `PAINTED_REACTIONS` in Hud.tsx.
 
+### The intro cinematic (wanted, 5 Nov)
+
+A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the
+middle third (phones crop the sides), and attach `art/ghoul-gourd-outside.jpg` as a style reference if
+the tool allows. The Yawning Portal and Salty Swallow shots reuse their backdrops, the door shot ends on
+Sperm's bust.
+
+**The town at night (essential, wide 16:9), `art/intro-town.jpg`**
+> Wide establishing view looking down a narrow cobbled street through a crooked medieval fantasy town at
+> night, steep timber-framed houses leaning over the road on both sides, warm amber light glowing in small
+> leaded windows, iron lanterns on brackets, chimney smoke drifting across a deep blue night sky, wet
+> cobblestones reflecting the lantern light, a few small distant cloaked figures, the street leading the eye
+> to a warm glow at its far end in the centre of the picture, deep shadows at the edges, moody and inviting,
+> no text, no lettering, no signs with writing. *+ style line*
+
+**Foreground frame (recommended, wide 16:9), `art/intro-foreground.jpg`**: cut out and slid past the town
+at a different speed, for depth.
+> Very dark near-silhouette foreground elements only, framing the edges of a wide picture: heavy timber roof
+> eaves across the top corners, a wooden beam and stone wall corner down the left edge, a wrought iron lantern
+> on a bracket hanging at the upper right, a stack of old barrels in the lower right corner. The entire centre
+> of the picture is completely empty flat solid magenta background, no checkerboard, no gradient, no glow, no
+> light spilling onto the background, crisp clean edges, no text. *+ style line*
+
+**The door (recommended, wide 16:9), `art/intro-door.jpg`**
+> Close view of the front of a timber-framed medieval fantasy tavern at night, a heavy arched oak door with
+> black iron strap hinges set in a worn stone arch, standing slightly ajar in the centre of the picture with
+> warm golden firelight spilling out across wet cobblestones, a weathered wooden hanging sign above showing a
+> painted skull-faced ghoul holding a gourd, no words on the sign, small leaded windows glowing on either side,
+> room left clear in front of the door for a figure to stand, rain-wet stone, moody and inviting, no people, no
+> text, no lettering. *+ style line*
+
+**Sound (optional).** Music, `IntroMusic.mp3` (Udio): *Dark fantasy tavern cinematic score, instrumental, about
+25 seconds. Opens almost silent with a lone low fiddle and distant muffled drum. Slowly builds with hurdy-gurdy,
+low strings and war drums. Rises to a big dramatic swell in the last five seconds, then ends on one heavy final
+hit. Folk instruments, ominous but adventurous, no vocals.* Street, `IntroStreet.mp3`: *Steady light rain on
+cobblestones and wooden roofs at night, a medieval town, with faint muffled tavern singing and laughter from
+behind a distant door, a creaking hanging sign, no music, 25 seconds.*
+
+**Narrator (optional; draft words, the user's to rewrite).** A gravelly, older, unhurried storyteller, with a hint
+of a smile. A clip per line, `IntroLine1.mp3` to `IntroLine5.mp3`: "Every town has a game." / "In this one, they
+play for gold, for glory, and for a seat on the Salty Swallow." / "Few get past the Portal. Fewer still come back
+from the ship." / "Find a 2. Find a 4. Chase 24." / "But first, you have to get past the bouncer."
+
 ## Status
 
 | Asset | Status | File |
@@ -158,7 +201,7 @@ matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320
 | UI parchment | Done | `art/parchment.jpg` → `art/parchment.webp` (dialogs; covers each panel, not tiled) |
 | Felt | Done | `client/public/textures/felt.webp` |
 | Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
-| Opponents' dice (the Ghoul and Gourd) | Done, 3 Nov | `art/dice-mcgrath.jpg` (made, but McGrath throws your ivory dice since 3 Nov), `dice-frak.jpg`, `dice-danhausen.jpg`, `dice-duke.jpg` (its 1 ringed in gold, `RING_ONE`), `dice-martha.jpg` → `textures/dice/<id>.webp` and `<id>-cut.webp` (`diceSheets()`: faces redrawn even, lifted lighter; pips as painted). Still wanted: the Yawning Portal's and the ship's nine (prompt above; the `dice-import` subagent brings them in) |
+| Opponents' dice (the Ghoul and Gourd) | Done, 3 Nov; **switched off since 4 Nov** (everyone throws ivory; `OPPONENT_DICE_ON` in `client/src/textures.ts` brings them back) | `art/dice-mcgrath.jpg` (made, but McGrath throws your ivory dice since 3 Nov), `dice-frak.jpg`, `dice-danhausen.jpg`, `dice-duke.jpg` (its 1 ringed in gold, `RING_ONE`), `dice-martha.jpg` → `textures/dice/<id>.webp` and `<id>-cut.webp` (`diceSheets()`: faces redrawn even, lifted lighter; pips as painted). If they come back on, still wanted: the Yawning Portal's and the ship's nine (prompt above; the `dice-import` subagent brings them in) |
 | Multiplayer reactions (five item icons) | Done, 3 Nov | `art/reaction-cheers.jpg`, `reaction-ha.jpg`, `reaction-ooh.jpg`, `reaction-smug.jpg`, `reaction-woe.jpg` (flat magenta, `cutOutFlat` with `icon: 320`; the tankard keeps its ale drops and has `holes` in its handle) → `client/public/art/reactions/<id>.webp` |
 | Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
 | Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
@@ -176,6 +219,8 @@ matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320
 | Brodor | Done, 21 Oct; new painting 26 Oct | `art/bust-brodor.jpg` (fists in gold gloves and ribbons; flat raspberry, `cutOutFlat` with `holes` between the ribbons) → `brodor.webp` (696x720); `seat: 1.3`, round frame centred on [52, 31] at zoom 1.7. The first painting (with the Slim Jim) is kept as `art/bust-brodor-v1.webp` |
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
+| Mystery Flavour (Martha's Elf Bar, a keepsake) | Done, 4 Nov | `art/keepsake-mysteryFlavour.jpg` (lime green background, `cutOutFlat` with `green: true`, `icon: 320` and `holes` in the smoke's curl) → `keepsakes/mysteryFlavour.webp` |
+| The intro cinematic | Wanted, 5 Nov | `art/intro-town.jpg` (essential), `intro-foreground.jpg`, `intro-door.jpg`; see "The intro cinematic" in the prompt pack |
 | Keepsake pictures (eight item icons) | Done, 29 Oct | `art/keepsake-bentCopper.jpg` (the Shield), `keepsake-velvetCushion.jpg`, `keepsake-luckySeat.jpg` (the Trap Card), `keepsake-loyaltyCard.jpg`, `keepsake-potionBelt.jpg`, `keepsake-loadedDie.jpg`, `keepsake-marthasMask.jpg`, `keepsake-brodorsSunglasses.jpg` (flat magenta / crimson, `cutOutFlat` with `icon: 320` like the Thonics; the Loyalty Card with `holes` seeds for its nine punched holes (the tenth is painted filled in, so it stays parchment); Martha's mask keeps its light pink sticker outline as a border) → `client/public/art/keepsakes/<id>.webp`, 320x320. Shown ~26 px on the strip, ~40 px on Thom's back shelf, ~84 px in the gold burst |
 | Keepsake pictures, three more (the Miser's Purse, the Bottomless Flask, the Gambler's Charm) | Done, 30 Oct | `art/keepsake-misersPurse.jpg` (a leather coin sack tied with a dark cord), `keepsake-bottomlessFlask.jpg` (a pewter hip flask pouring a golden swirl: the curl's middle seeded with `holes`; the open cap is painted metal inside, so it stays), `keepsake-gamblersCharm.jpg` (a braided cord, a brass four-sided die and a four-leaf clover: `holes` seeds for the cord's loop knot, the ring and the gaps between the wires, the die and the clover) (flat magenta, `cutOutFlat` with `icon: 320`, like the keepsakes) → `client/public/art/keepsakes/<id>.webp`, 320x320. In the game since 30 Oct |
 | Blessing and song icons (the Bard's two songs, the Lady's Grace, Sworn to Kram) | Done, 29 Oct | `art/keepsake-inspiringSong.jpg` (a lute, a ribbon and floating notes: `minPiece: 0.001` keeps the separate notes), `keepsake-cuttingWords.jpg` (quill and dagger), `keepsake-ladysGrace.jpg` (a candle with a cyan flame: `glow` with `colour: 'light'` keeps the flame and a soft see-through pale glow; the handle's loop seeded with `holes`), `keepsake-kram.jpg` (a black disc with a red K) (flat magenta, `cutOutFlat` with `icon: 320`, like the keepsakes) → `client/public/art/keepsakes/<id>.webp`, 320x320. For the strip's 🎶 / 🗡️ / 🔱 and the Lady's Grace, still emoji in the game until wired up |
@@ -202,7 +247,8 @@ patches boxed in by a hand) are listed at the bottom of `client/scripts/process-
 **Ask for a flat background.** Most AI tools can't make real transparency and paint a
 checkerboard instead, which takes per-image cleanup. Ending character and plate prompts
 with *"on a plain flat solid magenta background, no checkerboard"* makes cut-outs
-automatic.
+automatic. For a subject that is itself pink or purple, ask for flat bright green instead
+(`cutOutFlat`'s `green` option, Mystery Flavour's).
 
 ## Process
 

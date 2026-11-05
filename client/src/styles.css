@@ -2073,6 +2073,29 @@ button.keepsake.used { opacity: 0.55; }
     animation: won-portrait-in 0.6s ease-out both;
 }
 @keyframes won-portrait-in { from { transform: scale(0.7) rotate(-6deg); opacity: 0; } }
+/* What they say as you beat them: the scenes' parchment bubble, its tail up to the portrait. */
+.won-speech {
+    position: relative;
+    margin: 2px 0 0;
+    padding: 7px 16px 8px;
+    border-radius: 18px;
+    border: 2px solid #6b4423;
+    background: radial-gradient(ellipse at 30% 20%, #fffaf0, #f3e4c2 70%, #e8d3a6);
+    color: #2b1708;
+    font-family: var(--read, Georgia, serif);
+    font-style: italic;
+    font-weight: 700;
+    font-size: clamp(1rem, 4.2vw, 1.2rem);
+    line-height: 1.2;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    transform-origin: 50% -10px;
+    animation: speech-pop 0.35s 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.won-speech::before, .won-speech::after {
+    content: ''; position: absolute; left: 50%; width: 0; height: 0; border-style: solid; transform: translateX(-50%);
+}
+.won-speech::before { top: -12px; border-width: 0 10px 12px; border-color: transparent transparent #6b4423; }
+.won-speech::after { top: -8px; border-width: 0 7.5px 9px; border-color: transparent transparent #fbf3df; }
 .fight-won .won-fight { margin: -6px 0 4px; color: var(--parchment); opacity: 0.8; font-size: 0.95rem; animation: fade-up 0.4s 0.2s both; }
 .won-rows { list-style: none; margin: 0; padding: 0; width: min(100%, 360px); display: flex; flex-direction: column; gap: 8px; }
 .won-rows li {

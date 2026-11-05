@@ -1,6 +1,6 @@
 # Character text in the Tavern Crawl
 
-Every line the game shows for each character, as of 4 November (checked against the game). Send changes in your own words and
+Every line the game shows for each character, as of 5 November (checked against the game). Send changes in your own words and
 they'll be put in; the "Where" notes say which file holds each line.
 
 Since 28 October an ability's screen shows **only its name**. The longer lines that used to sit
@@ -16,6 +16,7 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 
 **Sperm McGrath** (no ability)
 - Entrance card: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
+- Fight summary, after you beat him (a speech bubble): "Alright then, in you go"
 - Run-over screen, if he beats you: "You couldn't beat Sperm?" (everyone else: "[name] ended your run.")
 
 **Frak**: Mind Whip
@@ -28,7 +29,7 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 
 **Duke Morrigan**: Sympathy for the Devil
 - Entrance card: "Duke Morrigan, noble, roguish and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s."
-- Badge: none when he plays it. When you wear Martha's mask as the Devil: "Devil's round: three 6s for you"
+- Badge: none when he plays it.
 
 **Martha Mystery**: Disguises (boss)
 - Entrance card: "Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
@@ -83,7 +84,7 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 
 **The thief** (sign "Stop, thief!", "A hand in your purse")
 - "Finders keepers!" Caught: "Alright, alright! Have it back!" Got away: "Too slow!"
-- Counter: "The thief is making off with [gold]. Roll a [4, 5 or 6] to spot them."
+- Counter: "The thief is making off with [gold]. Roll a [4, 5 or 6] to spot them." Button: "Roll to catch the thief". Caught: "You rolled a [n]: caught the thief! Your purse is safe." Got away: "You rolled a [n]: the thief slips away with [gold]. You have [gold] left."
 
 **The Hooded Stranger** (sign "Keepsakes, for a price")
 - "I have something for you… for a price." Took one: "A fine choice. Mind your heart." Turned down: "Another time, then."
@@ -131,7 +132,7 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 
 ## Keepsakes
 
-Where: `server.js` (`TAVERN_KEEPSAKES`, `MARTHAS_MASK`, `BRODORS_SUNGLASSES`); the line as one works in `emitKeepsakeActivated` calls.
+Where: `server.js` (`TAVERN_KEEPSAKES`, `MYSTERY_FLAVOUR`, `BRODORS_SUNGLASSES`); the line as one works in `emitKeepsakeActivated` calls.
 
 - **Shield:** "Once per encounter, the first life you would lose is ignored." (offered from the Yawning Portal on) When it works: "Shield protects a life."
 - **Trap Card:** "Once per encounter, your first tied round counts as safe for you and a loss for the opponent."
@@ -142,16 +143,20 @@ Where: `server.js` (`TAVERN_KEEPSAKES`, `MARTHAS_MASK`, `BRODORS_SUNGLASSES`); t
 - **Miser's Purse:** "Each win pays 1 more gold for every 10 in your purse." On the fight summary: "Miser's Purse · 1 for every 10 in your purse".
 - **Gambler's Charm:** "When only one die is left to throw, it is thrown twice and you keep the better."
 - **Bottomless Flask:** "The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf." When it works: "Your [Thonic] fills up again."
-- **Martha's Mask:** "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you)."
+- **Mystery Flavour** (Martha's drop): "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random." Tapped: "Martha's Elf Bar. One puff a fight; this fight it tastes of [flavour]: [what it does]." When it works: "Martha's Elf Bar", "Mystery Flavour", "Tastes of [flavour]: [what happened]".
+- **Martha's Mask:** not in the game since 4 Nov (nothing gives it, though it's still one of the start screen's icons).
 - **Brodor's Sunglasses:** "A finished 23 restores a heart, like a 24."
 - On Thom's back shelf with five keepsakes, the buttons read "Pockets full".
 
 ## Multiplayer tables
 
-Not the Tavern Crawl, but the only words a multiplayer table shows during play (3 Nov), so they're
-here too. Where: `MULTIPLAYER_CALLOUTS` in `client/src/game.ts`.
+Not the Tavern Crawl, but the only words a multiplayer table shows during play, so they're
+here too. Where: `MULTIPLAYER_CALLOUTS` and `showSeatFlash` in `client/src/game.ts`; the cards in `client/src/Hud.tsx`.
 
 - "The Early Ross!": after the first throw, a 2 or a 4 is kept together with a 1, 3, 5 or 6.
 - "Didn't Bite!": after the first throw, just a 2 or a 4 is kept while a 6 is left to roll again.
+- "Dirty 20!": a hand finishes on exactly 20.
 - "Perfect 24!" when a hand finishes on 24 (with the player's name when it isn't you).
+- The round's result card: "Round result", then each player with their score or "Dust", "−1 ♥" for whoever loses a life or "tied", and "Sudden death: [names]" or "No lives lost" under it.
+- At table JUGS: "JUGS league", with "Won" and "Played" columns ("No games finished yet." before the first).
 - The reactions have names only as tooltips on their coins: Cheers, Ha!, Ooh, Smug, Woe.

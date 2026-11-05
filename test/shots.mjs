@@ -133,7 +133,8 @@ try {
             await fetch(`${CONTROLS}/${args.scene}`);
             await wait(2500);
             // (The fight's summary comes first: past it.)
-            for (let i = 0; i < 12; i++) { if (!await evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Next'); b?.click(); return !!b; })()`) && i > 2) break; await wait(500); }
+            // (stay=1: shoot the summary itself.)
+            for (let i = 0; i < 12 && !args.stay; i++) { if (!await evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Next'); b?.click(); return !!b; })()`) && i > 2) break; await wait(500); }
             await wait(1200);
             if (args.pick) { await evaluate(`window.__game.actions.chooseSpot('${args.pick}')`); await wait(500); }
             await wait(3500); // the character rises, the speech bubble pops

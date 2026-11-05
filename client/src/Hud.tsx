@@ -1957,6 +1957,8 @@ function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; th
 // After a fight is won, before the next event: what it paid, one line at a time with a clink of
 // coins, then the purse counting up to its new total. Shown once per win (remembered on this
 // device); a resumed run's last win was shown before it was saved.
+// What an opponent says on the summary, once you've beaten them (the user's, 5 Nov).
+const WON_LINES: Record<string, string> = { 'Sperm McGrath': 'Alright then, in you go' };
 const WIN_STEP_MS = 700;
 const HEART_TALLY_MS = 160; // between the coin tallies for each heart left
 const winKey = (won: ShopArrival) => String(won.at ?? won.defeated);
@@ -2006,6 +2008,7 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${sceneFileOf(won.defeated)}")` }}>
             <div className="interlude-body">
                 <span className="won-portrait" style={avatarStyle(portraitFor(won.defeated))} aria-hidden="true" />
+                {WON_LINES[won.defeated] && <p className="won-speech">{WON_LINES[won.defeated]}</p>}
                 <h2 className="interlude-title">{won.defeated} is defeated!</h2>
                 <ul className="won-rows">
                     {rows.map((row, i) => (

@@ -241,3 +241,21 @@ Flood now also takes one of your hearts (never your last). **The simulator doesn
 or the Astral Flood change yet** (it starts every fight on `playerHearts`): teach it before trusting its
 numbers for the Ghoul and Gourd.
 
+### The Ghoul and Gourd on 3 hearts (the user's call, 5 Nov), and what else changed since
+
+Set by hand, not simulated. You start every Ghoul and Gourd fight on 3 hearts (`fightHearts` is empty now), against
+McGrath 1, Frak 2, Danhausen 3, the Duke 3, Martha 3. This replaces the 2-heart fights above, so the simulator
+starting every fight on `playerHearts` is right again, and its lives come from `shared/balance.js`.
+
+Also changed by hand since, none of it in the simulator yet, so its numbers overstate or understate these:
+
+- Martha drops Mystery Flavour, not her mask, so the simulated player no longer wears a mask.
+- The Duke saves his Devil unless it helps (`devilPlan`; `devilWhenBelow` 0.7, about your 18 and up, using
+  `Strategy.chanceAfterKeep`): always for a 2, 4 and 6 with three dice left, never if you dusted, always when first to play.
+  His chance of beating a score without it, with a 2 and a 4 kept and four dice to throw: 13: 99%, 16: 88%, 18: 68%,
+  20: 39%, 22: 14%. These are for best play, and he plays simply, so his real chances are lower.
+- A thief strikes at most twice at any one place (`pickpocketMaxPerPlace`).
+- Keeping your last die waits for End Turn, so a slip can be undone; Back of the Head comes at End Turn.
+
+To play-test first. Then teach the simulator these and the Elf Bars, the Bard, the Cult, the new keepsakes and Astral
+Flood taking a heart before trusting its numbers.

@@ -3,7 +3,8 @@
 A multiplayer tavern dice game. Roll six dice and lock at least one after every roll.
 You must end with a **2** and a **4** locked. The other four dice are your score, so
 four 6s make a perfect **24**. Missing the 2 or the 4 is **dust**, and the lowest score
-each round loses a life.
+each round loses a life. Keeping your last die waits for End Turn, so a die kept this throw
+can still go back.
 
 ## Running it
 
@@ -45,7 +46,7 @@ Art: originals are in `art/`; `npm --prefix client run art` regenerates the game
 | Code | Mode |
 |---|---|
 | blank or any code | Classic multiplayer. Share the code with friends. |
-| `COMP` | Solo against The Molar |
+| `JUGS` | Classic multiplayer with a league table: every finished game is counted by player name, games won and played. |
 | `TAVERN` | Tavern Crawl: fourteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold to spend (prices rise as you buy) and a leaderboard by points. A run can be saved after each place. |
 
 ## Project layout
@@ -56,12 +57,13 @@ Art: originals are in `art/`; `npm --prefix client run art` regenerates the game
 | `shared/rules.js` | The game rules as pure functions, used by both the server and the browser. |
 | `shared/strategy.js` | Server only: best play for Tavern Crawl opponents from the Yawning Portal on. |
 | `shared/balance.js` | The Tavern Crawl's numbers: hearts, opponents' lives, gold, prices, events. |
+| `db.js` | What lasts between restarts: the leaderboard, who each player has met, the league. In the Neon Postgres database with `DATABASE_URL`, else in JSON files. |
 | `public/` | The classic page: `index.html`, art, audio, service worker, app manifest. |
 | `client/` | The 3D table, served at `/next` once built. |
 | `test/` | `rules.test.js`, `strategy.test.js` and `server.test.js` (real server driven by socket clients); `dev-server.js` sets up Tavern Crawl situations for browser checks (`npm run dev:test-server`). |
 | `balance/` | The balance simulator, its experiments and findings (`balance/README.md`). |
 | `art/`, `docs/` | Original AI art and the art direction (`docs/art-direction.md`). |
-| `leaderboard.json` | Tavern Crawl high scores, written by the server. |
+| `leaderboard.json`, `met.json`, `league.json` | Where those are kept without a database (not in git). |
 
 ## How a turn works
 
@@ -82,7 +84,8 @@ npm test
 |---|---|
 | `PORT` | Port to listen on (default 3000) |
 | `GAME_TIME_SCALE` | Multiplies all server delays, e.g. `0.01` in tests |
-| `LEADERBOARD_READONLY` | Set to anything to stop writing `leaderboard.json` (local testing) |
+| `DATABASE_URL` | The Neon Postgres link. Without it the leaderboard, who has met whom and the league live in files |
+| `LEADERBOARD_READONLY` | Set to anything to stop writing those files and reading `.env.local` (local testing) |
 | `TAVERN_START_ENCOUNTER` | Start Tavern Crawl runs at a later opponent, for testing (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar) |
 | `GAME_SERVER` | Game server the client's dev server proxies to (default `http://localhost:3000`) |
 | `SAVE_SECRET` | Seals saved Tavern Crawl runs. Set it in production, or saves only last until the server restarts |
