@@ -1841,6 +1841,35 @@ test('Thonics wait while dice are still tumbling', async () => {
 
 // ---- Turn order and the opponents' play ----
 
+test("tapping an opponent's entrance card away sets the moment clock right", async () => {
+    const code = 'TVRN-INTRO';
+    const socket = await join('Tapper', code);
+    await waitFor(socket, 'gameStateUpdate', s => s.tavernRun && s.tavernRun.started !== false);
+    const room = server.rooms[code];
+    assert.ok(room.introEnd, 'the entrance is on the clock');
+    // Tapped late: everything behind it moves later by as much.
+    room.introEnd = Date.now() - 20000;
+    const before = room.momentEnd;
+    socket.emit('introDone');
+    await new Promise(r => setTimeout(r, 50));
+    assert.ok(room.momentEnd >= before + 19000, 'the clock moved on');
+    assert.equal(room.introEnd, null);
+    // A second one does nothing.
+    const after = room.momentEnd;
+    socket.emit('introDone');
+    await new Promise(r => setTimeout(r, 50));
+    assert.equal(room.momentEnd, after);
+});
+
+test('every opponent says who they are, and every ability is explained', () => {
+    for (const e of server.TAVERN_ENCOUNTERS) {
+        assert.ok(e.blurb, e.name);
+        assert.equal(e.powers.length > 0, !!e.ability, e.name);
+        e.powers.forEach(p => assert.ok(p.name && p.text, e.name));
+        assert.ok(e.intro.startsWith(e.blurb), e.name);
+    }
+});
+
 test('in a Tavern Crawl the first turn alternates: player, opponent, player', async () => {
     const { hero, room } = await tavernTable('Alternator');
     room.players.BOT_MOLAR.lives = 9; // a long fight, whoever wins the rounds

@@ -71,9 +71,9 @@ try {
         };
         const startFilm = async () => {
             await s('Page.navigate', { url: 'http://localhost:5173/next/' });
-            await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game && [...document.querySelectorAll('button')].some(b => b.textContent === 'Watch the intro')) { clearInterval(t); r(); } }, 100); })`);
+            await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game && [...document.querySelectorAll('button')].some(b => b.textContent === 'Watch it')) { clearInterval(t); r(); } }, 100); })`);
             await wait(800);
-            await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Watch the intro').click()`);
+            await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Watch it').click()`);
             await evaluate(`new Promise(r => { const t = setInterval(() => { if (document.querySelector('.film-black')) { clearInterval(t); r(); } }, 20); })`);
             return Date.now();
         };
@@ -111,7 +111,7 @@ try {
             // The sound's wiring, with Chrome itself muted (--mute-audio): what started, and any errors.
             await s('Page.navigate', { url: 'http://localhost:5173/next/' });
             await wait(3000);
-            const box = await evaluate(`(() => { const r = [...document.querySelectorAll('button')].find(b => b.textContent === 'Watch the intro').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+            const box = await evaluate(`(() => { const r = [...document.querySelectorAll('button')].find(b => b.textContent === 'Watch it').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
             for (const type of ['mousePressed', 'mouseReleased']) await s('Input.dispatchMouseEvent', { type, x: box.x, y: box.y, button: 'left', clickCount: 1 });
             await wait(4000);
             console.log('sources started (seconds long):', await evaluate(`JSON.stringify(__sources)`), 'errors:', await evaluate(`JSON.stringify(__errors)`));

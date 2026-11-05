@@ -9,7 +9,7 @@ the short badge under the Roll button for the abilities that last a round or a t
 
 ## The opponents
 
-Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); ability names in
+The entrance card (and the `i` on the nameplate) shows the line about them, then each ability with what it does, as split on 5 Nov: the wording below is the same, except that Jaguar's two later abilities and his empty-shelf talk are spelled out from their badges. Where: name and card in `server.js` (`TAVERN_ENCOUNTERS`, `blurb` and `powers`); ability names in
 `shared/rules.js` (`ABILITY_NAMES`); badges in `client/src/Hud.tsx` (`roundEffectHint`).
 
 ### The Ghoul and Gourd

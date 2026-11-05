@@ -593,10 +593,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   flames sway and flicker, a heat shimmer, a slow breath, the green pips pulse, a glint in each eye
   (`DEVIL_EYES`); which parts move comes from `devil-sixes-mask.webp` (`livingMask` in
   process-art.mjs: red wide flames, green pips/eyes, blue tight flames). Without WebGL, the plain picture.
-- **An opponent's entrance (23 Oct):** the name card shows 4.5 s (`INTRO_MS`; 6 s, then 1.5 s shorter, the user's); at a fight's start the
-  server sends the new opponent before the round's abilities and puts the entrance on its moment
-  clock (`INTRO_SHOW_MS`), so abilities and the first throw wait for the card (Martha's entrance
-  and disguise used to run together). Thom greets you "Vim, vigour, vitality!" on your first visit
+- **An opponent's entrance (23 Oct; since 5 Nov, the user's, until it's tapped):** `OpponentCard` in Hud shows where, who, their hearts, `blurb` and each of their `powers` (name, painting from `ABILITY_ART`, what it does; both in `TAVERN_ENCOUNTERS`; the classic page's `intro` is made from them), and the `i` on the nameplate opens the same card. At a fight's start the server sends the new opponent before the round's abilities and puts the entrance on its moment clock (`INTRO_SHOW_MS`); the browser holds its queue while the card is up (`queueHeld`), so abilities and the first throw wait, and the tap (`actions.dismissIntro`) sends `introDone`, which moves the server's clock to match. Test scripts set `localStorage.tavernIntroAuto` (dev only) to have the card go by itself after 4.5 s (Martha's entrance and disguise used to run together). Thom greets you "Vim, vigour, vitality!" on your first visit
   in a run (`shop.first`, `thomMet`), then "What ya havin'?". Frak's painted cigar smoke is cut out
   of his picture (`noSmoke` in process-art.mjs; `ONLY=frak npm --prefix client run art` redoes one).
 - **Order of events (21 Oct, the user's: "they should not all happen together"):** after a round

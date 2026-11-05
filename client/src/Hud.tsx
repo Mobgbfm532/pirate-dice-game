@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, INTRO_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, readSavedRun, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, readSavedRun, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -486,7 +486,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
 }
 
 // The opponent's name, lives and score on the table edge, under their portrait.
-function OpponentPlate({ state }: { state: GameState }) {
+function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void }) {
     const bot = state.players[BOT_ID];
     const name = opponentName();
     if (!bot || (state.tavernRun && !name)) return null; // nobody at the table between fights
@@ -494,6 +494,7 @@ function OpponentPlate({ state }: { state: GameState }) {
     const starting = seated ? seated.lives : state.startingLives;
     return (
         <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
+            {seated && <button className="plate-info" onClick={onInfo} aria-label={`About ${seated.name}`} title={`About ${seated.name}`}>i</button>}
             <span className="name">{name ?? bot.name}</span>
             <Hearts lives={bot.lives} starting={starting} fight={fightKey(state)} />
             {state.tavernRun && <AbilityMarks state={state} />}
@@ -1091,24 +1092,55 @@ function DevilSixes({ snap }: { snap: Snapshot }) {
     );
 }
 
-// A Tavern Crawl opponent sits down: a name card on the table edge under their bust.
-// Tap to dismiss.
-function EncounterIntro({ snap, onDone }: { snap: Snapshot; onDone: (showing: boolean) => void }) {
-    const [visible, dismiss] = useMoment(snap.introAt, INTRO_MS);
-    useEffect(() => onDone(visible), [visible, onDone]);
-    // The first throw clears it away, so it never sits over the dice.
-    useEffect(() => { if (snap.rolling) dismiss(); }, [snap.rolling, dismiss]);
-    const run = snap.state?.tavernRun;
-    if (!visible || !run) return null;
-    const enemy = run.enemy;
-    const ability = enemy.ability ? Rules.ABILITY_NAMES[enemy.ability as keyof typeof Rules.ABILITY_NAMES] : null;
+// Who an opponent is and what they can do: their entrance card, and the same again from the ⓘ on
+// their nameplate (5 Nov, the user's). Each ability has its painting where there is one.
+function OpponentCard({ enemy, place, state, close, leaving }: { enemy: Enemy; place: string; state: GameState; close: string; leaving?: boolean }) {
+    // A long card on a short screen rises until it all shows, over the opponent if it must (the CSS
+    // keeps it above the screen's bottom edge, wherever the table's far edge moves to).
+    const card = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => { card.current?.style.setProperty('--card-h', `${card.current.offsetHeight}px`); });
     return (
-        <button key={snap.introAt} className="encounter-intro" onClick={dismiss}>
-            <span className="encounter">{run.place}</span>
+        <div ref={card} className={`encounter-intro ${leaving ? 'leaving' : ''}`}>
+            <span className="encounter">{place}{enemy.boss ? ' · Boss' : ''}</span>
             <span className="name">{enemy.name}</span>
             <Hearts lives={enemy.lives} starting={enemy.lives} />
-            {ability && <span className="ability">{ability}</span>}
-            <span className="intro">{enemy.intro}</span>
+            <span className="intro">{enemy.blurb}</span>
+            {enemy.powers.length > 0 && (
+                <div className="powers">
+                    {enemy.powers.map((power, i) => (
+                        <div key={power.name} className="power">
+                            {ABILITY_ART[power.name]
+                                ? <img src={`${import.meta.env.BASE_URL}art/${ABILITY_ART[power.name]}`} alt="" draggable={false} />
+                                : <span className="no-art" aria-hidden="true">✦</span>}
+                            <div>
+                                <span className="power-name">{power.name}{i === 0 && <AbilityMarks state={state} />}</span>
+                                <span className="power-text">{power.text}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            <span className="tap">{close}</span>
+        </div>
+    );
+}
+
+// A Tavern Crawl opponent sits down: their card, on the table's edge under their bust. It stays
+// until it's tapped (5 Nov, the user's); everything that comes next waits for that.
+function EncounterIntro({ snap }: { snap: Snapshot }) {
+    const [leavingAt, setLeavingAt] = useState(0);
+    const run = snap.state?.tavernRun;
+    if (!snap.introShowing || !run || !snap.state) return null;
+    const leaving = leavingAt === snap.introAt;
+    const leave = () => {
+        if (leaving) return;
+        setLeavingAt(snap.introAt);
+        playSound('click');
+        setTimeout(actions.dismissIntro, 240);
+    };
+    return (
+        <button key={snap.introAt} className={`intro-veil ${leaving ? 'leaving' : ''}`} onClick={leave} autoFocus>
+            <OpponentCard enemy={run.enemy} place={run.place} state={snap.state} close="Tap to continue" leaving={leaving} />
         </button>
     );
 }
@@ -2286,7 +2318,8 @@ export function Hud() {
     const snap = useSyncExternalStore(store.subscribe, store.get);
     const [musicOff, setMusicOffState] = useState(isMusicOff());
     const [soundsOff, setSoundsOffState] = useState(areSoundsOff());
-    const [introShowing, setIntroShowing] = useState(false);
+    const introShowing = snap.introShowing;
+    const [infoOpen, setInfoOpen] = useState(false);
     const [tuneOpen, setTuneOpen] = useState(false);
     const [leagueOpen, setLeagueOpen] = useState(false);
     const footerRef = useFooterInset();
@@ -2323,8 +2356,13 @@ export function Hud() {
             </header>
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
-            {state && botAcross && !introShowing && <OpponentPlate state={state} />}
-            <EncounterIntro snap={snap} onDone={setIntroShowing} />
+            {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
+            <EncounterIntro snap={snap} />
+            {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
+                <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>
+                    <OpponentCard enemy={state.tavernRun.seated ?? state.tavernRun.enemy} place={state.tavernRun.place} state={state} close="Tap to close" />
+                </button>
+            )}
             <AbilityMomentView snap={snap} />
             {snap.floodWaveAt && <FloodWave key={snap.floodWaveAt} />}
             <Celebration snap={snap} />

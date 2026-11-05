@@ -167,7 +167,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🦷',
         lives: BALANCE.opponentLives.molar,
         ability: null,
-        intro: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
+        blurb: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24.",
+        powers: []
     },
     {
         id: 'frak',
@@ -176,7 +177,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🦑',
         lives: BALANCE.opponentLives.frak,
         ability: 'mindWhip',
-        intro: 'Frak, a repugnant ne’er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep one of your dice, at random.'
+        blurb: "Frak, a repugnant ne’er-do-well, slimes into place.",
+        powers: [{ name: "Mind Whip", text: "On your first throw he makes you keep one of your dice, at random." }]
     },
     {
         id: 'danhausen',
@@ -185,7 +187,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🧛',
         lives: BALANCE.opponentLives.danhausen,
         ability: 'cursed',
-        intro: 'Danhausen: Very Nice, Very Evil and Mayor of Waterdeep? You are Cursed: for a round, the lowest valid score wins.'
+        blurb: "Danhausen: Very Nice, Very Evil and Mayor of Waterdeep?",
+        powers: [{ name: "You are Cursed", text: "For a round, the lowest valid score wins." }]
     },
     {
         id: 'duke',
@@ -194,7 +197,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '😈',
         lives: BALANCE.opponentLives.duke,
         ability: 'devil',
-        intro: 'Duke Morrigan, noble, roguish and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s.'
+        blurb: "Duke Morrigan, noble, roguish and scion of Avernus.",
+        powers: [{ name: "Sympathy for the Devil", text: "His roll comes up three 6s." }]
     },
     {
         id: 'martha',
@@ -205,7 +209,8 @@ const TAVERN_ENCOUNTERS = [
         ability: 'disguises',
         boss: true, // beating her wins her Elf Bar, Mystery Flavour, and the invitation to the Yawning Portal
         drops: 'mysteryFlavour',
-        intro: 'Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick.'
+        blurb: "Martha? Mystery? Who knows?",
+        powers: [{ name: "Disguises", text: "Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick." }]
     },
     {
         id: 'sylvester',
@@ -214,7 +219,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '👊',
         lives: BALANCE.opponentLives.sylvester,
         ability: 'suckerPunch',
-        intro: 'Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again.'
+        blurb: "Sylvester Stonefist, a Master Monk - if you can imagine that.",
+        powers: [{ name: "Back of the Head", text: "As you keep your last die, he knocks your best die loose and you roll it again." }]
     },
     {
         id: 'vaelin',
@@ -223,7 +229,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🖋️',
         lives: BALANCE.opponentLives.vaelin,
         ability: 'inkfire',
-        intro: 'Vaelin Inkhand, wizard of the inky flame. Inkfire Brand: for a round he burns the 6 into the table, and your dice that land on it roll again.'
+        blurb: "Vaelin Inkhand, wizard of the inky flame.",
+        powers: [{ name: "Inkfire Brand", text: "For a round he burns the 6 into the table, and your dice that land on it roll again." }]
     },
     {
         id: 'stason',
@@ -232,7 +239,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🤺',
         lives: BALANCE.opponentLives.stason,
         ability: 'flourish',
-        intro: 'Stason Jatham, action hero, beekeeper. Vexing Rapier: twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better.'
+        blurb: "Stason Jatham, action hero, beekeeper.",
+        powers: [{ name: "Vexing Rapier", text: "Twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better." }]
     },
     {
         id: 'ridgeler',
@@ -241,7 +249,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🐉',
         lives: BALANCE.opponentLives.ridgeler,
         ability: 'divineSmite',
-        intro: 'The Ridgeler, dragonborn paladin and a War Daddy. Divine Smite: for a round, if he wins it, you lose two hearts.'
+        blurb: "The Ridgeler, dragonborn paladin and a War Daddy.",
+        powers: [{ name: "Divine Smite", text: "For a round, if he wins it, you lose two hearts." }]
     },
     {
         id: 'brodor',
@@ -252,7 +261,8 @@ const TAVERN_ENCOUNTERS = [
         ability: 'astralFlood',
         boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
         drops: 'brodorsSunglasses',
-        intro: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
+        blurb: "Brodor, Goblin-mania champion of the Madness.",
+        powers: [{ name: "Astral Flood", text: "Once he has lost a life, he floods the table with light, heals one and takes one of yours." }]
     },
     {
         id: 'klarg',
@@ -264,7 +274,8 @@ const TAVERN_ENCOUNTERS = [
         // Since 25 Oct (the final tier): twice a fight he waits for a 2 or 4 you still need,
         // snatches it and keeps it for his own hand (it starts his next turn already kept).
         keepsStolen: true,
-        intro: 'Klarg, bugbear paladin and sworn enemy of Kram. Twice a fight his Reach Around snatches a 2 or 4 you need, and he keeps it for his own hand.'
+        blurb: "Klarg, bugbear paladin and sworn enemy of Kram.",
+        powers: [{ name: "Reach Around", text: "Twice a fight he snatches a 2 or 4 you need, and keeps it for his own hand." }]
     },
     {
         id: 'rokr',
@@ -273,7 +284,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
         ability: 'writtenInStars',
-        intro: 'Rokr reads the dice in the stars. Written in the Stars: for a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept.'
+        blurb: "Rokr reads the dice in the stars.",
+        powers: [{ name: "Written in the Stars", text: "For a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept." }]
     },
     {
         id: 'hangman',
@@ -283,7 +295,8 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.hangman,
         ability: 'deadEye',
         abilities: ['deadEye', 'deadeye24'], // Dead Eye, and his Ace kept for his last stand
-        intro: 'The Hangman and The Ace of Spades, his revolver. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24.'
+        blurb: "The Hangman and The Ace of Spades, his revolver.",
+        powers: [{ name: "Dead Eye", text: "Once a fight he shoots your best die as you finish and it rolls again." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
     },
     {
         id: 'jaguar',
@@ -292,7 +305,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '😎',
         lives: BALANCE.opponentLives.jaguar,
         ability: 'jaguarPhases',
-        intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Smooth Talk: he talks your Thonics off your shelf and drinks them. At two lives, The Cloak. At his last, All In.'
+        blurb: "Jaguar Cantona has the smile, the cloak, and an extra life.",
+        powers: [{ name: "Smooth Talk", text: "He talks your Thonics off your shelf and drinks them. With your shelf empty, he talks 3 off your finished hand." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
     }
 ];
 
@@ -377,6 +391,9 @@ const MYSTERY_FLAVOUR = {
     name: 'Mystery Flavour',
     text: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random."
 };
+// The classic page shows it all as one line.
+TAVERN_ENCOUNTERS.forEach(e => { e.intro = [e.blurb, ...e.powers.map(p => `${p.name}: ${p.text}`)].join(' '); });
+
 // What each boss drops (TAVERN_ENCOUNTERS `drops`).
 const BOSS_DROPS = { mysteryFlavour: MYSTERY_FLAVOUR, brodorsSunglasses: BRODORS_SUNGLASSES };
 // Saves from before 4 Nov may carry Martha's mask: it comes back as her Elf Bar.
@@ -1407,7 +1424,8 @@ function emitMoment(roomCode, room, event, data) {
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
 const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card, with a line per player (the client's too)
 const FLOOD_WAVE_MS = 2200; // Astral Flood's wave over the table, after its banner (the client's too)
-const INTRO_SHOW_MS = 4500; // an opponent's entrance (the client's INTRO_MS)
+const INTRO_SHOW_MS = 4500; // an opponent's entrance, until the player taps it away (introDone)
+const INTRO_LEAVE_MS = 300; // the moment after that tap (the client's too)
 function sendMoment(roomCode, event, data) {
     let room = rooms[roomCode];
     let shown = !(event === 'roundResult' && data && data.ends); // (the end of a fight shows its summary instead)
@@ -1682,6 +1700,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     let now = Date.now();
     room.momentNext = Math.max(room.momentNext || 0, now + delay(INTRO_SHOW_MS));
     room.momentEnd = Math.max(room.momentEnd || 0, now + delay(INTRO_SHOW_MS));
+    room.introEnd = now + delay(INTRO_SHOW_MS); // (the card stays until tapped: introDone sets the clock right)
     emitState(roomCode);
     beginTavernRound(roomCode, room);
 }
@@ -2499,6 +2518,16 @@ io.on('connection', (socket) => {
     socket.on('rollDice', () => { if (isMyTurn()) performRoll(socket.roomCode); });
     socket.on('toggleDie', (dieId) => { if (isMyTurn() && Number.isInteger(dieId)) performToggle(socket.roomCode, dieId); });
     socket.on('endTurn', () => { if (isMyTurn()) performEndTurn(socket.roomCode); });
+    // The player has tapped the entrance card away (5 Nov, the user's). The browser has held back
+    // what follows it; the moment clock moves to match, whether that took a second or a minute.
+    socket.on('introDone', () => {
+        let room = rooms[socket.roomCode];
+        if (!room || !room.introEnd) return;
+        let shift = Date.now() + delay(INTRO_LEAVE_MS) - room.introEnd;
+        room.momentNext = (room.momentNext || 0) + shift;
+        room.momentEnd = (room.momentEnd || 0) + shift;
+        room.introEnd = null;
+    });
 
     // Thom's cart: the run's one player buys while it is open.
     const tavernPlayer = () => {

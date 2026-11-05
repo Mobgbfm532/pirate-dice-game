@@ -100,7 +100,7 @@ try {
         await s('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: w < 768 });
         await s('Page.enable');
         await s('Page.addScriptToEvaluateOnNewDocument', {
-            source: `try { localStorage.tavernMuted = '1'; localStorage.tavernWinSeen = 'x'; localStorage.tavernLook = ${JSON.stringify(look)}; } catch {}
+            source: `try { localStorage.tavernMuted = '1'; localStorage.tavernWinSeen = 'x'; localStorage.tavernIntroAuto = '1'; localStorage.tavernLook = ${JSON.stringify(look)}; } catch {}
                 HTMLMediaElement.prototype.play = () => Promise.resolve();`
         });
         await s('Page.navigate', { url: CLIENT });

@@ -126,7 +126,8 @@ function Line({ at, out, place = 'low', text }: { at: number[]; out: number; pla
     );
 }
 
-// Rain over the door: one tile of streaks, scrolled.
+// Rain: one tile of straight-down streaks, scrolled by exactly its own height, the whole layer turned
+// a little so it falls aslant (it used to scroll sideways too, so it hopped at every repeat: the user, 5 Nov).
 let rainTile = '';
 function rainImage() {
     if (rainTile) return rainTile;
@@ -144,7 +145,7 @@ function rainImage() {
         for (const [ox, oy] of [[0, 0], [size, 0], [0, size], [-size, 0], [0, -size]]) {
             g.beginPath();
             g.moveTo(x + ox, y + oy);
-            g.lineTo(x + ox - len * 0.16, y + oy + len);
+            g.lineTo(x + ox, y + oy + len);
             g.stroke();
         }
     }

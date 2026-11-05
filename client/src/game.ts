@@ -36,7 +36,7 @@ export interface Thonic { id: string; name: string; text: string; price: number;
 export interface RoundEffect { kind: 'mind' | 'curse' | 'devil' | 'ink' | 'smite'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean }
 
 // A Tavern Crawl opponent (server.js TAVERN_ENCOUNTERS).
-export interface Enemy { id: string; name: string; intro: string; ability: string | null; lives: number }
+export interface Enemy { id: string; name: string; intro: string; blurb: string; powers: { name: string; text: string }[]; ability: string | null; lives: number; boss?: boolean }
 
 export interface TavernRun {
     encounterNumber: number;
@@ -185,6 +185,7 @@ export interface Snapshot {
     waiting: boolean; // a classic table with nobody to play yet
     yourTurnAt: number; // when play last came round to you (for the banner)
     introAt: number; // when the current Tavern Crawl opponent was introduced
+    introShowing: boolean; // their entrance card is up, until it's tapped away
     ability: AbilityMoment | null;
     shopArrival: ShopArrival | null;
     // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
@@ -241,6 +242,7 @@ let snapshot: Snapshot = {
     waiting: false,
     yourTurnAt: 0,
     introAt: 0,
+    introShowing: false,
     ability: null,
     shopArrival: null,
     betweenShown: false,
@@ -280,13 +282,16 @@ export function showToast(title: string, text: string, tone: Toast['tone'] = 'in
 const tasks: ((done: () => void) => void)[] = [];
 let taskRunning = false;
 
+// While an opponent's entrance card is up, everything behind it waits (queueHeld).
+let queueHeld = false;
+
 function enqueue(task: (done: () => void) => void) {
     tasks.push(task);
-    if (!taskRunning) runNext();
+    if (!taskRunning && !queueHeld) runNext();
 }
 
 function runNext() {
-    const task = tasks.shift();
+    const task = queueHeld ? undefined : tasks.shift();
     if (!task) { taskRunning = false; return; }
     taskRunning = true;
     task(runNext);
@@ -583,7 +588,7 @@ let betweenPending = false;
 // behind them, so a round's glow, an ability's mark or a lost heart don't show before the moment
 // that explains them.
 socket.on('gameStateUpdate', (state: GameState) => {
-    if (state.mode === 'tavern-crawl' && taskRunning) enqueue(done => { applyState(state); done(); });
+    if (state.mode === 'tavern-crawl' && (taskRunning || queueHeld)) enqueue(done => { applyState(state); done(); });
     else applyState(state);
 });
 
@@ -623,16 +628,21 @@ function introduceOpponent(state: GameState) {
         if (sessionStorage.getItem('tavernIntro') === key) return;
         sessionStorage.setItem('tavernIntro', key);
     } catch { /* storage unavailable: introduce anyway */ }
-    update({ introAt: performance.now() });
-    // The entrance is a moment of its own: what comes next (the round's abilities, the first
-    // throw) waits until the name card has gone.
-    const gone = performance.now() + INTRO_MS;
-    momentFreeAt = Math.max(momentFreeAt, gone);
-    momentGoneAt = Math.max(momentGoneAt, gone);
+    // The entrance is a moment of its own, and stays until it's tapped away (5 Nov, the user's): what
+    // comes next (the round's abilities, the first throw) waits behind it. The last fight's dice go.
+    resetTrayForNewTurn();
+    update({ introAt: performance.now(), introShowing: true, turn: null, isMyTurn: false });
+    if (scriptedIntro) {
+        const gone = performance.now() + INTRO_MS;
+        momentFreeAt = Math.max(momentFreeAt, gone);
+        momentGoneAt = Math.max(momentGoneAt, gone);
+        setTimeout(() => update({ introShowing: false }), INTRO_MS);
+    } else queueHeld = true;
 }
-// An opponent's entrance: the name card's time on screen (Hud): 4.5 s since 23 Oct (the user's
-// calls: 5, then 6, then 1.5 shorter).
-export const INTRO_MS = 4500;
+// Development: test scripts (localStorage.tavernIntroAuto) have the card go by itself after this long.
+const INTRO_MS = 4500;
+const scriptedIntro = (() => { try { return import.meta.env.DEV && localStorage.getItem('tavernIntroAuto') === '1'; } catch { return false; } })();
+const INTRO_LEAVE_MS = 300; // (the server's too)
 
 // Invite link for a classic table: opens the 3D table with the code filled in.
 export function inviteLink(code: string) {
@@ -859,6 +869,20 @@ export const actions = {
         } catch {
             showToast('Invite link', url, 'info', 8000);
         }
+    },
+    // The opponent's entrance card is tapped away: on with the fight.
+    dismissIntro() {
+        if (!snapshot.introShowing) return;
+        update({ introShowing: false });
+        if (!queueHeld) return;
+        queueHeld = false;
+        socket.emit('introDone');
+        const next = performance.now() + INTRO_LEAVE_MS;
+        momentFreeAt = Math.max(momentFreeAt, next);
+        momentGoneAt = Math.max(momentGoneAt, next);
+        if (!taskRunning) runNext();
+        // (A turn that reached the browser before the card went up.)
+        if (!snapshot.turn && !taskRunning && serverTurn && serverTurn.playerId === snapshot.state?.currentTurnId) applyTurn(serverTurn);
     },
     roll() {
         const { turn, isMyTurn, rolling } = snapshot;
@@ -1106,7 +1130,7 @@ export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     // (hold: keep it up that much longer, to look at a still of it)
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit || SHAKING_ABILITIES.has(ability)) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
-    intro() { update({ introAt: performance.now() }); },
+    intro() { update({ introAt: performance.now(), introShowing: true }); },
     floodWave() { showFloodWave(); },
     // A multiplayer round result card, held up until the next call (null ends it).
     roundResult(rows: RoundResultRow[] | null) { update({ roundResult: rows ? { rows, at: performance.now() } : null }); },
