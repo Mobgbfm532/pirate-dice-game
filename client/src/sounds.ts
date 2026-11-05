@@ -59,12 +59,15 @@ const sfx = {
     flourish: load('Flourish.mp3', ABILITY_VOLUME),
     smite: load('DivineSmite.mp3', ABILITY_VOLUME),
     astralFlood: load('AstralFlood.mp3', ABILITY_VOLUME),
+    // A heart breaking, and one won back by a perfect hand (the user's, 5 Nov; Hearts in Hud, with the picture).
+    loseHeart: load('LoseHeart.mp3', 0.8),
+    healthPickup: load('Perfect24Health.mp3', 0.8),
     // Sylvester's Back of the Head (the user's, 5 Nov; it was the swoosh).
     sylvesterPunch: load('SylvesterPunch.mp3', ABILITY_VOLUME)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
-const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1 };
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1, healthPickup: 0.1 };
 // The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
 // asked to, where an <audio> element can lag noticeably on phones.
 const buffers = new Map<keyof typeof sfx, AudioBuffer>();

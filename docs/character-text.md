@@ -5,7 +5,7 @@ they'll be put in; the "Where" notes say which file holds each line.
 
 Since 28 October an ability's screen shows **only its name**. The longer lines that used to sit
 under it are gone. What you still see is the entrance card, the name on the ability screen, and
-the short badge under the Roll button for the abilities that last a round or a turn.
+the short plaque under the Roll button for the abilities that last a round or a turn (since 5 Nov on one slim line, "Name: What it does", capitalised).
 
 ## The opponents
 
@@ -64,7 +64,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 
 **Rokr**: Written in the Stars
 - Entrance card: "Rokr reads the dice in the stars. Written in the Stars: for a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept."
-- Badge: "The stars mark [faces] on your next throw", then "Star-bound now: [faces]. Next throw: [faces]"
+- Badge: "Next throw binds [faces]", then "Bound: [faces]. Next: [faces]"
 
 **The Hangman**: Dead Eye, and The Ace of Spades (his revolver)
 - Entrance card: "The Hangman and The Ace of Spades, his revolver. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24."

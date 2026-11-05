@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, readSavedRun, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -202,42 +202,46 @@ function cursed(state: GameState) {
 
 // The hot tub's surge on your Wild Magic (aqua) die, in a few words (the hint under Roll; the user's wording, 20 Oct).
 const SURGE_HINTS: Record<string, string> = {
-    noOnes: 'the Wild Magic die never rolls a 1',
-    twin: 'the Wild Magic die rolls twice and keeps the better result.',
-    lucky: 'the Wild Magic die only rolls 4, 5 or 6',
-    scalding: 'the Wild Magic die always lands on a 6',
-    soggy: 'the Wild Magic die never rolls a 6'
+    noOnes: 'The Wild Magic die never rolls a 1',
+    twin: 'Wild Magic die keeps the better of two rolls',
+    lucky: 'The Wild Magic die only rolls 4, 5 or 6',
+    scalding: 'The Wild Magic die always lands on a 6',
+    soggy: 'The Wild Magic die never rolls a 6'
 };
 
-// What this round's ability means for you, in a line (shown under the Roll button).
+// What this round's ability means for you, on a one-line plaque under the Roll button: its name and
+// what it does (5 Nov, the user's: it was a line of text in a coloured pill).
 // Mind Whip shows only once it has landed (your first throw) and only while it's still your
 // turn; on the opponent's turn the hot tub's surge (if any) shows instead.
-// Returns the line and its badge colour.
-function roundEffectHint(state: GameState, myTurn: boolean, turn: TurnView | null = null): { text: string; kind: string } {
+// kind: the plaque's colour.
+interface RoundBadge { title: string; text: string; kind: string }
+const NO_BADGE: RoundBadge = { title: '', text: '', kind: '' };
+function roundEffectHint(state: GameState, myTurn: boolean, turn: TurnView | null = null): RoundBadge {
     const effect = state.tavernRun?.roundEffect;
     // Rokr's stars, on your turn: which faces they mark for the next throw (and this one's).
     const stars = myTurn && turn?.stars;
     if (stars && !turn.finalized) {
         const next = stars.next ? stars.next.join(' and ') : '';
         const bound = turn.dice.some(d => d.bound);
-        return { text: bound && stars.now ? `Star-bound now: ${stars.now.join(' and ')}. Next throw: ${next}` : `The stars mark ${next} on your next throw`, kind: 'stars' };
+        return { title: 'Written in the Stars', text: bound && stars.now ? `Bound: ${stars.now.join(' and ')}. Next: ${next}` : `Next throw binds ${next}`, kind: 'stars' };
     }
     const phase = state.tavernRun?.jaguarPhase;
-    if (phase === 'cloak') return { text: 'The Cloak: Jaguar throws after you, his dice hidden', kind: 'cloak' };
-    if (phase === 'allIn') return { text: 'All In: whoever loses this round loses two hearts', kind: 'allin' };
+    if (phase === 'cloak') return { title: 'The Cloak', text: 'Jaguar throws after you, his dice hidden', kind: 'cloak' };
+    if (phase === 'allIn') return { title: 'All In', text: 'Whoever loses this round loses two hearts', kind: 'allin' };
     const surge = state.tavernRun?.tubSurge;
     const cap = state.tavernRun?.devilCap ?? null;
-    if (effect?.kind === 'curse') return { text: 'Cursed round: the lowest valid score wins', kind: 'curse' };
-    if (effect?.kind === 'ink') return { text: "Inkfire round: your dice can't land on 6", kind: 'ink' };
-    if (effect?.kind === 'smite') return { text: 'Divine Smite: lose this round, lose two hearts', kind: 'smite' };
-    if (effect?.kind === 'mind' && effect.landed && myTurn) return { text: 'Mind Whip: the selected die stays kept', kind: 'mind' };
+    if (effect?.kind === 'curse') return { title: 'Cursed round', text: 'The lowest valid score wins', kind: 'curse' };
+    if (effect?.kind === 'ink') return { title: 'Inkfire round', text: "Your dice can't land on 6", kind: 'ink' };
+    if (effect?.kind === 'smite') return { title: 'Divine Smite', text: 'Lose this round, lose two hearts', kind: 'smite' };
+    if (effect?.kind === 'mind' && effect.landed && myTurn) return { title: 'Mind Whip', text: 'The selected die stays kept', kind: 'mind' };
     // The Devil: three 6s for whoever plays it (no cap on the other side since 21 Oct unless devilCap is set).
-    if (effect?.kind === 'devil') return cap != null
-        ? { text: effect.by === 'player' ? `Devil's round: they can't score above ${cap}` : `Devil's round: you can't score above ${cap}`, kind: 'devil' }
-        : effect.by === 'player' ? { text: "Devil's round: three 6s for you", kind: 'devil' } : { text: '', kind: '' };
-    if (state.tavernRun?.cloud && !turn?.finalized) return { text: "Cotton Candy Cloud: they can't see your score", kind: 'cloud' };
-    if (surge && surge.id !== 'pruney') return { text: `${surge.name}: ${SURGE_HINTS[surge.id]}`, kind: 'tub' };
-    return { text: '', kind: '' };
+    if (effect?.kind === 'devil') {
+        if (cap != null) return { title: "Devil's round", text: effect.by === 'player' ? `They can't score above ${cap}` : `You can't score above ${cap}`, kind: 'devil' };
+        return effect.by === 'player' ? { title: "Devil's round", text: 'Three 6s for you', kind: 'devil' } : NO_BADGE;
+    }
+    if (state.tavernRun?.cloud && !turn?.finalized) return { title: 'Cotton Candy Cloud', text: "They can't see your score", kind: 'cloud' };
+    if (surge && surge.id !== 'pruney') return { title: surge.name, text: SURGE_HINTS[surge.id], kind: 'tub' };
+    return NO_BADGE;
 }
 
 // What the player rolling now has to do. The lowest score of the round loses a life (and
@@ -255,7 +259,9 @@ function scoreToBeat(state: GameState, rollerId: string): { label: string; targe
 // step 5) a heart that's lost cracks in two and falls away, and one that comes back pops in with
 // a glow. `fight` changes when a new fight starts, where hearts reset without any of that.
 const HEART_MS = 900;
-function Hearts({ lives, starting, fight = '' }: { lives: number; starting: number; fight?: string }) {
+// `player`: whose they are, at the table; a lost heart then has its sound as it cracks, and one won
+// back by a perfect hand its own as it pops in (the user's, 5 Nov).
+function Hearts({ lives, starting, fight = '', player }: { lives: number; starting: number; fight?: string; player?: string }) {
     const n = Math.max(0, lives);
     const seen = useRef({ n, fight });
     const [change, setChange] = useState<{ kind: 'lost' | 'healed'; from: number; to: number; at: number } | null>(null);
@@ -264,10 +270,12 @@ function Hearts({ lives, starting, fight = '' }: { lives: number; starting: numb
         seen.current = { n, fight };
         if (was.fight !== fight || was.n === n) return;
         const at = performance.now();
+        if (player && n < was.n) playSound('loseHeart');
+        else if (player && heartFromHand(player)) playSound('healthPickup');
         setChange(n < was.n ? { kind: 'lost', from: n, to: was.n, at } : { kind: 'healed', from: was.n, to: n, at });
         const timer = setTimeout(() => setChange(c => (c && c.at === at ? null : c)), HEART_MS + 100);
         return () => clearTimeout(timer);
-    }, [n, fight]);
+    }, [n, fight, player]);
     const slots = Math.max(starting, n, change?.to ?? 0);
     return (
         <div className="hearts" aria-label={`${n} lives`}>
@@ -304,7 +312,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                         <div>
                             <FitName name={p.name} />
                             {/* A Tavern Crawl opponent's hearts are out of their own lives, not yours. */}
-                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} fight={fightKey(state)} />
+                            <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} fight={fightKey(state)} player={id} />
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
                         <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
@@ -458,7 +466,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
                 <div className="portrait" style={avatarStyle(playerPortrait(id, p.name, p.avatar))} />
                 <div className="who">
                     <FitName name={p.name} />
-                    <Hearts lives={p.lives} starting={state.startingLives} fight={fightKey(state)} />
+                    <Hearts lives={p.lives} starting={state.startingLives} fight={fightKey(state)} player={id} />
                 </div>
                 {/* Their score this round, big once they've finished: what you have to beat (keyed, so
                     it lands with a pop each time it changes). */}
@@ -496,7 +504,7 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
         <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
             {seated && <button className="plate-info" onClick={onInfo} aria-label={`About ${seated.name}`} title={`About ${seated.name}`}>i</button>}
             <span className="name">{name ?? bot.name}</span>
-            <Hearts lives={bot.lives} starting={starting} fight={fightKey(state)} />
+            <Hearts lives={bot.lives} starting={starting} fight={fightKey(state)} player={BOT_ID} />
             {state.tavernRun && <AbilityMarks state={state} />}
             <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
         </div>
@@ -544,13 +552,13 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     if (snap.rolling) { label = 'Rolling…'; disabled = true; }
     else if (turn.finalized || handComplete(turn)) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
 
-    const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : { text: '', kind: '' };
+    const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : NO_BADGE;
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
         : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again'
             : '';
     // (Rokr's stars come before the tip: which faces can't be kept is what you need to know.)
     const badgeFirst = badge.kind === 'stars' || !tip;
-    const hint = badgeFirst ? badge.text || tip : tip;
+    const plaque = badgeFirst && !!badge.kind;
 
     return (
         <div className="controls">
@@ -574,7 +582,11 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 aria-hidden={!snap.isMyTurn}
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
             {/* A hot tub fight: its badge can take two lines on small phones, so the space is kept the whole fight (the table doesn't jump when a tip replaces it). */}
-            <div className={`hint ${badgeFirst && badge.kind ? `round-${badge.kind}` : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>{hint}</div>
+            <div className={`hint ${state?.tavernRun ? 'crawl' : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>
+                {plaque ? (
+                    <div className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>
+                ) : tip}
+            </div>
         </div>
     );
 }

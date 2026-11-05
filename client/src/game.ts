@@ -429,6 +429,15 @@ function showSeatFlash(playerId: string, text: string, kind: string, color: stri
     setTimeout(() => { if (snapshot.seatFlash?.key === key) update({ seatFlash: null }); }, SEAT_FLASH_MS);
 }
 let slowThrow = false; // the throw on the table was a slow-motion last one
+// Whether a heart this player has just won back came from their perfect hand (once per hand).
+let healingHand: { playerId: string; at: number } | null = null;
+export function heartFromHand(playerId: string) {
+    const hand = healingHand;
+    if (!hand || hand.playerId !== playerId || performance.now() - hand.at > 10000) return false;
+    healingHand = null;
+    return true;
+}
+
 function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null, turn: TurnView | null) {
     if (!event) return;
     const mine = snapshot.isMyTurn;
@@ -443,6 +452,8 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
     // wins: four 1s with the 2 and 4 is its perfect hand, and a 24 its worst.
     const cursed = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse';
     const perfect = perfectHand(event.outcome, cursed);
+    // A hand that can win a heart back (a 24; a 23 with Brodor's Sunglasses): the heart's sound, when it comes.
+    if (turn && !busted && score >= 23) healingHand = { playerId: turn.playerId, at: performance.now() };
     // The user's Whoa (4 Nov), on top of the rest: a Perfect ...4?, and any slow-motion last throw as it lands.
     if (WHOA_ON && (slowThrow || perfect === 'perfect4')) playSound('whoa');
     slowThrow = false;
