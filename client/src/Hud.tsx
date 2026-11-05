@@ -1413,7 +1413,7 @@ const INVITATIONS: Record<string, { title: string; line: (place: string) => stri
     },
     Brodor: {
         title: 'Word from the docks',
-        line: () => `Brodor flips you his sunglasses. "Keep 'em, champ." Then word reaches the Portal: the Salty Swallow has docked, and her crew are the finest players on the coast.`,
+        line: () => `Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"`,
         gift: 'are yours: a finished 23 restores a heart, like a 24.'
     }
 };
@@ -2070,6 +2070,23 @@ function Modals({ snap }: { snap: Snapshot }) {
     );
 }
 
+// Brodor's Astral Flood, after its banner (5 Nov, the user: a big effect on the player's screen): a
+// wall of aurora light pours down over the table, ripples out from the felt, and drains away, full
+// of falling stars. Over everything, taps go through; the heart he takes breaks as it hits.
+function FloodWave() {
+    return (
+        <div className="flood-wave" aria-hidden="true">
+            <span className="flood-sheet" />
+            <span className="flood-ribbons" />
+            <span className="flood-flash" />
+            {[0, 1, 2].map(i => <span key={i} className="flood-ring" style={{ animationDelay: `${0.55 + i * 0.22}s` }} />)}
+            {Array.from({ length: 26 }, (_, i) => (
+                <span key={i} className="flood-star" style={{ left: `${(i * 37 + 11) % 98}%`, animationDelay: `${0.1 + (i * 0.083) % 1}s`, '--s': `${3 + (i * 5) % 5}px` } as React.CSSProperties} />
+            ))}
+        </div>
+    );
+}
+
 // A multiplayer round's result (4 Nov, the user's call): everyone's score, best first, and who lost a
 // heart or goes to sudden death. On the felt, for a few seconds; taps go through to the table.
 function RoundResultCard({ rows, myId }: { rows: RoundResultRow[]; myId: string | null }) {
@@ -2282,6 +2299,7 @@ export function Hud() {
             {state && botAcross && !introShowing && <OpponentPlate state={state} />}
             <EncounterIntro snap={snap} onDone={setIntroShowing} />
             <AbilityMomentView snap={snap} />
+            {snap.floodWaveAt && <FloodWave key={snap.floodWaveAt} />}
             <Celebration snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}

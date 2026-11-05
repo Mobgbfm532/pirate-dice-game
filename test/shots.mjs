@@ -39,7 +39,8 @@ const MOMENTS = {
     biteme: `preview.callout('', '#4fc3f7', 'didntBite', store.get().myId)`,
     react: `(() => { const s = store.get(); const o = s.state.playerOrder.filter(i => i !== s.myId); preview.react(o[0], '🍻'); preview.react(o[1] ?? o[0], '💔'); preview.react(s.myId, '🃏'); })()`,
     grace: `preview.ability('Shrine to the Lady', "The Lady's Grace", { text: 'The Lady saves you from the dust', extra: '♥ saved', blessing: 'ladysGrace' })`,
-    bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`
+    bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`,
+    floodwave: `preview.floodWave()`
 };
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
     const [wh, dpr] = s.split('@');
@@ -147,7 +148,7 @@ try {
             await evaluate(`(({ preview, table, store }) => { ${MOMENTS[moment]}; })(window.__game)`);
             await wait(args.hold ? 50 : 700); // near its brightest (a slow page needs the time to draw the moment)
             // hold=<ms>: every animation stopped at that point of the moment (a still for slow pages).
-            if (args.hold) { await evaluate(`(() => { const s = window.__game.store.get(); const at = Math.max(s.ability?.at ?? 0, s.celebration?.at ?? 0, Number(s.callout?.key) || 0); performance.now = () => at + ${Number(args.hold)}; document.getAnimations().forEach(a => { a.pause(); a.currentTime = ${Number(args.hold)}; }); })()`); await wait(1500); }
+            if (args.hold) { await evaluate(`(() => { const s = window.__game.store.get(); const at = Math.max(s.ability?.at ?? 0, s.celebration?.at ?? 0, s.floodWaveAt ?? 0, Number(s.callout?.key) || 0); performance.now = () => at + ${Number(args.hold)}; document.getAnimations().forEach(a => { a.pause(); a.currentTime = ${Number(args.hold)}; }); })()`); await wait(1500); }
         }
         // frames=<n>,<ms>: n stills of the table's own motion (the bust, the light), the page clock set
         // forward <ms> each time from 8 s on (after the entrance), for a short animation.

@@ -1406,6 +1406,7 @@ function emitMoment(roomCode, room, event, data) {
 // step) waits for it too: momentsLeft.
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
 const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card, with a line per player (the client's too)
+const FLOOD_WAVE_MS = 2200; // Astral Flood's wave over the table, after its banner (the client's too)
 const INTRO_SHOW_MS = 4500; // an opponent's entrance (the client's INTRO_MS)
 function sendMoment(roomCode, event, data) {
     let room = rooms[roomCode];
@@ -1413,8 +1414,9 @@ function sendMoment(roomCode, event, data) {
     if (room && shown) {
         let result = event === 'roundResult';
         let start = Math.max(Date.now(), room.momentNext || 0);
-        room.momentNext = start + delay(result ? RESULT_GAP_MS : MOMENT_GAP_MS);
-        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : MOMENT_SHOW_MS));
+        let flood = event === 'signatureMove' && data && data.ability === Rules.ABILITY_NAMES.astralFlood && !data.cancelled;
+        room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_GAP_MS);
+        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_SHOW_MS));
     }
     io.to(roomCode).emit(event, data);
 }

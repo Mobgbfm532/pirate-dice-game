@@ -2474,6 +2474,67 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
     animation: flood 1.4s ease-out forwards;
 }
 @keyframes flood { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+/* After its banner, the flood itself (5 Nov): a wall of aurora light pours down over the table, rings
+   ripple out from the felt, stars fall through it, and it drains away. Taps go through. */
+.flood-wave { position: fixed; inset: 0; z-index: 45; overflow: hidden; pointer-events: none; }
+.flood-wave > span { position: absolute; display: block; }
+.flood-sheet {
+    left: -10%; right: -10%; top: -20%; height: 140%;
+    background: linear-gradient(transparent,
+        rgba(170, 110, 255, 0.55) 12%, rgba(64, 224, 208, 0.75) 34%, rgba(255, 244, 214, 0.9) 50%,
+        rgba(64, 224, 208, 0.75) 66%, rgba(170, 110, 255, 0.55) 88%, transparent);
+    filter: blur(14px);
+    mix-blend-mode: screen;
+    animation: flood-pour 2.2s cubic-bezier(0.3, 0.1, 0.4, 1) both;
+}
+@keyframes flood-pour {
+    0% { transform: translateY(-100%); opacity: 0.9; }
+    35% { transform: translateY(-12%); opacity: 1; }
+    62% { transform: translateY(0); opacity: 0.85; }
+    100% { transform: translateY(85%); opacity: 0; }
+}
+.flood-ribbons {
+    inset: -20%;
+    background:
+        radial-gradient(ellipse 18% 70% at 20% 50%, rgba(64, 224, 208, 0.65), transparent 70%),
+        radial-gradient(ellipse 14% 80% at 48% 45%, rgba(190, 140, 255, 0.7), transparent 70%),
+        radial-gradient(ellipse 20% 70% at 78% 55%, rgba(255, 215, 130, 0.5), transparent 70%);
+    filter: blur(18px);
+    mix-blend-mode: screen;
+    animation: flood-ribbons 2.2s ease-in-out both;
+}
+@keyframes flood-ribbons {
+    0%, 12% { opacity: 0; transform: translateX(-6%) skewX(-10deg); }
+    45% { opacity: 1; transform: translateX(2%) skewX(6deg); }
+    75% { opacity: 0.8; transform: translateX(5%) skewX(-4deg); }
+    100% { opacity: 0; transform: translateX(8%) skewX(8deg); }
+}
+.flood-flash {
+    inset: 0;
+    background: radial-gradient(circle at var(--table-x, 50%) var(--felt-y, 45%), rgba(255, 255, 255, 0.95), rgba(190, 240, 255, 0.5) 35%, transparent 72%);
+    animation: flood-flash 2.2s ease-out both;
+}
+@keyframes flood-flash { 0%, 24% { opacity: 0; } 36% { opacity: 1; } 62%, 100% { opacity: 0; } }
+.flood-ring {
+    left: var(--table-x, 50%); top: var(--felt-y, 45%);
+    /* (Drawn full size and scaled up from small, so the ring is still thin as it reaches the edges.) */
+    width: 180vmax; height: 180vmax; margin: -90vmax 0 0 -90vmax; border-radius: 50%;
+    border: 5px solid rgba(225, 250, 255, 0.95);
+    box-shadow: 0 0 22px 5px rgba(120, 225, 255, 0.75), inset 0 0 14px rgba(190, 150, 255, 0.7);
+    opacity: 0;
+    animation: flood-ring 1.1s ease-out both;
+}
+@keyframes flood-ring { 0% { opacity: 0.95; transform: scale(0.02); } 100% { opacity: 0; transform: scale(1); } }
+.flood-star {
+    top: -4%; width: var(--s); height: var(--s); border-radius: 50%; background: #fff;
+    box-shadow: 0 0 8px 3px rgba(200, 235, 255, 0.95);
+    opacity: 0;
+    animation: flood-star 1.15s ease-in both;
+}
+@keyframes flood-star { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(105vh); } }
+@media (prefers-reduced-motion: reduce) {
+    .flood-sheet, .flood-ribbons, .flood-ring, .flood-star { display: none; }
+}
 
 /* ---- Keepsakes (21 Oct): small round pictures beside your chip; a fanfare when one works ---- */
 .keepsake-row { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }

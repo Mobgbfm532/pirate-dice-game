@@ -179,6 +179,7 @@ export interface Snapshot {
     leaderboard: LeaderboardEntry[];
     league: LeagueRow[] | null; // this table's league (a league table only, e.g. JUGS)
     seatFlash: { playerId: string; text: string; kind: string; color: string; key: string } | null; // "Dirty 20!" over a nameplate
+    floodWaveAt: number | null; // Brodor's Astral Flood pouring over the table
     roundResult: { rows: RoundResultRow[]; at: number } | null; // a multiplayer round's result card
     roomCode: string;
     waiting: boolean; // a classic table with nobody to play yet
@@ -233,6 +234,7 @@ let snapshot: Snapshot = {
     leaderboard: [],
     league: null,
     seatFlash: null,
+    floodWaveAt: null,
     roundResult: null,
     roomCode: '',
     waiting: false,
@@ -649,11 +651,15 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace 
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In']);
 
+// The Yawning Portal's hard hitters: the whole screen shakes with their moment.
+const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Brand', 'Divine Smite']);
+
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
 // so the name and sound land just as Klarg's hand lifts the die.
 socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean }) => {
     const steal = data.ability === 'Reach Around';
+    const flood = data.ability === 'Astral Flood' && !data.cancelled;
     enqueueMoment(() => {
         const sound = ABILITY_SOUNDS[data.ability];
         if (data.cancelled) { /* a Clear-Eye stopped it: silent */ }
@@ -661,12 +667,22 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
             playSound('marthaSwitch');
             if (sound) setTimeout(() => playSound(sound), SWITCH_LEAD_MS);
         } else if (sound) playSound(sound);
-        // The Ridgeler's hammer comes down (a won Divine Smite round): the whole screen shakes as it lands.
-        if (data.hit) shakeScreen(250);
+        // The screen shakes as these land (5 Nov, the user's), and as the Ridgeler's hammer comes down.
+        if (!data.cancelled && (data.hit || SHAKING_ABILITIES.has(data.ability))) shakeScreen(250);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
     }, MOMENT_GAP_MS, () => (steal ? Math.max(0, ...table.stolenAt.values()) : 0));
+    // Once its banner has gone, the flood pours over the table; the state behind it (the heart he
+    // takes) waits in the queue until then, so it breaks as the wave hits.
+    if (flood) enqueueMoment(showFloodWave, FLOOD_WAVE_MS, () => momentGoneAt, FLOOD_WAVE_MS);
 });
+
+const FLOOD_WAVE_MS = 2200; // (the server's too)
+function showFloodWave() {
+    const at = performance.now();
+    update({ floodWaveAt: at });
+    setTimeout(() => { if (snapshot.floodWaveAt === at) update({ floodWaveAt: null }); }, FLOOD_WAVE_MS);
+}
 
 // The whole page shakes (CSS `.screen-shake`, off for reduced motion), `delay` ms from now.
 function shakeScreen(delay: number) {
@@ -1021,8 +1037,9 @@ export const actions = {
 export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     // (hold: keep it up that much longer, to look at a still of it)
-    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
+    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit || SHAKING_ABILITIES.has(ability)) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now() }); },
+    floodWave() { showFloodWave(); },
     // A multiplayer round result card, held up until the next call (null ends it).
     roundResult(rows: RoundResultRow[] | null) { update({ roundResult: rows ? { rows, at: performance.now() } : null }); },
     // A reaction rising from a player's nameplate (a multiplayer table), e.g. react(id, '🍻').

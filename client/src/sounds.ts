@@ -8,6 +8,9 @@ function load(file: string, volume: number, loop = false) {
     return audio;
 }
 
+// Every opponent's ability clip (5 Nov, the user: a little louder; they were 0.75).
+const ABILITY_VOLUME = 0.95;
+
 const sfx = {
     click: load('click.mp3', 0.6),
     bust: load('bust.mp3', 0.6),
@@ -15,20 +18,20 @@ const sfx = {
     yay: load('yay.mp3', 0.6),
     ohwell: load('ohwell.mp3', 0.6),
     swoosh: load('Swoosh.mp3', 0.6),
-    devil: load('DevilsTeets.wav', 0.6),
+    devil: load('DevilsTeets.wav', 0.8), // (0.6 until 5 Nov, the user: a little louder)
     winner: load('Winner.mp3', 0.75),
-    reachAround: load('Reach Around.mp3', 0.75),
-    constellation: load('Constellation.mp3', 0.75),
-    gunshot: load('Gunshot.mp3', 0.85),
+    reachAround: load('Reach Around.mp3', ABILITY_VOLUME),
+    constellation: load('Constellation.mp3', ABILITY_VOLUME),
+    gunshot: load('Gunshot.mp3', 1),
     // The user's ability sounds (26 Oct).
-    mindWhip: load('MindWhip.mp3', 0.75),
-    cursed: load('YouAreCursed.mp3', 0.75),
-    sympathy: load('SympathyForTheDevil.mp3', 0.75),
+    mindWhip: load('MindWhip.mp3', ABILITY_VOLUME),
+    cursed: load('YouAreCursed.mp3', ABILITY_VOLUME),
+    sympathy: load('SympathyForTheDevil.mp3', ABILITY_VOLUME),
     marthaPuff: load('MarthaPuff.mp3', 0.75), // (unused since 4 Nov: Disguises has the user's MarthaAbility.mp3)
-    marthaAbility: load('MarthaAbility.mp3', 0.75),
+    marthaAbility: load('MarthaAbility.mp3', ABILITY_VOLUME),
     // An Elf Bar's puff (the user's, 4 Nov; it borrowed Martha's puff before).
     vape: load('Vape.mp3', 0.75),
-    marthaSwitch: load('MarthaSwitch.mp3', 0.75),
+    marthaSwitch: load('MarthaSwitch.mp3', ABILITY_VOLUME),
     // Between fights (the user's, 27 Oct): what a soak or a candle brings.
     tubGood: load('HotTubGood.mp3', 0.75),
     tubBad: load('HotTubBad.mp3', 0.75),
@@ -52,10 +55,12 @@ const sfx = {
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
     bardTune: load('BardTune.mp3', 0.8),
     // The Yawning Portal's abilities (the user's, 3 Nov).
-    inkfire: load('InkfireBrand.mp3', 0.75),
-    flourish: load('Flourish.mp3', 0.75),
-    smite: load('DivineSmite.mp3', 0.75),
-    astralFlood: load('AstralFlood.mp3', 0.75)
+    inkfire: load('InkfireBrand.mp3', ABILITY_VOLUME),
+    flourish: load('Flourish.mp3', ABILITY_VOLUME),
+    smite: load('DivineSmite.mp3', ABILITY_VOLUME),
+    astralFlood: load('AstralFlood.mp3', ABILITY_VOLUME),
+    // Sylvester's Back of the Head (the user's, 5 Nov; it was the swoosh).
+    sylvesterPunch: load('SylvesterPunch.mp3', ABILITY_VOLUME)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
@@ -375,7 +380,7 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
     'Constellation Blur': 'constellation',
     'The Ace of Spades': 'gunshot',
-    'Back of the Head': 'swoosh',
+    'Back of the Head': 'sylvesterPunch',
     'Inkfire Brand': 'inkfire',
     'Vexing Rapier': 'flourish',
     'Divine Smite': 'smite',

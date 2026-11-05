@@ -54,7 +54,7 @@ Where: name and entrance card in `server.js` (`TAVERN_ENCOUNTERS`, `intro`); abi
 
 **Brodor**: Astral Flood (boss)
 - Entrance card: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
-- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "Keep 'em, champ." Then word reaches the Portal: the Salty Swallow has docked, and her crew are the finest players on the coast." His sunglasses "are yours: a finished 23 restores a heart, like a 24."
+- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow
 
