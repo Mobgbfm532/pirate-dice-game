@@ -9,6 +9,7 @@ import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editablePortrait, portraitEdits, portraitFor } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, sceneFileOf } from './Backdrop';
 import { lookNext } from './look';
+import { IntroFilm, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
 // The tavern's five reactions (the user's, 3 Nov), painted by the user the same day (art/reaction-<id>.jpg
@@ -71,6 +72,20 @@ function JoinScreen() {
     };
     // A Tavern Crawl saved at an invitation on to the next place.
     const [saved, setSaved] = useState(readSavedRun);
+    // The intro film: before a device's first Tavern Crawl, or asked for ("Watch the intro").
+    const [film, setFilm] = useState<'crawl' | 'watch' | null>(null);
+    const [choice, setChoice] = useState(introChoice);
+    const playIntro = choice ?? !introSeen();
+    useEffect(() => {
+        if (!playIntro || invite) return;
+        const wait = setTimeout(preloadIntro, 1200);
+        return () => clearTimeout(wait);
+    }, [playIntro, invite]);
+    if (film) return <IntroFilm onDone={() => {
+        liftCurtain();
+        if (film === 'crawl') join('TAVERN');
+        else setFilm(null);
+    }} />;
 
     return (
         <div className="modal-backdrop">
@@ -94,7 +109,7 @@ function JoinScreen() {
                     </div>
                 )}
                 {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
-                <button className={invite ? 'secondary' : 'primary'} onClick={() => join('TAVERN')}>Tavern Crawl</button>
+                <button className={invite ? 'secondary' : 'primary'} onClick={() => { if (playIntro) setFilm('crawl'); else join('TAVERN'); }}>Tavern Crawl</button>
                 <div className="row">
                     <input value={code} maxLength={10} placeholder="Table code" onChange={e => setCode(e.target.value.toUpperCase())} />
                     <button className="secondary" onClick={() => join(code)}>Join table</button>
@@ -107,6 +122,15 @@ function JoinScreen() {
                                 {'♥'.repeat(n)}
                             </button>
                         ))}
+                    </div>
+                )}
+                {!invite && (
+                    <div className="intro-row">
+                        <label className="intro-check">
+                            <input type="checkbox" checked={playIntro} onChange={e => { saveIntroChoice(e.target.checked); setChoice(e.target.checked); }} />
+                            Play intro before a Tavern Crawl
+                        </label>
+                        <button className="link-button watch-intro" onClick={() => setFilm('watch')}>Watch it</button>
                     </div>
                 )}
                 <p className="fine">Prototype of the 3D table. The classic game is still at <a href="/">the main page</a>.</p>

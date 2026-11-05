@@ -1,8 +1,8 @@
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
-import { calloutText, dirtyTwenty, isLocked, onePerfect4Away, perfectHand, type DieStatus, type TurnOutcome, type TurnView } from './rules';
+import { calloutText, dirtyTwenty, isLocked, onePerfect4Away, perfectHand, type Die, type DieStatus, type TurnOutcome, type TurnView } from './rules';
 import { simulateRoll, readFrame, paceSeconds, suspensePace, type Pace, type RollTrack } from './physics';
-import { waitingPosition } from './layout';
+import { screenInsets, waitingPosition } from './layout';
 import { lookNext } from './look';
 import { playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
@@ -198,6 +198,7 @@ export interface Snapshot {
     // 2, the 4 and four 1s. who: the player's name when it isn't you.
     celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
     devil: { at: number; who: string | null } | null; // three 6s landed (who: when it isn't you)
+    filmPause: boolean; // the intro film covers the table: it isn't drawn meanwhile
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
@@ -246,7 +247,8 @@ let snapshot: Snapshot = {
     ghosts: null,
     putBackSlot: null,
     celebration: null,
-    devil: null
+    devil: null,
+    filmPause: false
 };
 
 const listeners = new Set<() => void>();
@@ -1034,6 +1036,72 @@ export const actions = {
 
 // Development only (see main.tsx): play an opponent's signature moment or entrance on
 // demand, to check how it looks without waiting for it to happen in a game.
+// The intro film's lesson (Intro.tsx), played on the real table with the real dice: a 2 found and
+// kept, a 4, then four 6s. No socket is involved: it runs before you've sat down, and leaves the table as it was.
+export interface FilmThrow { dice: { id: number; value: number }[]; keep: number[]; track: RollTrack; pace: Pace; ms: number; perfect?: boolean }
+const filmTurn = (dice: Die[]): TurnView => ({ key: 'film', playerId: 'film', dice, rollCount: 1, locksThisRoll: 0, hasRolled: true, blurActive: false, suspense: 'none', callout: null, finalized: false, outcome: null, canRoll: false });
+const FILM_THROWS = [
+    { dice: [[0, 3], [1, 2], [2, 5], [3, 1], [4, 6], [5, 3]], keep: [1], seed: 240 },
+    { dice: [[0, 5], [2, 1], [3, 4], [4, 3], [5, 2]], keep: [3], seed: 24 },
+    { dice: [[0, 6], [2, 6], [4, 6], [5, 6]], keep: [0, 2, 4, 5], seed: 2424, perfect: true }
+];
+export const film = {
+    begin() { update({ filmPause: true }); },
+    // Pre-simulated before the film starts (each throw takes a moment to work out), each played a
+    // little faster if it would run past `longest` seconds.
+    prepare(longest: number): FilmThrow[] {
+        return FILM_THROWS.map(({ dice, keep, seed, perfect }) => {
+            const track = simulateRoll(dice.map(d => d[0]), dice.map(d => d[1]), seed);
+            const pace: Pace = { speed: Math.max(1, track.frames / 60 / longest) };
+            return { dice: dice.map(([id, value]) => ({ id, value })), keep, track, pace, ms: paceSeconds(pace, track.frames) * 1000, perfect };
+        });
+    },
+    showTable() {
+        resetTrayForNewTurn();
+        screenInsets.bottom = Math.max(70, innerHeight * 0.1);
+        // (On a computer's screen the table rises to just under the black bar and the words, for bigger
+        // dice; a phone on its side has no height to spare for the words over it.)
+        if (innerWidth > innerHeight && innerHeight > 500) screenInsets.top = Math.min(innerHeight * 0.085, 70) + 46;
+        update({ filmPause: false, turn: filmTurn([0, 1, 2, 3, 4, 5].map(id => ({ id, value: 0, status: 'active' }))) });
+    },
+    hideTable() { update({ filmPause: true }); },
+    playThrow(one: FilmThrow) {
+        table.roll = { track: one.track, startedAt: performance.now(), speed: 1, pace: one.pace, hidden: new Set() };
+        update({ rolling: true });
+        playDiceImpacts(one.track.impacts, one.pace);
+        setTimeout(() => {
+            if (!snapshot.turn || snapshot.turn.key !== 'film' || table.roll?.track !== one.track) return;
+            table.roll = null;
+            one.dice.forEach((d, i) => {
+                const pose = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
+                readFrame(one.track, one.track.frames - 1, i, pose.position, pose.quaternion);
+                table.rest.set(d.id, pose);
+            });
+            const shown = (keeping: boolean) => filmTurn(snapshot.turn!.dice.map(d => {
+                const thrown = one.dice.find(t => t.id === d.id);
+                return { ...d, value: thrown ? thrown.value : d.value, status: keeping && one.keep.includes(d.id) ? 'permanentlyLocked' as const : d.status };
+            }));
+            update({ rolling: false, turn: shown(false) });
+            // A beat to see the faces, then what's wanted goes to its plate.
+            setTimeout(() => {
+                if (snapshot.turn?.key !== 'film') return;
+                const turn = shown(true);
+                recordLockOrder(turn);
+                update({ turn });
+                // (The camera leans in as on any perfect hand. Not its gold light here: it paled the green pips.)
+                if (one.perfect) update({ celebration: { kind: 'perfect24', at: performance.now(), who: null } });
+            }, 90);
+        }, one.ms + 30);
+    },
+    end() {
+        table.roll = null;
+        resetTrayForNewTurn();
+        screenInsets.bottom = 0;
+        screenInsets.top = 0;
+        update({ filmPause: false, turn: null, rolling: false, celebration: null });
+    }
+};
+
 export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     // (hold: keep it up that much longer, to look at a still of it)

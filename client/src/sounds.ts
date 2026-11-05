@@ -494,3 +494,79 @@ export function setSoundsOff(value: boolean) {
 export function areSoundsOff() {
     return muted;
 }
+
+// ---- The intro film's sound (the user's, 5 Nov; under the music switch) ----
+// The music as it is; the rain and the tavern laid under it, the tavern muffled as if through the
+// door until the film reaches it, when it opens up. Scheduled in one go from the film's start.
+const RAIN_SKIP = 0.3;
+const FILM_CLIPS = { music: 'IntroMusic.mp3', rain: 'IntroRain.mp3', tavern: 'IntroTavernAmbience.mp3' };
+type FilmClip = keyof typeof FILM_CLIPS;
+const filmBytes = new Map<FilmClip, Promise<ArrayBuffer>>();
+const filmBuffers = new Map<FilmClip, AudioBuffer>();
+export function fetchFilmSound() {
+    (Object.keys(FILM_CLIPS) as FilmClip[]).forEach(name => {
+        if (!filmBytes.has(name)) filmBytes.set(name, fetch(`/${FILM_CLIPS[name]}`).then(r => r.arrayBuffer()));
+    });
+}
+export async function loadFilmSound() {
+    if (musicOff) return;
+    fetchFilmSound();
+    const ctx = audio();
+    if (!ctx) return;
+    await Promise.all((Object.keys(FILM_CLIPS) as FilmClip[]).map(async name => {
+        if (filmBuffers.has(name)) return;
+        // (decodeAudioData takes the bytes away, so it gets a copy.)
+        try { filmBuffers.set(name, await ctx.decodeAudioData((await filmBytes.get(name)!).slice(0))); } catch { /* the film plays on without it */ }
+    }));
+}
+// lead: when the music comes in, by the film's clock; elapsed: how far the film has got. Returns a
+// function that fades it all out.
+export function playFilmSound(lead: number, elapsed: number) {
+    const ctx = audio();
+    if (!ctx || musicOff) return () => {};
+    const start = ctx.currentTime + 0.02 - elapsed + lead; // the music's 0, on the audio clock
+    const at = (t: number) => Math.max(ctx.currentTime, start + t);
+    const sources: AudioBufferSourceNode[] = [];
+    const master = ctx.createGain();
+    master.connect(ctx.destination);
+    const play = (name: FilmClip, from: number, levels: [number, number][], options: { skip?: number; into?: AudioNode } = {}) => {
+        const buffer = filmBuffers.get(name);
+        if (!buffer) return;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const level = ctx.createGain();
+        level.gain.setValueAtTime(levels[0][1], at(levels[0][0]));
+        levels.slice(1).forEach(([t, v]) => level.gain.linearRampToValueAtTime(v, at(t)));
+        source.connect(level).connect(options.into ?? master);
+        const offset = Math.max(0, ctx.currentTime - (start + from));
+        source.start(at(from), (options.skip ?? 0) + offset);
+        sources.push(source);
+    };
+    play('music', 0, [[0, 0.8], [40, 0.8]]);
+    // The street: rain as the town appears, faint indoors, full at the door. The clip is shorter than
+    // that and opens with 0.15 s of silence, which stuttered where it looped (the user, 5 Nov): so two
+    // passes, past the silence, crossfaded while it's faint; the door scene has one unbroken stretch.
+    play('rain', 6, [[6, 0], [7, 0.9], [11.6, 0.9], [12.2, 0.3], [15.5, 0.3], [17.5, 0]], { skip: RAIN_SKIP });
+    play('rain', 15.5, [[15.5, 0], [17.5, 0.25], [24.3, 0.2], [25.2, 1.1], [29, 1.1], [30, 0]], { skip: RAIN_SKIP });
+    // The tavern: behind the door until it opens.
+    const door = ctx.createBiquadFilter();
+    door.type = 'lowpass';
+    door.frequency.setValueAtTime(520, at(6));
+    door.frequency.setValueAtTime(520, at(27.6));
+    door.frequency.exponentialRampToValueAtTime(9000, at(29));
+    door.connect(master);
+    play('tavern', 6, [[6, 0], [7, 0.3], [11.6, 0.3], [12.2, 0.1], [24.3, 0.1], [25.5, 0.8], [27.6, 0.9], [29, 1.2], [29.6, 1.2], [31, 0]], { into: door });
+    let stopped = false;
+    return () => {
+        if (stopped) return;
+        stopped = true;
+        // The tail of the music and the tavern carry on a moment over whatever comes next.
+        master.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+        setTimeout(() => { sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); master.disconnect(); }, 1800);
+    };
+}
+
+// The first tap wakes Web Audio (for the film, which starts before the tavern's music does).
+export function unlockAudio() {
+    audio();
+}

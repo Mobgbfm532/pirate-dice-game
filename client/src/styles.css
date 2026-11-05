@@ -1919,6 +1919,10 @@ button.keepsake.used { opacity: 0.55; }
 .saved-run { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 .saved-run .detail { display: block; font-size: 0.75rem; opacity: 0.85; }
 .saved-run .link-button { color: #5d4037; text-shadow: none; animation: none; font-size: 0.8rem; padding: 2px 10px; }
+.intro-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px; }
+.intro-check { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; color: #3e2723; font-size: 0.9rem; cursor: pointer; }
+.intro-check input { width: 18px; height: 18px; margin: 0; padding: 0; flex: none; accent-color: #a3201c; cursor: pointer; }
+.join .watch-intro { color: #5d4037; text-shadow: none; animation: none; font-size: 0.85rem; padding: 2px 10px; }
 
 /* The opponent's ability uses on the nameplate. */
 .ability-marks { display: inline-flex; gap: 1px; font-size: 0.85rem; line-height: 1; }

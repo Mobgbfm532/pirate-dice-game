@@ -191,13 +191,13 @@ async function cutOut(file, name, { maxHeight = 720, fireBox = null, patches = [
 // checkerboard. Flood-fill from the border through anything close to the border's colour,
 // then take the background's tint out of the edge pixels (wispy hair over magenta would
 // otherwise keep a pink fringe).
-function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOverBlue = -Infinity, green = false }) {
+function floodFlat(img, { tolerance, minRed, minBlue, pocket, holes = [], redOverBlue = -Infinity, green = false, background = null }) {
     const { data, width, height } = img;
     const border = [];
     for (let x = 0; x < width; x++) border.push(x, (height - 1) * width + x);
     for (let y = 0; y < height; y++) border.push(y * width, y * width + width - 1);
     const median = c => border.map(p => data[p * 4 + c]).sort((a, b) => a - b)[border.length >> 1];
-    const bg = [median(0), median(1), median(2)];
+    const bg = background ?? [median(0), median(1), median(2)]; // (background: when dark paint fills most of the border)
     // Close to the background AND magenta-ish (red and blue both above green): skin and
     // brown cloth in shadow can come close in plain distance, but their blue sits below green.
     const near = p => {
@@ -843,7 +843,26 @@ async function diceSheets() {
     }
 }
 
+// The intro film's paintings (the user's, 5 Nov). The foreground frame keeps its full size, not trimmed:
+// the film places its left and right parts by where they stand in the painting.
+async function introFilm() {
+    if (!wanted('intro')) return;
+    mkdirSync(path.join(OUT, 'intro'), { recursive: true });
+    for (const name of ['town', 'door']) {
+        const info = await sharp(path.join(ART, `intro-${name}.jpg`)).webp({ quality: 82 }).toFile(path.join(OUT, 'intro', `${name}.webp`));
+        console.log(`intro/${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    }
+    const img = await readRgba('intro-foreground.jpg');
+    const { mask, bg } = floodFlat(img, { tolerance: 80, minRed: 45, minBlue: 15, pocket: 14, holes: [[688, 384], [1105, 310], [1215, 232]], background: [img.data[(384 * img.width + 688) * 4], img.data[(384 * img.width + 688) * 4 + 1], img.data[(384 * img.width + 688) * 4 + 2]] });
+    despill(img, mask, bg, 6, null);
+    applyMask(img, mask);
+    await writePreview('intro-foreground', img);
+    const info = await toSharp(img).webp({ quality: 80, alphaQuality: 90 }).toFile(path.join(OUT, 'intro', 'foreground.webp'));
+    console.log(`intro/foreground.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  background rgb(${bg.join(',')})`);
+}
+
 if (!ONLY || ONLY.has('dice')) await diceSheets();
+await introFilm();
 if (!ONLY) {
     await surfaces();
     await backdrop();

@@ -149,7 +149,7 @@ Done 3 Nov: the user painted all five (Ha! is Frak's grinning face with his ciga
 matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320`) into
 `client/public/art/reactions/<id>.webp`; then add each id to `PAINTED_REACTIONS` in Hud.tsx.
 
-### The intro cinematic (wanted, 5 Nov)
+### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
 A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the
 middle third (phones crop the sides), and attach `art/ghoul-gourd-outside.jpg` as a style reference if
@@ -187,10 +187,10 @@ hit. Folk instruments, ominous but adventurous, no vocals.* Street, `IntroStreet
 cobblestones and wooden roofs at night, a medieval town, with faint muffled tavern singing and laughter from
 behind a distant door, a creaking hanging sign, no music, 25 seconds.*
 
-**Narrator (optional; draft words, the user's to rewrite).** A gravelly, older, unhurried storyteller, with a hint
-of a smile. A clip per line, `IntroLine1.mp3` to `IntroLine5.mp3`: "Every town has a game." / "In this one, they
-play for gold, for glory, and for a seat on the Salty Swallow." / "Few get past the Portal. Fewer still come back
-from the ship." / "Find a 2. Find a 4. Chase 24." / "But first, you have to get past the bouncer."
+**Narrator (optional; on screen as text for now).** A gravelly, older, unhurried storyteller, with a hint
+of a smile. A clip per line, `IntroLine1.mp3` to `IntroLine5.mp3`, the user's words: "Every town has a game." / "In this one, some
+play for gold, others play for glory." / "Few get past the Portal. Fewer still come back from the ship." / "Find a 2.
+Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 
 ## Status
 
@@ -220,7 +220,7 @@ from the ship." / "Find a 2. Find a 4. Chase 24." / "But first, you have to get 
 | Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
 | Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
 | Mystery Flavour (Martha's Elf Bar, a keepsake) | Done, 4 Nov | `art/keepsake-mysteryFlavour.jpg` (lime green background, `cutOutFlat` with `green: true`, `icon: 320` and `holes` in the smoke's curl) → `keepsakes/mysteryFlavour.webp` |
-| The intro cinematic | Wanted, 5 Nov | `art/intro-town.jpg` (essential), `intro-foreground.jpg`, `intro-door.jpg`; see "The intro cinematic" in the prompt pack |
+| The intro cinematic | Done, 5 Nov (no narrator yet) | `art/intro-town.jpg`, `intro-foreground.jpg`, `intro-door.jpg`; `public/IntroMusic.mp3`, `IntroRain.mp3`, `IntroTavernAmbience.mp3` |
 | Keepsake pictures (eight item icons) | Done, 29 Oct | `art/keepsake-bentCopper.jpg` (the Shield), `keepsake-velvetCushion.jpg`, `keepsake-luckySeat.jpg` (the Trap Card), `keepsake-loyaltyCard.jpg`, `keepsake-potionBelt.jpg`, `keepsake-loadedDie.jpg`, `keepsake-marthasMask.jpg`, `keepsake-brodorsSunglasses.jpg` (flat magenta / crimson, `cutOutFlat` with `icon: 320` like the Thonics; the Loyalty Card with `holes` seeds for its nine punched holes (the tenth is painted filled in, so it stays parchment); Martha's mask keeps its light pink sticker outline as a border) → `client/public/art/keepsakes/<id>.webp`, 320x320. Shown ~26 px on the strip, ~40 px on Thom's back shelf, ~84 px in the gold burst |
 | Keepsake pictures, three more (the Miser's Purse, the Bottomless Flask, the Gambler's Charm) | Done, 30 Oct | `art/keepsake-misersPurse.jpg` (a leather coin sack tied with a dark cord), `keepsake-bottomlessFlask.jpg` (a pewter hip flask pouring a golden swirl: the curl's middle seeded with `holes`; the open cap is painted metal inside, so it stays), `keepsake-gamblersCharm.jpg` (a braided cord, a brass four-sided die and a four-leaf clover: `holes` seeds for the cord's loop knot, the ring and the gaps between the wires, the die and the clover) (flat magenta, `cutOutFlat` with `icon: 320`, like the keepsakes) → `client/public/art/keepsakes/<id>.webp`, 320x320. In the game since 30 Oct |
 | Blessing and song icons (the Bard's two songs, the Lady's Grace, Sworn to Kram) | Done, 29 Oct | `art/keepsake-inspiringSong.jpg` (a lute, a ribbon and floating notes: `minPiece: 0.001` keeps the separate notes), `keepsake-cuttingWords.jpg` (quill and dagger), `keepsake-ladysGrace.jpg` (a candle with a cyan flame: `glow` with `colour: 'light'` keeps the flame and a soft see-through pale glow; the handle's loop seeded with `holes`), `keepsake-kram.jpg` (a black disc with a red K) (flat magenta, `cutOutFlat` with `icon: 320`, like the keepsakes) → `client/public/art/keepsakes/<id>.webp`, 320x320. For the strip's 🎶 / 🗡️ / 🔱 and the Lady's Grace, still emoji in the game until wired up |

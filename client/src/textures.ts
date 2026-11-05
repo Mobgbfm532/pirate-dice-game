@@ -131,6 +131,32 @@ function clearPips(ctx: CanvasRenderingContext2D, size: number) {
     ctx.putImageData(pixels, 0, 0);
 }
 
+// The painted faces each have a brown line drawn round them, which on a 3D die read as a cartoon
+// outline along every edge (the user, 5 Nov). The face is cut from just inside it (FACE_INSET), and
+// what's left of it at the corners is painted over in the face's own ivory, feathered in.
+const FACE_INSET = 9;
+function clearFaceEdge(ctx: CanvasRenderingContext2D, size: number) {
+    const pixels = ctx.getImageData(0, 0, size, size);
+    const d = pixels.data;
+    const edgeAt = (x: number, y: number) => Math.min(x, y, size - 1 - x, size - 1 - y) / size;
+    const ivory = [0, 0, 0];
+    let count = 0;
+    for (let y = 0; y < size; y += 2) for (let x = 0; x < size; x += 2) {
+        const e = edgeAt(x, y);
+        if (e < 0.08 || e > 0.095) continue;
+        const i = (y * size + x) * 4;
+        for (let c = 0; c < 3; c++) ivory[c] += d[i + c];
+        count++;
+    }
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const k = 1 - Math.min(1, Math.max(0, (edgeAt(x, y) - 0.03) / 0.05));
+        if (k <= 0) continue;
+        const i = (y * size + x) * 4;
+        for (let c = 0; c < 3; c++) d[i + c] = Math.round(d[i + c] * (1 - k) + (ivory[c] / count) * k);
+    }
+    ctx.putImageData(pixels, 0, 0);
+}
+
 // Wear on a face (shared by all six): red = how much lacquer is left, green = roughness. Full and
 // glossy in the middle, rubbed and duller towards the edges, in blotches rather than a clean band.
 function wearTexture() {
@@ -255,7 +281,9 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.
         FACE_VALUES.forEach((value, i) => {
             const [sx, sy] = DICE_SHEET_FACES[value];
             const texture = canvasTexture(ctx => {
-                ctx.drawImage(image, sx, sy, DICE_SHEET_FACE_SIZE, DICE_SHEET_FACE_SIZE, 0, 0, 512, 512);
+                const inset = lookNext ? FACE_INSET : 0;
+                ctx.drawImage(image, sx + inset, sy + inset, DICE_SHEET_FACE_SIZE - inset * 2, DICE_SHEET_FACE_SIZE - inset * 2, 0, 0, 512, 512);
+                if (lookNext) clearFaceEdge(ctx, 512);
                 if (lookNext && (value === 1 || value === 6)) clearPips(ctx, 512);
             }, 512);
             materials[i].map?.dispose();

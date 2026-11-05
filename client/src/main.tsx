@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import { TableScene } from './TableScene';
@@ -23,10 +23,13 @@ function hideLoadingScreen() {
 }
 
 function App() {
+    // (The intro film covers the table: no need to draw it underneath.)
+    const paused = useSyncExternalStore(store.subscribe, () => store.get().filmPause);
     return (
         <>
             <Backdrop />
             <Canvas
+                frameloop={paused ? 'never' : 'always'}
                 shadows={lookNext ? 'soft' : true}
                 dpr={lookNext ? renderDpr() : [1, 2]}
                 camera={{ fov: 40, near: 0.1, far: 80, position: [0, 10, 8] }}
