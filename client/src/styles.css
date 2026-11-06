@@ -2869,6 +2869,9 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 
 /* The tuning panel's Portraits tab: a big frame to drag the picture in, and nameplate-sized copies. */
 .tune-tabs { margin-top: 2px; }
+/* The table's centre line, while opponents are being placed. */
+.seat-guide { position: fixed; left: var(--table-x, 50%); top: 0; height: var(--horizon, 30%); width: 0; border-left: 2px dashed rgba(255, 213, 79, 0.75); z-index: 39; pointer-events: none; }
+.seat-editor .tune-row { grid-template-columns: auto 1fr auto; }
 .portrait-editor { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .portrait-editor select { width: 100%; padding: 6px 8px; border-radius: 8px; background: #2a1a0e; color: var(--parchment); border: 1px solid var(--panel-border); font: inherit; }
 .portrait-frame {

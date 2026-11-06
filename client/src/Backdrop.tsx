@@ -1,5 +1,5 @@
 import { BOT_ID, store } from './game';
-import { PORTRAITS, type Portrait } from './portraits';
+import { PORTRAITS, seatPreview, type Portrait } from './portraits';
 import type { SceneAir } from './Air';
 
 // The tavern behind the table, and the current opponent sitting across from you: where they go
@@ -130,6 +130,7 @@ export function opponentPortraitKey(name: string): string {
 export function acrossTheTable(): { key: string; portrait: Portrait; isBot: boolean } | null {
     const { state, joined } = store.get();
     if (!joined || !state) return null;
+    if (seatPreview.key && PORTRAITS[seatPreview.key]) return { key: seatPreview.key, portrait: PORTRAITS[seatPreview.key], isBot: true };
     const bot = opponentName();
     const key = bot && opponentPortraitKey(bot);
     return key && PORTRAITS[key]?.bust ? { key, portrait: PORTRAITS[key], isBot: true } : null;

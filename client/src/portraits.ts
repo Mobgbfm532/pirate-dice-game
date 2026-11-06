@@ -24,6 +24,8 @@ export interface Portrait {
     // Behind the table: how much larger than the others to draw it, for a cut-out that shows
     // more of the body (the head stays at the same height; less of the body shows).
     seat?: number;
+    // Behind the table: moved by eye from the face's centring (percent of the bust's height; + is right / down).
+    seatShift?: [number, number];
     // The look preview's living air on this painting (Air.tsx): smoke from a point, a glow.
     air?: PaintedAir;
 }
@@ -166,3 +168,42 @@ export function editPortrait(key: string, edit: PortraitEdit | null) {
     applyEdit(key);
 }
 export const portraitEdits = () => edits;
+
+// ---- Where an opponent sits behind the table (the tuning panel's At the table tab, 6 Nov) ----
+// Left and right, up and down and size, per painting. Like the portraits: saved on this device
+// (localStorage.tavernSeats) and copied out as numbers to make them the game's.
+export interface SeatEdit { size: number; shift: [number, number] }
+// The user's own placing (6 Nov), from that tab.
+const SEATS: Record<string, SeatEdit> = {
+    'Duke Morrigan': { size: 1, shift: [11, 0] },
+    'Martha Mystery': { size: 1.15, shift: [-4, 0] },
+    Frak: { size: 1.37, shift: [0, -2.5] },
+    'Martha as Frak': { size: 1.15, shift: [0, -3] },
+    'Martha as Danhausen': { size: 1.12, shift: [0, -5.5] },
+    'Martha as Duke Morrigan': { size: 1.15, shift: [0, -4] },
+    'The Hangman': { size: 1.1, shift: [-4.5, -2.5] },
+    'Jaguar Cantona': { size: 1, shift: [-3.5, -4] },
+    'Vaelin Inkhand': { size: 1, shift: [-9, 0] },
+    'Stason Jatham': { size: 1, shift: [-3.5, 0] },
+    'The Ridgeler': { size: 1, shift: [-8.5, -4.5] }
+};
+Object.entries(SEATS).forEach(([key, { size, shift }]) => { PORTRAITS[key].seat = size; PORTRAITS[key].seatShift = shift; });
+export const SEATABLE = Object.keys(PORTRAITS).filter(k => PORTRAITS[k].bust && PORTRAITS[k].center && k !== 'The Molar');
+const BUILT_SEATS: Record<string, SeatEdit> = Object.fromEntries(SEATABLE.map(k => [k, { size: PORTRAITS[k].seat ?? 1, shift: PORTRAITS[k].seatShift ?? [0, 0] }]));
+const seatEdits: Record<string, SeatEdit> = (() => {
+    try { return JSON.parse(localStorage.getItem('tavernSeats') ?? '{}'); } catch { return {}; }
+})();
+const applySeat = (key: string) => {
+    const e = seatEdits[key] ?? BUILT_SEATS[key];
+    if (e && PORTRAITS[key]) { PORTRAITS[key].seat = e.size; PORTRAITS[key].seatShift = [...e.shift]; }
+};
+Object.keys(seatEdits).forEach(k => { if (BUILT_SEATS[k]) applySeat(k); });
+export function editSeat(key: string, edit: SeatEdit | null) {
+    if (edit) seatEdits[key] = { size: Math.round(edit.size * 100) / 100, shift: [Math.round(edit.shift[0] * 10) / 10, Math.round(edit.shift[1] * 10) / 10] };
+    else delete seatEdits[key];
+    try { localStorage.setItem('tavernSeats', JSON.stringify(seatEdits)); } catch { /* not saved */ }
+    applySeat(key);
+}
+export const seatEditsNow = () => seatEdits;
+// Who the At the table tab has sitting across, to look at anyone at any table.
+export const seatPreview: { key: string | null } = { key: null };

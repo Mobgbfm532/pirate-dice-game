@@ -411,7 +411,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   - **G (tune and prove):** the tuning panel (hidden since 4 Nov, the user's call: only on a visit with `?tune=1` in the address, no longer remembered; the ⚙ in the header; `tuning.ts`):
     sliders for the feel (multipliers saved per device), the frame rate, quality levels (Auto steps
     down from High when frames stay under ~45 a second), "Copy settings"; its Portraits tab (drag
-    and zoom every round portrait, "Copy portraits"). On 23 Oct the user found the built-in
+    and zoom every round portrait, "Copy portraits") and At the table tab (6 Nov, the user's: where an opponent's bust sits behind the table, left/right, up/down and size against a line on the table's centre; anyone can be brought to the table; `SeatEditor`, `seatShift`, `seat`, `localStorage.tavernSeats`, "Copy seats"; the user's numbers go in `SEATS` in portraits.ts). On 23 Oct the user found the built-in
     settings on High "look great" (no slider changes), and made the new look the default.
   - Before/after: `test/shots.mjs` + `test/shots-base.mjs` + `test/compare.mjs` and the
     `visual-shots` subagent; `previews/frozen.mjs` (gitignored) stops the page clock for moments.

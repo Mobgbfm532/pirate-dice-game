@@ -6,7 +6,7 @@ import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
-import { AVATAR_IDS, EDITABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editablePortrait, portraitEdits, portraitFor } from './portraits';
+import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, sceneFileOf } from './Backdrop';
 import { lookNext } from './look';
 import { IntroFilm, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
@@ -2299,9 +2299,53 @@ function PortraitEditor() {
     );
 }
 
+// The At the table tab: who sits across the table, moved and sized by eye against the table's
+// centre line. Anyone can be brought to the table to look at; the fight carries on as it was.
+function SeatEditor() {
+    const [key, setKey] = useState(() => { const now = acrossTheTable()?.key; return now && SEATABLE.includes(now) ? now : SEATABLE[0]; });
+    const [, redraw] = useState(0);
+    seatPreview.key = key;
+    useEffect(() => () => { seatPreview.key = null; }, []);
+    const p = PORTRAITS[key];
+    const size = p.seat ?? 1, shift = p.seatShift ?? [0, 0];
+    const set = (nextSize: number, next: [number, number]) => { editSeat(key, { size: nextSize, shift: next }); redraw(v => v + 1); };
+    const copy = async () => {
+        const text = JSON.stringify({ seats: seatEditsNow() });
+        try { await navigator.clipboard.writeText(text); showToast('', 'Seats copied: paste them to Claude', 'info', 2600); }
+        catch { showToast('Your seats', text, 'info', 12000); }
+    };
+    return (
+        <div className="portrait-editor seat-editor">
+            {createPortal(<i className="seat-guide" aria-hidden="true" />, document.body)}
+            <select value={key} onChange={e => setKey(e.target.value)} aria-label="Opponent">
+                {SEATABLE.map(k => <option key={k} value={k}>{k}{seatEditsNow()[k] ? ' •' : ''}</option>)}
+            </select>
+            <label className="tune-row">
+                <span>Left / right</span>
+                <input type="range" min={-40} max={40} step={0.5} value={shift[0]} onChange={e => set(size, [Number(e.target.value), shift[1]])} />
+                <span className="tune-value">{shift[0].toFixed(1)}</span>
+            </label>
+            <label className="tune-row">
+                <span>Up / down</span>
+                <input type="range" min={-40} max={40} step={0.5} value={shift[1]} onChange={e => set(size, [shift[0], Number(e.target.value)])} />
+                <span className="tune-value">{shift[1].toFixed(1)}</span>
+            </label>
+            <label className="tune-row">
+                <span>Size</span>
+                <input type="range" min={0.6} max={2.8} step={0.01} value={size} onChange={e => set(Number(e.target.value), shift)} />
+                <span className="tune-value">×{size.toFixed(2)}</span>
+            </label>
+            <div className="tune-actions">
+                <button className="primary" onClick={copy}>Copy seats</button>
+                <button className="secondary" onClick={() => { editSeat(key, null); redraw(v => v + 1); }}>Undo this one</button>
+            </div>
+        </div>
+    );
+}
+
 function TuningPanel({ onClose }: { onClose: () => void }) {
     useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
-    const [tab, setTab] = useState<'look' | 'portraits'>('look');
+    const [tab, setTab] = useState<'look' | 'portraits' | 'seats'>('look');
     const [fps, setFps] = useState(framesPerSecond());
     useEffect(() => { const t = setInterval(() => setFps(framesPerSecond()), 500); return () => clearInterval(t); }, []);
     const copy = async () => {
@@ -2320,8 +2364,9 @@ function TuningPanel({ onClose }: { onClose: () => void }) {
             <div className="tune-levels tune-tabs">
                 <button className={tab === 'look' ? 'on' : ''} onClick={() => setTab('look')}>Look</button>
                 <button className={tab === 'portraits' ? 'on' : ''} onClick={() => setTab('portraits')}>Portraits</button>
+                <button className={tab === 'seats' ? 'on' : ''} onClick={() => setTab('seats')}>At the table</button>
             </div>
-            {tab === 'portraits' ? <PortraitEditor /> : <>
+            {tab === 'seats' ? <SeatEditor /> : tab === 'portraits' ? <PortraitEditor /> : <>
             {!lookNext && (
                 <p className="tune-note">The classic look is on, so most sliders do nothing. <a href="?look=next">Back to the new look</a></p>
             )}

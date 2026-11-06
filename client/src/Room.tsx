@@ -343,7 +343,9 @@ export function Room() {
         // The face on the table's centre line, not the middle of the picture (a painting may hold
         // a flame, a sword or a mask off to one side: the user's call, 23 Oct, everyone centred).
         const faceX = (across.portrait.center?.[0] ?? 50) / 100;
-        const centerX = L.tableX + (0.5 - faceX) * w + bustDx, centerY = L.horizon - L.bustHeight * 0.8 + height / 2 + rise * height + bustDy;
+        // (seatShift: moved by eye, in the tuning panel's At the table tab.)
+        const [shiftX, shiftY] = across.portrait.seatShift ?? [0, 0];
+        const centerX = L.tableX + (0.5 - faceX) * w + (shiftX / 100) * L.bustHeight + bustDx, centerY = L.horizon - L.bustHeight * 0.8 + height / 2 + rise * height + (shiftY / 100) * L.bustHeight + bustDy;
         const b = materials.bust.uniforms;
         b.map.value = art.texture;
         b.brightness.value = brightness;
