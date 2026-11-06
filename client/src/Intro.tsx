@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { FilmDie, prepareOpeningThrow } from './FilmDie';
 import { film, type FilmThrow } from './game';
 import type { RollTrack } from './physics';
@@ -67,7 +67,9 @@ export function liftCurtain() {
 function useScreen() {
     const [size, setSize] = useState({ W: window.innerWidth, H: window.innerHeight });
     useEffect(() => {
-        const measure = () => setSize({ W: window.innerWidth, H: window.innerHeight });
+        // (Only when the width changes, as the phone turns: an address bar showing or hiding changes the
+        // height, and would move a painting mid-shot.)
+        const measure = () => setSize(was => (was.W === window.innerWidth ? was : { W: window.innerWidth, H: window.innerHeight }));
         window.addEventListener('resize', measure);
         return () => window.removeEventListener('resize', measure);
     }, []);
@@ -126,31 +128,78 @@ function Line({ at, out, place = 'low', text }: { at: number[]; out: number; pla
     );
 }
 
-// Rain: one tile of straight-down streaks, scrolled by exactly its own height, the whole layer turned
-// a little so it falls aslant (it used to scroll sideways too, so it hopped at every repeat: the user, 5 Nov).
-let rainTile = '';
-function rainImage() {
-    if (rainTile) return rainTile;
-    const size = 320, canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    const g = canvas.getContext('2d')!;
-    g.lineCap = 'round';
-    let seed = 7;
-    const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 46; i++) {
-        const x = r() * size, y = r() * size, len = 14 + r() * 26;
-        g.strokeStyle = `rgba(190,215,240,${(0.1 + r() * 0.25).toFixed(2)})`;
-        g.lineWidth = 0.7 + r() * 0.7;
-        // Drawn again across the tile's edges, so it joins up as it scrolls.
-        for (const [ox, oy] of [[0, 0], [size, 0], [0, size], [-size, 0], [0, -size]]) {
-            g.beginPath();
-            g.moveTo(x + ox, y + oy);
-            g.lineTo(x + ox, y + oy + len);
-            g.stroke();
-        }
-    }
-    return (rainTile = canvas.toDataURL());
+// Rain: streaks drawn afresh each frame on one canvas the size of the screen. (Until 6 Nov, two big
+// scrolling layers per shot, far too much for a phone's graphics memory, with everything else.)
+function Rain() {
+    const canvas = useRef<HTMLCanvasElement>(null);
+    useEffect(() => {
+        const el = canvas.current;
+        const g = el?.getContext('2d');
+        if (!el || !g) return;
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+        const W = window.innerWidth, H = window.innerHeight;
+        el.width = Math.round(W * ratio);
+        el.height = Math.round(H * ratio);
+        g.scale(ratio, ratio);
+        g.lineCap = 'round';
+        // A little slant, as the wind has it: for each pixel down, this far left.
+        const slant = Math.tan((9 * Math.PI) / 180);
+        const area = W * H;
+        const make = (count: number, speed: number, long: number) => Array.from({ length: Math.min(count, 500) }, () => {
+            const len = long * (0.5 + Math.random() * 0.8);
+            return { x: Math.random() * (W + H * slant), y: Math.random() * (H + 60) - 60, len, v: speed * (0.9 + Math.random() * 0.2) };
+        });
+        const layers = [
+            { drops: make(area / 1500, 340, 22), width: 0.8, colour: 'rgba(190, 215, 240, 0.1)' },
+            { drops: make(area / 2600, 760, 32), width: 1.2, colour: 'rgba(200, 222, 245, 0.24)' }
+        ];
+        const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let frame = 0, last = performance.now();
+        const draw = (now: number) => {
+            const dt = Math.min(0.05, (now - last) / 1000);
+            last = now;
+            g.clearRect(0, 0, W, H);
+            for (const { drops, width, colour } of layers) {
+                g.lineWidth = width;
+                g.strokeStyle = colour;
+                g.beginPath();
+                for (const d of drops) {
+                    if (!still) d.y += d.v * dt;
+                    if (d.y > H) { d.y = -d.len - Math.random() * 40; d.x = Math.random() * (W + H * slant); }
+                    const x = d.x - d.y * slant;
+                    g.moveTo(x, d.y);
+                    g.lineTo(x - d.len * slant, d.y + d.len);
+                }
+                g.stroke();
+            }
+            if (!still) frame = requestAnimationFrame(draw);
+        };
+        frame = requestAnimationFrame(draw);
+        return () => cancelAnimationFrame(frame);
+    }, []);
+    return <canvas ref={canvas} className="film-rain" aria-hidden="true" />;
 }
+
+// A part of the film exists only around its own time (6 Nov: with every shot alive for the whole film
+// a phone was asked for nearly 50 layers at once, and the last scene glitched). Its CSS delays are all
+// from the film's start, so it passes on how far the film had got as it appeared (--elapsed).
+interface FilmClock { now: () => number }
+function Timed({ clock, from, to, children }: { clock: FilmClock; from: number; to: number; children: ReactNode }) {
+    const now = clock.now();
+    return now >= T(from) && now < T(to) ? <TimedBody clock={clock}>{children}</TimedBody> : null;
+}
+function TimedBody({ clock, children }: { clock: FilmClock; children: ReactNode }) {
+    const [elapsed] = useState(clock.now);
+    return <div style={vars({ display: 'contents', '--elapsed': `${elapsed.toFixed(3)}s` })}>{children}</div>;
+}
+// Each part: when it appears and goes, a moment either side of its time on screen.
+const WINDOWS = {
+    town: [5.6, 12.3], portal: [11.6, 15.3], ship: [14.5, 17.7], door: [24.2, 99],
+    lineGame: [-1, 5.7], lineTown: [6.4, 11.9], linePortal: [12.1, 15], lineShip: [14.8, 17.5], lesson: [17.2, 25.1], lineDoor: [24.9, 28.9],
+    flood: [28, 99], out: [28.8, 99]
+} as const;
+const HITS = [6, 12, 18, 24];
+const hitWindow = (t: number) => [t - 0.2, t + 0.9] as const;
 
 // The left and right of the foreground frame slide out past the camera, faster than the town.
 const FG = { width: 1376, height: 768, leftEdge: 440, rightEdge: 970, lantern: [1105, 305] };
@@ -177,6 +226,12 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
     const screen = useScreen();
     const [ready, setReady] = useState(false);
     const [opening, setOpening] = useState<RollTrack | null>(null);
+    // The film's clock: seconds since it started (a dev still holds it at one moment).
+    const started = useRef(0);
+    const held = useRef<number | null>(null);
+    const clock = useRef<FilmClock>({ now: () => held.current ?? (performance.now() - started.current) / 1000 }).current;
+    const [, setTick] = useState(0); // (parts come and go when this moves on)
+    const [still, setStill] = useState(0);
     const dieClock = useRef({ at: Infinity });
     const dieDrawn = useRef<() => void>(() => {});
     const root = useRef<HTMLDivElement>(null);
@@ -213,16 +268,18 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
             setOpening(die);
             await Promise.race([new Promise<void>(r => { dieDrawn.current = r; }), new Promise(r => setTimeout(r, 2500))]);
             if (gone) return;
+            started.current = performance.now();
             setReady(true);
-            const started = performance.now();
+            // Parts come and go on these.
+            [...Object.values(WINDOWS), ...HITS.map(hitWindow)].flat().filter(t => t < 40).forEach(t => after(T(t) + 0.005, () => setTick(n => n + 1)));
             // The die's first hit on the music's first (its throw starts just before it).
             const hit = die.impacts[0]?.frame ?? 0;
             const dieAt = Math.max(0, LEAD - hit / 60);
-            dieClock.current.at = started + dieAt * 1000;
+            dieClock.current.at = started.current + dieAt * 1000;
             after(dieAt, () => playDiceImpacts(die.impacts));
             after(T(6.4), () => setOpening(null)); // (its canvas goes once the town has covered it)
             // (A sound that arrives late comes in where the film has got to.)
-            void sound.then(() => { if (!gone) stopSound.current = playFilmSound(LEAD, (performance.now() - started) / 1000); });
+            void sound.then(() => { if (!gone) stopSound.current = playFilmSound(LEAD, (performance.now() - started.current) / 1000); });
             after(DICE_FROM, () => film.showTable());
             throws.forEach((one: FilmThrow, i) => after(THROW_AT[i], () => film.playThrow(one)));
             after(DICE_TO, () => film.hideTable());
@@ -243,11 +300,12 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
     useEffect(() => {
         if (!import.meta.env.DEV || !ready) return;
         (window as unknown as { __filmSeek: (t: number) => void }).__filmSeek = t => {
-            root.current?.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = T(t) * 1000; });
+            held.current = T(t);
+            setStill(n => n + 1);
+            requestAnimationFrame(() => root.current?.getAnimations({ subtree: true }).forEach(a => a.pause()));
         };
     }, [ready]);
 
-    const rain = useMemo(rainImage, []);
     const { W, H } = screen;
 
     return (
@@ -260,9 +318,9 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
                 </div>
             )}
             {ready && (
-                <>
+                <Fragment key={still}>
 
-                    <Shot at={5.85} end={11.7} fade={0.45}>
+                    <Timed clock={clock} from={WINDOWS.town[0]} to={WINDOWS.town[1]}><Shot at={5.85} end={11.7} fade={0.45}>
                         <Plate src="intro/town.webp" screen={screen} at={5.85} len={6.6} drift={{ aspect: 1376 / 768, focus: [0.52, 0.62], aim: [0.5, 0.56], from: 1, to: 1.13 }}>
                             <Lamp x={0.216} y={0.54} size={0.13} beat={1} />
                             <Lamp x={0.783} y={0.5} size={0.13} beat={2} />
@@ -274,55 +332,53 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
                             <i className="film-mist two" />
                         </Plate>
                         <Foreground W={W} H={H} at={5.85} />
-                        <i className="film-rain" style={{ backgroundImage: `url(${rain})` }} />
-                        <i className="film-rain far" style={{ backgroundImage: `url(${rain})` }} />
-                    </Shot>
+                        <Rain />
+                    </Shot></Timed>
 
-                    <Shot at={11.85} end={14.8} fade={0.3}>
+                    <Timed clock={clock} from={WINDOWS.portal[0]} to={WINDOWS.portal[1]}><Shot at={11.85} end={14.8} fade={0.3}>
                         <Plate src="yawning-portal.webp" screen={screen} at={11.85} len={3.6} drift={{ aspect: 1584 / 672, focus: [0.505, 0.6], aim: [0.5, 0.56], seen: 0.75, from: 1.02, to: 1.16 }}>
                             <Lamp x={0.505} y={0.62} size={0.15} beat={2} colour="rgba(96, 214, 255, 0.5)" />
                             <Lamp x={0.19} y={0.6} size={0.1} beat={5} />
                         </Plate>
-                    </Shot>
+                    </Shot></Timed>
 
-                    <Shot at={14.8} end={17.2} fade={0.3}>
+                    <Timed clock={clock} from={WINDOWS.ship[0]} to={WINDOWS.ship[1]}><Shot at={14.8} end={17.2} fade={0.3}>
                         <Plate src="salty-swallow.webp" screen={screen} at={14.8} len={3.1} drift={{ aspect: 1584 / 672, focus: [0.68, 0.45], aim: [0.5, 0.5], seen: 0.75, from: 1.2, to: 1.04 }}>
                             <Lamp x={0.292} y={0.25} size={0.06} beat={1} />
                             <Lamp x={0.71} y={0.28} size={0.06} beat={3} />
                             <Lamp x={0.2} y={0.62} size={0.06} beat={4} />
                             <Lamp x={0.94} y={0.42} size={0.08} beat={6} colour="rgba(140, 190, 255, 0.4)" />
                         </Plate>
-                    </Shot>
+                    </Shot></Timed>
 
-                    <Shot at={24.5} end={40} fade={0.6}>
+                    <Timed clock={clock} from={WINDOWS.door[0]} to={WINDOWS.door[1]}><Shot at={24.5} end={40} fade={0.6}>
                         <Plate src="intro/door.webp" screen={screen} at={24.5} len={5.2} ease="cubic-bezier(0.5, 0, 0.9, 0.7)" drift={{ aspect: 896 / 1195, focus: [0.79, 0.56], aim: [0.5, 0.5], from: 1, to: 1.5 }}>
                             <Lamp x={0.643} y={0.47} size={0.17} beat={1} />
                             <Lamp x={0.232} y={0.482} size={0.1} beat={2} />
                             <Lamp x={0.18} y={0.49} size={0.05} beat={3} />
                             <i className="film-doorlight" style={vars({ '--at': `${T(26)}s` })} />
                         </Plate>
-                        <i className="film-rain" style={{ backgroundImage: `url(${rain})` }} />
-                        <i className="film-rain far" style={{ backgroundImage: `url(${rain})` }} />
-                    </Shot>
+                        <Rain />
+                    </Shot></Timed>
 
                     {/* The music's hits. */}
-                    {[6, 12, 18, 24].map(t => <i key={t} className="film-flash" style={vars({ '--at': `${T(t - 0.04)}s` })} />)}
+                    {HITS.map(t => <Timed key={t} clock={clock} from={hitWindow(t)[0]} to={hitWindow(t)[1]}><i className="film-flash" style={vars({ '--at': `${T(t - 0.04)}s` })} /></Timed>)}
 
-                    <Line place="under" at={[1.5]} out={5.1} text="Every town has a game." />
-                    <Line at={[6.7, 8.1, 9.6]} out={11.3} text="In this one, some play for gold, *others* play for glory." />
-                    <Line at={[12.3]} out={14.4} text="Few get past the Portal." />
-                    <Line at={[15]} out={16.9} text="Fewer still get past the Ship." />
-                    <p className="film-line top lesson" style={vars({ '--start': `${THROW_AT[0]}s`, '--end': `${T(24.5)}s` })}>
+                    <Timed clock={clock} from={WINDOWS.lineGame[0]} to={WINDOWS.lineGame[1]}><Line place="under" at={[1.5]} out={5.1} text="Every town has a game." /></Timed>
+                    <Timed clock={clock} from={WINDOWS.lineTown[0]} to={WINDOWS.lineTown[1]}><Line at={[6.7, 8.1, 9.6]} out={11.3} text="In this one, some play for gold, *others* play for glory." /></Timed>
+                    <Timed clock={clock} from={WINDOWS.linePortal[0]} to={WINDOWS.linePortal[1]}><Line at={[12.3]} out={14.4} text="Few get past the Portal." /></Timed>
+                    <Timed clock={clock} from={WINDOWS.lineShip[0]} to={WINDOWS.lineShip[1]}><Line at={[15]} out={16.9} text="Fewer still get past the Ship." /></Timed>
+                    <Timed clock={clock} from={WINDOWS.lesson[0]} to={WINDOWS.lesson[1]}><p className="film-line top lesson" style={vars({ '--start': `${THROW_AT[0]}s`, '--end': `${T(24.5)}s` })}>
                         <span className="film-word" style={vars({ '--at': `${THROW_AT[0]}s` })}>Find a 2. </span>
                         <span className="film-word" style={vars({ '--at': `${THROW_AT[1]}s` })}>Find a 4. </span>
                         <span className="film-word gold" style={vars({ '--at': `${THROW_AT[2]}s` })}>Chase 24.</span>
-                    </p>
-                    <Line at={[25.1, 26.5]} out={28.3} text="But first, you have to get past the bouncer..." />
+                    </p></Timed>
+                    <Timed clock={clock} from={WINDOWS.lineDoor[0]} to={WINDOWS.lineDoor[1]}><Line at={[25.1, 26.5]} out={28.3} text="But first, you have to get past the bouncer..." /></Timed>
 
                     {/* Through the door: its light floods the screen, then black. */}
-                    <i className="film-floodlight" style={vars({ '--at': `${T(28.3)}s` })} />
-                    <i className="film-out" style={vars({ '--at': `${T(29)}s` })} />
-                </>
+                    <Timed clock={clock} from={WINDOWS.flood[0]} to={WINDOWS.flood[1]}><i className="film-floodlight" style={vars({ '--at': `${T(28.3)}s` })} /></Timed>
+                    <Timed clock={clock} from={WINDOWS.out[0]} to={WINDOWS.out[1]}><i className="film-out" style={vars({ '--at': `${T(29)}s` })} /></Timed>
+                </Fragment>
             )}
             <i className="film-bar top" />
             <i className="film-bar bottom" />
