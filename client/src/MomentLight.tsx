@@ -45,7 +45,7 @@ function kindOf(m: AbilityMoment): string | null {
         case 'Inkfire Brand': return 'ink';
         case 'Divine Smite': return 'smite';
         case 'Astral Flood': return 'flood';
-        case 'Written in the Stars': return 'stars';
+        case 'Starry Form': return 'stars';
         case 'The Cloak': return 'cloak';
         case 'All In': return 'allIn';
         default: return null;

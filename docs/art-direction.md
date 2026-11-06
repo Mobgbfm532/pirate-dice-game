@@ -149,6 +149,16 @@ Done 3 Nov: the user painted all five (Ha! is Frak's grinning face with his ciga
 matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320`) into
 `client/public/art/reactions/<id>.webp`; then add each id to `PAINTED_REACTIONS` in Hud.tsx.
 
+### The Salty Swallow's crew (wanted, 6 Nov)
+
+Busts like the other spots: waist up, facing us, on a flat solid magenta background, no checkerboard, no glow on the background, crisp edges, no text. *+ style line*
+
+**Jorvash, `art/bust-jorvash.jpg`**
+> A dignified ship's manservant aboard a fantasy sailing ship: an impeccably neat old-fashioned butler's coat in faded navy with brass buttons, weathered but composed face, one raised eyebrow, carrying a small silver tray with a dark red bottle and a glass of black water that gleams faintly. Warm lantern light from one side.
+
+**Yvesil, `art/bust-yvesil.jpg`**
+> A mysterious ship's oracle in a dark fantasy tavern style: sea-worn robes in deep teal hung with shells, knotted cord and small charms, pale watchful eyes, one hand raised over a scatter of old bones and a guttering candle, salt spray in her hair. Cool moonlight from one side and a little warm candlelight from below.
+
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
 A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the

@@ -40,7 +40,7 @@
 
     const ABILITY_NAMES = {
         reachAround: 'Reach Around',
-        constellationBlur: 'Constellation Blur',
+        constellationBlur: 'Starry Form', // Rokr's (Constellation Blur until 25 Oct, Written in the Stars until 6 Nov)
         deadeye24: 'The Ace of Spades',
         smoothTalk: 'Smooth Talk',
         mindWhip: 'Mind Whip',
@@ -54,7 +54,8 @@
         astralFlood: 'Astral Flood',
         // The Salty Swallow as the final tier (25 Oct).
         writtenInStars: 'Written in the Stars', // Rokr's
-        deadEye: 'Dead Eye', // the Hangman's, beside his Ace
+        deadEye: 'Dead Eye', // the Hangman's until 6 Nov (its code is dormant)
+        penitentStare: 'Penitent Stare', // the Hangman's, beside his Ace
         jaguarPhases: 'Smooth Talk', // Jaguar's first phase (the use is a Thonic he talks off your shelf)
         cloak: 'The Cloak', // Jaguar's second phase
         allIn: 'All In' // and his last

@@ -30,7 +30,9 @@ module.exports = {
         // The Salty Swallow as the final tier (25 Oct; balance/experiments/final-ship.js): Rokr's
         // Written in the Stars (turns a fight), the Hangman's Dead Eye, Jaguar's Smooth Talk
         // (Thonics he talks off your shelf, in his first phase).
-        writtenInStars: 3, deadEye: 1, jaguarPhases: 2
+        writtenInStars: 3, deadEye: 1, jaguarPhases: 2,
+        // 6 Nov, the user's: the Hangman's Penitent Stare in place of Dead Eye.
+        penitentStare: 1
     },
     // How the final tier's abilities play (each set by simulation, 25 Oct): a sensible player,
     // fresh, wins Klarg 27%, Rokr 26%, the Hangman 26%, Jaguar 14% (the Yawning Portal ~40%,
@@ -128,6 +130,14 @@ module.exports = {
         // event (if no thief, Stranger or Darren found you): swear fealty, and your dice never land
         // on 1 for the next kramFights fights. First guesses, to set by play.
         bardPrice: 8,           // rising, priceRise
+        // The Salty Swallow's own (6 Nov, the user's; first guesses).
+        yvesilPrice: 8,         // an omen from Yvesil the oracle (rising)
+        omenGoodChance: 67,     // percent of her omens that are good
+        jorvashPrice: 8,        // a refreshment from Jorvash the manservant (rising)
+        notaroRed: 2,           // Notaro Red: your first hand that counts next fight scores this much more
+        ebonShieldHearts: 1,    // Water of the Ebon Shield: this many extra hearts next fight
+        blackSpot: 1,           // The Black Spot: all your hands next fight score this much less
+        stareEachHeart: 2,      // the Hangman's Penitent Stare: points off your hand per heart you've taken
         cuttingWords: 3,
         kramChance: 15,
         kramFights: 2

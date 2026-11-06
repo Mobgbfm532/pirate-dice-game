@@ -7,6 +7,18 @@ Since 28 October an ability's screen shows **only its name**. The longer lines t
 under it are gone. What you still see is the entrance card, the name on the ability screen, and
 the short plaque under the Roll button for the abilities that last a round or a turn (since 5 Nov on one slim line, "Name: What it does", capitalised).
 
+## The Salty Swallow's new text (6 Nov; first drafts except where marked as the user's)
+
+**Rokr**: Starry Form. Card: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." Plaque: "Keep blind: they show at your next throw".
+
+**The Hangman**: Penitent Stare (the user's name). Card: "Once a fight, after he's lost a life: this round your hand scores 2 less for each heart you've taken from him." Plaque: "Your hand scores [n] less".
+
+**Yvesil**, "Oracle of the Salty Swallow". Card: "Shall I read your next fight?" / "A good omen, or a bad one". Scene: "Cross her palm, and she reads your fight with [next]. It may not be what you want to hear." Good: "The sea smiles on you." Bad: "Ah. I am sorry." Walking away: "The sea will tell you itself, then." Omens: Fair Winds, Following Sea, The Albatross, The Black Spot (the user's picks).
+
+**Jorvash**, "Manservant of the Salty Swallow". Card: "Something to fortify you?" / "A refreshment for the next fight". Scene: "One of these before you face [next]?" After: "Very good." / "As you wish." Refreshments (the user's names): Notaro Red, Water of the Ebon Shield.
+
+**Thom, aboard** (the user's words, one at random each fight): "Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest." / "There's number one customer!" / "You're putting my kid through Dwemercore!"
+
 ## The opponents
 
 The entrance card (and the `i` on the nameplate) shows the line about them, then each ability with what it does, as split on 5 Nov: the wording below is the same, except that Jaguar's two later abilities and his empty-shelf talk are spelled out from their badges. Where: name and card in `server.js` (`TAVERN_ENCOUNTERS`, `blurb` and `powers`); ability names in
@@ -55,7 +67,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 
 **Brodor**: Astral Flood (boss)
 - Entrance card: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
-- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
+- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" Then: "Word has spread, the Salty Swallow has just docked - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow
 
@@ -64,7 +76,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 
 **Rokr**: Written in the Stars
 - Entrance card: "Rokr reads the dice in the stars. Written in the Stars: for a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept."
-- Badge: "Next throw binds [faces]", then "Bound: [faces]. Next: [faces]"
+- (Written in the Stars, dormant since 6 Nov.) Badge: "Next throw binds [faces]", then "Bound: [faces]. Next: [faces]"
 
 **The Hangman**: Dead Eye, and The Ace of Spades (his revolver)
 - Entrance card: "The Hangman and The Ace of Spades, his revolver. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24."

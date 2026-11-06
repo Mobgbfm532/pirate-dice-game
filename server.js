@@ -283,9 +283,9 @@ const TAVERN_ENCOUNTERS = [
         name: 'Rokr',
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
-        ability: 'writtenInStars',
+        ability: 'constellationBlur',
         blurb: "Rokr reads the dice in the stars.",
-        powers: [{ name: "Written in the Stars", text: "For a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept." }]
+        powers: [{ name: "Starry Form", text: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." }]
     },
     {
         id: 'hangman',
@@ -293,10 +293,10 @@ const TAVERN_ENCOUNTERS = [
         name: 'The Hangman',
         avatar: '🤠',
         lives: BALANCE.opponentLives.hangman,
-        ability: 'deadEye',
-        abilities: ['deadEye', 'deadeye24'], // Dead Eye, and his Ace kept for his last stand
+        ability: 'penitentStare',
+        abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
         blurb: "The Hangman and The Ace of Spades, his revolver.",
-        powers: [{ name: "Dead Eye", text: "Once a fight he shoots your best die as you finish and it rolls again." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
+        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life: this round your hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
     },
     {
         id: 'jaguar',
@@ -448,7 +448,7 @@ const PLACES = {
     saltySwallow: {
         name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'elfKid'],
+        spots: ['thom', 'shrine', 'elfKid', 'jorvash', 'yvesil'], // (Thom stows away, 6 Nov)
         events: []
     }
 };
@@ -482,6 +482,8 @@ const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
 const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
 const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
 const bardPrice = run => risingPrice(run, 'bard', INTERLUDE.bardPrice || 0);
+const yvesilPrice = run => risingPrice(run, 'yvesil', INTERLUDE.yvesilPrice || 0);
+const jorvashPrice = run => risingPrice(run, 'jorvash', INTERLUDE.jorvashPrice || 0);
 
 // The Wild Magic Hot Tub's surges (weights in shared/balance.js). The dice ones work on
 // HOT_TUB_DIE, on the player's turns, for the next fight (tavernRun.tubSurge).
@@ -523,7 +525,11 @@ function rollFaceFor(room, turn) {
     // The rolls that lost, this throw (Double Bubble, Flourish): sent with diceRolled as ghosts.
     turn.ghosts = [];
     if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn) : rollFace;
-    let face = playerFace(room, turn);
+    let plainFace = playerFace(room, turn);
+    // Yvesil's Fair Winds and the Albatross: on your first throw of each round, your 1s (or 6s) roll again.
+    let omen = room.tavernRun.omen;
+    let again = !turn.hasRolled && (omen === 'fairWinds' ? 1 : omen === 'albatross' ? 6 : 0);
+    let face = again ? d => { let v = plainFace(d); return v === again ? plainFace(d) : v; } : plainFace;
     if (!hasKeepsake(room, 'gamblersCharm')) return face;
     // The Gambler's Charm: the last die left to throw is thrown twice, and you keep the better (a
     // 2 or 4 you still need, else the higher; in a cursed round the lower). The other rises as a ghost.
@@ -641,7 +647,7 @@ function getTavernRunState(room) {
         shelf: room.tavernRun.shelf.map(shelfView(room.tavernRun)),
         shelfSize: shelfSizeOf(room),
         shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
-        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun), elfBars: Object.fromEntries(ELF_BARS.map(id => [id, thonicPrice(room.tavernRun, id)])) },
+        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun), yvesil: yvesilPrice(room.tavernRun), jorvash: jorvashPrice(room.tavernRun), elfBars: Object.fromEntries(ELF_BARS.map(id => [id, thonicPrice(room.tavernRun, id)])) },
         cloud: !!room.tavernRun.cloud,
         maxKeepsakes: MAX_KEEPSAKES, // Cotton Candy Cloud: the opponent can't see your score this round
         // The Bard's song for this fight: Inspiring Song ('ready' until your first throw, 'now' while
@@ -653,6 +659,11 @@ function getTavernRunState(room) {
         },
         // Sworn to Kram: this fight (now) and how many more after it (more).
         kram: { now: !!room.tavernRun.kram, more: room.tavernRun.kramFights || 0 },
+        // Yvesil's omen and Jorvash's Notaro Red: this fight's, and bought for the next.
+        omen: omenView(room.tavernRun.omen),
+        nextOmen: omenView(room.tavernRun.nextOmen),
+        notaro: !!room.tavernRun.notaro,
+        nextNotaro: !!room.tavernRun.nextNotaro,
         thomMet: !!room.tavernRun.thomMet, // you've been to Thom's cart this run
         // The opponents the player has met, in any run (ids): the rest show as "?" when the run ends.
         met: [...metOf((Object.values(room.players).find(p => p.id !== BOT_ID) || {}).name)],
@@ -828,7 +839,7 @@ function applyTavernRollAbilities(roomCode, room, turn) {
     }
     if (fireTavernAbility(roomCode, room, encounter, 'constellationBlur')) {
         turn.blurActive = true;
-        moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.constellationBlur, text: 'Rokr blurs the dice with constellations.' });
+        moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.constellationBlur, text: 'Your dice land hidden under twinkling constellations.' });
     }
     return moves;
 }
@@ -889,6 +900,20 @@ function throwAgain(roomCode, room, turn, rerolled) {
         if (rooms[roomCode] === room && room.turn && room.turn.key === key) io.to(roomCode).emit('diceRolled', thrown);
     }, lead);
 }
+
+// Yvesil the oracle (a spot on the Salty Swallow, 6 Nov): pay, and she reads your next fight.
+const OMENS = {
+    fairWinds: { name: 'Fair Winds', text: 'On your first throw of each round next fight, your 1s roll again.', good: true },
+    followingSea: { name: 'Following Sea', text: 'Your first dust next fight scores its dice as they lie instead.', good: true },
+    albatross: { name: 'The Albatross', text: 'On your first throw of each round next fight, your 6s roll again.', good: false },
+    blackSpot: { name: 'The Black Spot', text: `All your hands next fight score ${INTERLUDE.blackSpot ?? 1} less.`, good: false }
+};
+const omenView = id => (id && OMENS[id] ? { id, ...OMENS[id] } : null);
+// Jorvash the manservant (a spot on the Salty Swallow, 6 Nov): one of two, for the next fight.
+const REFRESHMENTS = [
+    { id: 'notaroRed', name: 'Notaro Red', text: `Your first hand that counts next fight scores ${INTERLUDE.notaroRed ?? 2} more.` },
+    { id: 'ebonShield', name: 'Water of the Ebon Shield', text: 'You start the next fight with one extra heart.' }
+];
 
 // The Bard's songs (a spot at the Yawning Portal), each for the next fight.
 const BARD_SONGS = [
@@ -1011,6 +1036,13 @@ function performEndTurn(roomCode) {
         busted = false;
         score = Rules.scoreDice(room.turn.dice).score;
     }
+    // Yvesil's Following Sea: your first dust this fight scores its dice as they lie.
+    if (room.mode === 'tavern-crawl' && currentId !== BOT_ID && busted && room.tavernRun.omen === 'followingSea') {
+        room.tavernRun.omen = null;
+        busted = false;
+        score = Rules.scoreDice(room.turn.dice).score;
+        sendMoment(roomCode, 'keepsakeActivated', { id: 'followingSea', name: OMENS.followingSea.name, text: `Your dust scores ${score}.`, who: 'Yvesil' });
+    }
     room.players[currentId].score = score;
     room.players[currentId].busted = busted;
 
@@ -1050,6 +1082,25 @@ function performEndTurn(roomCode) {
                 sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.deadEye, text: `The Hangman shoots your ${was}. It rolls again: ${shot.value}.`, die: shot.id, from: was, to: shot.value });
                 emitTurn(roomCode, { type: 'shot', die: shot.id });
             }
+        }
+        // The Hangman's Penitent Stare: this round your hand feels every heart you've taken from him.
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && effect && effect.kind === 'stare') {
+            let was = score;
+            score = Math.max(0, score - effect.off);
+            room.players[currentId].score = score;
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.penitentStare, text: `Your ${was} becomes ${score}.`, extra: `${was} → ${score}` });
+        }
+        // Yvesil's Black Spot, and Jorvash's Notaro Red (your first hand that counts).
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.omen === 'blackSpot') {
+            score = Math.max(0, score - (INTERLUDE.blackSpot ?? 1));
+            room.players[currentId].score = score;
+        }
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.notaro) {
+            room.tavernRun.notaro = false;
+            let was = score;
+            score = Math.min(Rules.PERFECT_SCORE, score + (INTERLUDE.notaroRed ?? 2));
+            room.players[currentId].score = score;
+            sendMoment(roomCode, 'keepsakeActivated', { id: 'notaroRed', name: 'Notaro Red', text: `Your ${was} becomes ${score}.`, who: 'Jorvash' });
         }
         // Jaguar, when your shelf was empty: he talks 3 off your finished hand instead.
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.talkThree) {
@@ -1527,6 +1578,10 @@ function createTavernRun() {
         tubSurge: null,
         ladysGrace: false,     // the Lady's Grace: the next dust that would cost a heart doesn't
         nextFightSong: null,   // the Bard's song for the next fight ('cuttingWords' or 'inspiringSong')
+        nextOmen: null,        // Yvesil's omen for the next fight, then omen during it
+        omen: null,
+        nextNotaro: false,     // Jorvash's Notaro Red for the next fight, then notaro during it, until it lands
+        notaro: false,
         song: null,            // Inspiring Song this fight: 'ready', then your first throw's turn key
         cuttingWords: false,   // Cutting Words this fight, until it lands
         puffs: {},             // Elf Bars on the shelf: puffs left, by id
@@ -1666,6 +1721,11 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
         room.tavernRun.nextFightSong = null;
         room.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
         room.tavernRun.cuttingWords = song === 'cuttingWords';
+        // Yvesil's omen and Jorvash's Notaro Red, for this one fight.
+        room.tavernRun.omen = room.tavernRun.nextOmen || null;
+        room.tavernRun.nextOmen = null;
+        room.tavernRun.notaro = !!room.tavernRun.nextNotaro;
+        room.tavernRun.nextNotaro = false;
         // Each Elf Bar may be puffed once a fight; Mystery Flavour tastes of a new one each fight.
         room.tavernRun.puffed = {};
         room.tavernRun.mysteryFlavour = ELF_BARS[crypto.randomInt(0, ELF_BARS.length)];
@@ -1761,6 +1821,16 @@ function beginTavernRound(roomCode, room) {
                 run.encounterKeepsakeUses.bentCopper = true;
                 emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield protects a life.');
             } else if (human && human.lives > 1) human.lives--;
+        }
+        return;
+    }
+    // The Hangman's Penitent Stare (6 Nov, the user's): once a fight, after he's lost a life: this round
+    // your hand scores less for each heart you've taken from him.
+    if (encounter.ability === 'penitentStare') {
+        let taken = bot ? encounter.lives - bot.lives : 0;
+        if (taken > 0 && fireTavernAbility(roomCode, room, encounter, 'penitentStare')) {
+            run.roundEffect = { kind: 'stare', by: 'opponent', ability: 'penitentStare', as: null, off: taken * (INTERLUDE.stareEachHeart ?? 2) };
+            sendMoment(roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, `This round your hand scores ${run.roundEffect.off} less.`));
         }
         return;
     }
@@ -1936,7 +2006,7 @@ function pickSpots(room) {
     let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
     // A spot that costs more than the purse holds isn't offered (the Shrine and the hot tub cost
     // gold since 21 Oct).
-    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
+    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'yvesil' || purse >= yvesilPrice(room.tavernRun)) && (id !== 'jorvash' || purse >= jorvashPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
     if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
@@ -2709,6 +2779,10 @@ io.on('connection', (socket) => {
             run.interlude = { stage: 'elfKid', stock: ELF_BARS.map(thonicView), puffs: ELF_BAR_PUFFS, bought: [] };
         } else if (spot === 'bard') {
             run.interlude = { stage: 'bard', songs: BARD_SONGS, price: bardPrice(run) };
+        } else if (spot === 'yvesil') {
+            run.interlude = { stage: 'yvesil', price: yvesilPrice(run) };
+        } else if (spot === 'jorvash') {
+            run.interlude = { stage: 'jorvash', drinks: REFRESHMENTS, price: jorvashPrice(run) };
         }
         emitState(socket.roomCode);
     });
@@ -2838,6 +2912,48 @@ io.on('connection', (socket) => {
             run.stats.spent += price;
             run.nextFightSong = song.id;
             run.interlude = { stage: 'done', spot: 'bard', song };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // Yvesil: pay and hear your omen for the next fight, good or bad (false: walk away, nothing paid).
+    socket.on('yvesilPick', (ask) => {
+        let room = interludeAt('yvesil');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (!ask) {
+            run.interlude = { stage: 'done', spot: 'yvesil', omen: null };
+        } else {
+            let price = yvesilPrice(run);
+            if (run.purse < price) return;
+            noteBought(run, 'yvesil');
+            run.purse -= price;
+            run.stats.spent += price;
+            let good = crypto.randomInt(0, 100) < (INTERLUDE.omenGoodChance ?? 67);
+            let pool = Object.keys(OMENS).filter(id => OMENS[id].good === good);
+            run.nextOmen = pool[crypto.randomInt(0, pool.length)];
+            run.interlude = { stage: 'done', spot: 'yvesil', omen: omenView(run.nextOmen) };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // Jorvash: pay for one of his two refreshments for the next fight (null: walk away, nothing paid).
+    socket.on('jorvashPick', (drinkId) => {
+        let room = interludeAt('jorvash');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (drinkId === null) {
+            run.interlude = { stage: 'done', spot: 'jorvash', drink: null };
+        } else {
+            let drink = REFRESHMENTS.find(d => d.id === drinkId);
+            let price = jorvashPrice(run);
+            if (!drink || run.purse < price) return;
+            noteBought(run, 'jorvash');
+            run.purse -= price;
+            run.stats.spent += price;
+            if (drink.id === 'notaroRed') run.nextNotaro = true;
+            else run.nextFightHearts = (run.nextFightHearts || nextHearts(run)) + (INTERLUDE.ebonShieldHearts ?? 1);
+            run.interlude = { stage: 'done', spot: 'jorvash', drink };
         }
         emitState(socket.roomCode);
     });
@@ -2997,4 +3113,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES };

@@ -33,7 +33,7 @@ export interface Thonic { id: string; name: string; text: string; price: number;
 // score wins), the Devil (`by` throws three 6s; the other side can't score above devilCap),
 // Vaelin's Inkfire (your dice can't land on 6) or the Ridgeler's Divine Smite (lose the round,
 // lose two hearts). `by` is 'player' when Martha's mask was worn.
-export interface RoundEffect { kind: 'mind' | 'curse' | 'devil' | 'ink' | 'smite'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean }
+export interface RoundEffect { kind: 'mind' | 'curse' | 'devil' | 'ink' | 'smite' | 'stare'; by: 'opponent' | 'player'; ability: string; as: string | null; landed?: boolean; off?: number }
 
 // A Tavern Crawl opponent (server.js TAVERN_ENCOUNTERS).
 export interface Enemy { id: string; name: string; intro: string; blurb: string; powers: { name: string; text: string }[]; ability: string | null; lives: number; boss?: boolean }
@@ -59,7 +59,11 @@ export interface TavernRun {
     shop: { stock: Thonic[]; free?: boolean; first?: boolean; keepsakes?: (Keepsake & { price: number })[] } | null; // Thom's cart is open (free: the Loyalty Card's free Thonic is still to take; keepsakes: his back shelf)
     thomMet?: boolean; // you've been to Thom's cart this run (his first greeting is different)
     met?: string[]; // the opponents (ids) you, by name, have sat down with in any run; the rest show as "?" when a run ends
-    prices?: { shrine: number; hotTub: number; bard?: number; elfBars?: Record<string, number> };
+    prices?: { shrine: number; hotTub: number; bard?: number; yvesil?: number; jorvash?: number; elfBars?: Record<string, number> };
+    omen?: Omen | null; // Yvesil's omen this fight
+    nextOmen?: Omen | null;
+    notaro?: boolean; // Jorvash's Notaro Red, this fight until it lands
+    nextNotaro?: boolean;
     cloud?: boolean; // Cotton Candy Cloud: the opponent can't see your score this round
     maxKeepsakes?: number; // keepsakes you can carry at once // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
     // The Bard's song this fight: Inspiring Song ('ready' until your first throw, 'now' while it can
@@ -87,7 +91,9 @@ export interface TubSurge { id: 'noOnes' | 'twin' | 'lucky' | 'scalding' | 'sogg
 
 // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots
 // catch your eye and you go to one.
-export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub' | 'bard' | 'elfKid';
+export type Spot = 'thom' | 'shrine' | 'diceDen' | 'hotTub' | 'bard' | 'elfKid' | 'jorvash' | 'yvesil';
+export interface Omen { id: string; name: string; text: string; good: boolean }
+export interface Refreshment { id: 'notaroRed' | 'ebonShield'; name: string; text: string }
 export interface BardSong { id: 'cuttingWords' | 'inspiringSong'; name: string; text: string }
 export interface DiceThrow { you: [number, number]; them: [number, number] }
 export type Interlude =
@@ -101,6 +107,10 @@ export type Interlude =
     | { stage: 'bard'; songs: BardSong[]; price: number } // the Bard (Yawning Portal): a song for the next fight
     | { stage: 'kram'; fights: number } // the Cult of Kram (a Yawning Portal event): swear fealty, no 1s for `fights` fights
     | { stage: 'done'; spot: 'bard'; song: BardSong | null }
+    | { stage: 'yvesil'; price: number } // Yvesil (the Salty Swallow): an omen for the next fight
+    | { stage: 'done'; spot: 'yvesil'; omen: Omen | null }
+    | { stage: 'jorvash'; drinks: Refreshment[]; price: number } // Jorvash (the Salty Swallow): a refreshment for the next fight
+    | { stage: 'done'; spot: 'jorvash'; drink: Refreshment | null }
     | { stage: 'done'; spot: 'kram'; sworn: boolean; fights: number }
     // Darren Snakehands: one die (up to smashOn a Thonic smashes, up to giftOn a free one, else a Thonic and gold).
     | { stage: 'darren'; smashOn: number; giftOn: number; roll?: number; outcome?: 'smash' | 'gift' | 'catch'; smashed?: Thonic; paid?: number; thonic?: Thonic; gold?: number }
@@ -669,7 +679,7 @@ socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
 });
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
-const ABILITY_MOMENTS = new Set(['Reach Around', 'Constellation Blur', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
     'Disguises', 'Back of the Head', 'Inkfire Brand', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In']);
@@ -1023,6 +1033,16 @@ export const actions = {
     bardPick(id: string | null) {
         if (id) playChime(); else playSound('click');
         socket.emit('bardPick', id);
+    },
+    // Yvesil: hear your omen (false: walk away).
+    yvesilPick(ask: boolean) {
+        if (ask) playChime(); else playSound('click');
+        socket.emit('yvesilPick', ask);
+    },
+    // Jorvash: a refreshment for the next fight (null: walk away).
+    jorvashPick(id: string | null) {
+        if (id) playChime(); else playSound('click');
+        socket.emit('jorvashPick', id);
     },
     // The Cult of Kram: swear fealty, or refuse.
     kram(action: 'swear' | 'refuse') {

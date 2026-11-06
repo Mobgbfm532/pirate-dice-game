@@ -524,14 +524,15 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   - **Klarg** (`keepsStolen`, `klargWaits`): twice a fight he waits for a throw showing a 2 or 4 you
     still need, snatches it (`Rules.stealHighestActiveDie`) and keeps it: his next turn starts with it
     kept (`run.klargHand` → `syncTurn`). (Two first-throw steals cost ~12 points each: too much.)
-  - **Rokr's Written in the Stars** (replaces Constellation Blur): 3 turns a fight (`startStars`), the
+  - **Rokr's Starry Form (since 6 Nov, the user's; the id stays `constellationBlur`):** twice a fight your dice land hidden under twinkling constellations (`turn.blurActive`, viewTurn; Constellation in Dice.tsx): you keep blind, and they show at your next throw. Beatable more often than the Stars were (about 40% against 26%, simulated). The painting is still `ability-written-in-the-stars.webp`. Written in the Stars' code is dormant: 3 turns a fight (`startStars`), the
     stars mark two faces before each throw of the turn (`turn.nextMarks` → `turn.marks`); dice landing
     on them are bound (`turn.boundIds`; `Rules.toggleDie` refuses them; all bound: a free roll). The
     client: stars over bound dice (Constellation), the plaque "Bound: ... Next: ...".
-  - **The Hangman** (`abilities: ['deadEye', 'deadeye24']`): **Dead Eye**, once a fight, as you end
+  - **The Hangman** (`abilities: ['penitentStare', 'deadeye24']`, since 6 Nov, the user's): **Penitent Stare**, once a fight, as a round begins once he's lost a life (round effect `stare`, `off`): this round your hand scores 2 less for each heart you've taken (`stareEachHeart`; a plaque and `.stare-veil`; the score changes at End Turn, with its moment showing "20 → 16"). No painting yet. **Dead Eye** (dormant since 6 Nov), once a fight, as you end
     a hand that counts he shoots your best scoring die and it rolls again (`deadEyeRerolls`; turnState
     event `shot`); his **Ace of Spades** stays, for his last life. Clear-Eye counts all his abilities
     (`encounterAbilityLeft`).
+  - **Yvesil and Jorvash (6 Nov, the user's; spots on the ship; prices and chances first guesses in `interlude`; stand-in pictures, `darren.webp` and `stranger.webp`, until the user paints them, `SPOT_PORTRAITS`):** Yvesil the oracle (`yvesilPick`, `yvesilPrice` 8, rising, `omenGoodChance` 67%): an omen for the next fight, `OMENS`: Fair Winds and The Albatross (your 1s, or 6s, roll again on your first throw of each round, in `rollFaceFor`), Following Sea (your first dust scores as it lies), The Black Spot (hands score 1 less). Jorvash the manservant (`jorvashPick`, `jorvashPrice` 8, rising), one of two for the next fight, `REFRESHMENTS`: Notaro Red (your first hand that counts scores 2 more, at most 24) or Water of the Ebon Shield (one extra heart). Both show on your strip. **Thom has stowed away:** aboard, his line is one of three, drawn per fight (`THOM_SHIP_LINES`). So the ship's spots are Thom, the Shrine, Johnny, Jorvash and Yvesil.
   - **Jaguar** (`jaguarPhases`, `beginJaguarRound`, `run.jaguarPhase` in the state): **Smooth Talk** (3+
     lives; twice a fight, once a round) talks a Thonic off your shelf and drinks it (Healing heals him,
     Steady counts his dust as it lies, `jaguarSteady`); an empty shelf: 3 off your finished hand
@@ -808,18 +809,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    Sperm's line, and these document updates.
 2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
 3. **The Salty Swallow sets sail** (brainstormed 4 Nov, nothing decided or built): the ship leaves port during
-   its four fights, with environmental effects instead of the thief and the Stranger. Spots the user named:
-   Jorvash the manservant (in place of Thom), Yvesil the oracle, a smaller Shrine to the Lady (same effect), and a
-   fourth still to choose. Ideas offered: weather that hits both sides shown as a badge, a voyage in stages (casting
+   its four fights, with environmental effects instead of the thief and the Stranger. Jorvash and Yvesil are built (6 Nov); Skipper Bren was discussed in place of Johnny aboard and left out for now (the user, 6 Nov); a smaller Shrine to the Lady was mentioned. Their paintings are wanted (`docs/art-direction.md`). Ideas offered: weather that hits both sides shown as a badge, a voyage in stages (casting
    off for Klarg, a clear starry night for Rokr, a squall for the Hangman, the eye of the storm for Jaguar), the
    Swell tipping a die to a neighbouring face, Yvesil selling the forecast or turning the wind, the Galley's stew
    giving sea legs; events like a wave over the deck, flotsam, gulls, seasickness. To decide: both sides or only
-   the player, a fixed voyage or random weather. The ship's ability names are still working names (Written in
-   the Stars, Dead Eye, Smooth Talk, the Cloak, All In).
+   the player, a fixed voyage or random weather. The ship's other ability names are still working names (Smooth Talk, the Cloak, All In).
 4. **Small things waiting on the user's word:**
    - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
    - The thief's button and result still say "catch" ("Roll to catch the thief"); the sentence above says "spot".
-   - Brodor's invitation is still titled "Word from the docks", though his new line no longer mentions the docking.
    - Leaving the Potion Belt behind for a boss's keepsake with 3 Thonics carried hides the third (read in the code,
      not reproduced): `claimDrop` doesn't trim the shelf, and `Shelf` draws only `shelfSize` slots.
    - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).

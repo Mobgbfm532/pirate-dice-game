@@ -82,7 +82,7 @@ export const PORTRAITS: Record<string, Portrait> = {
 // the portrait editor, 23 Oct). The Shrine is a
 // painted scene rather than a cut-out; it's framed on the statue and candles. Each is
 // framed to show the whole head and what they hold.
-export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket' | 'hotTub' | 'darren' | 'bard' | 'kram' | 'elfKid', Portrait> = {
+export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' | 'pickpocket' | 'hotTub' | 'darren' | 'bard' | 'kram' | 'elfKid' | 'jorvash' | 'yvesil', Portrait> = {
     thom: seated('thom.webp', [50.3, 32.9], 0.95, 506, 720, [-3.2, -3.2]),
     shrine: seated('shrine.webp', [50, 48], 1.35, 1024, 1024, [0, 0]),
     diceDen: seated('dicer.webp', [50.9, 42.5], 1.35, 1036, 720, [-2.2, -4.6]),
@@ -92,7 +92,10 @@ export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' |
     darren: seated('darren.webp', [51.9, 35.6], 0.9, 716, 720, [2.7, -9.5]),
     bard: seated('bard.webp', [57, 23], 1.25, 475, 720),
     kram: seated('kram.webp', [52, 30], 0.95, 560, 720), // two faces: centred between them
-    elfKid: seated('elf-kid.webp', [50, 27], 1.25, 477, 720)
+    elfKid: seated('elf-kid.webp', [50, 27], 1.25, 477, 720),
+    // Stand-ins until the user's paintings of them come (6 Nov).
+    jorvash: seated('darren.webp', [51.9, 35.6], 0.9, 716, 720, [2.7, -9.5]),
+    yvesil: seated('stranger.webp', [53, 39.1], 1.75, 1048, 720, [6.3, 2])
 };
 
 // What a player picks on the start screen: since 30 Oct seven of the game's painted item icons
@@ -139,7 +142,7 @@ export interface PortraitEdit { zoom: number; nudge: [number, number] }
 const SPOT_NAMES: Record<keyof typeof SPOT_PORTRAITS, string> = {
     thom: 'Thom', shrine: "The Lady's Shrine", diceDen: 'The Dice Den gambler', stranger: 'The Hooded Stranger',
     pickpocket: 'The thief', hotTub: 'Wild Magic Hot Tub', darren: 'Darren Snakehands',
-    bard: 'The Bard', kram: 'The Cult of Kram', elfKid: 'Johnny Elf Bar'
+    bard: 'The Bard', kram: 'The Cult of Kram', elfKid: 'Johnny Elf Bar', jorvash: 'Jorvash', yvesil: 'Yvesil'
 };
 const REGISTRY: Record<string, Portrait> = {
     ...Object.fromEntries(Object.keys(PORTRAITS).filter(k => PORTRAITS[k].center && PORTRAITS[k].bust).map(k => [k, PORTRAITS[k]])),

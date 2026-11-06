@@ -129,6 +129,8 @@ const COMMANDS = {
         else if (stage === 'darren') run.interlude = { stage, smashOn: 2, giftOn: 4 };
         else if (stage === 'kram') run.interlude = { stage, fights: 2 };
         else if (stage === 'bard') run.interlude = { stage, songs: server.BARD_SONGS, price: 8 };
+        else if (stage === 'yvesil') run.interlude = { stage, price: 8 };
+        else if (stage === 'jorvash') run.interlude = { stage, drinks: server.REFRESHMENTS, price: 8 };
         else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100], bet: null, throws: [] };
         else if (stage === 'stranger') run.interlude = server.strangerOffer(r);
         else run.interlude = { stage: 'choose', spots };

@@ -381,7 +381,7 @@ export function playSound(name: SoundName, playbackRate = 1) {
 
 export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
-    'Constellation Blur': 'constellation',
+    'Starry Form': 'constellation',
     'The Ace of Spades': 'gunshot',
     'Back of the Head': 'sylvesterPunch',
     'Inkfire Brand': 'inkfire',
