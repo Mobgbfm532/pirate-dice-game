@@ -600,17 +600,17 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
             <span className="purse" aria-label={coins(run.purse)}><span aria-hidden="true">🪙</span> {run.purse}</span>
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
-                (the user, 21 Oct). Tap one for a reminder of what it does; it dims once spent this fight. */}
+                (the user, 21 Oct). Tap one for its info panel; it dims once spent this fight. */}
             {(run.keepsakes.length > 0 || run.ladysGrace || run.bard?.words || run.bard?.song || run.kram?.now) && (
                 <span className="keepsake-row">
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
                         : k.id === 'mysteryFlavour' ? <MysteryKeepsake key={k.id} snap={snap} state={state} />
                         : <KeepsakeIcon key={k.id} icon={keepsakeIcon(k.id)} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
-                    {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." blessing />}
-                    {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} blessing />}
+                    {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." kind="A blessing" blessing />}
+                    {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} kind="A song" blessing />}
                     {run.bard?.song && <SongKeepsake snap={snap} state={state} />}
-                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} blessing />}
+                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} kind="Fealty" blessing />}
                 </span>
             )}
         </div>
@@ -620,19 +620,52 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
 // Keepsakes that work once a fight (dimmed once they have).
 const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask', 'bottomlessFlask', 'mysteryFlavour']);
 
-function KeepsakeIcon({ icon, name, text, spent = false, blessing = false }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean }) {
-    const remind = () => { playSound('click'); showToast(typeof icon === 'string' ? `${icon} ${name}` : name, spent ? `${text} (Used this fight.)` : text, 'info', 4200); };
+// Any item's info panel, opened by a tap on it (6 Nov, the user's: like an opponent's card, and it
+// replaces the toast that went away by itself). An item that can be used now has its button here.
+interface ItemAction { label: string; note?: string; run: () => void }
+function ItemInfo({ icon, kind, name, text, status, actions: buttons = [], onClose }: { icon: React.ReactNode; kind: string; name: string; text: React.ReactNode; status?: string; actions?: ItemAction[]; onClose: () => void }) {
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return createPortal(
+        <div className="item-veil" role="dialog" aria-label={name} onClick={onClose}>
+            <div className="item-card">
+                <span className="item-picture" aria-hidden="true">{icon}</span>
+                <span className="item-kind">{kind}</span>
+                <span className="item-name">{name}</span>
+                <div className="item-text">{text}</div>
+                {status && <span className="item-status">{status}</span>}
+                {buttons.map(b => (
+                    <button key={b.label} className="primary item-use" onClick={e => { e.stopPropagation(); onClose(); b.run(); }}>
+                        {b.label}{b.note && <small>{b.note}</small>}
+                    </button>
+                ))}
+                <span className="tap">Tap to close</span>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+function KeepsakeIcon({ icon, name, text, spent = false, blessing = false, kind = 'A keepsake' }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean; kind?: string }) {
+    const [open, setOpen] = useState(false);
+    const close = useCallback(() => setOpen(false), []);
     return (
-        <button className={`keepsake-icon ${spent ? 'spent' : ''} ${blessing ? 'blessing' : ''}`} aria-label={`${name}: ${text}`} onClick={remind}>
-            <span aria-hidden="true">{icon}</span>
-        </button>
+        <>
+            <button className={`keepsake-icon ${spent ? 'spent' : ''} ${blessing ? 'blessing' : ''}`} aria-label={`About ${name}`} onClick={() => { playSound('click'); setOpen(true); }}>
+                <span aria-hidden="true">{icon}</span>
+            </button>
+            {open && <ItemInfo icon={icon} kind={kind} name={name} text={text} status={spent ? 'Used this fight' : undefined} onClose={close} />}
+        </>
     );
 }
 
 // Martha's mask: lit when it can be worn (your turn, once a fight, in a round no one has played
 // a trick in yet). Danhausen's Curse before you roll; the Duke's Devil any time in your turn
 // with three or more dice to throw (the user's call, 21 Oct): the next throw lands three 6s.
-// Tap, then pick; when it can't be worn, a tap is a reminder of what it does.
+// A tap opens its panel, with its choices when it can be worn.
 const MASK_TEXT = "Once a fight: wear Danhausen's Curse before you roll (lowest valid score wins the round), or the Duke's Devil any time in your turn with three or more dice to throw (your next throw lands three 6s).";
 
 function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
@@ -643,31 +676,24 @@ function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     const curse = ready && !turn!.hasRolled;
     const devil = ready && turn!.dice.filter(d => d.status === 'active').length >= 3;
     const usable = curse || devil;
-    useEffect(() => { if (!usable) setOpen(false); }, [usable]);
-    const wear = (kind: 'curse' | 'devil') => { setOpen(false); actions.wearMask(kind); };
-    const tap = () => {
-        playSound('click');
-        if (usable) setOpen(!open);
-        else showToast("🎭 Martha's Mask", run.maskReady ? MASK_TEXT : `${MASK_TEXT} (Used this fight.)`, 'info', 5200);
-    };
+    const close = useCallback(() => setOpen(false), []);
+    const devilNote = state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : turn?.hasRolled ? 'next throw: three 6s' : 'three 6s for you';
     return (
-        <span className="mask-keepsake">
-            <button className={`keepsake-icon ${usable ? 'usable' : ''} ${run.maskReady ? '' : 'spent'}`} aria-label={`Martha's Mask: ${MASK_TEXT}`} onClick={tap}>
+        <>
+            <button className={`keepsake-icon ${usable ? 'usable' : ''} ${run.maskReady ? '' : 'spent'}`} aria-label="About Martha's Mask" onClick={() => { playSound('click'); setOpen(true); }}>
                 <span aria-hidden="true">{keepsakeIcon('marthasMask')}</span>
             </button>
-            {open && (
-                <span className="mask-choice" role="group" aria-label="Wear a disguise for this round">
-                    {curse && <button onClick={() => wear('curse')}>Curse<small>lowest wins</small></button>}
-                    {devil && <button onClick={() => wear('devil')}>Devil<small>{state.tavernRun?.devilCap != null ? `three 6s; they max ${state.tavernRun.devilCap}` : turn!.hasRolled ? 'next throw: three 6s' : 'three 6s for you'}</small></button>}
-                </span>
-            )}
-        </span>
+            {open && <ItemInfo icon={keepsakeIcon('marthasMask')} kind="A keepsake" name="Martha's Mask" text={MASK_TEXT} status={run.maskReady ? undefined : 'Used this fight'} onClose={close} actions={[
+                ...(curse ? [{ label: 'Wear the Curse', note: 'lowest wins', run: () => actions.wearMask('curse') }] : []),
+                ...(devil ? [{ label: 'Wear the Devil', note: devilNote, run: () => actions.wearMask('devil') }] : [])
+            ]} />}
+        </>
     );
 }
 
 // Mystery Flavour, Martha's Elf Bar (4 Nov): once a fight it works as this fight's flavour does
 // (one of Johnny's four, drawn as the fight starts; its painting shows which). Lit when that
-// flavour could be puffed now; a tap shows "Puff" beside it (two taps, like the shelf).
+// flavour could be puffed now; a tap opens its panel, with "Puff" when it can be.
 const ELF_BAR_NAMES: Record<string, string> = { purpleHaze: 'Purple Haze', cottonCandyCloud: 'Cotton Candy Cloud', lemonLevitation: 'Lemon Levitation', watermelonHindsight: 'Watermelon Hindsight' };
 const ELF_BAR_TEXT: Record<string, string> = {
     purpleHaze: 'after a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it',
@@ -680,26 +706,24 @@ function MysteryKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) 
     const run = state.tavernRun!;
     const mystery = run.mystery;
     const [open, setOpen] = useState(false);
+    const close = useCallback(() => setOpen(false), []);
     const flavour = mystery?.flavour ?? 'purpleHaze';
     const usable = !!mystery?.ready && drinkable({ id: flavour, name: '', text: '', price: 0, drink: true, elf: true } as Thonic, snap, state);
-    useEffect(() => { if (!usable) setOpen(false); }, [usable]);
-    const text = `Martha's Elf Bar. One puff a fight; this fight it tastes of ${ELF_BAR_NAMES[flavour]}: ${ELF_BAR_TEXT[flavour]}.`;
-    const tap = () => {
-        playSound('click');
-        if (usable) setOpen(!open);
-        else showToast('Mystery Flavour', mystery?.ready ? text : `${text} (Used this fight.)`, 'info', 5200);
-    };
+    const taste = ELF_BAR_TEXT[flavour];
     return (
-        <span className="mask-keepsake">
-            <button className={`keepsake-icon ${usable ? 'usable' : ''} ${mystery?.ready ? '' : 'spent'}`} aria-label={`Mystery Flavour: ${text}`} onClick={tap}>
+        <>
+            <button className={`keepsake-icon ${usable ? 'usable' : ''} ${mystery?.ready ? '' : 'spent'}`} aria-label="About Mystery Flavour" onClick={() => { playSound('click'); setOpen(true); }}>
                 <span aria-hidden="true">{mysteryIcon(flavour)}</span>
             </button>
             {open && (
-                <span className="mask-choice" role="group" aria-label="Mystery Flavour">
-                    <button onClick={() => { setOpen(false); actions.puffMystery(); }}>Puff<small>{ELF_BAR_NAMES[flavour]}</small></button>
-                </span>
+                <ItemInfo icon={mysteryIcon(flavour)} kind="A keepsake" name="Mystery Flavour" status={mystery?.ready ? undefined : 'Puffed this fight'} onClose={close}
+                    text={<>
+                        <p>Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random.</p>
+                        <p><b>This fight: {ELF_BAR_NAMES[flavour]}.</b> {taste[0].toUpperCase() + taste.slice(1)}.</p>
+                    </>}
+                    actions={usable ? [{ label: 'Puff', note: ELF_BAR_NAMES[flavour], run: actions.puffMystery }] : []} />
             )}
-        </span>
+        </>
     );
 }
 
@@ -715,31 +739,22 @@ function mysteryIcon(flavour?: string) {
 }
 
 // The Bard's Inspiring Song: right after your first throw of the fight, before you keep a die,
-// it lights up; a tap shows "Throw again" beside it (two taps, so a stray one doesn't spend it).
+// it lights up; a tap opens its panel, with "Throw again" while it can be.
 function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const turn = snap.turn;
     const [open, setOpen] = useState(false);
+    const close = useCallback(() => setOpen(false), []);
     const usable = run.bard?.song === 'now' && snap.isMyTurn && !!turn && !turn.finalized && !snap.rolling
         && turn.dice.every(d => d.status === 'active' || d.mind);
-    useEffect(() => { if (!usable) setOpen(false); }, [usable]);
     const text = "The Bard's song: right after your first throw this fight, you may throw it all again.";
-    const tap = () => {
-        playSound('click');
-        if (usable) setOpen(!open);
-        else showToast(`${KEEPSAKE_ICONS.inspiringSong} Inspiring Song`, text, 'info', 4200);
-    };
     return (
-        <span className="mask-keepsake">
-            <button className={`keepsake-icon blessing ${usable ? 'usable' : ''}`} aria-label={`Inspiring Song: ${text}`} onClick={tap}>
+        <>
+            <button className={`keepsake-icon blessing ${usable ? 'usable' : ''}`} aria-label="About Inspiring Song" onClick={() => { playSound('click'); setOpen(true); }}>
                 <span aria-hidden="true">{keepsakeIcon('inspiringSong')}</span>
             </button>
-            {open && (
-                <span className="mask-choice" role="group" aria-label="Inspiring Song">
-                    <button onClick={() => { setOpen(false); actions.inspiringSong(); }}>Throw again<small>Inspiring Song</small></button>
-                </span>
-            )}
-        </span>
+            {open && <ItemInfo icon={keepsakeIcon('inspiringSong')} kind="A song" name="Inspiring Song" text={text} onClose={close} actions={usable ? [{ label: 'Throw again', run: actions.inspiringSong }] : []} />}
+        </>
     );
 }
 
@@ -801,17 +816,15 @@ function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
     }
 }
 
-// The Thonics you carry. One lights up when it can be drunk: tap to pick it up, tap again to
-// drink. Second Thoughts then asks you to tap the kept die to put back.
+// The Thonics you carry. One lights up when it can be drunk. A tap opens its panel, with its Drink or
+// Puff button when it can be used. Second Thoughts then asks you to tap the kept die to put back.
 function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
-    const [armed, setArmed] = useState<number | null>(null);
-    useEffect(() => {
-        if (armed === null) return;
-        const timer = setTimeout(() => setArmed(null), 2500);
-        return () => clearTimeout(timer);
-    }, [armed]);
+    const [openSlot, setOpenSlot] = useState<number | null>(null);
+    const close = useCallback(() => setOpenSlot(null), []);
     const slots = Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null);
+    const open = openSlot !== null ? slots[openSlot] : null;
+    const canUse = !!open && drinkable(open, snap, state);
     return (
         <span className="shelf" aria-label="Thonics">
             {slots.map((t, i) => {
@@ -820,27 +833,36 @@ function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
                 return (
                     <button
                         key={i}
-                        className={`shelf-slot ${usable ? 'usable' : ''} ${armed === i || choosing ? 'armed' : ''}`}
-                        disabled={!usable}
-                        title={t ? `${t.name}: ${t.text}` : 'Empty'}
-                        aria-label={t ? (choosing ? `Cancel ${t.name}` : armed === i ? `${t.elf ? 'Puff' : 'Drink'} ${t.name}` : t.name) : 'Empty shelf slot'}
+                        className={`shelf-slot ${usable ? 'usable' : t ? 'idle' : ''} ${choosing ? 'armed' : ''}`}
+                        disabled={!t}
+                        title={t ? t.name : 'Empty'}
+                        aria-label={t ? (choosing ? `Cancel ${t.name}` : `About ${t.name}`) : 'Empty shelf slot'}
                         onClick={() => {
-                            if (!t || !usable) return;
+                            if (!t) return;
                             if (choosing) { actions.cancelPutBack(); return; }
-                            if (armed !== i) { setArmed(i); playSound('click'); return; }
-                            setArmed(null);
-                            if (t.id === 'secondThoughts') actions.startPutBack(i);
-                            else actions.drinkThonic(i);
+                            playSound('click');
+                            setOpenSlot(i);
                         }}
                     >
                         <Bottle thonic={t} />
-                        {armed === i && !choosing && <span className="drink-label">{t?.elf ? 'Puff?' : 'Drink?'}</span>}
                         {choosing && <span className="drink-label">Pick a die</span>}
                     </button>
                 );
             })}
+            {open && openSlot !== null && (
+                <ItemInfo icon={itemPicture(open)} kind={open.elf ? 'An Elf Bar' : 'A Thonic'} name={open.name} text={open.text} onClose={close}
+                    status={open.elf ? `${open.puffs} puff${open.puffs === 1 ? '' : 's'} left${open.puffed ? ', puffed this fight' : ''}` : undefined}
+                    actions={canUse ? [{ label: open.elf ? 'Puff' : 'Drink', run: () => { if (open.id === 'secondThoughts') actions.startPutBack(openSlot); else actions.drinkThonic(openSlot); } }] : []} />
+            )}
         </span>
     );
+}
+
+// An item's picture on its panel: the painting alone, large.
+function itemPicture(t: Thonic) {
+    if (t.elf) return <img className="item-art" src={elfBarArt(t.id)} alt="" draggable={false} />;
+    if (PAINTED_THONICS.has(t.id)) return <img className="item-art" src={`${import.meta.env.BASE_URL}art/thonics/${t.id}.webp`} alt="" draggable={false} />;
+    return <Bottle thonic={t} />;
 }
 
 // Shown on a classic table until a second player arrives.

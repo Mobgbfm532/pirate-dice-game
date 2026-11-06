@@ -955,6 +955,32 @@ footer {
     .encounter-intro .tap { margin-top: 3px; font-size: 0.75rem; }
 }
 
+/* An item's info panel: a tap on any keepsake, Thonic or Elf Bar. */
+.item-veil { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: pointer; background: rgba(8, 4, 2, 0.66); animation: intro-veil-in 0.25s ease-out both; }
+.item-card { box-sizing: border-box; width: min(100%, 360px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 18px 10px; color: var(--ink); text-align: center; background: radial-gradient(ellipse at center, transparent 55%, rgba(110, 70, 25, 0.25)), url('/art/parchment.webp') center / cover, #f1e2c2; border: 2px solid #8d6e3f; border-radius: 12px; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(224, 180, 76, 0.5), 0 0 34px rgba(255, 190, 90, 0.18); animation: item-card-in 0.4s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@keyframes item-card-in { from { opacity: 0; transform: translateY(18px) scale(0.92); } to { opacity: 1; transform: none; } }
+.item-picture { position: relative; display: grid; place-items: center; width: 104px; height: 104px; margin-bottom: 2px; border-radius: 50%; background: radial-gradient(circle, #4a2f20, #24140c); border: 2px solid #b08a45; box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6); font-size: 3rem; }
+.item-picture img, .item-picture .mystery-art { display: block; width: 82px; height: 82px; object-fit: contain; }
+.item-picture .mystery-art img { width: 100%; height: 100%; }
+.item-kind { font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: #6d4c2a; }
+.item-name { font-size: clamp(1.5rem, 7vw, 1.9rem); font-weight: 700; line-height: 1.1; color: var(--red); }
+.item-text { margin-top: 4px; font-family: var(--read, inherit); font-size: 1rem; line-height: 1.3; color: #3b2a1a; }
+.item-text p { margin: 0 0 6px; }
+.item-text p:last-child { margin-bottom: 0; }
+.item-status { margin-top: 5px; padding: 1px 10px; border-radius: 999px; background: #3e2723; color: var(--gold-bright); font-size: 0.82rem; }
+.item-use { margin-top: 10px; min-width: 160px; }
+.item-use small { display: block; font-size: 0.72rem; font-weight: 400; opacity: 0.85; }
+.item-card .tap { margin-top: 7px; font-size: 0.85rem; color: #6d4c2a; animation: intro-tap 1.6s ease-in-out 0.8s infinite; }
+@media (orientation: landscape) and (max-height: 500px) {
+    .item-picture { width: 66px; height: 66px; font-size: 2rem; }
+    .item-picture img, .item-picture .mystery-art { width: 52px; height: 52px; }
+    .item-card { padding: 8px 16px 6px; width: min(100%, 460px); }
+    .item-name { font-size: 1.3rem; }
+    .item-text { font-size: 0.88rem; margin-top: 2px; }
+    .item-use { margin-top: 5px; }
+    .item-card .tap { margin-top: 3px; }
+}
+
 /* The ⓘ on the nameplate. */
 .plate-info { position: relative; flex: none; width: 20px; height: 20px; margin-left: -6px; padding: 0; display: grid; place-items: center; border: 1px solid var(--gold); border-radius: 50%; background: rgba(0, 0, 0, 0.35); color: var(--gold-bright); font: italic 700 0.8rem/1 Georgia, serif; cursor: pointer; pointer-events: auto; box-shadow: none; }
 .plate-info::after { content: ''; position: absolute; inset: -12px; }
@@ -1257,7 +1283,7 @@ footer {
 .bottle.painted { width: 36px; height: 36px; }
 .bottle.painted::before { display: none; }
 .bottle.painted img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--liquid) 55%, transparent)); pointer-events: none; }
-.shelf-slot:disabled .bottle.painted { filter: saturate(0.6); }
+.shelf-slot:disabled .bottle.painted, .shelf-slot.idle .bottle.painted { filter: saturate(0.6); }
 .bottle.painted.lastGasp img { transform: scale(1.15); } /* (a tall thin vial: a touch bigger to match the round ones) */
 .bottle.empty .liquid { background: none; box-shadow: none; border-style: dashed; }
 .bottle.empty::before { border-style: dashed; background: none; }
@@ -1342,7 +1368,7 @@ footer {
     pointer-events: auto;
 }
 .shelf-slot:disabled { cursor: default; }
-.shelf-slot:disabled .bottle:not(.empty) { filter: saturate(0.6); }
+.shelf-slot:disabled .bottle:not(.empty), .shelf-slot.idle .bottle:not(.empty) { filter: saturate(0.6); }
 .shelf-slot.usable { border-color: var(--gold-bright); box-shadow: 0 0 10px rgba(255, 213, 79, 0.45); animation: usable-pulse 1.6s ease-in-out infinite; }
 .shelf-slot.armed { background: #1b3d1f; border-color: #aed581; animation: none; }
 /* Below the bottle, so it never reaches up into the slot rail. */

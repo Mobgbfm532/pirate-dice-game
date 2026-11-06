@@ -627,8 +627,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   opponent sits down (`resetTavernEncounter`), `loadMet` as a player joins a Tavern Crawl,
   `tavernRun.met` in the state, `encounterIds` in the run-over summary.
 - **Keepsakes on screen (21 Oct):** small round icons beside your chip (`KeepsakeIcon`,
-  `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`); a tap shows a toast with what
-  it does. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
+  `KEEPSAKE_ICONS`), dimmed once spent this fight (`ONCE_A_FIGHT`). A tap on any item there, keepsake, blessing, song, Thonic or Elf Bar, opens its info panel (`ItemInfo` in Hud, 6 Nov, the user's; it replaced a toast and the shelf's "Drink?" second tap), with its Drink, Puff or Throw again button when it can be used now. When one works, `keepsakeActivated` is a takeover moment with a gold burst of its icon
   and a synthesized chime (`playChime`); the Shield's is a force-field dome over the table
   (`.forcefield`), its line "Shield protects a life." The Lady's Grace moment shows only its name and "♥ saved" (no
   "Shrine to the Lady" over it since 4 Nov, the user's call).
