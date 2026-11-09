@@ -44,7 +44,7 @@ const RIVAL_LEN = (RIVALS_TO - RIVALS_FROM) / RIVALS.length;
 const PLACES: { art: string; name: string; focus: string }[] = [
     { art: 'tavern.webp', name: 'The Ghoul and Gourd', focus: '50% 45%' },
     { art: 'yawning-portal.webp', name: 'The Yawning Portal', focus: '50% 55%' },
-    { art: 'salty-swallow.webp', name: 'The Salty Swallow', focus: '62% 45%' }
+    { art: 'salty-swallow-sets-sail.webp', name: 'The Salty Swallow', focus: '48% 45%' }
 ];
 const PLACES_FROM = 18, PLACE_LEN = 2;
 

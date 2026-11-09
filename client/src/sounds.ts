@@ -21,7 +21,12 @@ const sfx = {
     devil: load('DevilsTeets.wav', 0.8), // (0.6 until 5 Nov, the user: a little louder)
     winner: load('Winner.mp3', 0.75),
     reachAround: load('Reach Around.mp3', ABILITY_VOLUME),
-    constellation: load('Constellation.mp3', ABILITY_VOLUME),
+    // The ship's (the user's, 9 Nov): Rokr's Starry Form (it was Constellation.mp3) and the Hangman's Penitent Stare;
+    // Yvesil's omen as it's told, good (Weal) or bad (Woe).
+    starryForm: load('StarryForm.mp3', ABILITY_VOLUME),
+    penitentStare: load('PenitentStare.mp3', ABILITY_VOLUME),
+    yvesilWeal: load('YvesilWeal.mp3', 0.8),
+    yvesilWoe: load('YvesilWoe.mp3', 0.8),
     gunshot: load('Gunshot.mp3', 1),
     // The user's ability sounds (26 Oct).
     mindWhip: load('MindWhip.mp3', ABILITY_VOLUME),
@@ -67,7 +72,7 @@ const sfx = {
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
-const LEAD: Partial<Record<keyof typeof sfx, number>> = { devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1, healthPickup: 0.1 };
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { starryForm: 0.24, yvesilWeal: 0.16, devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1, healthPickup: 0.1 };
 // The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
 // asked to, where an <audio> element can lag noticeably on phones.
 const buffers = new Map<keyof typeof sfx, AudioBuffer>();
@@ -86,9 +91,9 @@ const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
 // The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
 // scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
 // (The Lady's music a little louder than the hot tub's bubbling: the user, 28 Oct.)
-const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.5, kram: 0.8 };
+const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.5, kram: 0.8, yvesil: 1 }; // (Yvesil's theme is a quiet recording)
 // (Thom's cart since 28 Oct: the user's loop; the Bard's lute and the Cult of Kram's chant too.)
-const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('ThreeStrings.mp3', 0, true), kram: load('Cult.mp3', 0, true) };
+const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('ThreeStrings.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true) }; // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
 Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
 export type SceneAmbience = keyof typeof sceneAmbience;
 
@@ -481,7 +486,8 @@ export function playSound(name: SoundName, playbackRate = 1) {
 
 export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
-    'Starry Form': 'constellation',
+    'Starry Form': 'starryForm',
+    'Penitent Stare': 'penitentStare',
     'The Ace of Spades': 'gunshot',
     'Back of the Head': 'sylvesterPunch',
     'Inkfire Brand': 'inkfire',

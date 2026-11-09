@@ -28,7 +28,9 @@ const YAWNING_PORTAL: Scene = {
     air: { fire: [0.21, 0.6], fireWidth: 0.05 }
 };
 const SALTY_SWALLOW: Scene = {
-    file: 'salty-swallow.webp', floor: 0.75, aspect: 1584 / 672, center: 0.45,
+    // (Under way since 9 Nov, the user's painting: the gun deck at sea, laid out as the docked one,
+    // which the intro film still shows.)
+    file: 'salty-swallow-at-sea.webp', floor: 0.75, aspect: 1584 / 672, center: 0.45,
     air: { fire: [0.19, 0.62], fireWidth: 0.02 }
 };
 const SCENES: Record<string, Scene> = {

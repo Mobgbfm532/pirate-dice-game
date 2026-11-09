@@ -215,21 +215,28 @@ test('Klarg reaches around at most once a round, though he has two a fight', asy
     assert.equal(room.tavernRun.klargHand, 2);
 });
 
-test("The Salty Swallow's sea: a fight's first round is calm, the next is forecast, and heeling leans every die", async () => {
+test("The Salty Swallow's sea: the first round is calm, then the sea die's face on the leg's dial decides, and heeling leans every die", async () => {
     const hero = await tavernAgainst(fightOf('klarg'), 'SeaTest');
     const room = roomOf(hero);
     room.players.BOT_MOLAR.name = 'Klarg';
     room.tavernRun.encounterRound = 1;
     server.beginTavernRound(codeOf(hero), room);
     assert.equal(room.tavernRun.sea, 'calm', 'the first round of a fight is calm');
-    assert.ok(['calm', 'starboard', 'port'].includes(room.tavernRun.nextSea));
-    const forecast = room.tavernRun.nextSea;
-    room.tavernRun.encounterRound = 2;
-    server.beginTavernRound(codeOf(hero), room);
-    assert.equal(room.tavernRun.sea, forecast, 'the forecast comes true');
+    assert.equal(room.tavernRun.seaFace, null, 'no roll in the first round');
+    // Klarg's leg: 1 port, 2-5 calm, 6 starboard.
+    for (const [face, want] of [[1, 'port'], [3, 'calm'], [6, 'starboard']]) {
+        room.tavernRun.encounterRound = 2;
+        const unpin = pinFaces([face]);
+        server.beginTavernRound(codeOf(hero), room);
+        unpin();
+        assert.equal(room.tavernRun.sea, want, `face ${face}`);
+        assert.equal(room.tavernRun.seaFace, face);
+    }
     const st = server.getRoomState(codeOf(hero)).tavernRun;
-    assert.equal(st.sea.id, forecast);
-    assert.ok(st.nextSea && st.nextSea.name);
+    assert.equal(st.sea.id, 'starboard');
+    assert.equal(st.seaFace, 6);
+    assert.deepEqual(st.seaFaces, ['port', 'calm', 'calm', 'calm', 'calm', 'starboard']);
+    assert.equal(st.nextSea, null, 'no forecast since the sea die');
     // Listing to starboard: every die one higher (a 6 stays a 6); to port: one lower (a 1 stays a 1).
     for (const [sea, want] of [['starboard', [2, 3, 4, 5, 6, 6]], ['port', [1, 1, 2, 3, 4, 5]]]) {
         room.tavernRun.sea = sea;
@@ -265,25 +272,24 @@ test('no events aboard the Salty Swallow: no thief, no Hooded Stranger, straight
     assert.ok(stages.has('pickpocket'));
 });
 
-test('a change of sea is a moment of its own: seaChange, with the forecast, only when the sea changes', async () => {
+test('every sea die roll is a moment (seaChange): its face and the dial, and whether the sea changed', async () => {
     const hero = await tavernAgainst(fightOf('klarg'), 'SeaMoment');
     const room = roomOf(hero);
     room.players.BOT_MOLAR.name = 'Klarg';
     const seen = [];
     hero.on('seaChange', m => seen.push(m));
     room.tavernRun.sea = 'calm';
-    room.tavernRun.nextSea = 'starboard';
-    room.tavernRun.encounterRound = 2;
-    server.beginTavernRound(codeOf(hero), room);
-    room.tavernRun.nextSea = 'starboard';
-    room.tavernRun.encounterRound = 3;
-    server.beginTavernRound(codeOf(hero), room); // starboard again: no moment
+    for (const [round, face] of [[2, 6], [3, 6], [4, 2]]) {
+        room.tavernRun.encounterRound = round;
+        const unpin = pinFaces([face]);
+        server.beginTavernRound(codeOf(hero), room);
+        unpin();
+    }
     await sleep(80);
-    assert.equal(seen.length, 1);
-    assert.equal(seen[0].id, 'starboard');
+    assert.deepEqual(seen.map(m => [m.face, m.id, m.changed]), [[6, 'starboard', true], [6, 'starboard', false], [2, 'calm', true]]);
     assert.equal(seen[0].from, 'calm');
     assert.equal(seen[0].shift, 1);
-    assert.ok(seen[0].next && seen[0].next.name);
+    assert.equal(seen[0].faces.length, 6);
 });
 
 test('the sea is only aboard the Salty Swallow', async () => {

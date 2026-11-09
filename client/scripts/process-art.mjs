@@ -641,6 +641,13 @@ async function backdrop() {
         const info = await sharp(path.join(ART, `${name}-backdrop.jpg`)).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
         console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
     }
+    // The Salty Swallow at sea (the user's, 9 Nov): the gun deck under way, for its four fights and
+    // its scenes; the ship leaving harbour, for the scene as it sets sail; and the ship at the quay, for
+    // Skipper Bren's welcome (the user's second harbour painting, 9 Nov).
+    for (const name of ['salty-swallow-at-sea', 'salty-swallow-sets-sail', 'salty-swallow-quay']) {
+        const info = await sharp(path.join(ART, `${name}.jpg`)).webp({ quality: 80 }).toFile(path.join(OUT, `${name}.webp`));
+        console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    }
 }
 
 // Tiling wood for the 3D table, and parchment for dialogs (used once per panel, not tiled).
@@ -882,6 +889,28 @@ async function introFilm() {
     console.log(`intro/foreground.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  background rgb(${bg.join(',')})`);
 }
 
+// The sea die (the user's painting, 9 Nov: sea-green glass, pearl pips, a pink pearl 1, barnacles):
+// its six faces cut from their magenta, side by side in one strip, 1 to 6 (`sea-die.webp`, 256 px each).
+async function seaDie() {
+    if (!wanted('sea-die')) return;
+    const img = await readRgba('dice-sea.jpg');
+    const { mask } = floodFlat(img, { tolerance: 80, minRed: 45, minBlue: 15, pocket: 14 });
+    applyMask(img, mask);
+    const { data, width, height } = img;
+    const S = 256, faces = [];
+    for (let n = 0; n < 6; n++) {
+        const cx0 = Math.round((n % 3) * width / 3), cx1 = Math.round((n % 3 + 1) * width / 3);
+        const cy0 = Math.round(Math.floor(n / 3) * height / 2), cy1 = Math.round((Math.floor(n / 3) + 1) * height / 2);
+        let x0 = cx1, x1 = cx0, y0 = cy1, y1 = cy0;
+        for (let y = cy0; y < cy1; y++) for (let x = cx0; x < cx1; x++) if (data[(y * width + x) * 4 + 3] > 128) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+        const full = await toSharp(img).png().toBuffer();
+        faces.push(await sharp(full).extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 }).resize(S, S, { fit: 'fill' }).png().toBuffer());
+    }
+    const info = await sharp({ create: { width: S * 6, height: S, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+        .composite(faces.map((input, i) => ({ input, left: i * S, top: 0 }))).webp({ quality: 86, alphaQuality: 90 }).toFile(path.join(OUT, 'sea-die.webp'));
+    console.log(`sea-die.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+}
+
 if (!ONLY || ONLY.has('dice')) await diceSheets();
 // Rokr's Starry Form: the face hidden dice wear (the user's painting, 9 Nov), cut from inside its painted rim.
 if (wanted('starry')) {
@@ -922,6 +951,11 @@ await cutOutFlat('bust-bard.jpg', 'bard');
 // The Salty Swallow's crew (the user's paintings, 9 Nov).
 await cutOutFlat('bust-yvesil.jpg', 'yvesil', { holes: [[851, 319]], glow: { boxes: [[990, 0, 1260, 768]], colour: 'cyan', min: 0.1 } }); // the staff's cyan glow stays soft and see-through, her hand as it is (it was cut ragged, 9 Nov) stays soft and see-through (it was cut ragged, 9 Nov)
 await cutOutFlat('bust-jorvash.jpg', 'jorvash', { holes: [[977, 483], [565, 604], [1016, 483]] });
+await cutOutFlat('bust-bren.jpg', 'bren', { holes: [[760, 766]] }); // Skipper Bren on the quay (9 Nov); the gap between his arm and his side
+// The sea die's dial and its needle (the user's, 9 Nov): the needle turns about the middle of its hub's ring.
+await cutOutFlat('sea-dial.jpg', 'sea-dial', { maxHeight: 768 });
+await cutOutFlat('sea-dial-needle.jpg', 'sea-dial-needle', { holes: [[703, 665]], maxHeight: 768 });
+await seaDie();
 await cutOutFlat('bust-kram.jpg', 'kram', { holes: [[484, 500]] }); // background enclosed by her hair, left of her cheek
 await cutOutFlat('bust-elf-kid.jpg', 'elf-kid', { tolerance: 30, holes: [[238, 1010]] }); // the vial's pink liquid stays; background enclosed between his sleeve and waistcoat
 await cutOutFlat('hot-tub.jpg', 'hot-tub');

@@ -608,26 +608,26 @@ function seaShift(room) {
 function seaRoll(shift) {
     return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
 }
-function drawSea(encounter) {
-    let mix = (BALANCE.voyage || {})[encounter.id];
-    if (!mix) return 'calm';
-    let ids = Object.keys(mix).filter(id => SEAS[id] && mix[id] > 0);
-    let total = ids.reduce((a, id) => a + mix[id], 0);
-    let r = crypto.randomInt(0, Math.max(1, Math.round(total * 1000))) / 1000;
-    for (let id of ids) { if ((r -= mix[id]) < 0) return id; }
-    return ids[ids.length - 1] || 'calm';
+// The sea die's dial for this leg: what each face (1-6) brings (BALANCE.voyage, by opponent).
+function seaFaces(encounter) {
+    let faces = encounter && (BALANCE.voyage || {})[encounter.id];
+    return Array.isArray(faces) && faces.length === 6 && faces.every(id => SEAS[id]) ? faces : ['calm', 'calm', 'calm', 'calm', 'calm', 'calm'];
 }
-// As a round begins: aboard, this round's weather (the forecast) and the next's. A change of sea
-// after a fight's first round is a moment of its own (seaChange: a wave, the clinometer, its name;
-// 9 Nov, the user's), before the round's abilities, and the throws wait for it.
+// As a round begins aboard (9 Nov, the user's: "a dice roll to determine which weather"): from a
+// fight's second round the sea die is rolled, and its face on the leg's dial is this round's sea. The
+// roll is a moment of its own (seaChange: the die tumbles, the dial's needle swings to its face, and
+// a change of sea brings its wave and name), before the round's abilities; the throws wait for it.
 function setSea(roomCode, room, encounter) {
     let run = room.tavernRun;
-    if (!encounter || encounter.place !== 'saltySwallow') { run.sea = null; run.nextSea = null; return; }
+    run.nextSea = null; // (the forecast, until the sea die: 9 Nov)
+    if (!encounter || encounter.place !== 'saltySwallow') { run.sea = null; run.seaFace = null; return; }
     let was = run.sea;
-    let first = (run.encounterRound || 1) <= 1;
-    run.sea = first ? 'calm' : run.nextSea || 'calm';
-    run.nextSea = drawSea(encounter);
-    if (!first && was && run.sea !== was) sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: was, next: seaView(run.nextSea) });
+    if ((run.encounterRound || 1) <= 1) { run.sea = 'calm'; run.seaFace = null; return; }
+    let faces = seaFaces(encounter);
+    let face = crypto.randomInt(1, 7);
+    run.sea = faces[face - 1];
+    run.seaFace = face;
+    sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: was || 'calm', face, faces, changed: run.sea !== (was || 'calm') });
 }
 const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
 
@@ -724,7 +724,9 @@ function getTavernRunState(room) {
         jaguarPhase: room.tavernRun.jaguarPhase || null, // Jaguar's: 'talk', 'cloak' or 'allIn'
         klargHand: room.tavernRun.klargHand || null, // the die Klarg snatched, waiting for his turn
         sea: seaView(room.tavernRun.sea), // aboard the Salty Swallow: this round's weather
-        nextSea: seaView(room.tavernRun.nextSea), // and the next round's (the forecast)
+        nextSea: seaView(room.tavernRun.nextSea), // (the old forecast: null since the sea die)
+        seaFace: room.tavernRun.seaFace || null, // the sea die's face this round
+        seaFaces: placeOf(room) === PLACES.saltySwallow ? seaFaces(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex]) : null, // the leg's dial
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
@@ -1542,7 +1544,8 @@ function emitMoment(roomCode, room, event, data) {
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
 const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card, with a line per player (the client's too)
 const FLOOD_WAVE_MS = 2200; // Astral Flood's wave over the table, after its banner (the client's too)
-const SEA_SHOW_MS = 2600; // aboard the Salty Swallow, a change of sea's moment (the client's too)
+const SEA_SHOW_MS = 4000; // aboard the Salty Swallow, the sea die's roll when the sea changes (the client's too)
+const SEA_HOLD_MS = 2800; // and when the sea holds (the client's too)
 const INTRO_SHOW_MS = 4500; // an opponent's entrance, until the player taps it away (introDone)
 const INTRO_LEAVE_MS = 300; // the moment after that tap (the client's too)
 function sendMoment(roomCode, event, data) {
@@ -1553,8 +1556,9 @@ function sendMoment(roomCode, event, data) {
         let start = Math.max(Date.now(), room.momentNext || 0);
         let flood = event === 'signatureMove' && data && data.ability === Rules.ABILITY_NAMES.astralFlood && !data.cancelled;
         let sea = event === 'seaChange';
-        room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? SEA_SHOW_MS : MOMENT_GAP_MS);
-        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? SEA_SHOW_MS : MOMENT_SHOW_MS));
+        let seaMs = sea ? (data.changed ? SEA_SHOW_MS : SEA_HOLD_MS) : 0;
+        room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? seaMs : MOMENT_GAP_MS);
+        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? seaMs : MOMENT_SHOW_MS));
     }
     io.to(roomCode).emit(event, data);
 }
@@ -1760,7 +1764,9 @@ const heartsFor = encounter => (encounter && BALANCE.fightHearts?.[encounter.id]
 // ...and for the next fight, from between fights (encounterIndex is already the next opponent).
 const nextHearts = run => heartsFor(TAVERN_ENCOUNTERS[run.encounterIndex]);
 
-function resetTavernEncounter(roomCode, keepHumanLives = true) {
+// quiet: seat the opponent without announcing them or starting the round (the dev test server's
+// starting places, set up before the run is first shown).
+function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
     let room = rooms[roomCode];
     if (!room || room.mode !== 'tavern-crawl') return;
 
@@ -1823,6 +1829,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     room.tavernRun.clearEyeArmed = false;
     room.tavernRun.started = true;
     meet(room, encounter.id);
+    if (quiet) return;
     // The opponent's entrance first (the name card, INTRO_SHOW_MS): the browsers learn who sits
     // down before anything else, and the round's abilities and the first throw wait until the card
     // has gone (the user's call, 23 Oct: Martha's entrance and her disguise ran together).
@@ -2573,8 +2580,12 @@ io.on('connection', (socket) => {
             room.players[socket.id].name = asText(resumed.name).substring(0, 15) || room.players[socket.id].name;
         }
 
-        if (room.mode === 'tavern-crawl' && !room.tavernRun.started) {
-            resetTavernEncounter(roomCode, false);
+        let newRun = room.mode === 'tavern-crawl' && !room.tavernRun.started;
+        // (The dev test server may set a new run up itself, before it's first shown: devHooks.newRun.)
+        let devStart = newRun && !resumed && devHooks.newRun;
+        if (newRun) {
+            resetTavernEncounter(roomCode, false, !!devStart);
+            if (devStart) devHooks.newRun(roomCode, room);
         }
         if (resumed) {
             room.tavernRun.interlude = invitation(room, room.players[socket.id].name);
@@ -3190,4 +3201,6 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+// For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
+const devHooks = {};
+module.exports = { devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

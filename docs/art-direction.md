@@ -174,10 +174,15 @@ Everything here is on a flat solid magenta background, no checkerboard, no glow 
 - `art/keepsake-albatross.jpg`, The Albatross: a large grim white albatross with spread wings, a dead weight of rope hanging from its neck, stormy grey shading.
 - `art/keepsake-blackSpot.jpg`, The Black Spot: a torn scrap of old parchment with one big inked black circle in the middle.
 
-**At sea (wanted, 9 Nov: the Swallow has set sail)** (no magenta: full paintings, like the other backdrops)
+**At sea (painted by the user, 9 Nov: the Swallow has set sail)** (no magenta: full paintings, like the other backdrops)
 
 - `art/salty-swallow-at-sea.jpg`, the gun deck under way (replaces the docked backdrop for the ship's four fights; 1584×672 or wider, the same view as the docked one so the table and busts sit as before): *Wide interior view of a pirate ship's gun deck at night while the ship is at sea, seen from a seat at a gaming table: open gun ports and round portholes showing a dark rolling ocean with moonlit wave crests and spray, lanterns swinging on their hooks, a hammock swaying, ropes and barrels lashed down, a little seawater glistening on the deck boards, cool blue moonlight through the ports mixing with warm lantern light, out of focus, empty foreground. + style line*
 - `art/salty-swallow-sets-sail.jpg`, for the "sets sail" scene before Klarg (1600×900, wide; the scene crops its middle on a phone): *The pirate ship the Salty Swallow leaving a lantern-lit harbour at dusk, seen from the dock: sails unfurling and filling with wind, crew hauling lines, the last mooring rope dropping into the water, gulls, a low moon over the open sea beyond the harbour mouth, the ship heeling slightly as it catches the wind, warm harbour lights behind, cool sea ahead. Dramatic, adventurous. + style line*
+
+**Skipper Bren (painted, 9 Nov)** (flat solid magenta background, like the other spot busts)
+
+- `art/bust-bren.jpg`, Skipper Bren, master of the Salty Swallow, who welcomes you aboard on the docks: *A weathered sea captain in their fifties standing on a harbour dock at dusk, waist up, facing us with a warm, knowing half-smile, salt-and-pepper beard and braided hair under a battered tricorn hat with a gull feather, a long dark-blue captain's coat with tarnished brass buttons over a faded red sash, a brass spyglass tucked under one arm, the other hand raised in welcome, warm lantern light from one side and cool sea light from the other, arms close to the body. On a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean edges, no text, no lettering. + style line*
+  Done (9 Nov): cut out with `cutOutFlat('bust-bren.jpg', 'bren', ...)` into `client/public/art/bren.webp`, standing on the quay in `DockScene`. The user also painted the ship at the quay (`art/salty-swallow-quay.jpg`, the scene's backdrop), the sea die (`art/dice-sea.jpg` → `sea-die.webp`) and the dial with its needle (`art/sea-dial.jpg`, `art/sea-dial-needle.jpg`).
 
 When these come in: the backdrop goes in `SALTY_SWALLOW` in `client/src/Backdrop.tsx` (and the docked one could stay for the first scene), the sailing painting replaces the gun deck in `SetSail` (Hud.tsx); in the meantime the scene rocks the docked deck.
 
@@ -270,7 +275,9 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | The Salty Swallow's crew (Yvesil, Jorvash) | Done, 9 Nov | `art/bust-yvesil.jpg`, `bust-jorvash.jpg` → `yvesil.webp`, `jorvash.webp` (`holes` for trapped magenta); `SPOT_PORTRAITS` |
 | The ship's item icons (Notaro Red, the Water of the Ebon Shield, the four omens) | Done, 9 Nov | `art/keepsake-notaroRed.jpg`, `keepsake-ebonShield.jpg`, `keepsake-fairWinds.jpg`, `keepsake-followingSea.jpg`, `keepsake-albatross.jpg`, `keepsake-blackSpot.jpg` → `keepsakes/<id>.webp` (`icon: 320`, `SHIP_ICON_HOLES`) |
 | Starry Form's dice (Rokr's hidden dice) | Done, 9 Nov | `art/dice-starry.jpg` → `textures/dice/starry.webp` (cut from inside its painted rim; its stars glow and twinkle) |
-| Backdrop: the Salty Swallow | Done (26 Oct) | `art/salty-swallow-backdrop.jpg` → `salty-swallow.webp` (1584×672), the gun deck; the ship's four fights and its scenes between fights |
+| Backdrop: the Salty Swallow | Done (26 Oct) | `art/salty-swallow-backdrop.jpg` → `salty-swallow.webp` (1584×672), the gun deck docked; the intro film's ship shot |
+| Backdrop: the Salty Swallow at sea | Done (9 Nov) | `art/salty-swallow-at-sea.jpg` → `salty-swallow-at-sea.webp` (1584×672); the ship's four fights and its scenes between fights (`SALTY_SWALLOW` in Backdrop.tsx) |
+| The Salty Swallow sets sail | Done (9 Nov) | `art/salty-swallow-sets-sail.jpg` → `salty-swallow-sets-sail.webp` (1584×672); the sailing scene before Klarg (`SetSail`), the trailer's "One ship." |
 
 ## Processing art
 

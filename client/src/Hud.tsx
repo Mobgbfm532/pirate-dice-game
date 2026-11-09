@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, type SeaState, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell } from './sounds';
 import { simulateRoll } from './physics';
@@ -535,7 +535,7 @@ function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
 // What the line under Roll says: a round's plaque, or the tip. Aboard the Salty Swallow the sea is
 // always there (over the tip), taking turns with an opponent's ability when there is one.
 // A tap on either opens its explainer (9 Nov, the user's), the same card as the items on your strip.
-function HintLine({ badge, plaque, tip, sea, next, powers }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[] }) {
+function HintLine({ badge, plaque, tip, sea, next, powers, face, faces }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[]; face: number | null; faces: SeaState['id'][] | null }) {
     const turnAbout = useTakingTurns(!!sea && !!badge.kind);
     const [open, setOpen] = useState<'sea' | 'ability' | null>(null);
     const close = useCallback(() => setOpen(null), []);
@@ -550,7 +550,7 @@ function HintLine({ badge, plaque, tip, sea, next, powers }: { badge: RoundBadge
                         <div className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>
                     </button>
                 ) : tip}
-            {open === 'sea' && sea && <SeaInfo sea={sea} next={next} onClose={close} />}
+            {open === 'sea' && sea && <SeaInfo sea={sea} face={face} faces={faces} onClose={close} />}
             {open === 'ability' && badge.kind && <AbilityInfo badge={badge} powers={powers} onClose={close} />}
         </>
     );
@@ -562,13 +562,20 @@ const SEA_EXPLAIN: Record<SeaState['id'], string> = {
     port: 'The ship leans to port: every die thrown lands one lower. A 6 becomes a 5, a 2 a 1, and a 1 stays a 1, so there are no 6s, and no hand can reach 24 this round.',
     calm: 'A steady deck: the dice land as they fall.'
 };
-function SeaInfo({ sea, next, onClose }: { sea: SeaState; next: SeaState | null; onClose: () => void }) {
+function SeaInfo({ sea, face, faces, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; onClose: () => void }) {
+    // This leg's dial in words: e.g. "1 port · 2-5 calm · 6 starboard".
+    const ranges: string[] = [];
+    (faces ?? []).forEach((id, i) => {
+        const last = ranges.length && ranges[ranges.length - 1].endsWith(` ${id}`) ? ranges.pop()! : null;
+        ranges.push(last ? `${last.split(' ')[0].split('-')[0]}-${i + 1} ${id}` : `${i + 1} ${id}`);
+    });
     return (
-        <ItemInfo icon={<span className={`sea-info-ship sea-${sea.id}`}><span className="sea-ship">⛵</span></span>} kind="The sea, this round" name={sea.name} onClose={onClose}
+        <ItemInfo icon={faces ? <span className="sea-info-dial" style={{ '--to': `${face ? faceAngle(face) : 0}deg` } as React.CSSProperties}><SeaDial faces={faces} face={face} /></span> : <span className={`sea-info-ship sea-${sea.id}`}><span className="sea-ship">⛵</span></span>} kind="The sea, this round" name={sea.name} onClose={onClose}
             text={<>
                 <p>{SEA_EXPLAIN[sea.id]}</p>
-                {next && <p><b>Next round:</b> {next.id === 'calm' ? 'calm seas' : `listing to ${next.id}`}.</p>}
-                <p className="item-small">Aboard the Salty Swallow the sea changes from round to round, always forecast a round ahead. It leans everyone's dice, the opponent's too. A 2 and a 4 come up as often as ever.</p>
+                {face && <p><b>The sea die showed {face}.</b></p>}
+                {ranges.length > 0 && <p><b>Out here:</b> {ranges.join(' · ')}.</p>}
+                <p className="item-small">Aboard the Salty Swallow every round from the second begins with a roll of the sea die. The sea leans everyone's dice, the opponent's too. A 2 and a 4 come up as often as ever.</p>
             </>} />
     );
 }
@@ -672,7 +679,8 @@ function TurnControls({ snap }: { snap: Snapshot }) {
             {/* A hot tub fight: its badge can take two lines on small phones, so the space is kept the whole fight (the table doesn't jump when a tip replaces it). */}
             <div className={`hint ${state?.tavernRun ? 'crawl' : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>
                 <HintLine badge={badge} plaque={plaque} tip={tip} sea={state?.tavernRun?.sea ?? null} next={state?.tavernRun?.nextSea ?? null}
-                    powers={(state?.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).powers : null) ?? []} />
+                    powers={(state?.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).powers : null) ?? []}
+                    face={state?.tavernRun?.seaFace ?? null} faces={state?.tavernRun?.seaFaces ?? null} />
             </div>
         </div>
     );
@@ -1640,7 +1648,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     const take = () => (interlude.full ? setSwapping(true) : actions.claimDrop(true));
     return (
         <div className={`interlude-scene invitation ${lookNext ? 'arriving' : ''} ${skip ? 'skip' : ''} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={story.title}
-            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${placeBackdrop(state.tavernRun?.place)}")` }} onPointerDown={() => setSkip(true)}>
+            style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${placeBackdrop(interlude.from ?? state.tavernRun?.place)}")` }} onPointerDown={() => setSkip(true)}>
             <div className="interlude-body">
                 <PurseLine state={state} />
                 <h2 className="interlude-title">{story.title}</h2>
@@ -1775,9 +1783,11 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
     const portrait = SPOT_PORTRAITS[spot];
     // The hot tub, the Lady's shrine, the Bard and the Cult of Kram have their own ambience while their scene is up, and a
     // sound for what the soak or the candle brings (the user's clips, 27 Oct).
-    useEffect(() => (spot === 'hotTub' || spot === 'shrine' || spot === 'bard' || spot === 'kram' ? startSceneAmbience(spot) : undefined), [spot]);
+    // (Yvesil's theme, and Weal or Woe as her omen is told: the user's, 9 Nov.)
+    useEffect(() => (spot === 'hotTub' || spot === 'shrine' || spot === 'bard' || spot === 'kram' || spot === 'yvesil' ? startSceneAmbience(spot) : undefined), [spot]);
     const result = interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'tubGood' : 'tubBad')
-        : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'ladyChoice' : null;
+        : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'ladyChoice'
+            : interlude.stage === 'done' && interlude.spot === 'yvesil' && interlude.omen ? (interlude.omen.good ? 'yvesilWeal' : 'yvesilWoe') : null;
     useEffect(() => { if (result) playSound(result); }, [result]);
     return (
         <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
@@ -2341,7 +2351,6 @@ const SEA_WORDS: Record<SeaState['id'], { title: string; rule: string; sub: stri
     port: { title: 'Listing to port', rule: 'Every die lands one lower', sub: 'No 6s · no 24 this round' },
     calm: { title: 'The sea calms', rule: 'The dice land true', sub: 'A steady deck' }
 };
-const HEEL_DEG: Record<string, number> = { calm: 0, starboard: 24, port: -24 };
 // A brass ship's clinometer: its needle (.sea-needle) swings by CSS, from --from to --to (or rocks).
 function Clinometer({ className = '' }: { className?: string }) {
     return (
@@ -2365,8 +2374,53 @@ function Clinometer({ className = '' }: { className?: string }) {
 // The Salty Swallow sets sail (9 Nov, the user's): as the ship's first opponent sits down, before his
 // entrance card. Its gun deck rolls on the swell under swinging lanterns, the ship's bell rings
 // twice, the lines are cast off, a wave rises, the clinometer wakes, and the name: "The Salty
-// Swallow sets sail". About 6.4 s; a tap skips it. (Until the user paints the ship at sea, the deck
-// painting is the scene.)
+// Swallow sets sail". About 6.4 s; a tap skips it. The user's painting of the ship leaving harbour (9 Nov)
+// drifts from the lantern-lit quay toward the moon and the open sea.
+// Skipper Bren on the docks (9 Nov, the user's): before the Salty Swallow sets sail, Bren, its master,
+// meets you on the quay at dusk (the user's painting of the ship at the quay), welcomes you aboard and tells you of the
+// sea die; "Climb aboard" casts off. Bren's painting (`art/bust-bren.jpg` → `bren.webp`, the prompt is in
+// docs/art-direction.md; the user's, 9 Nov); without it, a silhouette in a captain's hat.
+const BREN_LINES = ["You'll be the one from the Portal. Word travels fast on the docks.", "Welcome aboard the Salty Swallow. Out there, we'll make an honest player of you."];
+function DockScene() {
+    const [line, setLine] = useState(0);
+    const [painted, setPainted] = useState(true);
+    useEffect(() => {
+        playSeaSwell('calm');
+        const timer = setTimeout(() => setLine(1), 2600);
+        return () => clearTimeout(timer);
+    }, []);
+    return createPortal(
+        <div className="dock-scene" role="dialog" aria-label="Skipper Bren welcomes you aboard">
+            <div className="dock-harbour" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/salty-swallow-quay.webp")` }} />
+            <div className="dock-stage">
+                <div key={line} className="thom-speech dock-speech">{BREN_LINES[line]}</div>
+                <div className="dock-figure">
+                    {painted
+                        ? <img src={`${import.meta.env.BASE_URL}art/bren.webp`} alt="" draggable={false} onError={() => setPainted(false)} />
+                        : <BrenSilhouette />}
+                </div>
+            </div>
+            <div className="dock-counter">
+                <div className="dock-plate"><strong>Skipper Bren</strong><span>Master of the Salty Swallow</span></div>
+                <p>At sea, from the second round of each fight, the <b>sea die</b> is rolled first. If the ship lists to starboard, every die thrown that round lands one higher; to port, one lower. Your dice and your opponent's alike.</p>
+                <button className="primary" onClick={() => { playSound('click'); actions.boardShip(); }}>Climb aboard</button>
+            </div>
+        </div>,
+        document.body
+    );
+}
+// Until Bren is painted: a figure in a captain's hat against the harbour lights.
+function BrenSilhouette() {
+    return (
+        <svg className="bren-silhouette" viewBox="0 0 200 260" aria-hidden="true">
+            {/* Shoulders and a coat collar, a head, and a tricorn hat. */}
+            <path d="M14,260 C16,206 46,180 80,170 L86,154 C72,144 66,124 67,104 C69,82 84,70 100,70 C116,70 131,82 133,104 C134,124 128,144 114,154 L120,170 C154,180 184,206 186,260 Z" fill="#120c08" stroke="#ffb85c" strokeWidth="1.4" strokeOpacity="0.5" />
+            <path d="M80,170 L100,198 L120,170" fill="none" stroke="#ffb85c" strokeWidth="1.2" strokeOpacity="0.35" />
+            <path d="M30,92 C58,60 82,84 100,58 C118,84 142,60 170,92 C140,84 124,90 100,88 C76,90 60,84 30,92 Z" fill="#0e0906" stroke="#ffb85c" strokeWidth="1.4" strokeOpacity="0.55" />
+        </svg>
+    );
+}
+
 const SAIL_MS = 6400;
 function SetSail({ at }: { at: number }) {
     useEffect(() => {
@@ -2381,9 +2435,7 @@ function SetSail({ at }: { at: number }) {
     }, [at]);
     return createPortal(
         <div className="sail-scene" role="dialog" aria-label="The Salty Swallow sets sail" onClick={() => actions.endSail()}>
-            <div className="sail-deck" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/salty-swallow.webp")` }} />
-            <span className="sail-lantern one" aria-hidden="true" />
-            <span className="sail-lantern two" aria-hidden="true" />
+            <div className="sail-deck harbour" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/salty-swallow-sets-sail.webp")` }} />
             <span className="sail-sea" aria-hidden="true" />
             <span className="sea-foam sail-foam" aria-hidden="true">
                 {Array.from({ length: 18 }, (_, i) => (
@@ -2396,7 +2448,7 @@ function SetSail({ at }: { at: number }) {
                 <span>sets sail</span>
             </div>
             <div className="sail-gauge"><Clinometer className="rocking" /></div>
-            <p className="sail-line last">Four fights at sea. The sea changes every round.</p>
+            <p className="sail-line last">Four fights at sea. Every round, the sea die decides.</p>
             <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endSail(); }}>Skip ›</button>
         </div>,
         document.body
@@ -2404,29 +2456,91 @@ function SetSail({ at }: { at: number }) {
 }
 function SeaMoment({ snap }: { snap: Snapshot }) {
     const m = snap.seaMoment;
-    const [visible] = useMoment(m?.at ?? 0, SEA_SHOW_MS);
+    const [visible] = useMoment(m?.at ?? 0, m?.changed ? SEA_SHOW_MS : SEA_HOLD_MS);
     if (!visible || !m) return null;
+    return createPortal(<SeaRollView key={m.at} m={m} />, document.body);
+}
+// (Its own piece, so its clock starts as it appears: the die tumbles, then lands on its face.)
+function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
+    const [rolling, setRolling] = useState(true);
+    useEffect(() => {
+        clatter([m.face]);
+        const timer = setTimeout(() => setRolling(false), SEA_LAND_MS - 120); // (from when it appears)
+        return () => clearTimeout(timer);
+    }, [m]);
     const words = SEA_WORDS[m.id];
     const dir = Math.sign(m.shift);
-    const vars = { '--dir': dir || 1, '--to': `${HEEL_DEG[m.id]}deg`, '--from': `${HEEL_DEG[m.from ?? 'calm'] ?? 0}deg` } as React.CSSProperties;
+    const vars = { '--dir': dir || 1, '--to': `${faceAngle(m.face)}deg` } as React.CSSProperties;
     return (
-        <div key={m.at} className={`sea-moment sea-${m.id}`} style={vars} role="status" aria-live="polite">
+        <div className={`sea-moment sea-${m.id} ${m.changed ? 'changed' : 'holds'}`} style={vars} role="status" aria-live="polite">
             <span className="sea-wash" aria-hidden="true" />
-            <span className="sea-crest" aria-hidden="true" />
-            <span className="sea-foam" aria-hidden="true">
-                {Array.from({ length: 24 }, (_, i) => (
-                    <i key={i} style={{ left: `${(i * 41 + 7) % 100}%`, animationDelay: `${0.28 + ((i * 0.067) % 0.5)}s`, '--dx': `${((i * 29) % 60) - 30 + (dir || 1) * 40}px`, '--dy': `${70 + (i * 53) % 120}px`, '--s': `${4 + (i * 7) % 9}px` } as React.CSSProperties} />
-                ))}
-            </span>
+            {m.changed && <span className="sea-crest" aria-hidden="true" />}
+            {m.changed && (
+                <span className="sea-foam" aria-hidden="true">
+                    {Array.from({ length: 24 }, (_, i) => (
+                        <i key={i} style={{ left: `${(i * 41 + 7) % 100}%`, animationDelay: `${1.65 + ((i * 0.067) % 0.5)}s`, '--dx': `${((i * 29) % 60) - 30 + (dir || 1) * 40}px`, '--dy': `${70 + (i * 53) % 120}px`, '--s': `${4 + (i * 7) % 9}px` } as React.CSSProperties} />
+                    ))}
+                </span>
+            )}
             <div className="sea-card">
-                <Clinometer />
-                <strong className="sea-title">{words.title}</strong>
-                <span className="sea-rule">{words.rule}</span>
-                <span className="sea-sub">{words.sub}</span>
-                {m.next && <span className="sea-forecast">Next round: {m.next.id === 'calm' ? 'calm seas' : `listing to ${m.next.id}`}</span>}
+                <span className="sea-kicker">The sea die</span>
+                <SeaDial faces={m.faces} face={m.face} />
+                <span className={`sea-die-wrap ${rolling ? 'rolling' : 'landed'}`}><SeaDie value={m.face} rolling={rolling} /></span>
+                <div className="sea-news">
+                    <strong className="sea-title">{m.changed ? words.title : `The sea holds`}</strong>
+                    <span className="sea-rule">{m.changed ? words.rule : `${m.name}: ${SEA_EFFECT[m.id]}`}</span>
+                    {m.changed && <span className="sea-sub">{words.sub}</span>}
+                </div>
             </div>
         </div>
     );
+}
+
+// The sea die's dial (9 Nov, the user's painting: a brass half-circle under glass, its six sectors numbered
+// 1 to 6, PORT and STBD, and a brass needle with a dark stone). Over the painting, each sector is tinted
+// by what that face brings on this leg (port red, calm sea-blue, starboard green). The needle hunts while
+// the die tumbles, then swings onto the face it landed on (with overshoot) and that sector lights up.
+// The painting's geometry, in `sea-dial.webp`'s pixels (1245x679): the needle's pivot, and the sectors'
+// radii; the needle (`sea-dial-needle.webp`, 186x701) turns about the middle of its hub ring.
+const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'] };
+const faceAngle = (face: number) => -75 + (face - 1) * 30;
+const DIAL = { w: 1245, h: 679, cx: 621, cy: 626, R: 414, r: 72 };
+const NEEDLE = { w: 186, h: 701, px: 92.6, py: 603.6, reach: 372 };
+function SeaDial({ faces, face }: { faces: SeaState['id'][]; face: number | null }) {
+    const { cx, cy, R, r } = DIAL;
+    const at = (deg: number, rad: number) => [cx + Math.sin(deg * Math.PI / 180) * rad, cy - Math.cos(deg * Math.PI / 180) * rad];
+    const sector = (i: number) => {
+        const a0 = -90 + i * 30, a1 = a0 + 30;
+        const [x0, y0] = at(a0, R), [x1, y1] = at(a1, R), [x2, y2] = at(a1, r), [x3, y3] = at(a0, r);
+        return `M${x0},${y0} A${R},${R} 0 0 1 ${x1},${y1} L${x2},${y2} A${r},${r} 0 0 0 ${x3},${y3} Z`;
+    };
+    const k = NEEDLE.reach / NEEDLE.py; // the needle's scale on the dial
+    const needle = { left: `${((cx - NEEDLE.px * k) / DIAL.w) * 100}%`, top: `${((cy - NEEDLE.py * k) / DIAL.h) * 100}%`, width: `${((NEEDLE.w * k) / DIAL.w) * 100}%`, transformOrigin: `${(NEEDLE.px / NEEDLE.w) * 100}% ${(NEEDLE.py / NEEDLE.h) * 100}%` };
+    const base = import.meta.env.BASE_URL;
+    return (
+        <span className="sea-dial" aria-hidden="true">
+            <img className="dial-painting" src={`${base}art/sea-dial.webp`} alt="" draggable={false} />
+            <svg className="dial-tints" viewBox={`0 0 ${DIAL.w} ${DIAL.h}`}>
+                {faces.map((id, i) => (
+                    <path key={i} className={`dial-sector ${face === i + 1 ? 'lit' : ''}`} d={sector(i)} fill={SEA_COLOURS[id][0]} style={{ '--lit': SEA_COLOURS[id][1] } as React.CSSProperties} />
+                ))}
+            </svg>
+            <img className="sea-needle" src={`${base}art/sea-dial-needle.webp`} alt="" draggable={false} style={needle} />
+        </span>
+    );
+}
+
+// The sea die itself (the user's painting, 9 Nov: sea-green glass, pearl pips, a pink pearl 1 and
+// barnacles): its six faces side by side in `sea-die.webp`. Tumbles through faces like the 2D dice.
+function SeaDie({ value, rolling }: { value: number; rolling: boolean }) {
+    const [face, setFace] = useState(value);
+    useEffect(() => {
+        if (!rolling) { setFace(value); return; }
+        const timer = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 90);
+        return () => clearInterval(timer);
+    }, [rolling, value]);
+    const shown = rolling ? face : value;
+    return <span className="sea-die" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/sea-die.webp")`, backgroundPosition: `${(shown - 1) * 20}% 0` }} aria-label={String(shown)} />;
 }
 
 function FloodWave() {
@@ -2701,7 +2815,7 @@ export function Hud() {
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
-            {snap.sailAt ? <SetSail at={snap.sailAt} /> : <EncounterIntro snap={snap} />}
+            {snap.sailAt ? (snap.sailStage === 'dock' ? <DockScene /> : <SetSail at={snap.sailAt} />) : <EncounterIntro snap={snap} />}
             {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
                 <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>
                     <OpponentCard enemy={state.tavernRun.seated ?? state.tavernRun.enemy} place={state.tavernRun.place} state={state} close="Tap to close" />

@@ -8,6 +8,8 @@ import { playSeaSwell, playChime, playDiceImpacts, playSound, startMusic, ABILIT
 
 // The Salty Swallow's sea (server SEAS): shift +1 every die one higher, -1 one lower.
 export interface SeaState { id: 'calm' | 'starboard' | 'port'; name: string; text: string; shift: number }
+// The sea die's roll as a round begins (server setSea): its face, the leg's dial, and whether the sea changed.
+export interface SeaRoll extends SeaState { from: string | null; face: number; faces: SeaState['id'][]; changed: boolean }
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
@@ -83,7 +85,9 @@ export interface TavernRun {
     jaguarPhase?: 'talk' | 'cloak' | 'allIn' | null; // Jaguar's phase this round
     klargHand?: number | null; // the die Klarg snatched, shown on his nameplate until his turn
     sea?: SeaState | null; // aboard the Salty Swallow: this round's weather (9 Nov)
-    nextSea?: SeaState | null; // and the next round's, the forecast
+    nextSea?: SeaState | null; // (the old forecast: always null since the sea die, 9 Nov)
+    seaFace?: number | null; // the sea die's face this round
+    seaFaces?: SeaState['id'][] | null; // this leg's dial: what each face of the sea die brings
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
     tubSurge?: TubSurge | null; // the Wild Magic Hot Tub's surge on one of your dice, this fight
@@ -197,14 +201,15 @@ export interface Snapshot {
     league: LeagueRow[] | null; // this table's league (a league table only, e.g. JUGS)
     seatFlash: { playerId: string; text: string; kind: string; color: string; key: string } | null; // "Dirty 20!" over a nameplate
     floodWaveAt: number | null; // Brodor's Astral Flood pouring over the table
-    seaMoment: (SeaState & { from: string | null; next: SeaState | null; at: number }) | null; // aboard: the sea changes (its banner)
+    seaMoment: (SeaRoll & { at: number }) | null; // aboard: the sea die's roll (and a change of sea's banner)
     roundResult: { rows: RoundResultRow[]; at: number } | null; // a multiplayer round's result card
     roomCode: string;
     waiting: boolean; // a classic table with nobody to play yet
     yourTurnAt: number; // when play last came round to you (for the banner)
     introAt: number; // when the current Tavern Crawl opponent was introduced
     introShowing: boolean; // their entrance card is up, until it's tapped away
-    sailAt: number; // the Salty Swallow sets sail: its scene, before Klarg's entrance card (0: none)
+    sailAt: number; // the Salty Swallow: Skipper Bren on the docks, then it sets sail, before Klarg's entrance card (0: none)
+    sailStage: 'dock' | 'sail'; // which of the two is up
     ability: AbilityMoment | null;
     shopArrival: ShopArrival | null;
     // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
@@ -275,6 +280,7 @@ let snapshot: Snapshot = {
     introAt: 0,
     introShowing: false,
     sailAt: 0,
+    sailStage: 'dock',
     ability: null,
     shopArrival: null,
     betweenShown: false,
@@ -687,7 +693,7 @@ function introduceOpponent(state: GameState) {
     // The Salty Swallow sets sail (9 Nov, the user's): its scene first, as the ship's first opponent sits down;
     // his entrance card is underneath it. (Not for test scripts, whose cards go by themselves.)
     const sailing = run.place === 'The Salty Swallow' && (run.seated ?? run.enemy).id === 'klarg' && !scriptedIntro;
-    update({ introAt: performance.now(), introShowing: true, turn: null, isMyTurn: false, ...(sailing ? { sailAt: performance.now() } : {}) });
+    update({ introAt: performance.now(), introShowing: true, turn: null, isMyTurn: false, ...(sailing ? { sailAt: performance.now(), sailStage: 'dock' as const } : {}) });
     if (scriptedIntro) {
         const gone = performance.now() + INTRO_MS;
         momentFreeAt = Math.max(momentFreeAt, gone);
@@ -753,22 +759,40 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
 });
 
 const FLOOD_WAVE_MS = 2200; // (the server's too)
-// Aboard the Salty Swallow, the sea changes (9 Nov, the user's): its moment, in turn with the rest
-// (SEA_SHOW_MS, the server's too): a wave sweeps the screen, the clinometer swings, the name slams
-// in with what it does, the page shakes and the table lurches the way she lists, with the swell's sound.
-export const SEA_SHOW_MS = 2600;
+// Aboard the Salty Swallow, each round from the second begins with the sea die (9 Nov, the user's):
+// its moment, in turn with the rest (the server's clock too): the die tumbles in and lands, the dial's
+// needle swings onto its face, and when the sea changes a wave breaks across, the whole screen heaves
+// and leans the way she lists (`heave`), the table lurches, the name slams in, with the swell's sound.
+export const SEA_SHOW_MS = 4000; // the sea changes (the server's too)
+export const SEA_HOLD_MS = 2800; // the sea holds (the server's too)
+export const SEA_LAND_MS = 1150; // the die lands; the needle settles and the news comes just after
 const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1 };
-function showSea(data: SeaState & { from: string | null; next: SeaState | null }, hold = 0) {
+function showSea(data: SeaRoll, hold = 0) {
     const at = performance.now();
     update({ seaMoment: { ...data, at: at + hold } });
-    playSeaSwell(data.shift === 0 ? 'calm' : 'heel');
-    shakeScreen(300);
-    table.seaLurchAt = at + 300;
-    table.seaLurch = data.shift - (SEA_SHIFTS[data.from ?? 'calm'] ?? 0) || 1;
+    if (!data.changed) return;
+    const news = SEA_LAND_MS + 300;
+    setTimeout(() => {
+        playSeaSwell(data.shift === 0 ? 'calm' : 'heel');
+        heave(data.shift);
+        table.seaLurchAt = performance.now();
+        table.seaLurch = data.shift - (SEA_SHIFTS[data.from ?? 'calm'] ?? 0) || 1;
+    }, news);
 }
-socket.on('seaChange', (data: SeaState & { from: string | null; next: SeaState | null }) => {
-    enqueueMoment(() => showSea(data), SEA_SHOW_MS, () => 0, SEA_SHOW_MS);
+socket.on('seaChange', (data: SeaRoll) => {
+    const ms = data.changed ? SEA_SHOW_MS : SEA_HOLD_MS;
+    enqueueMoment(() => showSea(data), ms, () => 0, ms);
 });
+// The deck heaves (9 Nov, the user's: in place of the jitter): the whole page leans a few degrees
+// toward the low side (dir 1 starboard, -1 port), rocks back past level and settles; calm seas, a bob.
+function heave(dir: number) {
+    const el = document.body;
+    el.classList.remove('sea-heave');
+    void el.offsetWidth; // (restart the animation)
+    el.style.setProperty('--heave', String(dir));
+    el.classList.add(dir ? 'sea-heave' : 'sea-heave', ...(dir ? [] : ['calm']));
+    setTimeout(() => el.classList.remove('sea-heave', 'calm'), 1600);
+}
 
 function showFloodWave() {
     const at = performance.now();
@@ -952,6 +976,8 @@ export const actions = {
     },
     // The Salty Swallow's sailing scene is over (or skipped): Klarg's entrance card is under it.
     endSail() { if (snapshot.sailAt) update({ sailAt: 0 }); },
+    // Skipper Bren's welcome is done: "Climb aboard", and the ship sets sail.
+    boardShip() { if (snapshot.sailAt) update({ sailAt: performance.now(), sailStage: 'sail' }); },
     // The opponent's entrance card is tapped away: on with the fight.
     dismissIntro() {
         if (!snapshot.introShowing) return;
@@ -1237,11 +1263,13 @@ export const preview = {
     intro() { update({ introAt: performance.now(), introShowing: true }); },
     floodWave() { showFloodWave(); },
     // The Salty Swallow sets sail (its scene alone; hold: freeze it that many ms in, for stills).
-    sail() { update({ sailAt: performance.now() }); },
+    sail(stage: 'dock' | 'sail' = 'sail') { update({ sailAt: performance.now(), sailStage: stage }); },
     // Aboard: a change of sea's moment, e.g. sea('starboard', 'calm'); hold keeps it up that much longer.
-    sea(id: 'calm' | 'starboard' | 'port' = 'starboard', from: string | null = 'calm', hold = 0) {
+    sea(id: 'calm' | 'starboard' | 'port' = 'starboard', from: string | null = 'calm', hold = 0, face = 0) {
         const names = { calm: 'Calm seas', starboard: 'Listing to starboard', port: 'Listing to port' };
-        showSea({ id, name: names[id], text: '', shift: SEA_SHIFTS[id], from, next: { id: 'port', name: names.port, text: '', shift: -1 } }, hold);
+        const faces: SeaState['id'][] = ['port', 'port', 'calm', 'calm', 'starboard', 'starboard'];
+        const landed = face || (id === 'port' ? 1 : id === 'calm' ? 3 : 6);
+        showSea({ id, name: names[id], text: '', shift: SEA_SHIFTS[id], from, face: landed, faces, changed: id !== from }, hold);
     },
     // A multiplayer round result card, held up until the next call (null ends it).
     roundResult(rows: RoundResultRow[] | null) { update({ roundResult: rows ? { rows, at: performance.now() } : null }); },

@@ -254,7 +254,7 @@ set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=
 against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`;
 `dev-test-server-portal` starts every crawl at Sylvester (opponents' lives can be changed on a dev server only with the `OPPONENT_LIVES`
-env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; `shared/balance.js` unchanged), and every new run there (a reload starts one) begins with 3 Healings and the Potion Belt, Shield, Loaded Die, Velvet Cushion and Trap Card (`START_SHELF`, `START_KEEPSAKES` env); `dev-test-server-ship` (:3008, controls :3009, with `client-dev-ship` on :5176; 9 Nov) starts every crawl at Klarg on the Salty Swallow with 3 Healings and the Potion Belt, Loaded Die, Shield, Trap Card and Velvet Cushion; `dev-test-server-b` (:3006, controls :3007) with
+env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; `shared/balance.js` unchanged), and every new run there (a reload starts one) begins with 3 Healings and the Potion Belt, Shield, Loaded Die, Velvet Cushion and Trap Card (`START_SHELF`, `START_KEEPSAKES` env); `dev-test-server-ship` (:3008, controls :3009, with `client-dev-ship` on :5176, `--host` so a phone on the Wi-Fi reaches it; 9 Nov) places every new crawl just after beating Brodor (his fight's summary, then the invitation to the Salty Swallow, the sailing scene, Klarg) with 3 Healings and the Potion Belt, Loaded Die, Shield, Trap Card and Velvet Cushion (`START_AFTER=brodor`, `TAVERN_START_ENCOUNTER=9`; the dev server sets a new run up before it's first shown through `server.devHooks.newRun`, seating the opponent quietly, `resetTavernEncounter(code, false, true)`); `dev-test-server-b` (:3006, controls :3007) with
 `client-dev-b` (:5175) is a second, separate pair for checks while the user plays on :3002 (the controls change
 every table on their server).
 
@@ -445,7 +445,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Inkhand, Stason Jatham, The Ridgeler, Brodor), then aboard the Salty Swallow, a docked ship
   (Klarg, Rokr, the Hangman, Jaguar). McGrath is the Molar renamed (keeps the id `molar`, plays
   simply). A boss (`boss`, `drops`: Martha, Brodor) drops a keepsake (`BOSS_DROPS`) and leads to an
-  invitation on to the next place. All fourteen have painted busts (Brodor's since 21 Oct, `seat: 1.3`). Martha has three
+  invitation on to the next place (its backdrop is the place just won, `interlude.from`: by then the run's place is the next one). All fourteen have painted busts (Brodor's since 21 Oct, `seat: 1.3`). Martha has three
   more, holding up Frak's, Danhausen's or the Duke's face as a mask: while one of her disguises
   is the round's effect, her bust and chip show that painting (`opponentPortraitKey` in
   Backdrop, PORTRAITS `'Martha as Frak'` etc.; a violet shimmer as she swaps,
@@ -553,7 +553,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **The sea (9 Nov, the user's; step 1 of the voyage, brainstormed the same day):** aboard the Salty
   Swallow each round has weather, drawn from its leg's mix (`BALANCE.voyage`, weights by opponent, first
   guesses) and forecast a round ahead; a fight's first round is calm (`SEAS`, `setSea` in
-  `beginTavernRound`, `run.sea` / `run.nextSea`, `sea` / `nextSea` in the state). So far only Heeling:
+  `beginTavernRound`, `run.sea` / `run.nextSea`, `sea` / `nextSea` in the state). So far only Heeling (since the evening of 9 Nov **rolled on the sea die**, below):
   **listing to starboard** every die thrown lands one higher (no 1s), **to port** one lower (no 6s), both
   sides (`seaRoll` under `rollFaceFor`; the Loaded Die's magic and the Devil's 6s untouched, Kram still
   no 1s). The opponents' solver knows it (`shift` in strategy.js: landings weighted by the leaning faces).
@@ -580,9 +580,27 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `tavernIntroAuto`): the gun deck rolling under swinging lantern light, the ship's bell twice (`playShipBell`,
   synthesized), "The bell rings. The lines are cast off…", a wave rising with spray and the swell's sound, "The
   Salty Swallow sets sail", the clinometer rocking (`Clinometer`, shared with the sea's moment), "Four fights at
-  sea. The sea changes every round."; a tap skips it. Dev: `preview.sail()`. Paintings wanted for the ship at
-  sea (a backdrop under way, and the ship leaving harbour for this scene): prompts in docs/art-direction.md. Rolling the whole view was left out (the paintings' edges
-  would show). Dev: `/sea?now=starboard&next=port`. Next (the brainstorm's order): the Squall and the
+  sea. The sea changes every round."; a tap skips it. Dev: `preview.sail()`. The user's paintings (9 Nov): the gun deck at sea (`art/salty-swallow-at-sea.jpg` → `salty-swallow-at-sea.webp`, laid out as the docked one: the ship's four fights and its scenes between fights; the docked `salty-swallow.webp` stays in the intro film) and the ship leaving harbour (`art/salty-swallow-sets-sail.jpg`: this scene, panning from the quay to the lighthouse and the open sea, `sail-pan`, a small pan on wide screens; and the trailer's "One ship."). Rolling the whole view was left out (the paintings' edges
+  would show). **The sea die (9 Nov, the user's: "a dice roll to determine which weather"; it replaced the forecast):** from a
+  fight's second round each round aboard begins with a roll of the sea die (`setSea`: `crypto.randomInt(1, 7)`,
+  so tests' `pinFaces` pin it); its face on the leg's dial is the round's sea (`BALANCE.voyage` is now six faces
+  per opponent: Klarg 1 port, 2-5 calm, 6 starboard; Rokr 1 / 2-4 / 5-6; the Hangman 1-2 / 3-4 / 5-6; Jaguar
+  1-3 / 4 / 5-6; first guesses). `seaFace`, `seaFaces` in the state; `nextSea` is always null. Every roll is a
+  moment (`seaChange` with `face`, `faces`, `changed`; 4 s when the sea changes, 2.8 s when it holds, on both
+  sides): the die (the user's painted sea die, `art/dice-sea.jpg` → `sea-die.webp`, six faces in a strip, `seaDie()` in process-art.mjs; `SeaDie` in Hud; the real dice sound) tumbles in and lands, the needle of **the sea
+  die's dial** (`SeaDial` in Hud: the user's painting `art/sea-dial.jpg` and needle `art/sea-dial-needle.jpg`, cut to
+  `sea-dial.webp` / `sea-dial-needle.webp`; `DIAL` and `NEEDLE` hold the hub and the needle's pivot in their pixels;
+  each sector tinted, screen-blended, by what its face brings on this leg: port red, calm sea-blue, starboard green) hunts and swings onto
+  its face, the sector lights; a change brings the wave, the news slamming in and **the heave** (`heave` in
+  game.ts, `body.sea-heave`: the page leans ~4° toward the low side, rocks back past level and settles; calm seas
+  bob; it replaced the jitter), with the swell's sound; a hold says "The sea holds" quietly. The moment is portalled
+  to the body so it stays level while the page heaves. The explainer shows the dial and the leg's faces in words.
+  **Skipper Bren** (9 Nov, the user's): before the sailing scene, Bren, the ship's master, meets you on the quay
+  (`DockScene` in Hud, `sailStage` 'dock' then 'sail', `actions.boardShip`): the user's painting of the ship at the quay
+  (`art/salty-swallow-quay.jpg`), two lines in a bubble, the sea die explained, "Climb aboard"; Bren is the user's
+  painting (`art/bust-bren.jpg` → `bren.webp`, 9 Nov; a silhouette, `BrenSilhouette`, if it fails to load). Dev: `preview.sail('dock')`,
+  `preview.sea(id, from, hold, face)`.
+  Dev: `/sea?now=starboard&next=port`. Next (the brainstorm's order): the Squall and the
   Rogue Wave, St Elmo's Fire, Fog; the player's say (Compass, Spyglass, Yvesil's forecast, a Ginger Thonic);
   choosing a course; events aboard.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
@@ -785,7 +803,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   on 1 for the next `kramFights` (2) fights (`run.kramFights` → `run.kram` per fight, in
   `rollFaceFor`; saved with the run), or refuse; then "Look around" as after any event. The strip
   shows 🗡️ Cutting Words, 🎶 Inspiring Song and 🔱 Sworn to Kram while they last. Paintings
-  `art/bust-bard.jpg`, `art/bust-kram.jpg` (`SPOT_PORTRAITS` bard, kram). Their scenes loop the user's `ThreeStrings.mp3` (the Bard, volume 0.5) and `Cult.mp3` (Kram, 0.8) like the hot tub's (`startSceneAmbience`).
+  `art/bust-bard.jpg`, `art/bust-kram.jpg` (`SPOT_PORTRAITS` bard, kram). Their scenes loop the user's `ThreeStrings.mp3` (the Bard, volume 0.5) and `Cult.mp3` (Kram, 0.8) like the hot tub's (`startSceneAmbience`). Since 9 Nov Yvesil's scene loops the user's `YvesilTheme.mp3` (3 min, a quiet recording: volume 1; 5.8 MB, fetched when her scene opens) and her omen plays `YvesilWeal.mp3` (good, 4.3 s) or `YvesilWoe.mp3` (bad, 1.5 s) as it's told. The ship's abilities have the user's clips too (9 Nov): Starry Form `StarryForm.mp3` (8.1 s, rings on past its banner; it was `Constellation.mp3`) and Penitent Stare `PenitentStare.mp3` (3.5 s) in `ABILITY_SOUNDS`. A sound check, silently: `previews/sound-check.mjs` (gitignored) records which clips start, by their length, after a trusted tap in a muted headless Chrome.
   Each spot (and the pickpocket) is a full scene built on Thom's (`SpotScene`: the character
   rises in their own light with a speech bubble and reacts to what happens, sign + counter;
   the Shrine's painting is its stage). **On wide screens (landscape, taller than 500 px; 4 Nov, the

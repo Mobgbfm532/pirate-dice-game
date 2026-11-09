@@ -55,16 +55,17 @@ const keepsakesOf = ids => ids.map(id => server.TAVERN_KEEPSAKES.find(k => k.id 
 // Tavern Crawl run starts with them, so a reload (a fresh run) gets them again. Each run once.
 const START_SHELF = (process.env.START_SHELF || '').split(',').filter(Boolean);
 const START_KEEPSAKES = (process.env.START_KEEPSAKES || '').split(',').filter(Boolean);
-const kitted = new WeakSet();
-if (START_SHELF.length || START_KEEPSAKES.length) setInterval(() => {
-    tavernTables().forEach(([code, r]) => {
-        if (!r.tavernRun || kitted.has(r.tavernRun)) return;
-        kitted.add(r.tavernRun);
-        if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
-        if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
-        server.emitState(code);
-    });
-}, 300);
+// START_AFTER=brodor (or martha, env): every new run, once kitted, is placed just after beating that
+// boss: the fight's summary, then the invitation on to the next place (as /invitation?boss=...).
+const START_AFTER = process.env.START_AFTER || '';
+// (Applied as the run is made, before it's first shown: server.devHooks.newRun.)
+if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER) server.devHooks.newRun = (code, r) => {
+    if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
+    if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
+    if (START_AFTER) COMMANDS['/invitation'](r, new URLSearchParams({ boss: START_AFTER }), code);
+    // (Otherwise the fight starts as usual: its entrance, its first round.)
+    else { server.resetTavernEncounter(code, false); }
+};
 
 const COMMANDS = {
     '/shop': (r, q) => {
