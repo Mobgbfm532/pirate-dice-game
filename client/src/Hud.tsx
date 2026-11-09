@@ -900,7 +900,9 @@ const PAINTED_KEEPSAKES = new Set(['bentCopper', 'velvetCushion', 'luckySeat', '
     // ...and the blessings and the Bard's songs (shown the same way, on the strip and in their moments).
     'ladysGrace', 'cuttingWords', 'inspiringSong', 'kram',
     // ...and the three of 30 Oct, and Martha's Elf Bar (4 Nov).
-    'misersPurse', 'gamblersCharm', 'bottomlessFlask', 'mysteryFlavour']);
+    'misersPurse', 'gamblersCharm', 'bottomlessFlask', 'mysteryFlavour',
+    // ...and the Salty Swallow's omens and refreshments (9 Nov).
+    'notaroRed', 'ebonShield', 'fairWinds', 'followingSea', 'albatross', 'blackSpot']);
 function keepsakeIcon(id: string): React.ReactNode {
     if (id === 'mysteryFlavour') return mysteryIcon();
     if (PAINTED_KEEPSAKES.has(id)) return <img className="item-art" src={`${import.meta.env.BASE_URL}art/keepsakes/${id}.webp`} alt="" draggable={false} />;
@@ -1237,7 +1239,11 @@ const ABILITY_ART: Record<string, string> = {
     'Vexing Rapier': 'ability-flourish.webp',
     'Astral Flood': 'ability-astral-flood.webp',
     'Reach Around': 'ability-reach-around.webp',
-    'Starry Form': 'ability-written-in-the-stars.webp',
+    'Starry Form': 'ability-starry-form.webp',
+    // 9 Nov: the ship's last three.
+    'Penitent Stare': 'ability-penitent-stare.webp',
+    'The Ace of Spades': 'ability-ace-of-spades.webp',
+    'All In': 'ability-all-in.webp',
     // 27 Oct: Jaguar's.
     'Smooth Talk': 'ability-smooth-talk.webp',
     'The Cloak': 'ability-the-cloak.webp',

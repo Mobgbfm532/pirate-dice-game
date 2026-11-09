@@ -27,11 +27,14 @@ const ABILITIES = {
     divineSmite: { fight: 8, name: 'Divine Smite', who: 'The Ridgeler' },
     astralFlood: { fight: 9, name: 'Astral Flood', who: 'Brodor' },
     reachAround: { fight: 10, name: 'Reach Around', who: 'Klarg' },
-    stars: { fight: 11, name: 'Written in the Stars', who: 'Rokr' },
-    deadEye: { fight: 12, name: 'Dead Eye', who: 'The Hangman' },
+    starryForm: { fight: 11, name: 'Starry Form', who: 'Rokr' },
+    // (The Hangman's two come only after he has lost a life, or at his last: usually stand-ins.)
+    penitentStare: { fight: 12, name: 'Penitent Stare', who: 'The Hangman' },
+    aceOfSpades: { fight: 12, name: 'The Ace of Spades', who: 'The Hangman' },
     // Jaguar's phases (Smooth Talk at 3+ lives, The Cloak at 2): they rarely come up in time, so usually stand-ins.
     smoothTalk: { fight: 13, name: 'Smooth Talk', who: 'Jaguar Cantona' },
-    cloak: { fight: 13, name: 'The Cloak', who: 'Jaguar Cantona' }
+    cloak: { fight: 13, name: 'The Cloak', who: 'Jaguar Cantona' },
+    allIn: { fight: 13, name: 'All In', who: 'Jaguar Cantona' }
 };
 const args = Object.fromEntries(process.argv.slice(3).map(a => a.split('=')));
 const outDir = process.argv[2] ?? 'previews/abilities';

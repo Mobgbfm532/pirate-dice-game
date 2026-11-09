@@ -882,6 +882,13 @@ async function introFilm() {
 }
 
 if (!ONLY || ONLY.has('dice')) await diceSheets();
+// Rokr's Starry Form: the face hidden dice wear (the user's painting, 9 Nov), cut from inside its painted rim.
+if (wanted('starry')) {
+    const { width, height } = await sharp(path.join(ART, 'dice-starry.jpg')).metadata();
+    const inset = Math.round(width * 0.07);
+    const info = await sharp(path.join(ART, 'dice-starry.jpg')).extract({ left: inset, top: inset, width: width - inset * 2, height: height - inset * 2 }).resize(512, 512).webp({ quality: 88 }).toFile(path.resolve(here, '../public/textures/dice/starry.webp'));
+    console.log(`dice/starry.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+}
 await introFilm();
 if (!ONLY) {
     await surfaces();
@@ -911,6 +918,9 @@ await cutOutFlat('bust-stason.jpg', 'stason');
 await cutOutFlat('bust-sylvester.jpg', 'sylvester');
 await cutOutFlat('bust-darren.jpg', 'darren');
 await cutOutFlat('bust-bard.jpg', 'bard');
+// The Salty Swallow's crew (the user's paintings, 9 Nov).
+await cutOutFlat('bust-yvesil.jpg', 'yvesil', { holes: [[851, 319]] });
+await cutOutFlat('bust-jorvash.jpg', 'jorvash', { holes: [[977, 483], [565, 604], [1016, 483]] });
 await cutOutFlat('bust-kram.jpg', 'kram', { holes: [[484, 500]] }); // background enclosed by her hair, left of her cheek
 await cutOutFlat('bust-elf-kid.jpg', 'elf-kid', { tolerance: 30, holes: [[238, 1010]] }); // the vial's pink liquid stays; background enclosed between his sleeve and waistcoat
 await cutOutFlat('hot-tub.jpg', 'hot-tub');
@@ -935,6 +945,11 @@ await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight
 await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight: 900, soften: { boxes: [[180, 0, 850, 420]], radius: 12 }, holes: [[839, 728], [221, 751], [951, 800], [122, 857], [247, 863], [749, 890], [135, 832], [903, 819], [312, 845], [762, 832], [32, 723], [996, 741], [739, 865], [136, 792], [886, 798]] });
 await cutOutFlat('ability-smooth-talk.jpg', 'ability-smooth-talk', { maxHeight: 900, tolerance: 30, holes: [[414, 180], [294, 424]], minPiece: 0.00002, trails: [{ colour: [245, 200, 120], reach: 35, boxes: [[90, 320, 325, 660], [520, 420, 660, 525]] }, { colour: [255, 70, 60], reach: 30, boxes: [[565, 120, 640, 330]] }], fade: { bottom: 60 } }); // his golden sparkle swirls and the potion's red glow stay, see-through
 await cutOutFlat('ability-the-cloak.jpg', 'ability-the-cloak', { maxHeight: 900, holes: [[777, 496], [751, 419], [822, 326], [712, 489], [833, 808], [293, 421], [415, 180]], trails: [{ colour: [60, 78, 92], reach: 20, boxes: [[0, 540, 330, 820], [640, 380, 848, 900]] }, { colour: [20, 28, 38], reach: 20, boxes: [[0, 700, 220, 800]] }], fade: { left: 90, right: 40, bottom: 60 } }); // his smoky wisps and the thin cloak's edge stay see-through; background between the folds and the arm
+// The ship's (the user's paintings, 9 Nov).
+await cutOutFlat('ability-starry-form.jpg', 'ability-starry-form', { maxHeight: 900, minPiece: 0.0005, holes: [[678, 161], [262, 348], [251, 643], [287, 674], [895, 464], [1042, 335], [428, 338], [222, 616], [978, 374], [848, 240], [169, 488], [444, 363], [948, 302]] });
+await cutOutFlat('ability-penitent-stare.jpg', 'ability-penitent-stare', { maxHeight: 900 });
+await cutOutFlat('ability-ace-of-spades.jpg', 'ability-ace-of-spades', { maxHeight: 900, holes: [[315, 373]] });
+await cutOutFlat('ability-all-in.jpg', 'ability-all-in', { maxHeight: 900, minPiece: 0.0005, holes: [[823, 505], [404, 534], [923, 611]] });
 await cutOutFlat('ability-divine-smite.jpg', 'ability-divine-smite', { maxHeight: 900, holes: [[412, 203], [478, 164], [961, 91], [553, 186], [580, 196], [524, 176], [709, 62]], glow: { boxes: [[590, 0, 1024, 440], [680, 440, 1024, 480]] }, fade: { right: 30, bottom: 60 } }); // the hammer's gold flame stays bright and see-through; background between his arm, head and the handle
 // Thom's Thonics (28 Oct): the bottles as square item icons (shelf ~28 px, Thom's cart ~40 px, the drinking moment ~200 px)
 await cutOutFlat('thonic-healing.jpg', 'thonics/healing', { icon: 320 });
@@ -967,6 +982,10 @@ await cutOutFlat('keepsake-loadedDie.jpg', 'keepsakes/loadedDie', { icon: 320 })
 await cutOutFlat('keepsake-marthasMask.jpg', 'keepsakes/marthasMask', { icon: 320 }); // its light pink sticker outline stays as the icon's border
 await cutOutFlat('keepsake-brodorsSunglasses.jpg', 'keepsakes/brodorsSunglasses', { icon: 320 });
 // The Bard's songs, the Lady's Grace and Kram's oath (29 Oct): icons like the keepsakes, for the strip
+// The Salty Swallow's omens and refreshments (the user's paintings, 9 Nov).
+// (holes: magenta trapped inside each painting, found by flooding from every pocket, 9 Nov.)
+const SHIP_ICON_HOLES = { notaroRed: [[948, 363], [829, 566], [893, 372], [877, 308]], fairWinds: [[641, 525]], albatross: [[799, 608], [700, 643], [831, 287]], blackSpot: [[378, 559]] };
+for (const id of ['notaroRed', 'ebonShield', 'fairWinds', 'followingSea', 'albatross', 'blackSpot']) await cutOutFlat(`keepsake-${id}.jpg`, `keepsakes/${id}`, { icon: 320, holes: SHIP_ICON_HOLES[id] ?? [] });
 await cutOutFlat('keepsake-inspiringSong.jpg', 'keepsakes/inspiringSong', { icon: 320, minPiece: 0.001 }); // the floating notes stay
 await cutOutFlat('keepsake-cuttingWords.jpg', 'keepsakes/cuttingWords', { icon: 320 });
 await cutOutFlat('keepsake-ladysGrace.jpg', 'keepsakes/ladysGrace', { icon: 320, holes: [[548, 540]], glow: { boxes: [[575, 70, 850, 294]], colour: 'light', min: 0.12 } }); // the cyan flame keeps a soft see-through glow; the handle's loop

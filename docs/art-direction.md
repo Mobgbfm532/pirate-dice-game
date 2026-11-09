@@ -149,15 +149,30 @@ Done 3 Nov: the user painted all five (Ha! is Frak's grinning face with his ciga
 matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320`) into
 `client/public/art/reactions/<id>.webp`; then add each id to `PAINTED_REACTIONS` in Hud.tsx.
 
-### The Salty Swallow's crew (wanted, 6 Nov)
+### The Salty Swallow (painted by the user, 9 Nov; the prompts stay here for repaints)
 
-Busts like the other spots: waist up, facing us, on a flat solid magenta background, no checkerboard, no glow on the background, crisp edges, no text. *+ style line*
+Everything here is on a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean edges, no text, no lettering. *+ style line*
 
-**Jorvash, `art/bust-jorvash.jpg`**
-> A dignified ship's manservant aboard a fantasy sailing ship: an impeccably neat old-fashioned butler's coat in faded navy with brass buttons, weathered but composed face, one raised eyebrow, carrying a small silver tray with a dark red bottle and a glass of black water that gleams faintly. Warm lantern light from one side.
+**Spot busts** (waist up, facing us, arms close to the body so they cut out cleanly)
 
-**Yvesil, `art/bust-yvesil.jpg`**
-> A mysterious ship's oracle in a dark fantasy tavern style: sea-worn robes in deep teal hung with shells, knotted cord and small charms, pale watchful eyes, one hand raised over a scatter of old bones and a guttering candle, salt spray in her hair. Cool moonlight from one side and a little warm candlelight from below.
+- `art/bust-yvesil.jpg`, Yvesil: A half-orc druid of the sea in their forties, green-grey weathered skin, small lower tusks, calm knowing eyes, braided dark hair threaded with shells and kelp. One arm ends in a stump below the elbow, wrapped in tarred rope and sailcloth, clearly visible in front of the chest. The other hand holds a gnarled driftwood staff crusted with barnacles. Sea-worn robes in deep teal hung with shells and knotted cord. Cool moonlight from one side, a faint blue-green glow of seawater around the staff.
+- `art/bust-jorvash.jpg`, Jorvash: An elderly, impeccably dignified upper-class manservant, tall and thin, silver hair perfectly combed, neat white moustache, one raised eyebrow, quietly unimpressed expression. Immaculate black tailcoat, crisp white shirt and waistcoat, white gloves. One gloved hand holds up a small silver tray with a bottle of dark red wine and a glass of black water that gleams faintly. Warm lantern light from one side.
+
+**Ability paintings** (a character in a dramatic moment, centred, the whole figure inside the frame)
+
+- `art/ability-starry-form.jpg`, Starry Form: Rokr, a hooded figure with violet glowing eyes in a dark fur-trimmed cloak, one hand raised, his body dissolving into a swirl of twinkling blue-white stars and joined constellation lines, six dice hanging in the swirl with their faces hidden by stars.
+- `art/ability-penitent-stare.jpg`, Penitent Stare: The Hangman, a gaunt gunslinger in a wide-brimmed black hat, leaning in and staring straight at us, his eyes burning with fierce orange hellfire, flames licking from the eye sockets, ghostly chains drifting around him, his face lit from within. Menacing, judging.
+- `art/ability-ace-of-spades.jpg`, The Ace of Spades: The Hangman, a gaunt gunslinger in a wide-brimmed black hat, firing a long ornate revolver straight at us, a bright muzzle flash, a spade symbol engraved on the revolver's barrel, gun smoke curling away. No playing cards.
+- `art/ability-all-in.jpg`, All In: Jaguar Cantona, a handsome smiling rogue with curly black hair and a flowing cloak, shoving a great heap of gold coins and dice forward with both arms, coins spilling, a daring grin.
+
+**Item icons** (one object only, centred and filling the frame, bold clear silhouette that reads at a small size, thick dark outline)
+
+- `art/keepsake-notaroRed.jpg`, Notaro Red: a dusty old bottle of deep red wine with a wax seal and a blank faded label, beside a filled glass.
+- `art/keepsake-ebonShield.jpg`, Water of the Ebon Shield: a small round black crystal flask of glossy black water that gleams, a tiny silver shield emblem on its front.
+- `art/keepsake-fairWinds.jpg`, Fair Winds: a billowing white sail full of wind on a small wooden mast, soft golden swirls of breeze around it.
+- `art/keepsake-followingSea.jpg`, Following Sea: a single rolling blue-green wave with a white crest, carrying a tiny wooden boat on its back.
+- `art/keepsake-albatross.jpg`, The Albatross: a large grim white albatross with spread wings, a dead weight of rope hanging from its neck, stormy grey shading.
+- `art/keepsake-blackSpot.jpg`, The Black Spot: a torn scrap of old parchment with one big inked black circle in the middle.
 
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 

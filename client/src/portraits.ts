@@ -93,9 +93,9 @@ export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' |
     bard: seated('bard.webp', [57, 23], 1.25, 475, 720),
     kram: seated('kram.webp', [52, 30], 0.95, 560, 720), // two faces: centred between them
     elfKid: seated('elf-kid.webp', [50, 27], 1.25, 477, 720),
-    // Stand-ins until the user's paintings of them come (6 Nov).
-    jorvash: seated('darren.webp', [51.9, 35.6], 0.9, 716, 720, [2.7, -9.5]),
-    yvesil: seated('stranger.webp', [53, 39.1], 1.75, 1048, 720, [6.3, 2])
+    // The user's paintings (9 Nov; the faces' middles first guesses, for the Portraits tab to settle).
+    jorvash: seated('jorvash.webp', [46, 20], 1.6, 703, 708),
+    yvesil: seated('yvesil.webp', [42, 21], 1.7, 833, 720)
 };
 
 // What a player picks on the start screen: since 30 Oct seven of the game's painted item icons

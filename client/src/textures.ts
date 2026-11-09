@@ -201,6 +201,9 @@ const finish = (m: THREE.MeshStandardMaterial) => {
     return m;
 };
 
+// How bright Starry Form's stars light themselves (Dice.tsx twinkles them about this).
+export const STARRY_GLOW = 0.55;
+
 export function createDiceMaterials() {
     const faces = FACE_VALUES.map(v => finish(new DiceMaterial({ map: faceTexture(v), ...diceMaterialProps, ...lacquer, ...ivory })));
     const hiddenMap = hiddenTexture();
@@ -212,7 +215,21 @@ export function createDiceMaterials() {
     // The Wild Magic Hot Tub: the die its surge works on, aqua with a soft glow.
     const tub = FACE_VALUES.map((_, i) => finish(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#86e3ee'), emissive: new THREE.Color('#00838f'), emissiveIntensity: 0.4, ...diceMaterialProps, ...lacquer })));
     loadPaintedFaces(faces, [loaded, mind, tub]);
-    return { faces, hidden, loaded, mind, tub };
+    // Rokr's Starry Form: the dice he hides wear the night sky (the user's painting, 9 Nov). Its
+    // stars light themselves (an emissive map: Dice.tsx makes them twinkle). The plain "?" until it loads.
+    const starryMat = new DiceMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps, ...lacquer });
+    const starry = FACE_VALUES.map(() => starryMat);
+    const sky = new Image();
+    sky.onload = () => {
+        const map = canvasTexture(ctx => ctx.drawImage(sky, 0, 0, 512, 512), 512);
+        starryMat.map = map;
+        starryMat.emissiveMap = map;
+        starryMat.emissive.set('#ffffff');
+        starryMat.emissiveIntensity = STARRY_GLOW;
+        starryMat.needsUpdate = true;
+    };
+    sky.src = `${import.meta.env.BASE_URL}textures/dice/starry.webp`;
+    return { faces, hidden, loaded, mind, tub, starry };
 }
 
 // Opponents' own dice (3 Nov, the user's paintings): a sheet per opponent made by the art script

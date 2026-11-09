@@ -6,7 +6,7 @@ import { BOT_ID, actions, canPutBack, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
 import { paceFrame, readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
-import { OPPONENT_DICE, createDiceMaterials, opponentDiceMaterials } from './textures';
+import { OPPONENT_DICE, STARRY_GLOW, createDiceMaterials, opponentDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
 
@@ -173,6 +173,8 @@ export function Dice() {
 
     useFrame((_, delta) => {
         const now = performance.now();
+        // Starry Form's stars twinkle, slowly and unevenly.
+        if (materials.starry[0].emissiveMap) materials.starry[0].emissiveIntensity = STARRY_GLOW * (0.8 + 0.2 * Math.sin(now / 410) + 0.12 * Math.sin(now / 173));
         const dice: Die[] = turn ? turn.dice : DICE_IDS.map(id => ({ id, value: 0, status: 'active' }));
         const slots = assignSlots(dice, table.lockOrder);
         const scoringCount = dice.filter(isLocked).length - [...slots.values()].filter(s => s < 2).length;
@@ -241,7 +243,9 @@ export function Dice() {
             }
 
             const shown = table.diceSet ? opponentDiceMaterials(table.diceSet, materials.faces) : own;
-            mesh.material = showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : shown;
+            // (A die Rokr's Starry Form hid wears the night sky; one not yet thrown, or Jaguar's cloaked dice, the plain "?".)
+            const starry = showHidden && !turn?.cloaked && (roll && trackIndex >= 0 ? roll.hidden.has(die.id) : !!die.hidden);
+            mesh.material = starry ? materials.starry : showHidden ? materials.hidden : die.mind ? materials.mind : die.id === tubId ? materials.tub : die.id === loadedId ? materials.loaded : shown;
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.
