@@ -21,6 +21,16 @@ Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a h
 
 **Thom, aboard** (the user's words, one at random each fight): "Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest." / "There's number one customer!" / "You're putting my kid through Dwemercore!"
 
+## The voyage (9 Nov)
+
+**Skipper Bren**, "Master of the Salty Swallow" (on the quay before the ship sets sail). Bubble: "You'll be the one from the Portal. Word travels fast on the docks." then "Welcome aboard the Salty Swallow. Out there, we'll make an honest player of you." (the user's). Below: "At sea, from the second round of each fight, the sea die is rolled first. If the ship lists to starboard, every die thrown that round lands one higher; to port, one lower. Your dice and your opponent's alike." (the user asked for it to be rewritten). Button: "Climb aboard".
+
+**Setting sail**: "The bell rings. The lines are cast off…", "The Salty Swallow sets sail", "Four fights at sea. Every round, the sea die decides."
+
+**The sea die's moment**: "The sea die", then "Listing to starboard" / "Every die lands one higher" / "No 1s · 6s twice as likely"; "Listing to port" / "Every die lands one lower" / "No 6s · no 24 this round"; "The sea calms" / "The dice land true" / "A steady deck"; when it doesn't change, "The sea holds".
+
+**The plaque under Roll**: "Calm seas: a steady deck", "Listing to starboard: every die +1 (no 1s)", "Listing to port: every die −1 (no 6s)".
+
 ## The opponents
 
 The entrance card (and the `i` on the nameplate) shows the line about them, then each ability with what it does, as split on 5 Nov: the wording below is the same, except that Jaguar's two later abilities and his empty-shelf talk are spelled out from their badges. Where: name and card in `server.js` (`TAVERN_ENCOUNTERS`, `blurb` and `powers`); ability names in

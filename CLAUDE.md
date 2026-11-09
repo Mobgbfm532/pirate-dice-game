@@ -330,7 +330,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 154 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, saves after each place. 163 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
     for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);
@@ -340,7 +340,17 @@ one too, or saves only last until the server restarts, which on the free tier is
   - the user's heart sounds and a new Astral Flood clip; the At the table tab, and the user's placings built in;
   - the Salty Swallow: Yvesil and Jorvash (spots), Thom stowed away, Rokr's Starry Form, the Hangman's Penitent Stare,
     Brodor's new end-screen text, Martha's keepsake line fixed; on 9 Nov all the ship's art from the user (two busts,
-    four ability paintings, six item icons, the night-sky dice). Skipper Bren was discussed and left out.
+    four ability paintings, six item icons, the night-sky dice).
+- **9 Nov, the voyage (the user's calls; details in "The sea" under "Tavern Crawl now"):**
+  - the trailer (`/next/?trailer`); Klarg's Reach Around once a round, banner first, his paw taking the die; Johnny
+    ashore; every ability counted on the nameplate; Jaguar takes a Healing only when hurt; Yvesil re-cut;
+  - no events aboard ("Look around the ship"); the gun deck at sea as the ship's backdrop;
+  - the sea: from a fight's second round the sea die is rolled and its face on the leg's dial sets the round's sea
+    (calm, or listing to starboard or port: every die one higher or lower), with its moment, the page heaving, a
+    plaque under Roll and an explainer; Skipper Bren welcomes you on the quay, then the Salty Swallow sets sail;
+  - the user's art: Bren, the sea die, the dial and its needle, the ship at the quay and setting sail; the user's
+    sounds for Starry Form, Penitent Stare and Yvesil (her theme, Weal and Woe);
+  - a boss's invitation shows the place just won behind it; the ship test server starts just after Brodor.
 - **4-5 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - Martha drops Mystery Flavour, her own Elf Bar, not her mask; the Duke saves his Devil unless it helps;
     the Ghoul and Gourd on 3 hearts against 1, 2, 3, 3, 3; at most two thieves at a place;
@@ -869,17 +879,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Play the Salty Swallow on a phone** (everything up to 9 Nov is pushed and on the test site): the ship's new
+1. **Play the Salty Swallow on a phone** (everything up to 9 Nov is pushed and on the test site; the ship test server
+   starts just after Brodor): the sea die and its dial, the heave, Bren's welcome and the sailing scene, the ship's new
    abilities and crew, Yvesil's and Jorvash's round portraits (first guesses; the Portraits tab), whether the floating
    constellations over Starry Form's dice should stay on top of the night-sky faces, and the intro's last scene
    after the 6 Nov fix. Yvesil's pronouns aren't settled: the scene text says "her" (`docs/character-text.md`).
 2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
-3. **The Salty Swallow sets sail** (brainstormed 4 Nov; the crew is built, the voyage isn't): the ship leaves port during
-   its four fights, with environmental effects instead of the thief and the Stranger. Jorvash and Yvesil are built (6 Nov); Skipper Bren was discussed in place of Johnny aboard and left out for now (the user, 6 Nov); a smaller Shrine to the Lady was mentioned. Their paintings are wanted (`docs/art-direction.md`). Ideas offered: weather that hits both sides shown as a badge, a voyage in stages (casting
-   off for Klarg, a clear starry night for Rokr, a squall for the Hangman, the eye of the storm for Jaguar), the
-   Swell tipping a die to a neighbouring face, Yvesil selling the forecast or turning the wind, the Galley's stew
-   giving sea legs; events like a wave over the deck, flotsam, gulls, seasickness. To decide: both sides or only
-   the player, a fixed voyage or random weather. The ship's other ability names are still working names (Smooth Talk, the Cloak, All In).
+3. **The voyage, more** (step 1, Heeling on the sea die, built 9 Nov; see "The sea"): next in the brainstorm's order,
+   the Squall and the Rogue Wave, St Elmo's Fire, Fog; then the player's say (a Compass, a Spyglass, Yvesil's
+   forecast, a Ginger Thonic), choosing a course, events aboard. The sea die's faces per opponent
+   (`BALANCE.voyage`) are first guesses. The ship's other ability names are still working names (Smooth Talk, the
+   Cloak, All In).
 4. **Small things waiting on the user's word:**
    - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
    - The thief's button and result still say "catch" ("Roll to catch the thief"); the sentence above says "spot".
