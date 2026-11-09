@@ -321,7 +321,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   A DHCP reservation on the router (user's job) or Render fixes it for good.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (5 November 2026)
+## Status (9 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -329,8 +329,17 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 150 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
-- **5 Nov:** the intro film, with the user's three paintings, three sounds and five lines (see `Intro.tsx` in the 3D client notes).
+  keepsakes, gold, saves after each place. 154 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+- **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
+  - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
+    for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);
+  - opponents' entrance cards wait for a tap and explain each ability, with an "i" on the nameplate for the same card;
+    every item on your strip opens an info panel; a slim one-line plaque under Roll;
+  - cleaner dice faces (no painted outline), the opponents' painted dice back on with clean pips;
+  - the user's heart sounds and a new Astral Flood clip; the At the table tab, and the user's placings built in;
+  - the Salty Swallow: Yvesil and Jorvash (spots), Thom stowed away, Rokr's Starry Form, the Hangman's Penitent Stare,
+    Brodor's new end-screen text, Martha's keepsake line fixed; on 9 Nov all the ship's art from the user (two busts,
+    four ability paintings, six item icons, the night-sky dice). Skipper Bren was discussed and left out.
 - **4-5 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - Martha drops Mystery Flavour, her own Elf Bar, not her mask; the Duke saves his Devil unless it helps;
     the Ghoul and Gourd on 3 hearts against 1, 2, 3, 3, 3; at most two thieves at a place;
@@ -354,7 +363,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   Tavern Crawl design doc's "Where the game stands" table).
 - **27 Oct - 1 Nov (the user's calls; details in "Tavern Crawl now"):**
   - abilities rise up the screen like the devil's three 6s, 1.85 s each, showing only their name;
-    paintings for most abilities (all but Dead Eye, the Ace of Spades and All In); new busts for
+    paintings for most abilities (all of them since 9 Nov); new busts for
     Brodor and Jaguar; the user's sounds for the Ghoul and Gourd's abilities, the hot tub, the
     Shrine, Thom's cart (a loop), buying, the payout, the Shield, drinking, the gasp;
   - a new wide tabletop painting; a better Thonic moment (its bottle pops and tips);
@@ -442,7 +451,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). Since 26 Oct each place
   has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
-  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine and Johnny Elf Bar and no events of its
+  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine, Johnny Elf Bar, Jorvash and Yvesil and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
   Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
   the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
@@ -467,7 +476,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   they win 48% (pure best 53%, the old fixed habits 35%).
 - **Abilities** fire from a random round 1-3, up to `abilityUses` times a fight (Frak 1,
   Danhausen 2, Duke 1, Martha 2; the Yawning Portal's five 1 each (Stason 2), first guesses; the ship since 25 Oct:
-  Klarg 2, Rokr 3 turns, the Hangman's Dead Eye 1 (+ his Ace), Jaguar's Smooth Talk 2; Stason's Flourish 2 since 3 Nov, shown as **Vexing Rapier** since 3 Nov; its id stays `flourish`). Each use costs the player ~10 points of fight win chance. **The Yawning
+  Klarg 2, Rokr's Starry Form 2 (since 6 Nov), the Hangman's Penitent Stare 1 (+ his Ace; since 6 Nov), Jaguar's Smooth Talk 2; Stason's Flourish 2 since 3 Nov, shown as **Vexing Rapier** since 3 Nov; its id stays `flourish`). Each use costs the player ~10 points of fight win chance. **The Yawning
   Portal's five** (21 Oct, played as the simulator plays them): Sylvester's **Back of the Head** (the knocked-loose die must be rolled before it can be kept again, `turn.mustRollId`, 23 Oct; the
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
   hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it
@@ -538,14 +547,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     Steady counts his dust as it lies, `jaguarSteady`); an empty shelf: 3 off your finished hand
     (`talkThree`). **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
     **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
-  - Tests pin the dice with `pinFaces` (server.test.js). The old Constellation Blur code is unused now.
+  - Tests pin the dice with `pinFaces` (server.test.js). Starry Form is the old Constellation Blur code brought back (6 Nov); Written in the Stars' and Dead Eye's code is dormant.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
   bust behind it overlapped the painting, the user's call), motes of light rising, the painting
   pushing slowly in, the banner below it (on phones on their side the painting left, the banner
   right), 1.85 s like every moment (turning light rays behind the painting); not when a Clear-Eye cancels it.
   So far Mind Whip, You are Cursed, Sympathy for the Devil, Disguises, Back of the Head, Inkfire
-  Brand, Flourish, Astral Flood, Reach Around, Written in the Stars, since 27 Oct Jaguar's Smooth Talk and The Cloak, and since 28 Oct the Ridgeler's Divine Smite (`ABILITY_ART` in Hud,
+  Brand, Flourish, Astral Flood, Reach Around, Written in the Stars, since 27 Oct Jaguar's Smooth Talk and The Cloak, since 28 Oct the Ridgeler's Divine Smite, and since 9 Nov Starry Form, Penitent Stare, The Ace of Spades and All In: every ability has one now (`ABILITY_ART` in Hud,
   `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets; `cutOutFlat` also has
   `minPiece` (keep a flying die), `trails` (see-through streaks; a list for several colours), `fade` (fades out where the painting itself crops the character), `soften` (a fading
   edge), `glow` (a bright flame over the background keeps its own warm colours, see-through by brightness; Divine Smite's hammer) and `smokeMinBlue`). Since 28 Oct an ability's screen shows only its name (keepsakes and Thonics keep their lines); Astral Flood's stage has its painting's aurora and stars (`.aurora`, `.twinkle`). Every character's text is listed in `docs/character-text.md` for the user to edit. Brodor's bust is a new painting since 26 Oct (the first is
@@ -694,7 +703,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   to one (the user chose this over doors: it's a room you can look around, and it becomes "a
   fork in the road" in later places). Spots are drawn at random from the place's `spots`
   (since 30 Oct: the Ghoul and Gourd Thom, the Shrine, the hot tub, Johnny Elf Bar; the Yawning
-  Portal Thom, the Shrine, the Bard, Johnny; the Salty Swallow Thom, the Shrine, Johnny; events:
+  Portal Thom, the Shrine, the Bard, Johnny; the Salty Swallow Thom, the Shrine, Johnny, and since 6 Nov Jorvash and Yvesil; events:
   Darren at the Ghoul and Gourd, the Cult of Kram at the Yawning Portal, none of its own on the ship):
   Thom's cart (opens `ThomShop`), the Shrine to the Lady (light a candle: a blessing at random,
   her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
@@ -805,10 +814,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Commit and push what's waiting** (ask first): the Ghoul and Gourd's lives (you 3; 1, 2, 3, 3, 3),
-   Sperm's line, and these document updates.
+1. **Play the Salty Swallow on a phone** (everything up to 9 Nov is pushed and on the test site): the ship's new
+   abilities and crew, Yvesil's and Jorvash's round portraits (first guesses; the Portraits tab), whether the floating
+   constellations over Starry Form's dice should stay on top of the night-sky faces, and the intro's last scene
+   after the 6 Nov fix. Yvesil's pronouns aren't settled: the scene text says "her" (`docs/character-text.md`).
 2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
-3. **The Salty Swallow sets sail** (brainstormed 4 Nov, nothing decided or built): the ship leaves port during
+3. **The Salty Swallow sets sail** (brainstormed 4 Nov; the crew is built, the voyage isn't): the ship leaves port during
    its four fights, with environmental effects instead of the thief and the Stranger. Jorvash and Yvesil are built (6 Nov); Skipper Bren was discussed in place of Johnny aboard and left out for now (the user, 6 Nov); a smaller Shrine to the Lady was mentioned. Their paintings are wanted (`docs/art-direction.md`). Ideas offered: weather that hits both sides shown as a badge, a voyage in stages (casting
    off for Klarg, a clear starry night for Rokr, a squall for the Hangman, the eye of the storm for Jaguar), the
    Swell tipping a die to a neighbouring face, Yvesil selling the forecast or turning the wind, the Galley's stew

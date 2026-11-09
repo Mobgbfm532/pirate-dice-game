@@ -7,7 +7,9 @@ Since 28 October an ability's screen shows **only its name**. The longer lines t
 under it are gone. What you still see is the entrance card, the name on the ability screen, and
 the short plaque under the Roll button for the abilities that last a round or a turn (since 5 Nov on one slim line, "Name: What it does", capitalised).
 
-## The Salty Swallow's new text (6 Nov; first drafts except where marked as the user's)
+## The Salty Swallow's new text (6 Nov; first drafts except where marked as the user's; paintings since 9 Nov)
+
+Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a half-orc druid of the sea in their forties, with one arm a stump; Jorvash an old upper-class manservant: the user's descriptions).
 
 **Rokr**: Starry Form. Card: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." Plaque: "Keep blind: they show at your next throw".
 
