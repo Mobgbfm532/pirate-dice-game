@@ -550,6 +550,24 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     (Steady first); with only Healing on your shelf and his hearts full he leaves it and talks 3 off your hand. **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
     **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
   - Tests pin the dice with `pinFaces` (server.test.js). Starry Form is the old Constellation Blur code brought back (6 Nov); Written in the Stars' and Dead Eye's code is dormant.
+- **The sea (9 Nov, the user's; step 1 of the voyage, brainstormed the same day):** aboard the Salty
+  Swallow each round has weather, drawn from its leg's mix (`BALANCE.voyage`, weights by opponent, first
+  guesses) and forecast a round ahead; a fight's first round is calm (`SEAS`, `setSea` in
+  `beginTavernRound`, `run.sea` / `run.nextSea`, `sea` / `nextSea` in the state). So far only Heeling:
+  **listing to starboard** every die thrown lands one higher (no 1s), **to port** one lower (no 6s), both
+  sides (`seaRoll` under `rollFaceFor`; the Loaded Die's magic and the Devil's 6s untouched, Kram still
+  no 1s). The opponents' solver knows it (`shift` in strategy.js: landings weighted by the leaning faces).
+  A careful player dusts no more often either way (a 2 and a 4 stay 1 in 6); scores move (about 22 and
+  16 on average) and to port no 24 is possible. On screen: the plaque under Roll, always aboard (`SeaPlaque`,
+  `HintLine`: a little ship leaning and rocking, this round's sea and the next's; over the tip, and taking
+  turns every 3.5 s with an ability's plaque, `useTakingTurns`; a header chip sat over the bust, the user's
+  call, 9 Nov), the
+  dice drifting to the low side as they land (`diceRolled.sea` → `simulateRoll`'s `lean`: gravity leans,
+  `LEAN_PULL`, and they're thrown toward that side; only the look), and the deck lurching as the list
+  changes (`table.seaLurchAt`, cameraMoves). Rolling the whole view was left out (the paintings' edges
+  would show). Dev: `/sea?now=starboard&next=port`. Next (the brainstorm's order): the Squall and the
+  Rogue Wave, St Elmo's Fire, Fog; the player's say (Compass, Spyglass, Yvesil's forecast, a Ginger Thonic);
+  choosing a course; events aboard.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
   bust behind it overlapped the painting, the user's call), motes of light rising, the painting

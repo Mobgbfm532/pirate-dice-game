@@ -11,6 +11,7 @@
 //        (or start the server with OPPONENT_LIVES="sylvester:2,vaelin:2")
 //   curl "http://localhost:3003/surge?id=twin"      a hot tub surge on this fight
 //   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
+//   curl "http://localhost:3003/sea?now=starboard&next=port"   aboard the ship: this round's sea and the forecast
 //   curl "http://localhost:3003/purse?n=150"
 //   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
 //   curl "http://localhost:3003/won?hearts=2"        the fight is won: the gold summary, then the event
@@ -78,6 +79,8 @@ const COMMANDS = {
     // The hot tub's surge on this fight (id: noOnes, twin, lucky, scalding, soggy).
     '/surge': (r, q) => { r.tavernRun.tubSurge = q.get('id') || 'twin'; },
     '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
+    // Aboard the Salty Swallow: this round's sea and the forecast (calm, starboard, port).
+    '/sea': (r, q) => { r.tavernRun.sea = q.get('now') || 'starboard'; r.tavernRun.nextSea = q.get('next') || 'calm'; },
     // A fight against opponent n (0 McGrath ... 4 Martha, 5 Sylvester ... 9 Brodor, 10 Klarg ... 13 Jaguar), its ability ready from round 1.
     '/fight': (r, q, code) => { r.tavernRun.encounterIndex = Number(q.get('n')); r.tavernRun.interlude = null; r.tavernRun.shop = null; server.resetTavernEncounter(code); r.tavernRun.abilityRound = 1; r.tavernRun.abilityUsed = {}; server.beginTavernRound(code, r); },
     // A fight just won (the current opponent, &hearts=2 left): its gold summary, then the event between fights.

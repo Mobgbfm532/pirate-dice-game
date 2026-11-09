@@ -215,6 +215,47 @@ test('Klarg reaches around at most once a round, though he has two a fight', asy
     assert.equal(room.tavernRun.klargHand, 2);
 });
 
+test("The Salty Swallow's sea: a fight's first round is calm, the next is forecast, and heeling leans every die", async () => {
+    const hero = await tavernAgainst(fightOf('klarg'), 'SeaTest');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.name = 'Klarg';
+    room.tavernRun.encounterRound = 1;
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.sea, 'calm', 'the first round of a fight is calm');
+    assert.ok(['calm', 'starboard', 'port'].includes(room.tavernRun.nextSea));
+    const forecast = room.tavernRun.nextSea;
+    room.tavernRun.encounterRound = 2;
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.sea, forecast, 'the forecast comes true');
+    const st = server.getRoomState(codeOf(hero)).tavernRun;
+    assert.equal(st.sea.id, forecast);
+    assert.ok(st.nextSea && st.nextSea.name);
+    // Listing to starboard: every die one higher (a 6 stays a 6); to port: one lower (a 1 stays a 1).
+    for (const [sea, want] of [['starboard', [2, 3, 4, 5, 6, 6]], ['port', [1, 1, 2, 3, 4, 5]]]) {
+        room.tavernRun.sea = sea;
+        room.tavernRun.encounterKeepsakeUses = room.tavernRun.encounterKeepsakeUses || {};
+        const unpin = pinFaces([1, 2, 3, 4, 5, 6]);
+        const face = server.rollFaceFor(room, { playerId: hero.id, dice: [], hasRolled: true });
+        const got = [0, 1, 2, 3, 4, 5].map(id => face({ id: id + 10 }));
+        unpin();
+        assert.deepEqual(got, want, sea);
+        // The opponent's dice lean the same way.
+        const unpin2 = pinFaces([1, 6]);
+        const theirs = server.rollFaceFor(room, { playerId: 'BOT_MOLAR', dice: [] });
+        const both = [theirs({ id: 0 }), theirs({ id: 1 })];
+        unpin2();
+        assert.deepEqual(both, sea === 'starboard' ? [2, 6] : [1, 5], `${sea}: theirs`);
+    }
+});
+
+test('the sea is only aboard the Salty Swallow', async () => {
+    const hero = await tavernAgainst(fightOf('vaelin'), 'NoSea');
+    const room = roomOf(hero);
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.sea, null);
+    assert.equal(server.getRoomState(codeOf(hero)).tavernRun.sea, null);
+});
+
 test("Rokr's Starry Form hides your dice under constellations: you keep blind, and they show at your next throw", async () => {
     const hero = await tavernAgainst(fightOf('rokr'), 'RokrTest');
     const room = roomOf(hero);

@@ -3232,3 +3232,17 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
     background: radial-gradient(circle at 35% 30%, #f2b45a, #c8741e 70%, #9a5312); box-shadow: 0 0 8px rgba(255, 150, 40, 0.55), 0 2px 3px rgba(0, 0, 0, 0.6); }
 .klarg-hand .die2d > .pip { background: #2a170a; }
 @keyframes klarg-hand-in { from { transform: translateY(-18px) scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* The Salty Swallow's sea (9 Nov, the user's): on the plaque under Roll, in sea blue, a little ship
+   leaning the way she lists and rocking; the forecast after it. Two plaques taking turns fade in. */
+.round-plaque.round-sea { --accent: #9fd8ff; --tint: rgba(30, 110, 170, 0.32); }
+.round-plaque.sea-calm { --accent: #b9d6e6; --tint: rgba(40, 80, 110, 0.26); }
+.sea-ship { display: inline-block; animation: sea-rock 4.2s ease-in-out infinite; transform-origin: 50% 85%; }
+.sea-starboard .sea-ship { --heel: 14deg; }
+.sea-port .sea-ship { --heel: -14deg; }
+.sea-next { color: #9cc8e0; }
+@keyframes sea-rock { 0%, 100% { transform: rotate(calc(var(--heel, 0deg) - 4deg)); } 50% { transform: rotate(calc(var(--heel, 0deg) + 4deg)); } }
+.hint.crawl .round-plaque { animation-name: plaque-in; animation-duration: 0.45s; animation-timing-function: ease-out; animation-fill-mode: both; }
+.hint.crawl .round-plaque.round-curse, .hint.crawl .round-plaque.round-devil, .hint.crawl .round-plaque.round-mind { animation: plaque-in 0.45s ease-out both, round-pulse 2.4s ease-in-out infinite; }
+@keyframes plaque-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sea-ship { animation: none; transform: rotate(var(--heel, 0deg)); } }

@@ -524,8 +524,9 @@ function rollFaceFor(room, turn) {
     if (room.mode !== 'tavern-crawl') return rollFace;
     // The rolls that lost, this throw (Double Bubble, Flourish): sent with diceRolled as ghosts.
     turn.ghosts = [];
-    if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn) : rollFace;
-    let plainFace = playerFace(room, turn);
+    let roll = seaRoll(seaShift(room));
+    if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn, roll) : roll;
+    let plainFace = playerFace(room, turn, roll);
     // Yvesil's Fair Winds and the Albatross: on your first throw of each round, your 1s (or 6s) roll again.
     let omen = room.tavernRun.omen;
     let again = !turn.hasRolled && (omen === 'fairWinds' ? 1 : omen === 'albatross' ? 6 : 0);
@@ -548,20 +549,20 @@ function rollFaceFor(room, turn) {
 
 // How your dice land (before the Gambler's Charm): the Loaded Die, the hot tub's surge, Vaelin's
 // Inkfire, fealty to Kram.
-function playerFace(room, turn) {
+function playerFace(room, turn, roll = rollFace) {
     let loaded = hasKeepsake(room, 'loadedDie');
     let surge = room.tavernRun.tubSurge;
     let effect = room.tavernRun.roundEffect;
     let ink = !!effect && effect.kind === 'ink';
     let kram = !!room.tavernRun.kram; // sworn to Kram: your dice never land on 1
-    if (!loaded && !surge && !ink && !kram) return rollFace;
+    if (!loaded && !surge && !ink && !kram) return roll;
     // The Loaded Die (reworked 30 Oct): a 2 or a 4 until you've kept both, then 4, 5 or 6.
     let loadedFace = () => {
         let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
         let needed = [2, 4].filter(n => !kept.includes(n));
         return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7);
     };
-    let plain = d => (loaded && d && d.id === LOADED_DIE ? loadedFace() : kram ? crypto.randomInt(2, 7) : rollFace());
+    let plain = d => (loaded && d && d.id === LOADED_DIE ? loadedFace() : kram ? Math.max(2, roll()) : roll());
     let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
     if (!surge) return base;
     return d => {
@@ -588,10 +589,46 @@ function playerFace(room, turn) {
 
 // Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or 4
 // he still needs, else the higher).
-function flourishFace(turn) {
+// ---- The Salty Swallow's sea (9 Nov, the user's) ----
+// Each round aboard has its weather, drawn from the leg's mix (BALANCE.voyage, by opponent) and
+// forecast a round ahead; a fight's first round is calm. Heeling leans every die thrown, both
+// sides': to starboard one higher (no 1s), to port one lower (no 6s). The Loaded Die's magic and
+// the Devil's three 6s are untouched; Kram's fealty still means no 1s.
+const SEAS = {
+    calm: { name: 'Calm seas', text: 'The deck is steady.', shift: 0 },
+    starboard: { name: 'Listing to starboard', text: 'Every die lands one higher: no 1s.', shift: 1 },
+    port: { name: 'Listing to port', text: 'Every die lands one lower: no 6s.', shift: -1 }
+};
+function seaShift(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return sea && SEAS[sea] ? SEAS[sea].shift : 0;
+}
+// A plain throw of one die, leaning with the sea.
+function seaRoll(shift) {
+    return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
+}
+function drawSea(encounter) {
+    let mix = (BALANCE.voyage || {})[encounter.id];
+    if (!mix) return 'calm';
+    let ids = Object.keys(mix).filter(id => SEAS[id] && mix[id] > 0);
+    let total = ids.reduce((a, id) => a + mix[id], 0);
+    let r = crypto.randomInt(0, Math.max(1, Math.round(total * 1000))) / 1000;
+    for (let id of ids) { if ((r -= mix[id]) < 0) return id; }
+    return ids[ids.length - 1] || 'calm';
+}
+// As a round begins: aboard, this round's weather (the forecast) and the next's.
+function setSea(room, encounter) {
+    let run = room.tavernRun;
+    if (!encounter || encounter.place !== 'saltySwallow') { run.sea = null; run.nextSea = null; return; }
+    run.sea = (run.encounterRound || 1) <= 1 ? 'calm' : run.nextSea || 'calm';
+    run.nextSea = drawSea(encounter);
+}
+const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
+
+function flourishFace(turn, roll = rollFace) {
     return d => {
         let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
-        let a = rollFace(), b = rollFace();
+        let a = roll(), b = roll();
         let pick = Math.max(a, b);
         for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
         // The other roll rises from the die as a ghost (like Double Bubble's; the user's call, 21 Oct).
@@ -680,6 +717,8 @@ function getTavernRunState(room) {
         ...abilityMarks(room, seated),
         jaguarPhase: room.tavernRun.jaguarPhase || null, // Jaguar's: 'talk', 'cloak' or 'allIn'
         klargHand: room.tavernRun.klargHand || null, // the die Klarg snatched, waiting for his turn
+        sea: seaView(room.tavernRun.sea), // aboard the Salty Swallow: this round's weather
+        nextSea: seaView(room.tavernRun.nextSea), // and the next round's (the forecast)
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
@@ -976,7 +1015,7 @@ function performRoll(roomCode) {
     // throwSeed lets every screen simulate the identical tumble (the values are already decided).
     let abilitySixes = !!turn.abilitySixes;
     turn.abilitySixes = false;
-    let thrown = { turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil && !abilitySixes, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let thrown = { sea: seaShift(room) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil && !abilitySixes, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1316,7 +1355,7 @@ function runBotDecision(roomCode) {
     // A cursed round is played for the fewest points; under the player's Devil the bot's
     // score counts as no more than the cap.
     let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
-    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null };
+    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room) };
     let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
@@ -1826,6 +1865,7 @@ function beginTavernRound(roomCode, room) {
     run.talkThree = false;
     run.cloud = false;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    setSea(room, encounter);
     if (!encounter || !encounter.keepsStolen) run.klargHand = null; // (a fight ended with one in his hand)
     if (!encounter || encounter.ability !== 'jaguarPhases') run.jaguarPhase = null;
     if (!encounter || !encounter.ability) return;

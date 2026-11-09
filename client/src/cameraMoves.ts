@@ -74,6 +74,14 @@ export function cameraMoves(now: number, focal: number) {
         }
     }
 
+    // The ship's list changes (a new round's sea): the deck lurches that way and settles.
+    if (table.seaLurchAt) {
+        const t = now - table.seaLurchAt;
+        yaw += jolt(t, 1100, -0.011 * Math.sign(table.seaLurch || 1));
+        const [a, b] = rumble(t, 900, 0.0018, 4);
+        pitch += a; yaw += b;
+    }
+
     shake.pitch = pitch;
     shake.yaw = yaw;
     // Turning the camera up moves the world down the screen; turning it left moves it right.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, type SeaState, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -520,6 +520,37 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
     );
 }
 
+// The Salty Swallow's sea (9 Nov, the user's), on the plaque under Roll: a little ship leaning
+// the way she lists and rocking, this round's weather and the next's (the forecast). (A chip in
+// the header sat over the opponent's bust: the user's call, it moved here.)
+const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)' };
+const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port' };
+function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
+    return (
+        <div className={`round-plaque round-sea sea-${sea.id}`} title={`${sea.name}. ${sea.text}${next ? ` Next round: ${next.name}.` : ''}`}>
+            <span className="sea-ship" aria-hidden="true">⛵</span> <b>{sea.name}:</b> {SEA_EFFECT[sea.id]}{next && <span className="sea-next"> · Next: {SEA_NEXT[next.id]}</span>}
+        </div>
+    );
+}
+// What the line under Roll says: a round's plaque, or the tip. Aboard the Salty Swallow the sea is
+// always there (over the tip), taking turns with an opponent's ability when there is one.
+function HintLine({ badge, plaque, tip, sea, next }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null }) {
+    const turnAbout = useTakingTurns(!!sea && !!badge.kind);
+    if (sea && (!badge.kind || turnAbout === 1)) return <SeaPlaque key="sea" sea={sea} next={next} />;
+    if (plaque || (sea && badge.kind)) return <div key="ability" className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>;
+    return <>{tip}</>;
+}
+// Two plaques wanting the one line (the sea and an opponent's ability): they take turns.
+function useTakingTurns(both: boolean, ms = 3500) {
+    const [which, setWhich] = useState(0);
+    useEffect(() => {
+        if (!both) { setWhich(0); return; }
+        const timer = setInterval(() => setWhich(w => 1 - w), ms);
+        return () => clearInterval(timer);
+    }, [both, ms]);
+    return which;
+}
+
 // The opponent's ability on their nameplate: one ✦ per use this fight, lit while it's left and
 // dark once spent. The plate flashes when one is spent.
 function AbilityMarks({ state }: { state: GameState }) {
@@ -593,9 +624,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
             {/* A hot tub fight: its badge can take two lines on small phones, so the space is kept the whole fight (the table doesn't jump when a tip replaces it). */}
             <div className={`hint ${state?.tavernRun ? 'crawl' : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>
-                {plaque ? (
-                    <div className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>
-                ) : tip}
+                <HintLine badge={badge} plaque={plaque} tip={tip} sea={state?.tavernRun?.sea ?? null} next={state?.tavernRun?.nextSea ?? null} />
             </div>
         </div>
     );

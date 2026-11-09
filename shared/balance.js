@@ -37,6 +37,15 @@ module.exports = {
     // How the final tier's abilities play (each set by simulation, 25 Oct): a sensible player,
     // fresh, wins Klarg 27%, Rokr 26%, the Hangman 26%, Jaguar 14% (the Yawning Portal ~40%,
     // Brodor 23%; the ship as it was 36, 41, 35, 24).
+    // The Salty Swallow's sea (9 Nov, the user's): each round's weather drawn from its leg's mix (weights,
+    // by opponent), forecast a round ahead; a fight's first round is calm. Heeling to starboard: every
+    // die lands one higher (no 1s); to port: one lower (no 6s). Both sides. First guesses.
+    voyage: {
+        klarg: { calm: 2, starboard: 1, port: 1 },
+        rokr: { calm: 2, starboard: 1, port: 1 },
+        hangman: { calm: 1, starboard: 1, port: 1 },
+        jaguar: { calm: 1, starboard: 1, port: 1 }
+    },
     finalShip: {
         klargWaits: true,        // Klarg steals when a 2 or 4 you still need shows (else: on your first throw)
         starFaces: 2,            // Rokr: faces marked before each throw of the turn

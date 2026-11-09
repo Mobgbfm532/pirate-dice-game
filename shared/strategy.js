@@ -12,6 +12,8 @@
 //   - The player dusted: the chance of a valid hand (a 2 and a 4).
 //   - It goes first: the chance that a sensible player then fails to beat it (see
 //     firstMoverValue: the player's scores are taken from playing for the most points).
+// The Salty Swallow's sea (9 Nov) can lean every die one higher or lower (shift +1 / -1): the
+// landings are then weighted by the leaning faces (a 6 twice as likely, no 1s; or the reverse).
 // Two rounds change what "beat" means: a cursed one (low: the lowest valid score wins, and a
 // sensible player plays for the fewest points), and the Devil's (cap: a score counts as no
 // more than cap).
@@ -24,15 +26,22 @@ const at = (n, s, h) => (n * (MAX_S + 1) + s) * 4 + h; // h: bit 1 = has a 2, bi
 
 // Every way k dice can land, as counts per face (1..6), with its probability, and every
 // choice of dice to keep from it (at least one) as counts per face.
-function landings(k) {
+// The chance of each face (1..6) with the sea's lean: one higher (no 1s, a 6 twice as likely), one lower.
+function faceChances(shift = 0) {
+    const p = [0, 0, 0, 0, 0, 0];
+    for (let f = 1; f <= 6; f++) p[Math.min(6, Math.max(1, f + shift)) - 1] += 1 / 6;
+    return p;
+}
+function landings(k, shift = 0) {
+    const chance = faceChances(shift);
     const out = [];
     const counts = [0, 0, 0, 0, 0, 0];
     const spread = (face, left) => {
         if (face === 5) {
             counts[5] = left;
             let p = FACT[k];
-            counts.forEach(c => { p /= FACT[c]; });
-            out.push({ counts: counts.slice(), p: p / 6 ** k, keeps: keepChoices(counts) });
+            counts.forEach((c, f) => { p = (p / FACT[c]) * chance[f] ** c; });
+            if (p > 0) out.push({ counts: counts.slice(), p, keeps: keepChoices(counts) });
             return;
         }
         for (let i = left; i >= 0; i--) { counts[face] = i; spread(face + 1, left - i); }
@@ -58,7 +67,11 @@ function keepChoices(counts) {
     return out;
 }
 
-const LANDINGS = [null, 1, 2, 3, 4, 5, 6].map(k => (k ? landings(k) : null));
+const LANDINGS_BY = new Map();
+const landingsFor = (shift = 0) => {
+    if (!LANDINGS_BY.has(shift)) LANDINGS_BY.set(shift, [null, 1, 2, 3, 4, 5, 6].map(k => (k ? landings(k, shift) : null)));
+    return LANDINGS_BY.get(shift);
+};
 
 // The opponents play like people: a 2 or 4 they still need is always taken when it shows
 // (one of each), and only the rest of the keep is chosen for the best chance. (Pure best play
@@ -83,7 +96,8 @@ function afterKeeping(s, h, keep) {
 
 // Chances of a good finish from every position, for a given finish value
 // (finish(score, valid) -> 0..1).
-function solve(finish) {
+function solve(finish, shift = 0) {
+    const LANDINGS = landingsFor(shift);
     const V = new Float64Array(STATES);
     for (let s = 0; s <= MAX_S; s++) for (let h = 0; h < 4; h++) V[at(0, s, h)] = finish(s, h === 3);
     for (let n = 1; n <= 6; n++) {
@@ -108,9 +122,11 @@ function solve(finish) {
 // The player's likely final scores, if they play for the most points (or, low, the fewest):
 // { dust, score[] }.
 const playerScores = {};
-function sensiblePlayerScores(low = false) {
-    if (playerScores[low]) return playerScores[low];
-    const V = solve((s, valid) => (valid ? (low ? 24 - Math.min(s, 24) : s) / 24 : 0));
+function sensiblePlayerScores(low = false, shift = 0) {
+    const key = `${low}|${shift}`;
+    if (playerScores[key]) return playerScores[key];
+    const LANDINGS = landingsFor(shift);
+    const V = solve((s, valid) => (valid ? (low ? 24 - Math.min(s, 24) : s) / 24 : 0), shift);
     const P = new Float64Array(STATES);
     P[at(6, 0, 0)] = 1;
     const result = { dust: 0, score: new Array(MAX_S + 1).fill(0) };
@@ -133,15 +149,15 @@ function sensiblePlayerScores(low = false) {
         const p = P[at(0, s, h)];
         if (h === 3) result.score[s] += p; else result.dust += p;
     }
-    playerScores[low] = result;
+    playerScores[key] = result;
     return result;
 }
 
 // Going first: the value of finishing on a score is the chance the player then fails to
 // beat it (they dust, score lower, or tie and lose the sudden death half the time). Cursed
 // (low), beating it means scoring lower.
-function firstMoverValue(score, low = false) {
-    const d = sensiblePlayerScores(low);
+function firstMoverValue(score, low = false, shift = 0) {
+    const d = sensiblePlayerScores(low, shift);
     let fails = d.dust;
     for (let x = 0; x <= MAX_S; x++) if (low ? x > score : x < score) fails += d.score[x];
     return fails + 0.5 * d.score[score];
@@ -150,10 +166,10 @@ function firstMoverValue(score, low = false) {
 // The finish value for what the bot knows. toBeat: the player's score, null if they dusted,
 // undefined if they haven't played yet. aceAt16: the Hangman can turn 16+ into 24. low: a
 // cursed round. cap: the bot's score counts as no more than this (the Devil's round).
-function finishFor(toBeat, { aceAt16 = false, low = false, cap = null } = {}) {
+function finishFor(toBeat, { aceAt16 = false, low = false, cap = null, shift = 0 } = {}) {
     const lift = s => Math.min(aceAt16 && !low && s >= 16 && s < 24 ? 24 : s, cap ?? MAX_S);
     if (toBeat === null) return (s, valid) => (valid ? 1 : 0);
-    if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S), low) : 0);
+    if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S), low, shift) : 0);
     return (s, valid) => {
         if (!valid) return 0;
         const score = lift(s);
@@ -164,8 +180,8 @@ function finishFor(toBeat, { aceAt16 = false, low = false, cap = null } = {}) {
 
 const tables = new Map();
 function tableFor(toBeat, options = {}) {
-    const key = `${toBeat}|${options.aceAt16 ? 1 : 0}|${options.low ? 1 : 0}|${options.cap ?? ''}`;
-    if (!tables.has(key)) tables.set(key, { V: solve(finishFor(toBeat, options)), finish: finishFor(toBeat, options) });
+    const key = `${toBeat}|${options.aceAt16 ? 1 : 0}|${options.low ? 1 : 0}|${options.cap ?? ''}|${options.shift || 0}`;
+    if (!tables.has(key)) tables.set(key, { V: solve(finishFor(toBeat, options), options.shift || 0), finish: finishFor(toBeat, options) });
     return tables.get(key);
 }
 

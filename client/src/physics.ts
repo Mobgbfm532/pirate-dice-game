@@ -121,8 +121,12 @@ function clippedCube(half: number, clip: number) {
 
 const DIE_SHAPE = clippedCube(DIE_HALF, 0.14); // matches the drawn dice's corner radius (0.13)
 
-function buildWorld() {
-    const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -24, 0) });
+// The Salty Swallow listing (9 Nov): gravity leans toward the low side (+x, the right, to starboard),
+// so the dice drift that way as they land. Only the look: the faces are still the server's.
+const LEAN_PULL = 6.5;
+
+function buildWorld(lean = 0) {
+    const world = new CANNON.World({ gravity: new CANNON.Vec3(lean * LEAN_PULL, -24, 0) });
     world.allowSleep = true;
     world.broadphase = new CANNON.NaiveBroadphase();
 
@@ -157,8 +161,8 @@ function buildWorld() {
 }
 
 // direction: 1 throws left to right across the tray's long side, -1 right to left.
-function simulateOnce(count: number, direction: 1 | -1) {
-    const { world, diceMaterial, floor, walls } = buildWorld();
+function simulateOnce(count: number, direction: 1 | -1, lean = 0) {
+    const { world, diceMaterial, floor, walls } = buildWorld(lean);
     const bodies: CANNON.Body[] = [];
 
     for (let i = 0; i < count; i++) {
@@ -244,17 +248,19 @@ function isFlat(b: CANNON.Body) {
 }
 
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
-export function simulateRoll(dieIds: number[], targetValues: number[], seed?: number): RollTrack {
+export function simulateRoll(dieIds: number[], targetValues: number[], seed?: number, lean = 0): RollTrack {
     random = seed === undefined ? Math.random : seededRandom(seed);
     // Prefer a throw that ends flat within ~3.2s; otherwise keep the best one seen
     // (flat beats cocked, then shorter beats longer).
     const QUICK_FRAMES = 3.2 * 60;
     const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
         a.flat !== b.flat ? a.flat : a.frames < b.frames;
-    const direction = random() < 0.5 ? 1 : -1;
-    let result = simulateOnce(dieIds.length, direction);
+    // (Aboard a listing ship the dice are thrown toward the low side, so they end up there.)
+    const toss = random() < 0.5 ? 1 : -1;
+    const direction = lean > 0 ? 1 : lean < 0 ? -1 : toss;
+    let result = simulateOnce(dieIds.length, direction, lean);
     for (let attempt = 0; attempt < 6 && !(result.flat && result.frames <= QUICK_FRAMES); attempt++) {
-        const next = simulateOnce(dieIds.length, direction);
+        const next = simulateOnce(dieIds.length, direction, lean);
         if (better(next, result)) result = next;
     }
 

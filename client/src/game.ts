@@ -6,6 +6,9 @@ import { screenInsets, waitingPosition } from './layout';
 import { lookNext } from './look';
 import { playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
+// The Salty Swallow's sea (server SEAS): shift +1 every die one higher, -1 one lower.
+export interface SeaState { id: 'calm' | 'starboard' | 'port'; name: string; text: string; shift: number }
+
 // Talks to the game server and holds everything the UI and the 3D table draw from.
 // The server decides every roll; this file only animates and displays its decisions.
 
@@ -79,6 +82,8 @@ export interface TavernRun {
     abilitySpent?: number; // how many of them are spent
     jaguarPhase?: 'talk' | 'cloak' | 'allIn' | null; // Jaguar's phase this round
     klargHand?: number | null; // the die Klarg snatched, shown on his nameplate until his turn
+    sea?: SeaState | null; // aboard the Salty Swallow: this round's weather (9 Nov)
+    nextSea?: SeaState | null; // and the next round's, the forecast
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
     tubSurge?: TubSurge | null; // the Wild Magic Hot Tub's surge on one of your dice, this fight
@@ -235,6 +240,8 @@ export const table = {
     lockOrder: new Map<number, number>(), // die id -> when it was locked, so slots never reshuffle
     stolenAt: new Map<number, number>(), // die id -> time Klarg took it
     devilAt: 0,
+    seaLurchAt: 0, // the ship's list changed (a new round's sea)
+    seaLurch: 0, // which way: + to starboard, - to port
     celebrateAt: 0,
     diceSet: null as string | null // development: every die shows this opponent's set (preview.dice)
 };
@@ -505,7 +512,7 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
     });
 });
 
-socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; ghosts?: Ghost[] }) => {
+socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; ghosts?: Ghost[] }) => {
     enqueue(done => setTimeout(() => {
         const turn = data.turn;
         if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
@@ -517,7 +524,8 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
         const thrownIds = data.rerolled ? new Set(data.rerolled) : new Set((before ? before.dice : turn.dice.filter(d => d.status !== 'stolen'))
             .filter(d => d.status === 'active').map(d => d.id));
         const rolled = turn.dice.filter(d => thrownIds.has(d.id));
-        const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed);
+        // (Aboard a listing ship the dice drift to the low side: data.sea.)
+        const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed, data.sea ?? 0);
         // A cursed round's chance at its perfect hand (since 26 Oct, the user's): the 2, the 4 and
         // three 1s kept, one die to throw for the fourth 1. The server's suspense doesn't know the
         // Curse, so the throw gets its slow motion here.
@@ -642,6 +650,9 @@ function applyState(state: GameState) {
     const between = !!run && !!(run.interlude || run.shop);
     // Straight in after a reload or a resume; after a fight, once its last roll has played out.
     const fromFight = !!snapshot.state?.tavernRun && !snapshot.state.tavernRun.interlude && !snapshot.state.tavernRun.shop;
+    // The ship's list changes with a new round's sea: the deck lurches (cameraMoves).
+    const sea = run?.sea ?? null, wasSea = snapshot.state?.tavernRun?.sea ?? null;
+    if (sea && wasSea && sea.id !== wasSea.id) { table.seaLurchAt = performance.now(); table.seaLurch = sea.shift - wasSea.shift; }
     update({ state, isMyTurn, waiting, ...(between ? {} : { betweenShown: false }) });
     if (between && !snapshot.betweenShown && !betweenPending) {
         if (!fromFight) update({ betweenShown: true });

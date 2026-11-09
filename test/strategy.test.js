@@ -109,3 +109,14 @@ test('the chances make sense', () => {
     const sum = d.dust + d.score.reduce((a, b) => a + b, 0);
     assert.ok(Math.abs(sum - 1) < 1e-9, 'the player\'s scores add up to certainty');
 });
+
+test("the Salty Swallow's sea: it knows a list to starboard lifts every die and to port lowers it", () => {
+    // Beating 18 from the start: far likelier when every die lands one higher, far less when one lower.
+    const calm = Strategy.chanceFromStart(18), up = Strategy.chanceFromStart(18, { shift: 1 }), down = Strategy.chanceFromStart(18, { shift: -1 });
+    assert.ok(up > calm + 0.1 && down < calm - 0.3, `${down} < ${calm} < ${up}`);
+    // Listing to port nothing scores above 20: a 21 can't be beaten.
+    assert.equal(Strategy.chanceFromStart(21, { shift: -1 }), 0);
+    // A careful player dusts no more often either way (a 2 and a 4 are as likely as ever).
+    const dust = shift => Strategy.sensiblePlayerScores(false, shift).dust;
+    assert.ok(Math.abs(dust(1) - dust(0)) < 0.01 && Math.abs(dust(-1) - dust(0)) < 0.01);
+});
