@@ -333,6 +333,106 @@ export function playChime() {
     });
 }
 
+// The ship's bell (9 Nov, the Salty Swallow setting sail): struck `strikes` times, a bronze bell's
+// partials (not quite in tune with each other) ringing away. Synthesized, under the game sounds switch.
+export function playShipBell(strikes = 2, gap = 0.62) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    const out = ctx.createGain();
+    out.gain.value = 0.5;
+    out.connect(ctx.destination);
+    const base = 587;
+    const partials: [number, number, number][] = [[0.5, 0.35, 3.2], [1, 0.5, 2.6], [1.19, 0.18, 1.6], [1.56, 0.12, 1.2], [2.0, 0.22, 1.4], [2.74, 0.1, 0.8], [3.76, 0.06, 0.5]];
+    for (let k = 0; k < strikes; k++) {
+        const when = ctx.currentTime + 0.03 + k * gap;
+        for (const [ratio, level, decay] of partials) {
+            const tone = ctx.createOscillator();
+            tone.type = 'sine';
+            tone.frequency.setValueAtTime(base * ratio, when);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, when);
+            gain.gain.exponentialRampToValueAtTime(level, when + 0.004);
+            gain.gain.exponentialRampToValueAtTime(0.0001, when + decay);
+            tone.connect(gain).connect(out);
+            tone.start(when);
+            tone.stop(when + decay + 0.05);
+        }
+    }
+}
+
+// Aboard the Salty Swallow, the sea changes (9 Nov): a wave rising and washing past (noise through a
+// low-pass that opens and closes), and when she heels a deep boom against the hull and the timbers
+// creaking. Synthesized, under the game sounds switch.
+let seaNoise: AudioBuffer | null = null;
+export function playSeaSwell(kind: 'heel' | 'calm') {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    if (!seaNoise) {
+        seaNoise = ctx.createBuffer(1, Math.round(ctx.sampleRate * 2.6), ctx.sampleRate);
+        const d = seaNoise.getChannelData(0);
+        let brown = 0;
+        for (let i = 0; i < d.length; i++) { brown = (brown + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = brown * 3.5; }
+    }
+    const heel = kind === 'heel';
+    const t = ctx.currentTime + 0.02;
+    const out = ctx.createGain();
+    out.gain.value = heel ? 0.9 : 0.6;
+    out.connect(ctx.destination);
+    // The wave.
+    const wash = ctx.createBufferSource();
+    wash.buffer = seaNoise;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(180, t);
+    filter.frequency.exponentialRampToValueAtTime(heel ? 2400 : 1400, t + 0.55);
+    filter.frequency.exponentialRampToValueAtTime(260, t + 2.3);
+    const washGain = ctx.createGain();
+    washGain.gain.setValueAtTime(0.0001, t);
+    washGain.gain.exponentialRampToValueAtTime(heel ? 1 : 0.7, t + 0.45);
+    washGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+    wash.connect(filter).connect(washGain).connect(out);
+    wash.start(t);
+    wash.stop(t + 2.6);
+    if (!heel) return;
+    // The boom against the hull, as the screen shakes.
+    const boomAt = t + 0.28;
+    const boom = ctx.createOscillator();
+    boom.type = 'sine';
+    boom.frequency.setValueAtTime(70, boomAt);
+    boom.frequency.exponentialRampToValueAtTime(34, boomAt + 0.6);
+    const boomGain = ctx.createGain();
+    boomGain.gain.setValueAtTime(0.0001, boomAt);
+    boomGain.gain.exponentialRampToValueAtTime(0.9, boomAt + 0.02);
+    boomGain.gain.exponentialRampToValueAtTime(0.0001, boomAt + 0.8);
+    boom.connect(boomGain).connect(out);
+    boom.start(boomAt);
+    boom.stop(boomAt + 0.85);
+    // The timbers creaking as she leans.
+    const creakAt = t + 0.45;
+    const creak = ctx.createOscillator();
+    creak.type = 'sawtooth';
+    creak.frequency.setValueAtTime(150, creakAt);
+    creak.frequency.linearRampToValueAtTime(118, creakAt + 0.9);
+    const wobble = ctx.createOscillator();
+    wobble.frequency.value = 23;
+    const wobbleDepth = ctx.createGain();
+    wobbleDepth.gain.value = 9;
+    wobble.connect(wobbleDepth).connect(creak.frequency);
+    const creakFilter = ctx.createBiquadFilter();
+    creakFilter.type = 'bandpass';
+    creakFilter.frequency.value = 600;
+    creakFilter.Q.value = 3;
+    const creakGain = ctx.createGain();
+    creakGain.gain.setValueAtTime(0.0001, creakAt);
+    creakGain.gain.exponentialRampToValueAtTime(0.12, creakAt + 0.15);
+    creakGain.gain.exponentialRampToValueAtTime(0.0001, creakAt + 0.95);
+    creak.connect(creakFilter).connect(creakGain).connect(out);
+    creak.start(creakAt); wobble.start(creakAt);
+    creak.stop(creakAt + 1); wobble.stop(creakAt + 1);
+}
+
 // Development only: renders the cork pop offline to raw samples, for listening outside the game.
 export async function renderCorkPop(fizz = false, sampleRate = 22050) {
     const ctx = new OfflineAudioContext(1, Math.ceil(1.2 * sampleRate), sampleRate);

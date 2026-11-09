@@ -248,6 +248,44 @@ test("The Salty Swallow's sea: a fight's first round is calm, the next is foreca
     }
 });
 
+test('no events aboard the Salty Swallow: no thief, no Hooded Stranger, straight to the spots', async () => {
+    const hero = await tavernAgainst(fightOf('rokr'), 'NoEvents');
+    const room = roomOf(hero);
+    room.tavernRun.purse = 500;
+    room.tavernRun.keepsakes = [];
+    for (let i = 0; i < 200; i++) {
+        room.tavernRun.thieves = {};
+        server.startInterlude(room, { defeated: 'Rokr' });
+        assert.equal(room.tavernRun.interlude.stage, 'choose');
+    }
+    // Ashore they still happen.
+    room.tavernRun.encounterIndex = fightOf('vaelin');
+    const stages = new Set();
+    for (let i = 0; i < 300; i++) { room.tavernRun.thieves = {}; server.startInterlude(room, { defeated: 'Vaelin' }); stages.add(room.tavernRun.interlude.stage); }
+    assert.ok(stages.has('pickpocket'));
+});
+
+test('a change of sea is a moment of its own: seaChange, with the forecast, only when the sea changes', async () => {
+    const hero = await tavernAgainst(fightOf('klarg'), 'SeaMoment');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.name = 'Klarg';
+    const seen = [];
+    hero.on('seaChange', m => seen.push(m));
+    room.tavernRun.sea = 'calm';
+    room.tavernRun.nextSea = 'starboard';
+    room.tavernRun.encounterRound = 2;
+    server.beginTavernRound(codeOf(hero), room);
+    room.tavernRun.nextSea = 'starboard';
+    room.tavernRun.encounterRound = 3;
+    server.beginTavernRound(codeOf(hero), room); // starboard again: no moment
+    await sleep(80);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].id, 'starboard');
+    assert.equal(seen[0].from, 'calm');
+    assert.equal(seen[0].shift, 1);
+    assert.ok(seen[0].next && seen[0].next.name);
+});
+
 test('the sea is only aboard the Salty Swallow', async () => {
     const hero = await tavernAgainst(fightOf('vaelin'), 'NoSea');
     const room = roomOf(hero);

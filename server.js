@@ -449,6 +449,7 @@ const PLACES = {
         name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
         spots: ['thom', 'shrine', 'jorvash', 'yvesil'], // (Thom stows away, 6 Nov; Johnny Elf Bar stays ashore, 9 Nov)
+        noEvents: true, // no thief, no Hooded Stranger aboard: straight to the spots (the user's, 9 Nov)
         events: []
     }
 };
@@ -616,12 +617,17 @@ function drawSea(encounter) {
     for (let id of ids) { if ((r -= mix[id]) < 0) return id; }
     return ids[ids.length - 1] || 'calm';
 }
-// As a round begins: aboard, this round's weather (the forecast) and the next's.
-function setSea(room, encounter) {
+// As a round begins: aboard, this round's weather (the forecast) and the next's. A change of sea
+// after a fight's first round is a moment of its own (seaChange: a wave, the clinometer, its name;
+// 9 Nov, the user's), before the round's abilities, and the throws wait for it.
+function setSea(roomCode, room, encounter) {
     let run = room.tavernRun;
     if (!encounter || encounter.place !== 'saltySwallow') { run.sea = null; run.nextSea = null; return; }
-    run.sea = (run.encounterRound || 1) <= 1 ? 'calm' : run.nextSea || 'calm';
+    let was = run.sea;
+    let first = (run.encounterRound || 1) <= 1;
+    run.sea = first ? 'calm' : run.nextSea || 'calm';
     run.nextSea = drawSea(encounter);
+    if (!first && was && run.sea !== was) sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: was, next: seaView(run.nextSea) });
 }
 const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
 
@@ -1536,6 +1542,7 @@ function emitMoment(roomCode, room, event, data) {
 const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
 const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card, with a line per player (the client's too)
 const FLOOD_WAVE_MS = 2200; // Astral Flood's wave over the table, after its banner (the client's too)
+const SEA_SHOW_MS = 2600; // aboard the Salty Swallow, a change of sea's moment (the client's too)
 const INTRO_SHOW_MS = 4500; // an opponent's entrance, until the player taps it away (introDone)
 const INTRO_LEAVE_MS = 300; // the moment after that tap (the client's too)
 function sendMoment(roomCode, event, data) {
@@ -1545,8 +1552,9 @@ function sendMoment(roomCode, event, data) {
         let result = event === 'roundResult';
         let start = Math.max(Date.now(), room.momentNext || 0);
         let flood = event === 'signatureMove' && data && data.ability === Rules.ABILITY_NAMES.astralFlood && !data.cancelled;
-        room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_GAP_MS);
-        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_SHOW_MS));
+        let sea = event === 'seaChange';
+        room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? SEA_SHOW_MS : MOMENT_GAP_MS);
+        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? SEA_SHOW_MS : MOMENT_SHOW_MS));
     }
     io.to(roomCode).emit(event, data);
 }
@@ -1865,7 +1873,7 @@ function beginTavernRound(roomCode, room) {
     run.talkThree = false;
     run.cloud = false;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
-    setSea(room, encounter);
+    setSea(roomCode, room, encounter);
     if (!encounter || !encounter.keepsStolen) run.klargHand = null; // (a fight ended with one in his hand)
     if (!encounter || encounter.ability !== 'jaguarPhases') run.jaguarPhase = null;
     if (!encounter || !encounter.ability) return;
@@ -2102,7 +2110,9 @@ function startInterlude(room, won) {
     // count needn't travel with it: the next place starts afresh.)
     let place = TAVERN_ENCOUNTERS[run.encounterIndex].place;
     run.thieves = run.thieves || {};
-    if (steal > 0 && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+    if (PLACES[place] && PLACES[place].noEvents) {
+        run.interlude = { stage: 'choose', spots: pickSpots(room) };
+    } else if (steal > 0 && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
         run.thieves[place] = (run.thieves[place] || 0) + 1;
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
     } else if (!pocketsFull(room) && unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {

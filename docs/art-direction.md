@@ -174,6 +174,13 @@ Everything here is on a flat solid magenta background, no checkerboard, no glow 
 - `art/keepsake-albatross.jpg`, The Albatross: a large grim white albatross with spread wings, a dead weight of rope hanging from its neck, stormy grey shading.
 - `art/keepsake-blackSpot.jpg`, The Black Spot: a torn scrap of old parchment with one big inked black circle in the middle.
 
+**At sea (wanted, 9 Nov: the Swallow has set sail)** (no magenta: full paintings, like the other backdrops)
+
+- `art/salty-swallow-at-sea.jpg`, the gun deck under way (replaces the docked backdrop for the ship's four fights; 1584×672 or wider, the same view as the docked one so the table and busts sit as before): *Wide interior view of a pirate ship's gun deck at night while the ship is at sea, seen from a seat at a gaming table: open gun ports and round portholes showing a dark rolling ocean with moonlit wave crests and spray, lanterns swinging on their hooks, a hammock swaying, ropes and barrels lashed down, a little seawater glistening on the deck boards, cool blue moonlight through the ports mixing with warm lantern light, out of focus, empty foreground. + style line*
+- `art/salty-swallow-sets-sail.jpg`, for the "sets sail" scene before Klarg (1600×900, wide; the scene crops its middle on a phone): *The pirate ship the Salty Swallow leaving a lantern-lit harbour at dusk, seen from the dock: sails unfurling and filling with wind, crew hauling lines, the last mooring rope dropping into the water, gulls, a low moon over the open sea beyond the harbour mouth, the ship heeling slightly as it catches the wind, warm harbour lights behind, cool sea ahead. Dramatic, adventurous. + style line*
+
+When these come in: the backdrop goes in `SALTY_SWALLOW` in `client/src/Backdrop.tsx` (and the docked one could stay for the first scene), the sailing painting replaces the gun deck in `SetSail` (Hud.tsx); in the meantime the scene rocks the docked deck.
+
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
 A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the

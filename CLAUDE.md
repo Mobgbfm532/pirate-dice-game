@@ -542,7 +542,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     a hand that counts he shoots your best scoring die and it rolls again (`deadEyeRerolls`; turnState
     event `shot`); his **Ace of Spades** stays, for his last life. Clear-Eye counts all his abilities
     (`encounterAbilityLeft`).
-  - **Yvesil and Jorvash (6 Nov, the user's; spots on the ship; prices and chances first guesses in `interlude`; the user's busts since 9 Nov, `bust-yvesil.jpg` and `bust-jorvash.jpg`, `SPOT_PORTRAITS`; the omens' and refreshments' icons too, `art/keepsake-<id>.jpg`, with `holes` for their trapped magenta):** Yvesil the oracle (`yvesilPick`, `yvesilPrice` 8, rising, `omenGoodChance` 67%): an omen for the next fight, `OMENS`: Fair Winds and The Albatross (your 1s, or 6s, roll again on your first throw of each round, in `rollFaceFor`), Following Sea (your first dust scores as it lies), The Black Spot (hands score 1 less). Jorvash the manservant (`jorvashPick`, `jorvashPrice` 8, rising), one of two for the next fight, `REFRESHMENTS`: Notaro Red (your first hand that counts scores 2 more, at most 24) or Water of the Ebon Shield (one extra heart). Both show on your strip. **Thom has stowed away:** aboard, his line is one of three, drawn per fight (`THOM_SHIP_LINES`). So the ship's spots are Thom, the Shrine, Jorvash and Yvesil (Johnny stays ashore, 9 Nov). Yvesil's staff glow is cut soft and see-through (`glow` with `colour: 'cyan'` in process-art.mjs: only a glow with plenty of blue, so her green hand stays as painted), and on an upright phone she stands bigger, her far arm running off the left, her speech bubble just above her head (9 Nov).
+  - **Yvesil and Jorvash (6 Nov, the user's; spots on the ship; prices and chances first guesses in `interlude`; the user's busts since 9 Nov, `bust-yvesil.jpg` and `bust-jorvash.jpg`, `SPOT_PORTRAITS`; the omens' and refreshments' icons too, `art/keepsake-<id>.jpg`, with `holes` for their trapped magenta):** Yvesil the oracle (`yvesilPick`, `yvesilPrice` 8, rising, `omenGoodChance` 67%): an omen for the next fight, `OMENS`: Fair Winds and The Albatross (your 1s, or 6s, roll again on your first throw of each round, in `rollFaceFor`), Following Sea (your first dust scores as it lies), The Black Spot (hands score 1 less). Jorvash the manservant (`jorvashPick`, `jorvashPrice` 8, rising), one of two for the next fight, `REFRESHMENTS`: Notaro Red (your first hand that counts scores 2 more, at most 24) or Water of the Ebon Shield (one extra heart). Both show on your strip. **Thom has stowed away:** aboard, his line is one of three, drawn per fight (`THOM_SHIP_LINES`). So the ship's spots are Thom, the Shrine, Jorvash and Yvesil (Johnny stays ashore, 9 Nov). No random events aboard either: no thief, no Hooded Stranger, straight to the spots (`noEvents` on `PLACES.saltySwallow`, 9 Nov, the user's); where a scene's button says where you are, aboard it's "Look around the ship". Yvesil's staff glow is cut soft and see-through (`glow` with `colour: 'cyan'` in process-art.mjs: only a glow with plenty of blue, so her green hand stays as painted), and on an upright phone she stands bigger, her far arm running off the left, her speech bubble just above her head (9 Nov).
   - **Jaguar** (`jaguarPhases`, `beginJaguarRound`, `run.jaguarPhase` in the state): **Smooth Talk** (3+
     lives; twice a fight, once a round) talks a Thonic off your shelf and drinks it (Healing heals him,
     Steady counts his dust as it lies, `jaguarSteady`); an empty shelf: 3 off your finished hand
@@ -564,7 +564,24 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   call, 9 Nov), the
   dice drifting to the low side as they land (`diceRolled.sea` → `simulateRoll`'s `lean`: gravity leans,
   `LEAN_PULL`, and they're thrown toward that side; only the look), and the deck lurching as the list
-  changes (`table.seaLurchAt`, cameraMoves). Rolling the whole view was left out (the paintings' edges
+  changes (`table.seaLurchAt`, cameraMoves). A change of sea after a fight's first round is a moment of
+  its own (9 Nov, the user's: "dynamic and atmospheric and weighty"; `seaChange` from `setSea`,
+  `SEA_SHOW_MS` 2.6 s on both sides, so throws and the opponent wait for it, before the round's
+  abilities): a wash of sea sweeps in from the side she lists to, a wave crest breaks across throwing
+  spray, a brass clinometer's needle swings past and settles on her heel, the name slams in with what it
+  means ("No 1s · 6s twice as likely", "No 6s · no 24 this round", "The sea calms") and the forecast, the
+  page shakes and the table lurches (`SeaMoment` in Hud, `.sea-moment`), with a synthesized swell
+  (`playSeaSwell`: a wave through an opening low-pass, a boom against the hull, the timbers creaking). The
+  plaque has water rolling along its foot and sways on a listing deck. Dev: `preview.sea(id, from, hold)`. A tap on the plaque under Roll opens its explainer (9 Nov, the user's; `HintLine`'s
+  `plaque-button`, the `ItemInfo` card): the sea's (`SeaInfo`: what this round does, the forecast, how the sea
+  works) or the round's ability (`AbilityInfo`: its painting and its power's text). **The Salty Swallow sets
+  sail** (9 Nov, the user's): as Klarg, the ship's first opponent, sits down, a scene before his entrance card
+  (`SetSail` in Hud, `snapshot.sailAt`, `actions.endSail`, `SAIL_MS` 6.4 s; not for test scripts with
+  `tavernIntroAuto`): the gun deck rolling under swinging lantern light, the ship's bell twice (`playShipBell`,
+  synthesized), "The bell rings. The lines are cast off…", a wave rising with spray and the swell's sound, "The
+  Salty Swallow sets sail", the clinometer rocking (`Clinometer`, shared with the sea's moment), "Four fights at
+  sea. The sea changes every round."; a tap skips it. Dev: `preview.sail()`. Paintings wanted for the ship at
+  sea (a backdrop under way, and the ship leaving harbour for this scene): prompts in docs/art-direction.md. Rolling the whole view was left out (the paintings' edges
   would show). Dev: `/sea?now=starboard&next=port`. Next (the brainstorm's order): the Squall and the
   Rogue Wave, St Elmo's Fire, Fog; the player's say (Compass, Spyglass, Yvesil's forecast, a Ginger Thonic);
   choosing a course; events aboard.

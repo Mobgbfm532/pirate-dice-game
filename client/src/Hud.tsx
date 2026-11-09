@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, type SeaState, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, type SeaState, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
-import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
@@ -534,11 +534,58 @@ function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
 }
 // What the line under Roll says: a round's plaque, or the tip. Aboard the Salty Swallow the sea is
 // always there (over the tip), taking turns with an opponent's ability when there is one.
-function HintLine({ badge, plaque, tip, sea, next }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null }) {
+// A tap on either opens its explainer (9 Nov, the user's), the same card as the items on your strip.
+function HintLine({ badge, plaque, tip, sea, next, powers }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[] }) {
     const turnAbout = useTakingTurns(!!sea && !!badge.kind);
-    if (sea && (!badge.kind || turnAbout === 1)) return <SeaPlaque key="sea" sea={sea} next={next} />;
-    if (plaque || (sea && badge.kind)) return <div key="ability" className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>;
-    return <>{tip}</>;
+    const [open, setOpen] = useState<'sea' | 'ability' | null>(null);
+    const close = useCallback(() => setOpen(null), []);
+    const showSea = !!sea && (!badge.kind || turnAbout === 1);
+    const showAbility = !showSea && (plaque || (!!sea && !!badge.kind));
+    const tap = (which: 'sea' | 'ability') => () => { playSound('click'); setOpen(which); };
+    return (
+        <>
+            {showSea ? <button key="sea" className="plaque-button" onClick={tap('sea')} aria-label={`About the sea: ${sea!.name}`}><SeaPlaque sea={sea!} next={next} /></button>
+                : showAbility ? (
+                    <button key="ability" className="plaque-button" onClick={tap('ability')} aria-label={`About ${badge.title}`}>
+                        <div className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>
+                    </button>
+                ) : tip}
+            {open === 'sea' && sea && <SeaInfo sea={sea} next={next} onClose={close} />}
+            {open === 'ability' && badge.kind && <AbilityInfo badge={badge} powers={powers} onClose={close} />}
+        </>
+    );
+}
+
+// The sea's explainer: what this round's does, the forecast, and how the sea works.
+const SEA_EXPLAIN: Record<SeaState['id'], string> = {
+    starboard: 'The ship leans to starboard: every die thrown lands one higher. A 1 becomes a 2, a 5 a 6, and a 6 stays a 6, so there are no 1s and 6s come twice as often.',
+    port: 'The ship leans to port: every die thrown lands one lower. A 6 becomes a 5, a 2 a 1, and a 1 stays a 1, so there are no 6s, and no hand can reach 24 this round.',
+    calm: 'A steady deck: the dice land as they fall.'
+};
+function SeaInfo({ sea, next, onClose }: { sea: SeaState; next: SeaState | null; onClose: () => void }) {
+    return (
+        <ItemInfo icon={<span className={`sea-info-ship sea-${sea.id}`}><span className="sea-ship">⛵</span></span>} kind="The sea, this round" name={sea.name} onClose={onClose}
+            text={<>
+                <p>{SEA_EXPLAIN[sea.id]}</p>
+                {next && <p><b>Next round:</b> {next.id === 'calm' ? 'calm seas' : `listing to ${next.id}`}.</p>}
+                <p className="item-small">Aboard the Salty Swallow the sea changes from round to round, always forecast a round ahead. It leans everyone's dice, the opponent's too. A 2 and a 4 come up as often as ever.</p>
+            </>} />
+    );
+}
+
+// An opponent's ability (or a round's effect) on the plaque: its painting and what it does.
+const KIND_ABILITY: Record<string, string> = { curse: 'You are Cursed', ink: 'Inkfire Brand', stare: 'Penitent Stare', smite: 'Divine Smite', mind: 'Mind Whip', devil: 'Sympathy for the Devil', cloak: 'The Cloak', allin: 'All In' };
+function AbilityInfo({ badge, powers, onClose }: { badge: RoundBadge; powers: { name: string; text: string }[]; onClose: () => void }) {
+    const name = KIND_ABILITY[badge.kind] ?? badge.title;
+    const power = powers.find(p => p.name === name || p.name === badge.title);
+    const art = ABILITY_ART[name] ?? ABILITY_ART[badge.title];
+    return (
+        <ItemInfo icon={art ? <img src={`${import.meta.env.BASE_URL}art/${art}`} alt="" draggable={false} /> : '✦'} kind="This round" name={badge.title} onClose={onClose}
+            text={<>
+                <p><b>{badge.text}.</b></p>
+                {power && power.text !== badge.text && <p>{power.text}</p>}
+            </>} />
+    );
 }
 // Two plaques wanting the one line (the sea and an opponent's ability): they take turns.
 function useTakingTurns(both: boolean, ms = 3500) {
@@ -624,7 +671,8 @@ function TurnControls({ snap }: { snap: Snapshot }) {
             >{snap.isMyTurn ? label : roller ? `${roller.name}'s turn` : label}</button>
             {/* A hot tub fight: its badge can take two lines on small phones, so the space is kept the whole fight (the table doesn't jump when a tip replaces it). */}
             <div className={`hint ${state?.tavernRun ? 'crawl' : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>
-                <HintLine badge={badge} plaque={plaque} tip={tip} sea={state?.tavernRun?.sea ?? null} next={state?.tavernRun?.nextSea ?? null} />
+                <HintLine badge={badge} plaque={plaque} tip={tip} sea={state?.tavernRun?.sea ?? null} next={state?.tavernRun?.nextSea ?? null}
+                    powers={(state?.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).powers : null) ?? []} />
             </div>
         </div>
     );
@@ -1774,7 +1822,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
     // phone squeezed the button's words onto four lines).
     const afterEvent = (
         <span className="after-event">
-            <button className="primary onward wraps" onClick={onLookAround}>Look around the tavern</button>
+            <button className="primary onward wraps" onClick={onLookAround}>Look around the {run.place === 'The Salty Swallow' ? 'ship' : 'tavern'}</button>
             <button className="link-button" onClick={onMoveOn}>Or challenge {next} right away</button>
         </span>
     );
@@ -2284,6 +2332,103 @@ function Modals({ snap }: { snap: Snapshot }) {
 // Brodor's Astral Flood, after its banner (5 Nov, the user: a big effect on the player's screen): a
 // wall of aurora light pours down over the table, ripples out from the felt, and drains away, full
 // of falling stars. Over everything, taps go through; the heart he takes breaks as it hits.
+// Aboard the Salty Swallow, the sea changes (9 Nov, the user's: "dynamic and atmospheric and weighty
+// in true video game fashion"): a wash of sea sweeps in from the side she lists to, a wave crest
+// breaks across the screen throwing spray, and a brass clinometer's needle swings past and settles
+// on her new heel while the name slams in with what it means and the next round's forecast.
+const SEA_WORDS: Record<SeaState['id'], { title: string; rule: string; sub: string }> = {
+    starboard: { title: 'Listing to starboard', rule: 'Every die lands one higher', sub: 'No 1s · 6s twice as likely' },
+    port: { title: 'Listing to port', rule: 'Every die lands one lower', sub: 'No 6s · no 24 this round' },
+    calm: { title: 'The sea calms', rule: 'The dice land true', sub: 'A steady deck' }
+};
+const HEEL_DEG: Record<string, number> = { calm: 0, starboard: 24, port: -24 };
+// A brass ship's clinometer: its needle (.sea-needle) swings by CSS, from --from to --to (or rocks).
+function Clinometer({ className = '' }: { className?: string }) {
+    return (
+        <svg className={`sea-gauge ${className}`} viewBox="0 0 220 124" aria-hidden="true">
+            <defs>
+                <linearGradient id="sea-brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f6dc8e" /><stop offset="0.5" stopColor="#c9973a" /><stop offset="1" stopColor="#7a5318" /></linearGradient>
+                <radialGradient id="sea-face" cx="0.5" cy="1" r="1"><stop offset="0" stopColor="#123447" /><stop offset="1" stopColor="#06141d" /></radialGradient>
+            </defs>
+            <path d="M14,114 A96,96 0 0 1 206,114 Z" fill="url(#sea-face)" stroke="url(#sea-brass)" strokeWidth="7" />
+            {Array.from({ length: 9 }, (_, i) => {
+                const a = (-40 + i * 10) * Math.PI / 180, r1 = i % 2 ? 80 : 74, r2 = 88;
+                return <line key={i} x1={110 + Math.sin(a) * r1} y1={114 - Math.cos(a) * r1} x2={110 + Math.sin(a) * r2} y2={114 - Math.cos(a) * r2} stroke={i === 4 ? '#ffe9a8' : '#c9a35a'} strokeWidth={i === 4 ? 3 : 2} />;
+            })}
+            <text x="34" y="106" className="sea-gauge-word">PORT</text>
+            <text x="186" y="106" className="sea-gauge-word" textAnchor="end">STBD</text>
+            <g className="sea-needle"><path d="M110,114 L106,108 L110,34 L114,108 Z" fill="#ffd36a" stroke="#6b4310" strokeWidth="1" /><circle cx="110" cy="114" r="7" fill="url(#sea-brass)" /></g>
+        </svg>
+    );
+}
+
+// The Salty Swallow sets sail (9 Nov, the user's): as the ship's first opponent sits down, before his
+// entrance card. Its gun deck rolls on the swell under swinging lanterns, the ship's bell rings
+// twice, the lines are cast off, a wave rises, the clinometer wakes, and the name: "The Salty
+// Swallow sets sail". About 6.4 s; a tap skips it. (Until the user paints the ship at sea, the deck
+// painting is the scene.)
+const SAIL_MS = 6400;
+function SetSail({ at }: { at: number }) {
+    useEffect(() => {
+        const timers = [
+            setTimeout(() => playShipBell(2), 250),
+            setTimeout(() => playSeaSwell('heel'), 2300),
+            setTimeout(() => actions.endSail(), Math.max(0, SAIL_MS - (performance.now() - at)))
+        ];
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.endSail(); };
+        window.addEventListener('keydown', onKey);
+        return () => { timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey); };
+    }, [at]);
+    return createPortal(
+        <div className="sail-scene" role="dialog" aria-label="The Salty Swallow sets sail" onClick={() => actions.endSail()}>
+            <div className="sail-deck" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/salty-swallow.webp")` }} />
+            <span className="sail-lantern one" aria-hidden="true" />
+            <span className="sail-lantern two" aria-hidden="true" />
+            <span className="sail-sea" aria-hidden="true" />
+            <span className="sea-foam sail-foam" aria-hidden="true">
+                {Array.from({ length: 18 }, (_, i) => (
+                    <i key={i} style={{ left: `${(i * 37 + 5) % 100}%`, animationDelay: `${2.35 + ((i * 0.071) % 0.6)}s`, '--dx': `${((i * 23) % 50) - 25}px`, '--dy': `${60 + (i * 47) % 110}px`, '--s': `${4 + (i * 5) % 8}px` } as React.CSSProperties} />
+                ))}
+            </span>
+            <p className="sail-line first">The bell rings. The lines are cast off…</p>
+            <div className="sail-title">
+                <strong>The Salty Swallow</strong>
+                <span>sets sail</span>
+            </div>
+            <div className="sail-gauge"><Clinometer className="rocking" /></div>
+            <p className="sail-line last">Four fights at sea. The sea changes every round.</p>
+            <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endSail(); }}>Skip ›</button>
+        </div>,
+        document.body
+    );
+}
+function SeaMoment({ snap }: { snap: Snapshot }) {
+    const m = snap.seaMoment;
+    const [visible] = useMoment(m?.at ?? 0, SEA_SHOW_MS);
+    if (!visible || !m) return null;
+    const words = SEA_WORDS[m.id];
+    const dir = Math.sign(m.shift);
+    const vars = { '--dir': dir || 1, '--to': `${HEEL_DEG[m.id]}deg`, '--from': `${HEEL_DEG[m.from ?? 'calm'] ?? 0}deg` } as React.CSSProperties;
+    return (
+        <div key={m.at} className={`sea-moment sea-${m.id}`} style={vars} role="status" aria-live="polite">
+            <span className="sea-wash" aria-hidden="true" />
+            <span className="sea-crest" aria-hidden="true" />
+            <span className="sea-foam" aria-hidden="true">
+                {Array.from({ length: 24 }, (_, i) => (
+                    <i key={i} style={{ left: `${(i * 41 + 7) % 100}%`, animationDelay: `${0.28 + ((i * 0.067) % 0.5)}s`, '--dx': `${((i * 29) % 60) - 30 + (dir || 1) * 40}px`, '--dy': `${70 + (i * 53) % 120}px`, '--s': `${4 + (i * 7) % 9}px` } as React.CSSProperties} />
+                ))}
+            </span>
+            <div className="sea-card">
+                <Clinometer />
+                <strong className="sea-title">{words.title}</strong>
+                <span className="sea-rule">{words.rule}</span>
+                <span className="sea-sub">{words.sub}</span>
+                {m.next && <span className="sea-forecast">Next round: {m.next.id === 'calm' ? 'calm seas' : `listing to ${m.next.id}`}</span>}
+            </div>
+        </div>
+    );
+}
+
 function FloodWave() {
     return (
         <div className="flood-wave" aria-hidden="true">
@@ -2556,7 +2701,7 @@ export function Hud() {
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
-            <EncounterIntro snap={snap} />
+            {snap.sailAt ? <SetSail at={snap.sailAt} /> : <EncounterIntro snap={snap} />}
             {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
                 <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>
                     <OpponentCard enemy={state.tavernRun.seated ?? state.tavernRun.enemy} place={state.tavernRun.place} state={state} close="Tap to close" />
@@ -2564,6 +2709,7 @@ export function Hud() {
             )}
             <AbilityMomentView snap={snap} />
             {snap.floodWaveAt && <FloodWave key={snap.floodWaveAt} />}
+            <SeaMoment snap={snap} />
             <Celebration snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}
