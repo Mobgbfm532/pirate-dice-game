@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -10,6 +10,7 @@ import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, avatarStyle,
 import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, sceneFileOf } from './Backdrop';
 import { lookNext } from './look';
 import { IntroFilm, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
+import { Trailer } from './Trailer';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
 // The tavern's five reactions (the user's, 3 Nov), painted by the user the same day (art/reaction-<id>.jpg
@@ -2486,6 +2487,8 @@ export function Hud() {
     // Phones on their side keep every player in the column at the top left (no room for a bar).
     const sideways = useMedia('(orientation: landscape) and (max-height: 500px)');
 
+    // The trailer (?trailer in the address): the game's own Perfect 24 and three 6s play over the table under it.
+    if (trailerWanted) return <><Trailer /><Celebration snap={snap} /><DevilSixes snap={snap} /></>;
     if (!snap.joined) return <JoinScreen />;
     const state = snap.state;
     const botAcross = acrossTheTable()?.isBot ?? false;

@@ -575,7 +575,11 @@ function writeSavedRun(run: SavedRun | null) {
     } catch { /* storage unavailable */ }
 }
 
+// The trailer (?trailer in the address, 9 Nov): plays on its own, without sitting down at a table.
+export const trailerWanted = typeof location !== 'undefined' && new URLSearchParams(location.search).has('trailer');
+
 function readSeat(): Seat | null {
+    if (trailerWanted) return null;
     try { return JSON.parse(sessionStorage.getItem('tavernSeat') ?? 'null'); } catch { return null; }
 }
 
@@ -1093,9 +1097,12 @@ export const actions = {
 // demand, to check how it looks without waiting for it to happen in a game.
 // The intro film's lesson (Intro.tsx), played on the real table with the real dice: a 2 found and
 // kept, a 4, then four 6s. No socket is involved: it runs before you've sat down, and leaves the table as it was.
-export interface FilmThrow { dice: { id: number; value: number }[]; keep: number[]; track: RollTrack; pace: Pace; ms: number; perfect?: boolean }
+// (The trailer, Trailer.tsx, plays its own throws: `devil` brings the three 6s' moment as they land,
+// `slow` the slow motion of a last throw, `cheer` the yay of a perfect hand.)
+export interface FilmSpec { dice: number[][]; keep: number[]; seed: number; perfect?: boolean; devil?: boolean; slow?: boolean; cheer?: boolean }
+export interface FilmThrow { dice: { id: number; value: number }[]; keep: number[]; track: RollTrack; pace: Pace; ms: number; perfect?: boolean; devil?: boolean; cheer?: boolean }
 const filmTurn = (dice: Die[]): TurnView => ({ key: 'film', playerId: 'film', dice, rollCount: 1, locksThisRoll: 0, hasRolled: true, blurActive: false, suspense: 'none', callout: null, finalized: false, outcome: null, canRoll: false });
-const FILM_THROWS = [
+const FILM_THROWS: FilmSpec[] = [
     { dice: [[0, 3], [1, 2], [2, 5], [3, 1], [4, 6], [5, 3]], keep: [1], seed: 240 },
     { dice: [[0, 5], [2, 1], [3, 4], [4, 3], [5, 2]], keep: [3], seed: 24 },
     { dice: [[0, 6], [2, 6], [4, 6], [5, 6]], keep: [0, 2, 4, 5], seed: 2424, perfect: true }
@@ -1104,11 +1111,12 @@ export const film = {
     begin() { update({ filmPause: true }); },
     // Pre-simulated before the film starts (each throw takes a moment to work out), each played a
     // little faster if it would run past `longest` seconds.
-    prepare(longest: number): FilmThrow[] {
-        return FILM_THROWS.map(({ dice, keep, seed, perfect }) => {
+    prepare(longest: number, throws: FilmSpec[] = FILM_THROWS): FilmThrow[] {
+        return throws.map(({ dice, keep, seed, perfect, devil, slow, cheer }) => {
             const track = simulateRoll(dice.map(d => d[0]), dice.map(d => d[1]), seed);
-            const pace: Pace = { speed: Math.max(1, track.frames / 60 / longest) };
-            return { dice: dice.map(([id, value]) => ({ id, value })), keep, track, pace, ms: paceSeconds(pace, track.frames) * 1000, perfect };
+            const speed = Math.max(1, track.frames / 60 / longest);
+            const pace: Pace = slow ? suspensePace(track, speed) : { speed };
+            return { dice: dice.map(([id, value]) => ({ id, value })), keep, track, pace, ms: paceSeconds(pace, track.frames) * 1000, perfect, devil, cheer };
         });
     },
     showTable() {
@@ -1120,6 +1128,8 @@ export const film = {
         update({ filmPause: false, turn: filmTurn([0, 1, 2, 3, 4, 5].map(id => ({ id, value: 0, status: 'active' }))) });
     },
     hideTable() { update({ filmPause: true }); },
+    // The table again as it was left (the trailer comes back to it for the last throw).
+    showAgain() { update({ filmPause: false }); },
     playThrow(one: FilmThrow) {
         table.roll = { track: one.track, startedAt: performance.now(), speed: 1, pace: one.pace, hidden: new Set() };
         update({ rolling: true });
@@ -1137,6 +1147,11 @@ export const film = {
                 return { ...d, value: thrown ? thrown.value : d.value, status: keeping && one.keep.includes(d.id) ? 'permanentlyLocked' as const : d.status };
             }));
             update({ rolling: false, turn: shown(false) });
+            if (one.devil) {
+                table.devilAt = performance.now();
+                playSound('devil');
+                update({ devil: { at: performance.now(), who: null } });
+            }
             // A beat to see the faces, then what's wanted goes to its plate.
             setTimeout(() => {
                 if (snapshot.turn?.key !== 'film') return;
@@ -1145,6 +1160,7 @@ export const film = {
                 update({ turn });
                 // (The camera leans in as on any perfect hand. Not its gold light here: it paled the green pips.)
                 if (one.perfect) update({ celebration: { kind: 'perfect24', at: performance.now(), who: null } });
+                if (one.cheer) playSound('yay');
             }, 90);
         }, one.ms + 30);
     },
@@ -1153,7 +1169,7 @@ export const film = {
         resetTrayForNewTurn();
         screenInsets.bottom = 0;
         screenInsets.top = 0;
-        update({ filmPause: false, turn: null, rolling: false, celebration: null });
+        update({ filmPause: false, turn: null, rolling: false, celebration: null, devil: null });
     }
 };
 

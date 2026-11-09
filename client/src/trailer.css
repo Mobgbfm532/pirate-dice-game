@@ -1,0 +1,53 @@
+/* The trailer (Trailer.tsx). Each part's animations start as it appears; --len is how long it stays. */
+.film.trailer { --bar: 0px; }
+.film-black-plain { position: absolute; inset: 0; background: #000; }
+.tr-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #000; color: rgba(246, 234, 208, 0.5); font-size: 18px; }
+
+.tr-start { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border: 0; background: #000; color: #f6ead0; font: inherit; font-size: 20px; cursor: pointer; }
+.tr-start-title { font-size: 46px; color: #ffd24f; }
+.tr-start-note { font-family: 'Alegreya', Georgia, serif; font-size: 14px; opacity: 0.55; }
+
+/* Words. */
+.tr-words { position: absolute; left: 0; right: 0; margin: 0; padding: 0 18px; text-align: center; font-size: clamp(28px, 8.4vw, 50px); line-height: 1.2; pointer-events: none;
+    text-shadow: 0 2px 4px #000, 0 0 22px rgba(0, 0, 0, 0.95), 0 0 46px rgba(0, 0, 0, 0.7);
+    animation: tr-word 0.55s ease-out both, tr-out 0.35s linear calc(var(--len) - 0.35s) forwards; }
+.tr-words.top { top: max(28px, 7vh); }
+.tr-words.top.second { top: calc(max(28px, 7vh) + 1.3em); }
+.tr-words.low { bottom: max(48px, 11vh); }
+.tr-words.under { top: 63%; }
+.tr-words.lesson::before { content: ''; position: absolute; z-index: -1; left: 0; right: 0; top: -60px; height: calc(100% + 120px); background: linear-gradient(rgba(0, 0, 0, 0.55) 40%, transparent); }
+.tr-words.second::before { display: none; }
+@keyframes tr-word { from { opacity: 0; transform: translateY(0.3em) scale(1.06); } to { opacity: 1; transform: none; } }
+@keyframes tr-out { to { opacity: 0; } }
+
+/* The rivals: a painting a beat, punching in out of a flash of its own colour. */
+.tr-rival { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 46%, color-mix(in srgb, var(--c) 70%, #000) 0%, color-mix(in srgb, var(--c) 22%, #000) 48%, #050304 85%); }
+.tr-rival::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 46%, #fff, var(--c) 40%, transparent 75%); animation: tr-flash 0.32s ease-out both; pointer-events: none; }
+.tr-rival img { width: min(92vw, 70vh); height: min(92vw, 62vh); object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8)); animation: tr-punch 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.tr-rival-name { margin-top: 1vh; font-size: clamp(22px, 6.4vw, 38px); color: #fff3d6; text-shadow: 0 0 18px var(--c), 0 2px 4px #000; letter-spacing: 1px; animation: tr-word 0.3s ease-out both; }
+@keyframes tr-flash { from { opacity: 0.85; } to { opacity: 0; } }
+@keyframes tr-punch { from { transform: scale(1.22); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+
+/* The places: each painting pushing slowly in. */
+.tr-place { position: absolute; inset: 0; overflow: hidden; background: #000; animation: tr-fade-in 0.3s linear both; }
+.tr-place img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: tr-push var(--len) linear both; }
+.tr-place::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0, 0, 0, 0.7)); }
+.tr-place-name { position: absolute; z-index: 1; left: 0; right: 0; top: max(28px, 7vh); text-align: center; font-size: clamp(16px, 4.6vw, 26px); letter-spacing: 3px; text-transform: uppercase; color: #ffe2a0; text-shadow: 0 2px 4px #000, 0 0 20px #000; animation: tr-word 0.6s ease-out 0.15s both; }
+@keyframes tr-push { from { transform: scale(1.04); } to { transform: scale(1.16); } }
+@keyframes tr-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* The title. */
+.tr-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vh; background: radial-gradient(ellipse at 50% 45%, #2a1a0c, #000 70%); animation: tr-fade-in 0.8s linear both; }
+.tr-card.still { animation: none; }
+.tr-title { margin: 0; font-size: clamp(60px, 19vw, 120px); font-weight: 400; color: #ffd24f; text-shadow: 0 0 30px rgba(255, 170, 40, 0.7), 0 4px 6px #000; animation: tr-word 0.9s ease-out 0.15s both; }
+.tr-card.still .tr-title, .tr-card.still .tr-beat { animation: none; opacity: 1; }
+.tr-tagline { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.25em; font-size: clamp(24px, 7vw, 40px); }
+.tr-beat { opacity: 0; animation: tr-word 0.6s ease-out var(--d) both; }
+.tr-beat.gold { color: #ffd24f; text-shadow: 0 0 22px rgba(255, 170, 40, 0.8), 0 2px 4px #000; }
+.tr-after { position: absolute; bottom: max(30px, 6vh); display: flex; gap: 12px; }
+.tr-after button { height: 40px; padding: 0 16px; border: 1px solid rgba(246, 234, 208, 0.4); border-radius: 20px; background: rgba(0, 0, 0, 0.5); color: #f6ead0; font: inherit; font-size: 16px; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+    .tr-place img, .tr-rival img { animation: none; }
+}

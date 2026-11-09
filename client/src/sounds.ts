@@ -569,6 +569,24 @@ export function playFilmSound(lead: number, elapsed: number) {
     };
 }
 
+// The trailer's sound (9 Nov): the intro's music alone, its 0 at `lead` on the trailer's clock.
+export function playTrailerMusic(lead: number, elapsed: number) {
+    const ctx = audio();
+    const buffer = filmBuffers.get('music');
+    if (!ctx || musicOff || !buffer) return () => {};
+    const start = ctx.currentTime + 0.02 - elapsed + lead;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const level = ctx.createGain();
+    level.gain.value = 0.85;
+    source.connect(level).connect(ctx.destination);
+    source.start(Math.max(ctx.currentTime, start), Math.max(0, ctx.currentTime - start));
+    return () => {
+        level.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+        setTimeout(() => { try { source.stop(); } catch { /* not started */ } level.disconnect(); }, 1500);
+    };
+}
+
 // The first tap wakes Web Audio (for the film, which starts before the tavern's music does).
 export function unlockAudio() {
     audio();
