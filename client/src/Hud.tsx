@@ -528,11 +528,12 @@ function AbilityMarks({ state }: { state: GameState }) {
     const max = run.abilityMax ?? 0;
     if (!ability || !max) return null;
     const raw = run.abilityUsed?.[ability];
-    const used = Math.min(max, raw === true ? 1 : Number(raw || 0));
+    const used = Math.min(max, run.abilitySpent ?? (raw === true ? 1 : Number(raw || 0)));
     const name = Rules.ABILITY_NAMES[ability as keyof typeof Rules.ABILITY_NAMES] ?? ability;
+    const several = (run.seated ?? run.enemy).powers?.length ?? 1;
+    const label = several > 1 ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
     return (
-        <span key={used} className={`ability-marks ${used > 0 ? 'spent-now' : ''}`}
-            title={`${name}: ${max - used} of ${max} left this fight`} aria-label={`${name}: ${max - used} of ${max} left`}>
+        <span key={used} className={`ability-marks ${used > 0 ? 'spent-now' : ''}`} title={label} aria-label={label}>
             {Array.from({ length: max }, (_, i) => <span key={i} className={i < max - used ? 'left' : 'used'}>✦</span>)}
         </span>
     );

@@ -372,6 +372,46 @@ test("Jaguar's Smooth Talk drinks a Thonic off your shelf (his Healing heals him
     assert.equal((await scored).players[hero.id].score, 18);
 });
 
+test("Jaguar's Smooth Talk at full hearts leaves your Healing: another Thonic if there is one, else 3 off your hand", async () => {
+    // Healing and Fizzy, his hearts full: he takes the Fizzy.
+    let hero = await tavernAgainst(fightOf('jaguar'), 'JagFullMixed');
+    let room = roomOf(hero);
+    room.players.BOT_MOLAR.lives = 4;
+    room.tavernRun.shelf = ['healing', 'fizzy'];
+    let talk = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    server.beginTavernRound(codeOf(hero), room);
+    assert.match((await talk).text, /Fizzy/);
+    assert.deepEqual(room.tavernRun.shelf, ['healing']);
+    // Only Healing, his hearts full: he leaves them and talks 3 off your hand.
+    hero = await tavernAgainst(fightOf('jaguar'), 'JagFullHealing');
+    room = roomOf(hero);
+    room.players.BOT_MOLAR.lives = 4;
+    room.tavernRun.shelf = ['healing', 'healing'];
+    talk = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    server.beginTavernRound(codeOf(hero), room);
+    assert.match((await talk).text, /no need of your Healing/);
+    assert.deepEqual(room.tavernRun.shelf, ['healing', 'healing']);
+    assert.equal(room.tavernRun.talkThree, true);
+});
+
+test('the nameplate counts every ability use: the Hangman two, Jaguar four', async () => {
+    const hangman = await tavernAgainst(fightOf('hangman'), 'MarksHang');
+    roomOf(hangman).players.BOT_MOLAR.name = 'The Hangman'; // (who sits at a fresh test table)
+    let st = server.getRoomState(codeOf(hangman));
+    assert.deepEqual([runOf(st).abilityMax, runOf(st).abilitySpent], [2, 0]);
+    const jaguar = await tavernAgainst(fightOf('jaguar'), 'MarksJag');
+    const room = roomOf(jaguar);
+    room.players.BOT_MOLAR.name = 'Jaguar Cantona';
+    room.players.BOT_MOLAR.lives = 2;
+    room.tavernRun.jaguarPhase = 'cloak';
+    st = server.getRoomState(codeOf(jaguar));
+    assert.deepEqual([runOf(st).abilityMax, runOf(st).abilitySpent], [4, 1]);
+});
+
+test('Johnny Elf Bar stays ashore: not a spot aboard the Salty Swallow', () => {
+    assert.ok(!server.PLACES.saltySwallow.spots.includes('elfKid'));
+});
+
 test("Jaguar's Cloak at two lives: he throws after you, his dice hidden; All In at his last costs two hearts", async () => {
     const cloaked = await tavernAgainst(fightOf('jaguar'), 'JagCloak');
     const croom = roomOf(cloaked);
@@ -2434,11 +2474,11 @@ test('the Cult of Kram: swear fealty and your dice never land on 1 for two fight
 
 // ---- Elf Bars, from Johnny Elf Bar (28 Oct) ----
 
-test('Johnny Elf Bar is a spot in every place; an Elf Bar comes with 3 puffs, one of each kind', async () => {
+test('Johnny Elf Bar is a spot ashore (not aboard the ship); an Elf Bar comes with 3 puffs, one of each kind', async () => {
     const { hero, room } = await betweenFights('Vaper', { stage: 'choose', spots: ['elfKid', 'thom'] }, 100);
-    for (const fight of ['frak', 'vaelin', 'rokr']) {
+    for (const [fight, there] of [['frak', true], ['vaelin', true], ['rokr', false]]) {
         room.tavernRun.encounterIndex = fightOf(fight);
-        assert.ok(Array.from({ length: 80 }, () => server.pickSpots(room)).some(s => s.includes('elfKid')), fight);
+        assert.equal(Array.from({ length: 80 }, () => server.pickSpots(room)).some(s => s.includes('elfKid')), there, fight);
     }
     room.tavernRun.encounterIndex = fightOf('frak');
     hero.emit('chooseSpot', 'elfKid');

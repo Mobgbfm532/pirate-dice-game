@@ -452,7 +452,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). Since 26 Oct each place
   has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
-  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine, Johnny Elf Bar, Jorvash and Yvesil and no events of its
+  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine, Jorvash and Yvesil (Johnny Elf Bar stays ashore since 9 Nov, the user's) and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
   Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
   the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
@@ -526,7 +526,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   smouldering edges with rising embers, Rokr's blur twinkling stars, Klarg claw marks, Jaguar a
   gold sweep, the Hangman a gun-metal banner. The opponent's nameplate/chip
   shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after
-  the banner.
+  the banner. Since 9 Nov (the user's) it counts every ability they have (`abilityMarks` in server.js, `abilitySpent`): the Hangman 2 (Penitent Stare, the Ace), Jaguar 4 (Smooth Talk twice, the Cloak, All In; those two spent as his phase reaches them).
 - **The Salty Swallow as the final tier (25 Oct, the user's yes; set by simulation,
   `balance/experiments/final-ship.js`; settings in `shared/balance.js` `finalShip` and `abilityUses`):**
   each goes after a different part of your game. A sensible player, fresh, wins Klarg 27%, Rokr 26%,
@@ -542,11 +542,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     a hand that counts he shoots your best scoring die and it rolls again (`deadEyeRerolls`; turnState
     event `shot`); his **Ace of Spades** stays, for his last life. Clear-Eye counts all his abilities
     (`encounterAbilityLeft`).
-  - **Yvesil and Jorvash (6 Nov, the user's; spots on the ship; prices and chances first guesses in `interlude`; the user's busts since 9 Nov, `bust-yvesil.jpg` and `bust-jorvash.jpg`, `SPOT_PORTRAITS`; the omens' and refreshments' icons too, `art/keepsake-<id>.jpg`, with `holes` for their trapped magenta):** Yvesil the oracle (`yvesilPick`, `yvesilPrice` 8, rising, `omenGoodChance` 67%): an omen for the next fight, `OMENS`: Fair Winds and The Albatross (your 1s, or 6s, roll again on your first throw of each round, in `rollFaceFor`), Following Sea (your first dust scores as it lies), The Black Spot (hands score 1 less). Jorvash the manservant (`jorvashPick`, `jorvashPrice` 8, rising), one of two for the next fight, `REFRESHMENTS`: Notaro Red (your first hand that counts scores 2 more, at most 24) or Water of the Ebon Shield (one extra heart). Both show on your strip. **Thom has stowed away:** aboard, his line is one of three, drawn per fight (`THOM_SHIP_LINES`). So the ship's spots are Thom, the Shrine, Johnny, Jorvash and Yvesil.
+  - **Yvesil and Jorvash (6 Nov, the user's; spots on the ship; prices and chances first guesses in `interlude`; the user's busts since 9 Nov, `bust-yvesil.jpg` and `bust-jorvash.jpg`, `SPOT_PORTRAITS`; the omens' and refreshments' icons too, `art/keepsake-<id>.jpg`, with `holes` for their trapped magenta):** Yvesil the oracle (`yvesilPick`, `yvesilPrice` 8, rising, `omenGoodChance` 67%): an omen for the next fight, `OMENS`: Fair Winds and The Albatross (your 1s, or 6s, roll again on your first throw of each round, in `rollFaceFor`), Following Sea (your first dust scores as it lies), The Black Spot (hands score 1 less). Jorvash the manservant (`jorvashPick`, `jorvashPrice` 8, rising), one of two for the next fight, `REFRESHMENTS`: Notaro Red (your first hand that counts scores 2 more, at most 24) or Water of the Ebon Shield (one extra heart). Both show on your strip. **Thom has stowed away:** aboard, his line is one of three, drawn per fight (`THOM_SHIP_LINES`). So the ship's spots are Thom, the Shrine, Jorvash and Yvesil (Johnny stays ashore, 9 Nov). Yvesil's staff glow is cut soft and see-through (`glow` with `colour: 'cyan'` in process-art.mjs: only a glow with plenty of blue, so her green hand stays as painted), and on an upright phone she stands bigger, her far arm running off the left, her speech bubble just above her head (9 Nov).
   - **Jaguar** (`jaguarPhases`, `beginJaguarRound`, `run.jaguarPhase` in the state): **Smooth Talk** (3+
     lives; twice a fight, once a round) talks a Thonic off your shelf and drinks it (Healing heals him,
     Steady counts his dust as it lies, `jaguarSteady`); an empty shelf: 3 off your finished hand
-    (`talkThree`). **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
+    (`talkThree`). Since 9 Nov (the user's) he takes a Healing only when he's down on hearts, else any other Thonic
+    (Steady first); with only Healing on your shelf and his hearts full he leaves it and talks 3 off your hand. **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn).
     **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
   - Tests pin the dice with `pinFaces` (server.test.js). Starry Form is the old Constellation Blur code brought back (6 Nov); Written in the Stars' and Dead Eye's code is dormant.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
@@ -797,7 +798,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   at `/` walks straight on (its `leaveShop`), so it never sees the spots; the user is fine
   with that until the switch-over.
 - **Elf Bars (28 Oct, the user's; no side effects, the user's call):** magic vapes sold by
-  **Johnny Elf Bar**, one of Frak's street urchins, a spot in every place (`elfKid`, painting
+  **Johnny Elf Bar**, one of Frak's street urchins, a spot at the Ghoul and Gourd and the Yawning Portal (not the ship, since 9 Nov) (`elfKid`, painting
   `art/bust-elf-kid.jpg`; offered when the purse covers the cheapest). They sit on the Thonic
   shelf (`THONICS` entries with `elf: true`) with `elfBarPuffs` (3) puffs each, at most one
   puff a fight (`run.puffs`, `run.puffed` reset at a fight's start; saved with the run); the last

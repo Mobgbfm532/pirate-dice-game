@@ -75,7 +75,8 @@ export interface TavernRun {
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
     abilityUsed?: Record<string, number | boolean>; // uses of each ability this fight
     encounterKeepsakeUses?: Record<string, boolean>; // keepsakes that have worked this fight
-    abilityMax?: number; // the opponent's uses a fight
+    abilityMax?: number; // the opponent's uses a fight, every ability of theirs
+    abilitySpent?: number; // how many of them are spent
     jaguarPhase?: 'talk' | 'cloak' | 'allIn' | null; // Jaguar's phase this round
     klargHand?: number | null; // the die Klarg snatched, shown on his nameplate until his turn
     abilityLeft?: boolean; // the opponent's ability has uses left this fight

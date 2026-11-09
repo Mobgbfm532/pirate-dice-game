@@ -448,7 +448,7 @@ const PLACES = {
     saltySwallow: {
         name: 'The Salty Swallow',
         thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
-        spots: ['thom', 'shrine', 'elfKid', 'jorvash', 'yvesil'], // (Thom stows away, 6 Nov)
+        spots: ['thom', 'shrine', 'jorvash', 'yvesil'], // (Thom stows away, 6 Nov; Johnny Elf Bar stays ashore, 9 Nov)
         events: []
     }
 };
@@ -675,7 +675,9 @@ function getTavernRunState(room) {
         tubSurge: room.tavernRun.tubSurge ? { id: room.tavernRun.tubSurge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[room.tavernRun.tubSurge] } : null,
         nextSurge: room.tavernRun.nextFightSurge || null,
         abilityUsed: room.tavernRun.abilityUsed,
-        abilityMax: seated.ability ? BALANCE.abilityUses[seated.ability] : 0, // uses a fight (the seated opponent's)
+        // Uses a fight of every ability the seated opponent has, and how many are spent (the ✦ on
+        // the nameplate; 9 Nov, the user's: the Hangman's Ace and Jaguar's Cloak and All In count too).
+        ...abilityMarks(room, seated),
         jaguarPhase: room.tavernRun.jaguarPhase || null, // Jaguar's: 'talk', 'cloak' or 'allIn'
         klargHand: room.tavernRun.klargHand || null, // the die Klarg snatched, waiting for his turn
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
@@ -1430,6 +1432,23 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
     });
 }
 
+function abilityMarks(room, seated) {
+    let run = room.tavernRun;
+    let max = 0, spent = 0;
+    for (let a of abilitiesOf(seated)) {
+        let uses = BALANCE.abilityUses[a] || 0;
+        max += uses;
+        spent += Math.min(uses, getAbilityUseCount(room, a));
+    }
+    // Jaguar's Cloak and All In: one each, spent as his phase reaches them.
+    if (seated.ability === 'jaguarPhases') {
+        max += 2;
+        let phase = run.jaguarPhase;
+        spent += (phase === 'cloak' || phase === 'allIn' ? 1 : 0) + (phase === 'allIn' ? 1 : 0);
+    }
+    return { abilityMax: max, abilitySpent: spent };
+}
+
 function getAbilityUseCount(room, abilityId) {
     let used = room.tavernRun.abilityUsed[abilityId];
     if (used === true) return 1;
@@ -1877,10 +1896,15 @@ function beginJaguarRound(roomCode, room, encounter) {
     }
     if (!fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
     let shelf = run.shelf;
-    let id = (bot.lives < encounter.lives && shelf.includes('healing') && 'healing') || (shelf.includes('steady') && 'steady') || shelf.find(t => !THONICS[t].elf); // (not an Elf Bar)
+    // (9 Nov, the user's) Down on hearts, he takes a Healing first; with none, or at full hearts,
+    // whatever else is there (a Steady first). Healing alone on your shelf and his hearts full: he
+    // leaves it, and talks 3 off your hand instead. Never an Elf Bar.
+    let hurt = bot.lives < encounter.lives;
+    let id = (hurt && shelf.includes('healing') && 'healing') || (shelf.includes('steady') && 'steady') || shelf.find(t => !THONICS[t].elf && t !== 'healing');
     if (!id) {
         run.talkThree = true;
-        sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he'll talk ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
+        let why = shelf.some(t => !THONICS[t].elf) ? 'He has no need of your Healing' : 'Your shelf is empty';
+        sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `${why}, so he'll talk ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
         return;
     }
     shelf.splice(shelf.indexOf(id), 1);
@@ -3116,4 +3140,4 @@ function start(port = process.env.PORT || 3000) {
 
 if (require.main === module) start();
 
-module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES };
+module.exports = { start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

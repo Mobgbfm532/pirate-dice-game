@@ -493,7 +493,7 @@ function fadeEdges({ data, width, height }, { left = 0, right = 0, top = 0, bott
 // leftover pink in the boxes goes.
 // Returns alpha, like veil.
 function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97, colour = 'warm' }, alpha = new Map()) {
-    const light = colour === 'light';
+    const light = colour === 'light' || colour === 'cyan';
     const { data, width } = img;
     for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         const p = y * width + x, i = p * 4;
@@ -508,7 +508,8 @@ function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97, colour = 
         const f = [0, 1, 2].map(k => Math.max(0, Math.min(255, Math.round(bg[k] + (data[i + k] - bg[k]) / a))));
         // 'light' (the Lady's Grace candle, 29 Oct): a cyan flame and its pale glow; any bright colour
         // with plenty of green and some blue (cyan, white, pale gold) is glow; the wick and pink are not.
-        const isGlow = light ? f[1] >= 160 && f[2] >= 90 : f[0] >= f[1] && f[1] >= f[2] - 10 && f[0] - f[2] > 60;
+        // 'cyan' (Yvesil's staff, 9 Nov): only a glow with plenty of blue in it; her green hand isn't.
+        const isGlow = colour === 'cyan' ? f[1] >= 150 && f[2] >= 150 : light ? f[1] >= 160 && f[2] >= 90 : f[0] >= f[1] && f[1] >= f[2] - 10 && f[0] - f[2] > 60;
         if (!isGlow) {
             // Not flame: still pink (blue over green, red well over it) or dusky rose is the background
             // showing through the faintest wisps; it goes (keep red cloth and leather out of the boxes).
@@ -919,7 +920,7 @@ await cutOutFlat('bust-sylvester.jpg', 'sylvester');
 await cutOutFlat('bust-darren.jpg', 'darren');
 await cutOutFlat('bust-bard.jpg', 'bard');
 // The Salty Swallow's crew (the user's paintings, 9 Nov).
-await cutOutFlat('bust-yvesil.jpg', 'yvesil', { holes: [[851, 319]] });
+await cutOutFlat('bust-yvesil.jpg', 'yvesil', { holes: [[851, 319]], glow: { boxes: [[990, 0, 1260, 768]], colour: 'cyan', min: 0.1 } }); // the staff's cyan glow stays soft and see-through, her hand as it is (it was cut ragged, 9 Nov) stays soft and see-through (it was cut ragged, 9 Nov)
 await cutOutFlat('bust-jorvash.jpg', 'jorvash', { holes: [[977, 483], [565, 604], [1016, 483]] });
 await cutOutFlat('bust-kram.jpg', 'kram', { holes: [[484, 500]] }); // background enclosed by her hair, left of her cheek
 await cutOutFlat('bust-elf-kid.jpg', 'elf-kid', { tolerance: 30, holes: [[238, 1010]] }); // the vial's pink liquid stays; background enclosed between his sleeve and waistcoat
