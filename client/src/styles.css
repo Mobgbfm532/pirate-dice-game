@@ -3215,3 +3215,11 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
     .thom-scene:not(.spot-scene) .thom-bust { -webkit-mask-image: linear-gradient(to left, transparent, #000 16%); mask-image: linear-gradient(to left, transparent, #000 16%); }
     .spot-scene.kram .thom-bust { -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
 }
+
+/* Klarg's hand (9 Nov, the user's): the die he snatched sits on his nameplate, orange as it was on
+   the felt, until his turn starts with it kept. It drops in as his paw gets back. */
+.klarg-hand { display: inline-flex; align-items: center; animation: klarg-hand-in 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.klarg-hand .die2d { width: 22px; height: 22px; padding: 3px; gap: 1px; border-radius: 5px; transform: rotate(-12deg);
+    background: radial-gradient(circle at 35% 30%, #f2b45a, #c8741e 70%, #9a5312); box-shadow: 0 0 8px rgba(255, 150, 40, 0.55), 0 2px 3px rgba(0, 0, 0, 0.6); }
+.klarg-hand .die2d > .pip { background: #2a170a; }
+@keyframes klarg-hand-in { from { transform: translateY(-18px) scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }

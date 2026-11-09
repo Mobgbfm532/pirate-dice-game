@@ -193,6 +193,28 @@ test('Klarg waits for a 2 or 4 you need, snatches it and starts his turn with it
     assert.equal(room.tavernRun.klargHand, null);
 });
 
+test('Klarg reaches around at most once a round, though he has two a fight', async () => {
+    const hero = await tavernAgainst(fightOf('klarg'), 'KlargOnce');
+    const room = roomOf(hero);
+    // A 2 shows: he takes it.
+    let unpin = pinFaces([2, 1, 3, 3, 5, 6]);
+    hero.emit('rollDice');
+    let rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.equal(rolled.turn.dice.filter(d => d.status === Rules.STATUS.STOLEN).length, 1);
+    await sleep(rolled.animationMs * 0.01 + 60);
+    hero.emit('toggleDie', 5); // keep the 6
+    await sleep(30);
+    // A 4 you need shows on the next throw: this round he has had his go.
+    unpin = pinFaces([4, 1, 3, 3]);
+    hero.emit('rollDice');
+    rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === 2, 4000);
+    unpin();
+    assert.equal(rolled.turn.dice.filter(d => d.status === Rules.STATUS.STOLEN).length, 1, 'only the first die is gone');
+    assert.ok(rolled.turn.dice.some(d => d.value === 4 && d.status === Rules.STATUS.ACTIVE), 'the 4 stays yours');
+    assert.equal(room.tavernRun.klargHand, 2);
+});
+
 test("Rokr's Starry Form hides your dice under constellations: you keep blind, and they show at your next throw", async () => {
     const hero = await tavernAgainst(fightOf('rokr'), 'RokrTest');
     const room = roomOf(hero);

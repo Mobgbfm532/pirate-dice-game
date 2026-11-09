@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience } from './sounds';
 import { simulateRoll } from './physics';
@@ -509,6 +509,12 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
             <span className="name">{name ?? bot.name}</span>
             <Hearts lives={bot.lives} starting={starting} fight={fightKey(state)} player={BOT_ID} />
             {state.tavernRun && <AbilityMarks state={state} />}
+            {/* Klarg's hand (9 Nov, the user's): the die he snatched, until his turn starts with it kept. */}
+            {state.tavernRun?.klargHand && !klargStealing() && (
+                <span className="klarg-hand" title={`Klarg has your ${state.tavernRun.klargHand} for his hand`} aria-label={`Klarg holds a ${state.tavernRun.klargHand}`}>
+                    <Die value={state.tavernRun.klargHand} />
+                </span>
+            )}
             <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
         </div>
     );

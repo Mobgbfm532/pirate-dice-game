@@ -2,11 +2,11 @@ import { useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 're
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { BOT_ID, actions, canPutBack, store, table } from './game';
+import { BOT_ID, STEAL_MS, actions, canPutBack, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
 import { paceFrame, readFrame } from './physics';
 import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
-import { OPPONENT_DICE, STARRY_GLOW, createDiceMaterials, opponentDiceMaterials } from './textures';
+import { OPPONENT_DICE, STARRY_GLOW, artTexture, createDiceMaterials, opponentDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
 
@@ -27,7 +27,72 @@ const START_POSITIONS = DICE_IDS.map(waitingPosition);
 const targetPos = new THREE.Vector3();
 const targetQuat = new THREE.Quaternion();
 
-const STEAL_MS = 1400;
+
+// Klarg's Reach Around (9 Nov, the user's): his paw, cut from his painting with its die cut out,
+// swoops down from his side of the table, closes on the die he takes and drags it back with it in
+// his grip. One path for both: where the die's centre is at each moment of the steal (t 0..1).
+const GRIP = 0.36; // when the paw has closed on the die
+const smooth = (x: number) => x * x * (3 - 2 * x);
+function stealProgress(id: number, now: number) {
+    return Math.min(1, Math.max(0, now - (table.stolenAt.get(id) ?? now)) / STEAL_MS);
+}
+const farAway = new THREE.Vector3();
+const overDie = new THREE.Vector3();
+function stealGrip(rest: THREE.Vector3, t: number, out: THREE.Vector3) {
+    farAway.set(rest.x * 0.35, rest.y + 3.4, TABLE_FAR_EDGE_Z - 1.6);
+    if (t < GRIP - 0.08) {
+        // In from his side, slowing as it comes over the die.
+        const p = 1 - Math.pow(1 - t / (GRIP - 0.08), 2.4);
+        overDie.set(rest.x, rest.y + DIE_SIZE * 0.7, rest.z);
+        return out.copy(farAway).lerp(overDie, p);
+    }
+    if (t < GRIP) {
+        // Down onto it.
+        const p = smooth((t - (GRIP - 0.08)) / 0.08);
+        return out.set(rest.x, rest.y + DIE_SIZE * 0.7 * (1 - p), rest.z);
+    }
+    // A heave, then away with it, quicker as it goes.
+    const p = (t - GRIP) / (1 - GRIP);
+    overDie.copy(rest);
+    return out.copy(overDie).lerp(farAway, p * p * (1.4 - 0.4 * p));
+}
+
+// The paw: a picture facing the camera, drawn over the table, its empty grip on the die's path.
+const PAW_ASPECT = 480 / 400;
+const PAW_W = DIE_SIZE * 3.3;
+const PAW_GRIP: [number, number] = [0.27, 0.64]; // where the die sits in the picture (from its left, top)
+const PAW_TURN = -0.35; // a little turned, so the arm runs up towards him
+const pawTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), PAW_TURN);
+const pawOffset = new THREE.Vector3();
+const gripAt = new THREE.Vector3();
+function KlargPaw() {
+    const mesh = useRef<THREE.Mesh>(null);
+    const map = useMemo(() => artTexture('klarg-paw.webp'), []);
+    useFrame(({ camera }) => {
+        const m = mesh.current;
+        if (!m) return;
+        const now = performance.now();
+        const turn = store.get().turn;
+        const die = turn?.dice.find(d => d.status === 'stolen' && table.stolenAt.has(d.id) && stealProgress(d.id, now) > 0 && stealProgress(d.id, now) < 1);
+        const rest = die ? table.rest.get(die.id) : undefined;
+        if (!die || !rest) { m.visible = false; return; }
+        const t = stealProgress(die.id, now);
+        stealGrip(rest.position, t, gripAt);
+        const squeeze = t > GRIP - 0.05 && t < GRIP + 0.1 ? 0.94 : 1;
+        m.scale.set(PAW_W * squeeze, (PAW_W / PAW_ASPECT) * squeeze, 1);
+        m.quaternion.copy(camera.quaternion).multiply(pawTurn);
+        pawOffset.set((0.5 - PAW_GRIP[0]) * PAW_W, (PAW_GRIP[1] - 0.5) * (PAW_W / PAW_ASPECT), 0).multiplyScalar(squeeze).applyQuaternion(m.quaternion);
+        m.position.copy(gripAt).add(pawOffset);
+        (m.material as THREE.MeshBasicMaterial).opacity = Math.min(1, t / 0.1, (1 - t) / 0.18);
+        m.visible = true;
+    });
+    return (
+        <mesh ref={mesh} visible={false} renderOrder={20}>
+            <planeGeometry args={[1, 1]} />
+            <meshBasicMaterial map={map} transparent depthTest={false} depthWrite={false} toneMapped={false} />
+        </mesh>
+    );
+}
 
 // Rokr's Constellation Blur: a little constellation hangs over each blurred die, its stars
 // twinkling and joined by faint lines. Positions are around the die's top (die units).
@@ -198,24 +263,18 @@ export function Dice() {
                 showHidden = roll.hidden.has(die.id);
             } else {
                 if (die.status === 'stolen') {
-                    // Klarg reaches over: the die is plucked up off the felt, hangs there a
-                    // moment, then is swept back across the table to his side and gone.
+                    // Klarg's paw (KlargPaw) reaches over, closes on the die and drags it back
+                    // across the table to his side; it lies still on the felt until then.
                     const rest = table.rest.get(die.id);
-                    const t = Math.min(1, Math.max(0, now - (table.stolenAt.get(die.id) ?? now)) / STEAL_MS);
-                    const lift = Math.min(1, t / 0.3);
-                    const sweep = Math.max(0, (t - 0.45) / 0.55);
-                    const eased = sweep * sweep;
+                    const t = stealProgress(die.id, now);
                     if (rest) {
-                        targetPos.set(
-                            rest.position.x * (1 - eased),
-                            rest.position.y + lift * 1.6 + eased * 1.2,
-                            rest.position.z + (TABLE_FAR_EDGE_Z - 1.5 - rest.position.z) * eased
-                        );
-                        mesh.position.copy(targetPos);
+                        if (t >= GRIP) {
+                            stealGrip(rest.position, t, mesh.position);
+                            mesh.rotateY(delta * 3 * ((t - GRIP) / (1 - GRIP)));
+                        } else mesh.position.copy(rest.position);
                     }
-                    mesh.rotateY(delta * (2 + sweep * 10));
-                    mesh.scale.setScalar(1 - eased * 0.7);
-                    mesh.visible = t < 1;
+                    mesh.scale.setScalar(1 - 0.25 * Math.max(0, (t - GRIP) / (1 - GRIP)));
+                    mesh.visible = t < 0.97;
                     targetQuat.copy(mesh.quaternion);
                 } else if (isLocked(die)) {
                     const slot = slots.get(die.id) ?? 2;
@@ -310,6 +369,7 @@ export function Dice() {
                     <Constellation index={id} meshes={meshes} />
                 </group>
             ))}
+            <KlargPaw />
             {[0, 1, 2, 3, 4, 5].map(i => <TwinGhost key={i} index={i} geometry={geometry} materials={materials} meshes={meshes} />)}
         </group>
     );

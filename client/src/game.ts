@@ -77,6 +77,7 @@ export interface TavernRun {
     encounterKeepsakeUses?: Record<string, boolean>; // keepsakes that have worked this fight
     abilityMax?: number; // the opponent's uses a fight
     jaguarPhase?: 'talk' | 'cloak' | 'allIn' | null; // Jaguar's phase this round
+    klargHand?: number | null; // the die Klarg snatched, shown on his nameplate until his turn
     abilityLeft?: boolean; // the opponent's ability has uses left this fight
     ladysGrace?: boolean; // the Lady's Grace: the next dust that would cost a heart doesn't
     tubSurge?: TubSurge | null; // the Wild Magic Hot Tub's surge on one of your dice, this fight
@@ -209,13 +210,22 @@ export interface Snapshot {
     // 2, the 4 and four 1s. who: the player's name when it isn't you.
     celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
     devil: { at: number; who: string | null } | null; // three 6s landed (who: when it isn't you)
+    klargCaughtAt: number; // Klarg's paw got back to his side with your die (his nameplate shows it)
     filmPause: boolean; // the intro film covers the table: it isn't drawn meanwhile
 }
 
 export interface DiePose { position: THREE.Vector3; quaternion: THREE.Quaternion }
 
-// How long Klarg waits after the dice stop before reaching over.
+// Klarg's Reach Around (9 Nov, the user's: the banner first, then the die goes): the dice land, his
+// banner comes up a moment later with the die still on the felt under it, and as the banner leaves
+// his hand lifts the die and sweeps it away (STEAL_MS, Dice.tsx). The next throw waits for that.
 const STEAL_PAUSE_MS = 500;
+export const STEAL_MS = 1700;
+export function klargStealing() {
+    const now = performance.now();
+    return !!snapshot.turn?.dice.some(d => d.status === 'stolen' && (table.stolenAt.get(d.id) ?? 0) + STEAL_MS > now);
+}
+let stealReadyAt = 0; // when his banner may come up (the dice have settled)
 
 // Read every frame by the 3D table, so it lives outside React state.
 export const table = {
@@ -260,6 +270,7 @@ let snapshot: Snapshot = {
     putBackSlot: null,
     celebration: null,
     devil: null,
+    klargCaughtAt: 0,
     filmPause: false
 };
 
@@ -534,8 +545,12 @@ socket.on('diceRolled', (data: { turn: TurnView; preRollCallout: string | null; 
                 const pose = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
                 readFrame(track, track.frames - 1, i, pose.position, pose.quaternion);
                 table.rest.set(d.id, pose);
-                // Klarg waits until every die has stopped, then reaches over a moment later.
-                if (d.status === 'stolen') table.stolenAt.set(d.id, performance.now() + STEAL_PAUSE_MS);
+                // Klarg's banner comes first; the die waits on the felt for it (signatureMove sets
+                // the moment his hand comes; this is only in case the banner never does).
+                if (d.status === 'stolen') {
+                    stealReadyAt = performance.now() + STEAL_PAUSE_MS;
+                    table.stolenAt.set(d.id, performance.now() + 4000);
+                }
             });
             table.roll = null;
             if (data.devil) showDevil(turn);
@@ -692,8 +707,8 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare'
 const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Brand', 'Divine Smite']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
-// turn in the queue: it shows once the roll has finished. Reach Around waits a little longer,
-// so the name and sound land just as Klarg's hand lifts the die.
+// turn in the queue: it shows once the roll has finished. Reach Around waits for the dice to
+// settle, and the die it takes goes once its banner has.
 socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean }) => {
     const steal = data.ability === 'Reach Around';
     const flood = data.ability === 'Astral Flood' && !data.cancelled;
@@ -708,7 +723,14 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
         if (!data.cancelled && (data.hit || SHAKING_ABILITIES.has(data.ability))) shakeScreen(250);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
-    }, MOMENT_GAP_MS, () => (steal ? Math.max(0, ...table.stolenAt.values()) : 0));
+        // His hand comes for the die as the banner leaves (its last 0.15 s are it rising away).
+        if (steal && !data.cancelled) {
+            const hand = performance.now() + MOMENT_SHOW_MS - 150;
+            snapshot.turn?.dice.forEach(d => { if (d.status === 'stolen' && (table.stolenAt.get(d.id) ?? 0) > performance.now()) table.stolenAt.set(d.id, hand); });
+            // (The nameplate shows it in his hand once his paw has got it there.)
+            setTimeout(() => update({ klargCaughtAt: performance.now() }), hand - performance.now() + STEAL_MS + 60);
+        }
+    }, steal ? MOMENT_GAP_MS + STEAL_MS : MOMENT_GAP_MS, () => (steal ? stealReadyAt : 0), steal && !data.cancelled ? MOMENT_SHOW_MS + STEAL_MS : MOMENT_SHOW_MS);
     // Once its banner has gone, the flood pours over the table; the state behind it (the heart he
     // takes) waits in the queue until then, so it breaks as the wave hits.
     if (flood) enqueueMoment(showFloodWave, FLOOD_WAVE_MS, () => momentGoneAt, FLOOD_WAVE_MS);

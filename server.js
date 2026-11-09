@@ -677,6 +677,7 @@ function getTavernRunState(room) {
         abilityUsed: room.tavernRun.abilityUsed,
         abilityMax: seated.ability ? BALANCE.abilityUses[seated.ability] : 0, // uses a fight (the seated opponent's)
         jaguarPhase: room.tavernRun.jaguarPhase || null, // Jaguar's: 'talk', 'cloak' or 'allIn'
+        klargHand: room.tavernRun.klargHand || null, // the die Klarg snatched, waiting for his turn
         clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
@@ -793,14 +794,16 @@ function applyTavernRollAbilities(roomCode, room, turn) {
         sixes();
     }
     // Klarg (since 25 Oct): he waits for a throw showing a 2 or 4 you still need, snatches it and
-    // keeps it for his own hand (syncTurn puts it in his next turn).
-    if (mine && encounter && encounter.keepsStolen && FINAL_SHIP.klargWaits) {
+    // keeps it for his own hand (syncTurn puts it in his next turn). At most once a round (the
+    // user's, 9 Nov): your turn is the round's one chance.
+    if (mine && encounter && encounter.keepsStolen && FINAL_SHIP.klargWaits && !turn.reachedAround) {
         let keptNow = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
         let inPlayNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
         let showing = inPlayNow.some(d => (d.value === 2 && !keptNow.includes(2)) || (d.value === 4 && !keptNow.includes(4)));
         if (showing && inPlayNow.length >= 2 && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
             let stolen = Rules.stealHighestActiveDie(turn);
             if (stolen) {
+                turn.reachedAround = true;
                 run.klargHand = stolen.value;
                 moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: `Klarg snatches your ${stolen.value} and keeps it for his own hand.` });
             }
