@@ -704,6 +704,19 @@ function getRoomState(roomCode) {
     };
 }
 
+// In a fog bank, a moment that would give his hand away before yours is done (his Ace of Spades, the
+// Bard's Cutting Words) waits for the round's end (the user's, 10 Nov), and shows just before its result.
+function fogHeld(roomCode, room, event, data) {
+    let human = room.players[getHumanPlayerId(room)];
+    if (seaFog(room) && human && human.score === null) (room.tavernRun.fogHeld = room.tavernRun.fogHeld || []).push([event, data]);
+    else sendMoment(roomCode, event, data);
+}
+function sendFogHeld(roomCode, room) {
+    let held = room.tavernRun.fogHeld || [];
+    room.tavernRun.fogHeld = [];
+    held.forEach(([event, data]) => sendMoment(roomCode, event, data));
+}
+
 // In a fog bank his finished hand stays out of sight until yours is done too: no score, no dust.
 function fogMask(room) {
     let bot = room.players[BOT_ID];
@@ -774,7 +787,7 @@ function getTavernRunState(room) {
         nextSea: seaView(room.tavernRun.nextSea), // (the old forecast: null since the sea die)
         seaFace: room.tavernRun.seaFace || null, // the sea die's face this round
         seaFaces: placeOf(room) === PLACES.saltySwallow ? seaFaces(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex]) : null, // the leg's dial
-        clearEye: !!room.tavernRun.clearEyeArmed, // a Clear-Eye is waiting for the next ability
+        clearEye: !!room.tavernRun.clearEyeArmed || (room.tavernRun.fogHeld || []).some(([event, data]) => event === 'thonicUsed' && data.id === 'clearEye'), // a Clear-Eye is waiting for the next ability (in fog, still shown so until its cancel is told)
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
         encounterRound: room.tavernRun.encounterRound,
@@ -1159,8 +1172,8 @@ function performEndTurn(roomCode) {
         }
         if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
             room.players[currentId].score = 24;
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
-            io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
+            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
+            if (!seaFog(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
         // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
         // points (not in a cursed round, where a lower score would help them).
@@ -1169,7 +1182,7 @@ function performEndTurn(roomCode) {
             let off = INTERLUDE.cuttingWords ?? 3;
             let was = room.players[BOT_ID].score;
             score = room.players[BOT_ID].score = Math.max(0, was - off);
-            sendMoment(roomCode, 'keepsakeActivated', { id: 'cuttingWords', name: 'Cutting Words', text: `${encounter.name}'s ${was} becomes ${score}.`, who: 'The Bard' });
+            fogHeld(roomCode, room, 'keepsakeActivated', { id: 'cuttingWords', name: 'Cutting Words', text: `${encounter.name}'s ${was} becomes ${score}.`, who: 'The Bard' });
         }
 
         // The Hangman's Dead Eye: he shoots your best scoring die (not the 2 and 4 you need) and it
@@ -1602,8 +1615,10 @@ function fireTavernAbility(roomCode, room, encounter, abilityId) {
     if (!room.tavernRun.clearEyeArmed) return true;
     room.tavernRun.clearEyeArmed = false;
     let name = Rules.ABILITY_NAMES[abilityId];
-    emitMoment(roomCode, room, 'signatureMove', { name: encounter.name, ability: name, text: 'A Clear-Eye Thonic saw it coming.', cancelled: true });
-    emitMoment(roomCode, room, 'thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${name} is cancelled` });
+    // (His Ace cancelled in a fog bank: that too waits for the round's end, or it gives his hand away.)
+    let show = abilityId === 'deadeye24' ? (event, data) => fogHeld(roomCode, room, event, data) : (event, data) => emitMoment(roomCode, room, event, data);
+    show('signatureMove', { name: encounter.name, ability: name, text: 'A Clear-Eye Thonic saw it coming.', cancelled: true });
+    show('thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${name} is cancelled` });
     return false;
 }
 
@@ -1950,6 +1965,7 @@ const ROUND_EFFECT_TEXT = {
 };
 
 function beginTavernRound(roomCode, room) {
+    if (room.tavernRun) room.tavernRun.fogHeld = []; // (a fog bank's held moments are for its own round)
     let run = room.tavernRun;
     run.roundEffect = null;
     run.pendingDevil = null;
@@ -2377,6 +2393,7 @@ function evaluateTavernRound(roomCode) {
         if (!capped.busted) capped.score = Math.min(capped.score, BALANCE.devilCap);
     }
     let cursed = !!effect && effect.kind === 'curse';
+    sendFogHeld(roomCode, room);
     if (!cursed) stareTurnsRound(roomCode, room, human, enemy);
     let valid = roundPlayers.filter(id => !room.players[id].busted);
     if (valid.length > 1) {
@@ -3275,4 +3292,4 @@ if (require.main === module) start();
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

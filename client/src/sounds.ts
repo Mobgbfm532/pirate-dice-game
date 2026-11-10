@@ -70,7 +70,9 @@ const sfx = {
     // Sylvester's Back of the Head (the user's, 5 Nov; it was the swoosh).
     sylvesterPunch: load('SylvesterPunch.mp3', ABILITY_VOLUME),
     // Heavy seas: a rogue wave takes a die over the rail (the user's, 10 Nov; it was the synthesized swell).
-    rogueWave: load('RogueWave.mp3', 1) // (a quiet recording)
+    rogueWave: load('RogueWave.mp3', 1), // (a quiet recording)
+    // A fog bank rolls in, or holds (the user's, 10 Nov; a loud recording, 2.4 s).
+    fogHorn: load('FogHorn.mp3', 0.6)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).

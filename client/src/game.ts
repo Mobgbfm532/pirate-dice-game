@@ -786,10 +786,13 @@ const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1, ro
 function showSea(data: SeaRoll, hold = 0) {
     const at = performance.now();
     update({ seaMoment: { ...data, at: at + hold } });
-    if (!data.changed) return;
     const news = SEA_LAND_MS + 300;
+    // A fog bank's foghorn as the news comes, whether it rolls in or holds (the user's clip, 10 Nov), in place of the swell.
+    const fog = data.id === 'fog';
+    if (fog) setTimeout(() => playSound('fogHorn'), news);
+    if (!data.changed) return;
     setTimeout(() => {
-        playSeaSwell(data.shift === 0 ? 'calm' : 'heel');
+        if (!fog) playSeaSwell(data.shift === 0 ? 'calm' : 'heel');
         heave(data.shift);
         table.seaLurchAt = performance.now();
         table.seaLurch = data.shift - (SEA_SHIFTS[data.from ?? 'calm'] ?? 0) || 1;

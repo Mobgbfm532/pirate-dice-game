@@ -373,6 +373,35 @@ test('a fog bank: his dice land hidden and stay hidden, his finished score is ke
     assert.ok(view.dice.every(d => d.value === 0 && d.hidden), 'hidden');
     assert.equal(view.outcome, null);
     assert.equal(view.suspense, 'none');
+    // A moment that would give his hand away (his Ace) waits for the round's end in fog.
+    room.players[hero.id].score = null;
+    room.players.BOT_MOLAR.score = 24;
+    let seen = false;
+    hero.on('signatureMove', m => { if (m.ability === 'The Ace of Spades') seen = true; });
+    server.fogHeld(codeOf(hero), room, 'signatureMove', { name: 'The Hangman', ability: 'The Ace of Spades', text: 'Perfect 24.' });
+    await sleep(80);
+    assert.equal(seen, false, 'held while your hand is to come');
+    room.players[hero.id].score = 18;
+    const ace = waitFor(hero, 'signatureMove', m => m.ability === 'The Ace of Spades', 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    await ace;
+    // A Clear-Eye cancelling his Ace in fog is held too, and stays shown as ready until then.
+    room.players[hero.id].score = null;
+    room.players.BOT_MOLAR.score = 20;
+    room.tavernRun.sea = "fog"; // (the round just ended: a new one may have rolled another sea)
+    room.tavernRun.clearEyeArmed = true;
+    room.tavernRun.abilityRound = 1;
+    room.players.BOT_MOLAR.lives = 1;
+    room.tavernRun.abilityUsed = {};
+    const hangman = server.TAVERN_ENCOUNTERS[fightOf('hangman')];
+    // (Checked at once: at test speed the next round would begin within milliseconds.)
+    assert.equal(server.fireTavernAbility(codeOf(hero), room, hangman, 'deadeye24'), false, 'cancelled');
+    assert.deepEqual(room.tavernRun.fogHeld.map(([event]) => event), ['signatureMove', 'thonicUsed'], 'held');
+    assert.equal(runOf(server.getRoomState(codeOf(hero))).clearEye, true, 'still shown ready');
+    room.players[hero.id].score = 18;
+    const thonic = waitFor(hero, 'thonicUsed', m => m.id === 'clearEye', 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    await thonic;
     // The Hangman's dial has its fog bank on the 4.
     assert.equal(require('../shared/balance').voyage.hangman[3], 'fog');
 });
