@@ -65,6 +65,10 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > **Style line:** *hand-painted stylized fantasy game art, warm storybook look, soft
 > brush texture, rich but muted colours, chunky proportions*
 
+**The Shrine to the Lady aboard the Salty Swallow (10 Nov; a scene, not cut out, like `art/shrine.jpg`)**
+> A small shrine to the Lady, goddess of sailors, built into a corner of a wooden ship's gun deck at night, below decks on a pirate sailing ship. A hooded statue of the Lady, carved from pale weathered wood like a ship's figurehead and streaked with salt, a few barnacles and a little green sea-moss, in flowing robes, arms open in welcome, a gentle face; at her feet a carved crescent moon and curling waves. She stands in a niche between two heavy curved ship's ribs, a coil of old rigging and a fishing net hanging beside her. Before her a narrow wooden ledge with a raised rim so nothing slides off in a swell, crowded with candles, some in glass storm lanterns, wax dripping down the ledge, all lighting her warmly from below. Sailors' offerings on the ledge: a few coins, sea shells, a knotted rope, a small model ship, a brass compass, a sprig of dried seaweed. Behind, softly out of focus: a black iron cannon on its carriage, a hammock, swinging lanterns, a round porthole showing a moonlit sea, two sailors in the dim light. Warm candlelight against the cool blue night through the porthole. Square composition, the statue centred. *+ style line*
+> (For the same statue carried aboard: "weathered stone with patches of green moss" in place of "pale weathered wood".)
+
 **Felt (seamless)**
 > Top-down seamless tileable texture of bottle-green billiard baize felt, faint worn
 > patches, fine fibre texture, flat even lighting, no shadows, no objects. *+ style line*
