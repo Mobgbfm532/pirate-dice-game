@@ -44,7 +44,7 @@ const MOMENTS = {
     dock: `preview.sail('dock')`, // (Skipper Bren on the quay)
     sail: `preview.sail()`,
     searogue: `preview.sea('rogue', 'calm', 60000)`, // (the sea die landing on Heavy seas, the dial held)
-    seainfo: `document.querySelector('.plaque-button').click()`, // (the sea's explainer, with the leg's dial)
+    seainfo: `setTimeout(() => document.querySelector('.plaque-button')?.click(), 1500)`, // (the sea's explainer, with the leg's dial)
     card: `document.querySelector('.plate-info').click()` // (the opponent's card, from the i on the nameplate)
 };
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {

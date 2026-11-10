@@ -47,7 +47,13 @@ module.exports = {
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
         rokr: ['port', 'becalmed', 'becalmed', 'calm', 'calm', 'starboard'],
         hangman: ['port', 'squall', 'rogue', 'fog', 'calm', 'starboard'],
-        jaguar: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'] // (his dial by phase to come)
+        // Jaguar's follows his phase (10 Nov, the user's): the eye of the storm while he talks, the storm
+        // wall at his Cloak, every wave at once for All In.
+        jaguar: {
+            talk: ['port', 'calm', 'calm', 'fog', 'fog', 'starboard'],
+            cloak: ['port', 'squall', 'squall', 'rogue', 'rogue', 'starboard'],
+            allIn: ['port', 'rogue', 'rogue', 'rogue', 'rogue', 'starboard']
+        }
     },
     finalShip: {
         klargWaits: true,        // Klarg steals when a 2 or 4 you still need shows (else: on your first throw)

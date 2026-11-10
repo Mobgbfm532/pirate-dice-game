@@ -341,12 +341,32 @@ test('Heavy seas: the wave spares a last loose die', async () => {
 
 test('every sea dial: a 1 is always port and a 6 always starboard (the user, 10 Nov)', () => {
     const dials = require('../shared/balance').voyage;
-    for (const [leg, faces] of Object.entries(dials)) {
+    const legs = Object.entries(dials).flatMap(([leg, f]) => (Array.isArray(f) ? [[leg, f]] : Object.entries(f).map(([phase, p]) => [leg + " " + phase, p])));
+    for (const [leg, faces] of legs) {
         assert.equal(faces.length, 6, leg);
         assert.equal(faces[0], 'port', leg + ': face 1');
         assert.equal(faces[5], 'starboard', leg + ': face 6');
         assert.ok(faces.slice(1, 5).every(id => id !== 'port' && id !== 'starboard'), leg + ': faces 2-5 neither list');
     }
+});
+
+test("Jaguar's sea dial follows his phase (the user, 10 Nov)", async () => {
+    const hero = await tavernAgainst(fightOf('jaguar'), 'Eye of the Storm');
+    const room = roomOf(hero);
+    const bot = Object.values(room.players).find(p => p.id !== hero.id);
+    const dial = BALANCE.voyage.jaguar;
+    for (const [lives, phase] of [[3, 'talk'], [2, 'cloak'], [1, 'allIn']]) {
+        bot.lives = lives;
+        room.tavernRun.encounterRound = 2;
+        room.tavernRun.abilityUsed = { jaguarPhases: 99 }; // (no Smooth Talk in the way)
+        const unpin = pinFaces([3]);
+        server.beginTavernRound(codeOf(hero), room);
+        unpin();
+        assert.equal(room.tavernRun.jaguarPhase, phase);
+        assert.equal(room.tavernRun.sea, dial[phase][2], phase + ': face 3');
+        assert.deepEqual(server.getRoomState(codeOf(hero)).tavernRun.seaFaces, dial[phase], phase);
+    }
+    assert.ok(dial.talk.includes('fog') && dial.cloak.includes('squall') && dial.allIn.slice(1, 5).every(id => id === 'rogue'));
 });
 
 test('Becalmed: three throws a hand, then the dice stay as they lie; the opponent plays it too', async () => {

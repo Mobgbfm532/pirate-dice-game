@@ -337,7 +337,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 170 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, saves after each place. 171 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
     for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);
@@ -621,8 +621,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   **Jaguar's music** (10 Nov, the user's `JaguarBossBattle.mp3`, 9.8 MB, 6:46, trimmed frame by frame of its silent start and end so it loops without a gap, fetched only then): it crossfades in over the tavern tune as he sits down and back when the run ends (`BossMusic` in Hud, `setBossMusic` in sounds.ts, `BOSS_VOLUME` 0.15: a loud recording), under the music switch. Dev: `/sea?now=squall`. Tests: two.
   **The Fog bank** (10 Nov, the user's): a sea of its own (`SEAS.fog`, `fog: true`, the Hangman's face 4): neither side sees the other's hand until both are done. The opponent's dice land hidden and stay so even once his hand is finished (`turn.fogged`, set as his turn starts; `viewTurn` hides them, his `outcome` and `suspense`; no Devil moment), his finished score and dust are kept out of the state until yours is done (`fogMask` in getRoomState: `score: null`, `scoreHidden: true`, shown as "?" on his nameplate and as the score to beat), and he can't see your score (`getTavernScoreToBeat` undefined, so he plays for his best). On screen: banks of mist drifting over the table (`FogBank` in Hud, `.fog-bank`), a pale plaque, "Fog bank" on the sea die, its explainer, and the user's `FogHorn.mp3` as the sea die's news comes (rolling in or holding; in place of the swell). A moment that would give his hand away before yours is done (his Ace of Spades, the Bard's Cutting Words, a Clear-Eye cancelling his Ace, whose ready mark stays lit meanwhile) is held for the round's end and shows just before its result (`fogHeld`, `sendFogHeld`; the user's, 10 Nov). Dev: `/sea?now=fog`. Tests: one.
   **Becalmed** (10 Nov, the user's): a sea of its own (`SEAS.becalmed`, `maxThrows: 3`, Rokr's faces 2-3): a hand gets three throws (`turn.maxThrows`, set as a hand begins; `Rules.canRoll`), and whatever dice the third leaves stay as they lie, kept as they land (`Rules.keepRest` in performRoll). Both sides. The solver counts the throws left (`solveLimited`, options `throws` and `throwsLeft`; the sensible player's scores too, `limitedPlayerScores`): from the start his chance of a valid hand is 87% (96% unlimited). On screen: a warm, still plaque (its little ship doesn't rock), the hint counts the throws left ("Becalmed: 2 throws left", "Keep some: your last throw, and they stay as they lie"), "Becalmed" on the sea die, its explainer. No sound or picture of its own yet. Dev: `/sea?now=becalmed`. Tests: one.
-  Dev: `/sea?now=starboard&next=port`. Next (the Rogue wave, the Squall, Fog and Becalmed are built, 10 Nov; the brainstorm's order; the whole brainstorm, with its simulated numbers and each leg's weather mix, is
-  `docs/voyage-brainstorm.md`): Jaguar's dial by phase (St Elmo's fire and the player's say cut, 10 Nov, the user's; proposed final dials in the brainstorm);
+  **Jaguar's dial follows his phase** (10 Nov, the user's: the proposed final dials): `BALANCE.voyage.jaguar` is `{ talk, cloak, allIn }`, read from his lives as a round begins (`jaguarPhaseOf`, `seaFaces(encounter, room, fresh)`): Smooth Talk 2-3 calm, 4-5 Fog bank; the Cloak 2-3 Squall, 4-5 Heavy seas; All In 2-5 Heavy seas (1 port and 6 starboard throughout). The sea's explainer says so (`JAGUAR_SEA` in Hud). Tests: one.
+  Dev: `/sea?now=starboard&next=port`. Next (the Rogue wave, the Squall, Fog, Becalmed and Jaguar's dial are built, 10 Nov; the brainstorm's order; the whole brainstorm, with its simulated numbers and each leg's weather mix, is
+  `docs/voyage-brainstorm.md`; St Elmo's fire and the player's say cut, 10 Nov, the user's):
   choosing a course; events aboard.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
@@ -899,7 +900,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
 3. **The voyage, more** (step 1, Heeling on the sea die, built 9 Nov; see "The sea"): next in the brainstorm's order (`docs/voyage-brainstorm.md`),
    (the Rogue wave, as Heavy seas, the Squall, the Fog bank and Becalmed built 10 Nov; St Elmo's fire and the player's say
-   cut, 10 Nov), Jaguar's dial by phase; then choosing a course, events aboard. The sea die's faces per opponent
+   cut, 10 Nov), Jaguar's dial by phase (built 10 Nov); then choosing a course, events aboard. The sea die's faces per opponent
    (`BALANCE.voyage`) are first guesses. The ship's other ability names are still working names (Smooth Talk, the
    Cloak, All In).
 4. **Small things waiting on the user's word** (all open questions are in `docs/open-questions.md`):

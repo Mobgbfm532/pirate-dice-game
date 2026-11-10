@@ -637,8 +637,18 @@ function seaRoll(shift) {
     return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
 }
 // The sea die's dial for this leg: what each face (1-6) brings (BALANCE.voyage, by opponent).
-function seaFaces(encounter) {
+// Jaguar's dial follows his phase (10 Nov, the user's): { talk, cloak, allIn }, by his lives. As a
+// round begins (fresh) it is read from his lives, as his phase is about to be; the state shows this
+// round's phase's dial until the next round begins.
+function jaguarPhaseOf(lives) {
+    return lives >= 3 ? 'talk' : lives === 2 ? 'cloak' : 'allIn';
+}
+function seaFaces(encounter, room, fresh) {
     let faces = encounter && (BALANCE.voyage || {})[encounter.id];
+    if (faces && !Array.isArray(faces)) {
+        let bot = room && room.players[BOT_ID];
+        faces = faces[(!fresh && room && room.tavernRun.jaguarPhase) || jaguarPhaseOf(bot ? bot.lives : 3)];
+    }
     return Array.isArray(faces) && faces.length === 6 && faces.every(id => SEAS[id]) ? faces : ['calm', 'calm', 'calm', 'calm', 'calm', 'calm'];
 }
 // As a round begins aboard (9 Nov, the user's: "a dice roll to determine which weather"): from a
@@ -651,7 +661,7 @@ function setSea(roomCode, room, encounter) {
     if (!encounter || encounter.place !== 'saltySwallow') { run.sea = null; run.seaFace = null; return; }
     let was = run.sea;
     if ((run.encounterRound || 1) <= 1) { run.sea = 'calm'; run.seaFace = null; return; }
-    let faces = seaFaces(encounter);
+    let faces = seaFaces(encounter, room, true);
     let face = crypto.randomInt(1, 7);
     run.sea = faces[face - 1];
     run.seaFace = face;
@@ -794,7 +804,7 @@ function getTavernRunState(room) {
         sea: seaView(room.tavernRun.sea), // aboard the Salty Swallow: this round's weather
         nextSea: seaView(room.tavernRun.nextSea), // (the old forecast: null since the sea die)
         seaFace: room.tavernRun.seaFace || null, // the sea die's face this round
-        seaFaces: placeOf(room) === PLACES.saltySwallow ? seaFaces(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex]) : null, // the leg's dial
+        seaFaces: placeOf(room) === PLACES.saltySwallow ? seaFaces(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex], room) : null, // the leg's dial
         clearEye: !!room.tavernRun.clearEyeArmed || (room.tavernRun.fogHeld || []).some(([event, data]) => event === 'thonicUsed' && data.id === 'clearEye'), // a Clear-Eye is waiting for the next ability (in fog, still shown so until its cancel is told)
         abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
@@ -2042,7 +2052,7 @@ function beginJaguarRound(roomCode, room, encounter) {
     let run = room.tavernRun;
     let bot = room.players[BOT_ID];
     if (!bot) return;
-    let phase = bot.lives >= 3 ? 'talk' : bot.lives === 2 ? 'cloak' : 'allIn';
+    let phase = jaguarPhaseOf(bot.lives);
     let was = run.jaguarPhase;
     run.jaguarPhase = phase;
     if (phase === 'cloak' && FINAL_SHIP.cloakThrowsSecond !== false) {

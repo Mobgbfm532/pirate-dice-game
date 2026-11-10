@@ -10,14 +10,11 @@ day they happen, with what's been built marked as it lands.
 ## Open
 
 ### The voyage (`docs/voyage-brainstorm.md`)
-- **The final dials (proposed 10 Nov):** the table in `docs/voyage-brainstorm.md` ("The final dials"), Jaguar's changing with his phase. Waiting on the user.
-- **Sea dials now** (`BALANCE.voyage`, first guesses): 1 port and 6 starboard on every leg (the user, 10 Nov); faces 2-5 calm, except Rokr's 2-3 Becalmed and the Hangman's 2 Squall, 3 Heavy seas and 4 Fog bank. Only Jaguar's dial is still plain.
+- **The dials' numbers** (`BALANCE.voyage`, built as proposed in `docs/voyage-brainstorm.md`, "The final dials", 10 Nov): first guesses, not simulated. Klarg 2-5 calm; Rokr 2-3 Becalmed; the Hangman 2 Squall, 3 Heavy seas, 4 Fog; Jaguar by phase: talking 4-5 Fog, the Cloak 2-3 Squall and 4-5 Heavy seas, All In 2-5 Heavy seas. Is All In with a rogue wave two rounds in three too cruel?
 - **Becalmed and Starry Form:** on Rokr's leg his Starry Form can come in a becalmed round: you keep blind with only three throws. Too harsh, or a fair storm-free danger? (Option: no Starry Form while becalmed.)
 - **Becalmed's look and sound:** so far only a still, warm plaque and the hint counting throws. A sound (slack sails, a creak, gulls?) or something on the table, if wanted.
 - **The opponents and the Rogue wave:** their solver doesn't know a wave is coming, so they keep as on a calm sea. Teach it (and the balance simulator) before setting the dial's numbers?
 - **Sound levels to hear by ear (10 Nov):** the Squall's wind at 0.22 and Jaguar's music at 0.15 were set by measuring (both are loud recordings), the rogue wave at full volume (a quiet one).
-- **Jaguar's storm following his phases** (calm or fog, then squalls and waves, then heeling and waves)
-  isn't built; his dial is a plain mix for now.
 - The ship's ability names are still working names: Smooth Talk, the Cloak, All In.
 
 ### Small things
@@ -41,6 +38,7 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ## Settled
+- 10 Nov: "build the next item": Jaguar's sea dial follows his phase, as in the proposed final dials.
 - 10 Nov: in fog the Hangman's Ace of Spades (and the Bard's Cutting Words on his hand, and a Clear-Eye cancelling his Ace) shows at the round's end, not as it happens. The Fog bank's sound is the user's foghorn.
 - 10 Nov: Penitent Stare isn't telegraphed: no banner or plaque as a round begins; with both hands done he uses it only when he isn't already winning and it wins or ties him the round. (Whether a tie is worth it to him is a guess of mine: say if it should be only for a win.)
 - 10 Nov: the dial's Heavy seas slice is turquoise and the Squall's violet (they were slate and indigo, hard to see).

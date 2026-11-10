@@ -88,10 +88,10 @@ Jaguar's phases already change with his hearts, so the storm can follow them:
 - **2 hearts, the Cloak:** the storm wall hits, with squalls and rogue waves.
 - **His last heart, All In:** heeling and waves together.
 
-*Built so far (9 Nov):* every leg's dial has only calm and the two heelings (`BALANCE.voyage`, first
-guesses); the sea die's six faces would take the new weathers as they're built.
+*Built (10 Nov):* every leg's dial as in "The final dials" below, Jaguar's changing with his phase
+(`BALANCE.voyage`, first guesses, not yet simulated).
 
-## The final dials (proposed 10 Nov, waiting on the user)
+## The final dials (proposed 10 Nov; **Built** 10 Nov, numbers still first guesses)
 
 The rule (the user, 10 Nov): on every dial a 1 is listing to port and a 6 listing to starboard; each leg
 fills faces 2-5 with its own weather. Jaguar's dial changes with his phase.

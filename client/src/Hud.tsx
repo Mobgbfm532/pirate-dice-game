@@ -537,7 +537,7 @@ function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
 // What the line under Roll says: a round's plaque, or the tip. Aboard the Salty Swallow the sea is
 // always there (over the tip), taking turns with an opponent's ability when there is one.
 // A tap on either opens its explainer (9 Nov, the user's), the same card as the items on your strip.
-function HintLine({ badge, plaque, tip, sea, next, powers, face, faces }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[]; face: number | null; faces: SeaState['id'][] | null }) {
+function HintLine({ badge, plaque, tip, sea, next, powers, face, faces, phase }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[]; face: number | null; faces: SeaState['id'][] | null; phase?: string | null }) {
     const turnAbout = useTakingTurns(!!sea && !!badge.kind);
     const [open, setOpen] = useState<'sea' | 'ability' | null>(null);
     const close = useCallback(() => setOpen(null), []);
@@ -552,7 +552,7 @@ function HintLine({ badge, plaque, tip, sea, next, powers, face, faces }: { badg
                         <div className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>
                     </button>
                 ) : tip}
-            {open === 'sea' && sea && <SeaInfo sea={sea} face={face} faces={faces} onClose={close} />}
+            {open === 'sea' && sea && <SeaInfo sea={sea} face={face} faces={faces} phase={phase} onClose={close} />}
             {open === 'ability' && badge.kind && <AbilityInfo badge={badge} powers={powers} onClose={close} />}
         </>
     );
@@ -568,7 +568,13 @@ const SEA_EXPLAIN: Record<SeaState['id'], string> = {
     fog: "A fog bank: neither side can see across the table. Your opponent's dice land hidden and stay hidden, and their score with them, until both hands are done; they can't see yours either. You play to a target you can't see, so going second is no help this round.",
     rogue: "Heavy seas: as each hand's second throw is made, a rogue wave crosses the deck and one loose die, at random, goes over the rail. That hand finishes with five dice, so the best it can score is 18. Keep your 2 and your 4 the moment they show. (If only one loose die is left, the wave spares it.)"
 };
-function SeaInfo({ sea, face, faces, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; onClose: () => void }) {
+// Jaguar's dial follows his phase (10 Nov): what it is now, in words.
+const JAGUAR_SEA: Record<string, string> = {
+    talk: "In the eye of the storm while Jaguar talks: calm, or a fog bank. His Cloak brings the storm wall, and All In every wave at once.",
+    cloak: "The storm wall, since Jaguar drew his Cloak: squalls and rogue waves. On his last heart it's rogue waves all round.",
+    allIn: "All In: the storm at its worst, a rogue wave on every face between the lists."
+};
+function SeaInfo({ sea, face, faces, phase, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; phase?: string | null; onClose: () => void }) {
     // This leg's dial in words: e.g. "1 port · 2-5 calm · 6 starboard".
     const ranges: string[] = [];
     (faces ?? []).forEach((id, i) => {
@@ -581,6 +587,7 @@ function SeaInfo({ sea, face, faces, onClose }: { sea: SeaState; face: number | 
                 <p>{SEA_EXPLAIN[sea.id]}</p>
                 {face && <p><b>The sea die showed {face}.</b></p>}
                 {ranges.length > 0 && <p><b>Out here:</b> {ranges.join(' · ')}.</p>}
+                {phase && JAGUAR_SEA[phase] && <p>{JAGUAR_SEA[phase]}</p>}
                 <p className="item-small">Aboard the Salty Swallow every round from the second begins with a roll of the sea die. The sea leans everyone's dice, the opponent's too. A 2 and a 4 come up as often as ever.</p>
             </>} />
     );
@@ -695,7 +702,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
             <div className={`hint ${state?.tavernRun ? 'crawl' : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>
                 <HintLine badge={badge} plaque={plaque} tip={tip} sea={state?.tavernRun?.sea ?? null} next={state?.tavernRun?.nextSea ?? null}
                     powers={(state?.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).powers : null) ?? []}
-                    face={state?.tavernRun?.seaFace ?? null} faces={state?.tavernRun?.seaFaces ?? null} />
+                    face={state?.tavernRun?.seaFace ?? null} faces={state?.tavernRun?.seaFaces ?? null} phase={state?.tavernRun?.jaguarPhase ?? null} />
             </div>
         </div>
     );
