@@ -253,6 +253,11 @@ test("The Salty Swallow's sea: the first round is calm, then the sea die's face 
         unpin2();
         assert.deepEqual(both, sea === 'starboard' ? [2, 6] : [1, 5], `${sea}: theirs`);
     }
+    // To port the Loaded Die never lands on 6 either (the user, 10 Nov): once your 2 and 4 are kept, 4 or 5.
+    room.tavernRun.sea = 'port';
+    room.tavernRun.keepsakes.push({ id: 'loadedDie', name: 'Loaded Die', text: '' });
+    const loaded = server.rollFaceFor(room, keptTurn(hero.id, [2, 4]));
+    assert.deepEqual([...new Set(Array.from({ length: 300 }, () => loaded({ id: 0 })))].sort(), [4, 5]);
 });
 
 test('no events aboard the Salty Swallow: no thief, no Hooded Stranger, straight to the spots', async () => {
@@ -292,6 +297,48 @@ test('every sea die roll is a moment (seaChange): its face and the dial, and whe
     assert.equal(seen[0].faces.length, 6);
 });
 
+test('Heavy seas: at the second throw a rogue wave takes one loose die over the rail, and the hand ends on five', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'RogueWave');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'rogue';
+    let unpin = pinFaces([2, 1, 3, 3, 5, 6]);
+    hero.emit('rollDice');
+    const first = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.ok(first.turn.dice.every(d => !d.washed), 'no wave on the first throw');
+    await sleep(first.animationMs * 0.01 + 30);
+    hero.emit('toggleDie', 0); // the 2
+    await sleep(40);
+    const wave = waitFor(hero, 'rogueWave', () => true, 4000);
+    hero.emit('rollDice');
+    const w = await wave;
+    const second = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === 2, 4000);
+    const washed = second.turn.dice.filter(d => d.washed);
+    assert.equal(washed.length, 1, 'one die over the rail');
+    assert.equal(washed[0].id, w.dieId);
+    assert.notEqual(w.dieId, 0, 'never a kept die');
+    assert.equal(washed[0].status, 'stolen');
+    // Once a hand: the third throw brings no wave.
+    assert.ok(room.turn.waveDone);
+    // The hand plays out on five dice.
+    assert.equal(room.turn.dice.filter(d => d.status !== 'stolen').length, 5);
+});
+
+test('Heavy seas: the wave spares a last loose die', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'RogueSpare');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'rogue';
+    let unpin = pinFaces([2, 4, 5, 5, 5, 3]);
+    hero.emit('rollDice');
+    const first = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    await sleep(first.animationMs * 0.01 + 30);
+    for (const id of [0, 1, 2, 3, 4]) { hero.emit('toggleDie', id); await sleep(30); }
+    hero.emit('rollDice');
+    const second = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === 2, 4000);
+    assert.ok(second.turn.dice.every(d => !d.washed));
+});
+
 test('the sea is only aboard the Salty Swallow', async () => {
     const hero = await tavernAgainst(fightOf('vaelin'), 'NoSea');
     const room = roomOf(hero);
@@ -304,10 +351,15 @@ test("Rokr's Starry Form hides your dice under constellations: you keep blind, a
     const hero = await tavernAgainst(fightOf('rokr'), 'RokrTest');
     const room = roomOf(hero);
     const move = waitFor(hero, 'signatureMove', m => m.ability === 'Starry Form', 4000);
+    // Three 6s under the stars bring no Devil moment: it would give the hidden dice away (10 Nov).
+    const unpin = pinFaces([6, 6, 6, 1, 3, 5]);
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
     await move;
     assert.equal(rolled.turn.blurActive, true);
+    assert.equal(room.turn.dice.filter(d => d.value === 6).length, 3, 'three 6s landed');
+    assert.equal(rolled.devil, false, 'no three 6s moment on hidden dice');
     assert.ok(rolled.turn.dice.every(d => d.hidden), 'every die hidden');
     await sleep(rolled.animationMs * 0.01 + 30);
     hero.emit('toggleDie', 0);

@@ -2,10 +2,10 @@ import { useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 're
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { BOT_ID, STEAL_MS, actions, canPutBack, store, table } from './game';
+import { BOT_ID, STEAL_MS, WASH_MS, actions, canPutBack, store, table } from './game';
 import { assignSlots, isLocked, type Die } from './rules';
 import { paceFrame, readFrame } from './physics';
-import { DIE_SIZE, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
+import { DIE_SIZE, TRAY, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
 import { OPPONENT_DICE, STARRY_GLOW, artTexture, createDiceMaterials, opponentDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
@@ -33,6 +33,20 @@ const targetQuat = new THREE.Quaternion();
 // his grip. One path for both: where the die's centre is at each moment of the steal (t 0..1).
 const GRIP = 0.36; // when the paw has closed on the die
 const smooth = (x: number) => x * x * (3 - 2 * x);
+// Heavy seas' rogue wave (10 Nov): the die it takes rides the crest across the felt, the way the wave
+// runs (to starboard, +x), up over the rail and down into the sea, tumbling.
+const washTumble = new THREE.Quaternion();
+const washAxis = new THREE.Vector3(0.3, 0.2, -1).normalize();
+function washPose(from: THREE.Vector3, t: number, out: THREE.Vector3) {
+    const s = smooth(Math.min(1, t * 1.15));
+    const overX = TRAY.maxX + 1.8;
+    out.x = from.x + (overX - from.x) * s;
+    out.z = from.z + Math.sin(t * Math.PI) * 0.4;
+    // Up over the rail, then gone over the side.
+    const lift = Math.sin(Math.min(1, t / 0.7) * Math.PI * 0.5) * (TRAY.wallHeight + 0.5);
+    const drop = t > 0.7 ? ((t - 0.7) / 0.3) ** 2 * 4 : 0;
+    out.y = from.y + lift - drop;
+}
 function stealProgress(id: number, now: number) {
     return Math.min(1, Math.max(0, now - (table.stolenAt.get(id) ?? now)) / STEAL_MS);
 }
@@ -127,7 +141,12 @@ function Constellation({ index, meshes }: { index: number; meshes: MutableRefObj
         const mesh = meshes.current[index];
         const turn = store.get().turn;
         const die = turn?.dice.find(d => d.id === index);
-        const show = !!g && !!mesh && mesh.visible && ((!!die?.hidden && !turn?.cloaked) || !!die?.bound);
+        // (Since 10 Nov, the user's: the stars come with the throw, not once it lands: mid-throw the
+        // turn shown is still the one before, so a thrown die's hidden-ness comes from the roll.)
+        const roll = table.roll;
+        const thrown = !!roll && roll.track.dieIds.includes(index);
+        const hidden = thrown ? roll!.hidden.has(index) : !!die?.hidden;
+        const show = !!g && !!mesh && mesh.visible && ((hidden && !turn?.cloaked) || !!die?.bound);
         if (!g) return;
         g.visible = show;
         if (!show || !mesh) return;
@@ -262,6 +281,26 @@ export function Dice() {
                 readFrame(roll.track, frame, trackIndex, mesh.position, mesh.quaternion);
                 showHidden = roll.hidden.has(die.id);
             } else {
+                const washAt = table.washedAt.get(die.id);
+                const rest = table.rest.get(die.id);
+                if (washAt !== undefined && rest) {
+                    // A rogue wave's die: it waits on the felt for the crest, then goes over the rail.
+                    const t = Math.max(0, (now - washAt) / WASH_MS);
+                    washPose(rest.position, Math.min(1, t), mesh.position);
+                    washTumble.setFromAxisAngle(washAxis, smooth(Math.min(1, t)) * Math.PI * 2.4);
+                    mesh.quaternion.copy(rest.quaternion).premultiply(washTumble);
+                    mesh.visible = t < 1;
+                    ring.visible = false;
+                    const c = contacts.current[die.id];
+                    if (c) c.visible = mesh.visible && t < 0.3;
+                    return;
+                }
+                if (die.washed) {
+                    mesh.visible = ring.visible = false;
+                    const c = contacts.current[die.id];
+                    if (c) c.visible = false;
+                    return;
+                }
                 if (die.status === 'stolen') {
                     // Klarg's paw (KlargPaw) reaches over, closes on the die and drags it back
                     // across the table to his side; it lies still on the felt until then.

@@ -44,7 +44,7 @@ module.exports = {
     voyage: {
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
         rokr: ['port', 'calm', 'calm', 'calm', 'starboard', 'starboard'],
-        hangman: ['port', 'port', 'calm', 'calm', 'starboard', 'starboard'],
+        hangman: ['rogue', 'rogue', 'calm', 'calm', 'port', 'starboard'], // (10 Nov: Heavy seas on 1-2, a first guess; the Squall, St Elmo's fire and Fog to come)
         jaguar: ['port', 'port', 'port', 'calm', 'starboard', 'starboard']
     },
     finalShip: {

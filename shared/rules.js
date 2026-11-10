@@ -361,7 +361,7 @@
             key: turn.key,
             playerId: turn.playerId,
             // mind: the die Mind Whip made you keep (this throw).
-            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}), ...(d.id === turn.mustRollId ? { mustRoll: true } : {}), ...(bound(d) ? { bound: true } : {}) })),
+            dice: turn.dice.map(d => ({ ...(hide(d) ? { id: d.id, value: 0, status: d.status, hidden: true } : { id: d.id, value: d.value, status: d.status }), ...(d.id === turn.mindDieId ? { mind: true } : {}), ...(d.id === turn.mustRollId ? { mustRoll: true } : {}), ...(bound(d) ? { bound: true } : {}), ...(d.washed ? { washed: true } : {}) })),
             rollCount: turn.rollCount,
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,

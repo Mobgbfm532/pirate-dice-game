@@ -7,8 +7,10 @@ import { lookNext } from './look';
 import { playSeaSwell, playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
 // The Salty Swallow's sea (server SEAS): shift +1 every die one higher, -1 one lower.
-export interface SeaState { id: 'calm' | 'starboard' | 'port'; name: string; text: string; shift: number }
+export interface SeaState { id: 'calm' | 'starboard' | 'port' | 'rogue'; name: string; text: string; shift: number }
 // The sea die's roll as a round begins (server setSea): its face, the leg's dial, and whether the sea changed.
+// Heavy seas' rogue wave (server rogueWave, 10 Nov): the die it takes over the rail, and whose.
+export interface RogueWave { dieId: number; value: number; playerId: string; name: string }
 export interface SeaRoll extends SeaState { from: string | null; face: number; faces: SeaState['id'][]; changed: boolean }
 
 // Talks to the game server and holds everything the UI and the 3D table draw from.
@@ -202,6 +204,7 @@ export interface Snapshot {
     seatFlash: { playerId: string; text: string; kind: string; color: string; key: string } | null; // "Dirty 20!" over a nameplate
     floodWaveAt: number | null; // Brodor's Astral Flood pouring over the table
     seaMoment: (SeaRoll & { at: number }) | null; // aboard: the sea die's roll (and a change of sea's banner)
+    waveMoment: (RogueWave & { at: number }) | null; // Heavy seas: a rogue wave takes a loose die
     roundResult: { rows: RoundResultRow[]; at: number } | null; // a multiplayer round's result card
     roomCode: string;
     waiting: boolean; // a classic table with nobody to play yet
@@ -246,6 +249,7 @@ export const table = {
     rest: new Map<number, DiePose>(), // where each unlocked die is lying in the tray
     lockOrder: new Map<number, number>(), // die id -> when it was locked, so slots never reshuffle
     stolenAt: new Map<number, number>(), // die id -> time Klarg took it
+    washedAt: new Map<number, number>(), // die id -> time a rogue wave takes it over the rail (Heavy seas)
     devilAt: 0,
     seaLurchAt: 0, // the ship's list changed (a new round's sea)
     seaLurch: 0, // which way: + to starboard, - to port
@@ -273,6 +277,7 @@ let snapshot: Snapshot = {
     seatFlash: null,
     floodWaveAt: null,
     seaMoment: null,
+    waveMoment: null,
     roundResult: null,
     roomCode: '',
     waiting: false,
@@ -390,6 +395,7 @@ function setCallout(turn: TurnView | null, callout: string | null, outcome: Turn
 function resetTrayForNewTurn() {
     table.rest.clear();
     table.stolenAt.clear();
+    table.washedAt.clear();
     table.lockOrder.clear();
     for (let id = 0; id < 6; id++) {
         table.rest.set(id, { position: waitingPosition(id), quaternion: new THREE.Quaternion() });
@@ -532,7 +538,7 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
         const before = snapshot.turn && snapshot.turn.key === turn.key ? snapshot.turn : null;
         // (A Fizzy Thomic throws only the dice it names.)
         const thrownIds = data.rerolled ? new Set(data.rerolled) : new Set((before ? before.dice : turn.dice.filter(d => d.status !== 'stolen'))
-            .filter(d => d.status === 'active').map(d => d.id));
+            .filter(d => d.status === 'active' && !turn.dice.some(n => n.id === d.id && n.washed)).map(d => d.id));
         const rolled = turn.dice.filter(d => thrownIds.has(d.id));
         // (Aboard a listing ship the dice drift to the low side: data.sea.)
         const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed, data.sea ?? 0);
@@ -766,7 +772,7 @@ const FLOOD_WAVE_MS = 2200; // (the server's too)
 export const SEA_SHOW_MS = 4000; // the sea changes (the server's too)
 export const SEA_HOLD_MS = 2800; // the sea holds (the server's too)
 export const SEA_LAND_MS = 1150; // the die lands; the needle settles and the news comes just after
-const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1 };
+const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1, rogue: 0 };
 function showSea(data: SeaRoll, hold = 0) {
     const at = performance.now();
     update({ seaMoment: { ...data, at: at + hold } });
@@ -782,6 +788,22 @@ function showSea(data: SeaRoll, hold = 0) {
 socket.on('seaChange', (data: SeaRoll) => {
     const ms = data.changed ? SEA_SHOW_MS : SEA_HOLD_MS;
     enqueueMoment(() => showSea(data), ms, () => 0, ms);
+});
+// Heavy seas (10 Nov, the user's): as a hand's second throw is made, a rogue wave breaks over the deck
+// and one loose die goes over the rail, then the rest are thrown (the server's clock waits for it too).
+// The die rides the wave off the table (Dice.tsx, table.washedAt) as the crest passes.
+export const WAVE_SHOW_MS = 2400; // (the server's too)
+export const WAVE_TAKE_MS = 650; // the crest reaches the table and the die goes
+export const WASH_MS = 1100; // the die's ride over the rail
+function showWave(data: RogueWave, hold = 0) {
+    const at = performance.now();
+    update({ waveMoment: { ...data, at: at + hold } });
+    playSeaSwell('heel');
+    table.washedAt.set(data.dieId, at + WAVE_TAKE_MS);
+    setTimeout(() => { heave(1); table.seaLurchAt = performance.now(); table.seaLurch = 1; }, WAVE_TAKE_MS - 150);
+}
+socket.on('rogueWave', (data: RogueWave) => {
+    enqueueMoment(() => showWave(data), WAVE_SHOW_MS, () => 0, WAVE_SHOW_MS);
 });
 // The deck heaves (9 Nov, the user's: in place of the jitter): the whole page leans a few degrees
 // toward the low side (dir 1 starboard, -1 port), rocks back past level and settles; calm seas, a bob.
@@ -1265,12 +1287,14 @@ export const preview = {
     // The Salty Swallow sets sail (its scene alone; hold: freeze it that many ms in, for stills).
     sail(stage: 'dock' | 'sail' = 'sail') { update({ sailAt: performance.now(), sailStage: stage }); },
     // Aboard: a change of sea's moment, e.g. sea('starboard', 'calm'); hold keeps it up that much longer.
-    sea(id: 'calm' | 'starboard' | 'port' = 'starboard', from: string | null = 'calm', hold = 0, face = 0) {
-        const names = { calm: 'Calm seas', starboard: 'Listing to starboard', port: 'Listing to port' };
-        const faces: SeaState['id'][] = ['port', 'port', 'calm', 'calm', 'starboard', 'starboard'];
-        const landed = face || (id === 'port' ? 1 : id === 'calm' ? 3 : 6);
+    sea(id: SeaState['id'] = 'starboard', from: string | null = 'calm', hold = 0, face = 0) {
+        const names = { calm: 'Calm seas', starboard: 'Listing to starboard', port: 'Listing to port', rogue: 'Heavy seas' };
+        const faces: SeaState['id'][] = id === 'rogue' ? ['rogue', 'rogue', 'calm', 'calm', 'port', 'starboard'] : ['port', 'port', 'calm', 'calm', 'starboard', 'starboard'];
+        const landed = face || (id === 'port' ? 1 : id === 'calm' ? 3 : id === 'rogue' ? 1 : 6);
         showSea({ id, name: names[id], text: '', shift: SEA_SHIFTS[id], from, face: landed, faces, changed: id !== from }, hold);
     },
+    // Heavy seas: a rogue wave takes die `dieId` over the rail (its moment, and the die's ride off the table).
+    wave(dieId = 3, hold = 0) { showWave({ dieId, value: 0, playerId: snapshot.myId ?? '', name: '' }, hold); },
     // A multiplayer round result card, held up until the next call (null ends it).
     roundResult(rows: RoundResultRow[] | null) { update({ roundResult: rows ? { rows, at: performance.now() } : null }); },
     // A reaction rising from a player's nameplate (a multiplayer table), e.g. react(id, '🍻').

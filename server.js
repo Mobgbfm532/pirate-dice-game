@@ -561,7 +561,8 @@ function playerFace(room, turn, roll = rollFace) {
     let loadedFace = () => {
         let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
         let needed = [2, 4].filter(n => !kept.includes(n));
-        return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, 7);
+        // (Listing to port no die lands on 6, the Loaded Die neither: the user, 10 Nov.)
+        return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, seaShift(room) < 0 ? 6 : 7);
     };
     let plain = d => (loaded && d && d.id === LOADED_DIE ? loadedFace() : kram ? Math.max(2, roll()) : roll());
     let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
@@ -594,11 +595,14 @@ function playerFace(room, turn, roll = rollFace) {
 // Each round aboard has its weather, drawn from the leg's mix (BALANCE.voyage, by opponent) and
 // forecast a round ahead; a fight's first round is calm. Heeling leans every die thrown, both
 // sides': to starboard one higher (no 1s), to port one lower (no 6s). The Loaded Die's magic and
-// the Devil's three 6s are untouched; Kram's fealty still means no 1s.
+// the Devil's three 6s are untouched (but to port the Loaded Die's high faces are 4-5, 10 Nov); Kram's fealty still means no 1s.
 const SEAS = {
     calm: { name: 'Calm seas', text: 'The deck is steady.', shift: 0 },
     starboard: { name: 'Listing to starboard', text: 'Every die lands one higher: no 1s.', shift: 1 },
-    port: { name: 'Listing to port', text: 'Every die lands one lower: no 6s.', shift: -1 }
+    port: { name: 'Listing to port', text: 'Every die lands one lower: no 6s.', shift: -1 },
+    // The Rogue wave (10 Nov, the user's; docs/voyage-brainstorm.md): as each hand's second throw is made,
+    // a wave crosses the deck and one loose die goes over the rail (rogueWave). Both sides.
+    rogue: { name: 'Heavy seas', text: 'After the first throw a rogue wave takes one loose die over the rail.', shift: 0, wave: true }
 };
 function seaShift(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
@@ -630,6 +634,25 @@ function setSea(roomCode, room, encounter) {
     sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: was || 'calm', face, faces, changed: run.sea !== (was || 'calm') });
 }
 const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
+
+// Heavy seas: as a hand's second throw is made (once a hand), a rogue wave takes one loose die, at
+// random, over the rail: out of play (STOLEN, `washed`), so the hand ends on five dice (best 18). It
+// spares a last loose die (an open question: docs/open-questions.md). Its moment plays before the
+// throw, which waits for it. Returns the die, or null.
+const WAVE_SHOW_MS = 2400; // (the client's too)
+function rogueWave(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || !SEAS[room.tavernRun.sea] || !SEAS[room.tavernRun.sea].wave) return null;
+    if (!turn.hasRolled || turn.waveDone || !Rules.canRoll(turn)) return null;
+    turn.waveDone = true;
+    let loose = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (loose.length < 2) return null;
+    let die = loose[crypto.randomInt(0, loose.length)];
+    die.status = Rules.STATUS.STOLEN;
+    die.washed = true;
+    let who = room.players[turn.playerId];
+    sendMoment(roomCode, 'rogueWave', { dieId: die.id, value: die.value, playerId: turn.playerId, name: who ? who.name : '' });
+    return die;
+}
 
 function flourishFace(turn, roll = rollFace) {
     return d => {
@@ -982,6 +1005,7 @@ function performRoll(roomCode) {
     let signatureMoves = [];
     let preRollCallout = null;
     room.rollMoments = []; // moments raised while the dice are thrown wait until they land
+    rogueWave(roomCode, room, turn);
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
     // The Bard's Inspiring Song waits for your first throw of the fight; after it, it's gone.
@@ -1022,8 +1046,9 @@ function performRoll(roomCode) {
     let key = turn.key;
     // throwSeed lets every screen simulate the identical tumble (the values are already decided).
     let abilitySixes = !!turn.abilitySixes;
+    // (No three 6s moment on hidden dice, Starry Form or the Cloak: it would show what they are. 10 Nov.)
     turn.abilitySixes = false;
-    let thrown = { sea: seaShift(room) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil && !abilitySixes, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let thrown = { sea: seaShift(room) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1555,8 +1580,8 @@ function sendMoment(roomCode, event, data) {
         let result = event === 'roundResult';
         let start = Math.max(Date.now(), room.momentNext || 0);
         let flood = event === 'signatureMove' && data && data.ability === Rules.ABILITY_NAMES.astralFlood && !data.cancelled;
-        let sea = event === 'seaChange';
-        let seaMs = sea ? (data.changed ? SEA_SHOW_MS : SEA_HOLD_MS) : 0;
+        let sea = event === 'seaChange' || event === 'rogueWave';
+        let seaMs = event === 'rogueWave' ? WAVE_SHOW_MS : sea ? (data.changed ? SEA_SHOW_MS : SEA_HOLD_MS) : 0;
         room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? seaMs : MOMENT_GAP_MS);
         room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? seaMs : MOMENT_SHOW_MS));
     }

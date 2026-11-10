@@ -3241,6 +3241,15 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .sea-starboard .sea-ship { --heel: 14deg; }
 .sea-port .sea-ship { --heel: -14deg; }
 .sea-next { color: #9cc8e0; }
+/* Heavy seas (10 Nov): storm grey and white water; the little ship pitches. */
+.round-plaque.sea-rogue { --accent: #e4f4ff; --tint: rgba(70, 90, 110, 0.36); }
+.sea-rogue .sea-ship { animation: sea-pitch 1.6s ease-in-out infinite; }
+@keyframes sea-pitch { 0%, 100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(12deg) translateY(-2px); } }
+.sea-rogue.round-plaque::after { animation-duration: 1.6s; opacity: 0.8; }
+.sea-moment.wave-moment { --end: 2.4s; }
+.sea-moment.wave-moment .sea-crest { animation: sea-crest 1.3s cubic-bezier(0.3, 0.6, 0.4, 1) 0.1s both; }
+.wave-moment .sea-news { animation-delay: 0.35s; }
+.wave-moment .sea-title { text-shadow: 0 0 18px rgba(230, 248, 255, 0.9), 0 0 42px rgba(90, 150, 190, 0.8), 0 3px 4px #000; }
 @keyframes sea-rock { 0%, 100% { transform: rotate(calc(var(--heel, 0deg) - 4deg)); } 50% { transform: rotate(calc(var(--heel, 0deg) + 4deg)); } }
 .hint.crawl .round-plaque { animation-name: plaque-in; animation-duration: 0.45s; animation-timing-function: ease-out; animation-fill-mode: both; }
 .hint.crawl .round-plaque.round-curse, .hint.crawl .round-plaque.round-devil, .hint.crawl .round-plaque.round-mind { animation: plaque-in 0.45s ease-out both, round-pulse 2.4s ease-in-out infinite; }

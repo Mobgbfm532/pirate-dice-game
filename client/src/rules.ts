@@ -13,6 +13,7 @@ export interface Die {
     mind?: boolean; // the die Frak's Mind Whip made you keep this throw (can't be tapped back)
     mustRoll?: boolean; // Sylvester knocked it loose: it has to be rolled before it can be kept
     bound?: boolean; // Rokr's stars: it landed on a marked face and can't be kept this throw
+    washed?: boolean; // Heavy seas: a rogue wave took it over the rail (out of play, status 'stolen')
 }
 
 export interface TurnOutcome {

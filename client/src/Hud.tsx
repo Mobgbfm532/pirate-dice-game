@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell } from './sounds';
 import { simulateRoll } from './physics';
@@ -523,8 +523,8 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
 // The Salty Swallow's sea (9 Nov, the user's), on the plaque under Roll: a little ship leaning
 // the way she lists and rocking, this round's weather and the next's (the forecast). (A chip in
 // the header sat over the opponent's bust: the user's call, it moved here.)
-const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)' };
-const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port' };
+const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw' };
+const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas' };
 function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
     return (
         <div className={`round-plaque round-sea sea-${sea.id}`} title={`${sea.name}. ${sea.text}${next ? ` Next round: ${next.name}.` : ''}`}>
@@ -560,7 +560,8 @@ function HintLine({ badge, plaque, tip, sea, next, powers, face, faces }: { badg
 const SEA_EXPLAIN: Record<SeaState['id'], string> = {
     starboard: 'The ship leans to starboard: every die thrown lands one higher. A 1 becomes a 2, a 5 a 6, and a 6 stays a 6, so there are no 1s and 6s come twice as often.',
     port: 'The ship leans to port: every die thrown lands one lower. A 6 becomes a 5, a 2 a 1, and a 1 stays a 1, so there are no 6s, and no hand can reach 24 this round.',
-    calm: 'A steady deck: the dice land as they fall.'
+    calm: 'A steady deck: the dice land as they fall.',
+    rogue: "Heavy seas: as each hand's second throw is made, a rogue wave crosses the deck and one loose die, at random, goes over the rail. That hand finishes with five dice, so the best it can score is 18. Keep your 2 and your 4 the moment they show. (If only one loose die is left, the wave spares it.)"
 };
 function SeaInfo({ sea, face, faces, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; onClose: () => void }) {
     // This leg's dial in words: e.g. "1 port · 2-5 calm · 6 starboard".
@@ -919,7 +920,9 @@ function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const [openSlot, setOpenSlot] = useState<number | null>(null);
     const close = useCallback(() => setOpenSlot(null), []);
-    const slots = Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null);
+    // (A shelf can hold more than its size for a while: the Potion Belt left behind for a boss's
+    // keepsake keeps the Thonic in its slot until it's drunk. 10 Nov.)
+    const slots = Array.from({ length: Math.max(run.shelfSize, run.shelf.length) }, (_, i) => run.shelf.at(i) ?? null);
     const open = openSlot !== null ? slots[openSlot] : null;
     const canUse = !!open && drinkable(open, snap, state);
     return (
@@ -1519,7 +1522,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                 )}
                 <div className="shop-footer">
                     <div className="shop-shelf" aria-label="Your shelf">
-                        {Array.from({ length: run.shelfSize }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
+                        {Array.from({ length: Math.max(run.shelfSize, run.shelf.length) }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
                             <span key={i} className="shelf-slot" title={t ? t.name : 'Empty'}><Bottle thonic={t} /></span>
                         ))}
                     </div>
@@ -2099,12 +2102,12 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
             {done && (
                 <p className={`outcome ${interlude.caught ? 'good' : 'bad'}`}>
                     {interlude.caught
-                        ? <>You rolled a {interlude.roll}: <strong>caught the thief!</strong> Your purse is safe.</>
+                        ? <>You rolled a {interlude.roll}: <strong>you spotted them!</strong> Your purse is safe.</>
                         : <>You rolled a {interlude.roll}: the thief slips away with <strong>{coins(interlude.lost)}</strong>. You have {coins(purse)} left.</>}
                 </p>
             )}
             <div className="event-choices">
-                {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to catch the thief</button>}
+                {!rolled && <button className="primary" onClick={() => actions.pickpocket('roll')}>Roll to spot them</button>}
                 {done && next}
             </div>
         </>
@@ -2349,7 +2352,8 @@ function Modals({ snap }: { snap: Snapshot }) {
 const SEA_WORDS: Record<SeaState['id'], { title: string; rule: string; sub: string }> = {
     starboard: { title: 'Listing to starboard', rule: 'Every die lands one higher', sub: 'No 1s · 6s twice as likely' },
     port: { title: 'Listing to port', rule: 'Every die lands one lower', sub: 'No 6s · no 24 this round' },
-    calm: { title: 'The sea calms', rule: 'The dice land true', sub: 'A steady deck' }
+    calm: { title: 'The sea calms', rule: 'The dice land true', sub: 'A steady deck' },
+    rogue: { title: 'Heavy seas', rule: 'A rogue wave is coming', sub: 'At the second throw it takes a loose die' }
 };
 // A brass ship's clinometer: its needle (.sea-needle) swings by CSS, from --from to --to (or rocks).
 function Clinometer({ className = '' }: { className?: string }) {
@@ -2502,7 +2506,7 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
 // the die tumbles, then swings onto the face it landed on (with overshoot) and that sector lights up.
 // The painting's geometry, in `sea-dial.webp`'s pixels (1245x679): the needle's pivot, and the sectors'
 // radii; the needle (`sea-dial-needle.webp`, 186x701) turns about the middle of its hub ring.
-const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'] };
+const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#5b6f86', '#e4f4ff'] };
 const faceAngle = (face: number) => -75 + (face - 1) * 30;
 const DIAL = { w: 1245, h: 679, cx: 621, cy: 626, R: 414, r: 72 };
 const NEEDLE = { w: 186, h: 701, px: 92.6, py: 603.6, reach: 372 };
@@ -2541,6 +2545,36 @@ function SeaDie({ value, rolling }: { value: number; rolling: boolean }) {
     }, [rolling, value]);
     const shown = rolling ? face : value;
     return <span className="sea-die" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/sea-die.webp")`, backgroundPosition: `${(shown - 1) * 20}% 0` }} aria-label={String(shown)} />;
+}
+
+// Heavy seas' rogue wave (10 Nov, the user's): as the second throw is made, a wall of water breaks across
+// the screen with spray, the deck heaves, and the die it takes rides the crest over the rail (Dice.tsx);
+// a card says so. Taps go through. WAVE_SHOW_MS, like every moment, before the throw.
+function WaveMoment({ snap }: { snap: Snapshot }) {
+    const m = snap.waveMoment;
+    const [visible] = useMoment(m?.at ?? 0, WAVE_SHOW_MS);
+    if (!visible || !m) return null;
+    const mine = m.playerId === snap.myId;
+    return createPortal(
+        <div key={m.at} className="sea-moment sea-rogue changed wave-moment" style={{ '--dir': 1 } as React.CSSProperties} role="status" aria-live="polite">
+            <span className="sea-wash" aria-hidden="true" />
+            <span className="sea-crest" aria-hidden="true" />
+            <span className="sea-foam" aria-hidden="true">
+                {Array.from({ length: 30 }, (_, i) => (
+                    <i key={i} style={{ left: `${(i * 41 + 7) % 100}%`, animationDelay: `${0.45 + ((i * 0.061) % 0.55)}s`, '--dx': `${((i * 29) % 70) - 20 + 50}px`, '--dy': `${90 + (i * 53) % 150}px`, '--s': `${4 + (i * 7) % 10}px` } as React.CSSProperties} />
+                ))}
+            </span>
+            <div className="sea-card">
+                <span className="sea-kicker">Heavy seas</span>
+                <div className="sea-news">
+                    <strong className="sea-title">Rogue wave!</strong>
+                    <span className="sea-rule">{mine ? 'One of your dice goes over the rail' : `One of ${m.name || 'their'}${m.name ? "'s" : ''} dice goes over the rail`}</span>
+                    <span className="sea-sub">Five dice this hand · best 18</span>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
 }
 
 function FloodWave() {
@@ -2824,6 +2858,7 @@ export function Hud() {
             <AbilityMomentView snap={snap} />
             {snap.floodWaveAt && <FloodWave key={snap.floodWaveAt} />}
             <SeaMoment snap={snap} />
+            <WaveMoment snap={snap} />
             <Celebration snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}

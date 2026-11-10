@@ -267,6 +267,12 @@ one too, or saves only last until the server restarts, which on the free tier is
 
 ## Working here: lessons learned
 
+- **Record every brainstorm and open question, as it happens (the user, 10 Nov).** A brainstorm goes
+  into its own file in `docs/` the same session (`docs/voyage-brainstorm.md` is the model: the ideas, their
+  numbers, and what has been built marked **Built**); every question waiting on the user's word goes into
+  `docs/open-questions.md` the moment it comes up, and moves to its "Settled" list with the date once
+  answered. Do this before ending the turn. (The 9 Nov voyage brainstorm lived only as names here, and
+  its ideas had to be pasted back in.)
 - **Neon (3 Nov):** the Neon CLI is installed globally (`neon`, signed in as the user). This folder
   is linked to the Neon project `crimson-water-92243343` (`.neon`, gitignored; `neon.ts` holds the
   project's settings: Postgres only, no auth), branch `production`. `neon deploy` pulls
@@ -330,7 +336,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 163 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, saves after each place. 165 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
     for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);
@@ -544,7 +550,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   - **Klarg** (`keepsStolen`, `klargWaits`): twice a fight he waits for a throw showing a 2 or 4 you
     still need, snatches it (`Rules.stealHighestActiveDie`) and keeps it: his next turn starts with it
     kept (`run.klargHand` → `syncTurn`). Since 9 Nov (the user's): at most once a round (`turn.reachedAround`), and his banner comes first: the die he takes waits on the felt under it, and his hand lifts it and sweeps it away as the banner leaves (`stealReadyAt`, `STEAL_MS` in game.ts, 1.7 s; the next throw waits for it). The hand is his paw (`KlargPaw` in Dice.tsx, `art/klarg-paw.webp`, cut from his ability painting with its painted die erased by `client/scripts/klarg-paw.cjs`): it swoops in from his side, closes on the die (`GRIP`) and carries it back in its grip (`stealGrip`, one path for both); then the die sits on his nameplate, orange, until his turn starts with it (`klargHand` in the state, `.klarg-hand`, shown once `klargStealing()` is over). (Two first-throw steals cost ~12 points each: too much.)
-  - **Rokr's Starry Form (since 6 Nov, the user's; the id stays `constellationBlur`):** twice a fight your dice land hidden under twinkling constellations (`turn.blurActive`, viewTurn; Constellation in Dice.tsx): you keep blind, and they show at your next throw. Beatable more often than the Stars were (about 40% against 26%, simulated). Its painting `ability-starry-form.jpg` and the hidden dice's night-sky face `art/dice-starry.jpg` (`textures/dice/starry.webp`, cut from inside its rim; `materials.starry` in textures.ts, its stars an emissive map twinkled in Dice.tsx; dice not yet thrown and Jaguar's cloaked dice keep the plain "?") are the user's (9 Nov). Written in the Stars' code is dormant: 3 turns a fight (`startStars`), the
+  - **Rokr's Starry Form (since 6 Nov, the user's; the id stays `constellationBlur`):** twice a fight your dice land hidden under twinkling constellations (`turn.blurActive`, viewTurn; Constellation in Dice.tsx): you keep blind, and they show at your next throw. Since 10 Nov (the user's) the constellations appear with the throw, not once it lands (`Constellation` reads `table.roll.hidden` mid-throw), and three 6s landing hidden (Starry Form, Jaguar's Cloak) bring no Devil moment (`diceRolled.devil` false): it gave the dice away. Beatable more often than the Stars were (about 40% against 26%, simulated). Its painting `ability-starry-form.jpg` and the hidden dice's night-sky face `art/dice-starry.jpg` (`textures/dice/starry.webp`, cut from inside its rim; `materials.starry` in textures.ts, its stars an emissive map twinkled in Dice.tsx; dice not yet thrown and Jaguar's cloaked dice keep the plain "?") are the user's (9 Nov). Written in the Stars' code is dormant: 3 turns a fight (`startStars`), the
     stars mark two faces before each throw of the turn (`turn.nextMarks` → `turn.marks`); dice landing
     on them are bound (`turn.boundIds`; `Rules.toggleDie` refuses them; all bound: a free roll). The
     client: stars over bound dice (Constellation), the plaque "Bound: ... Next: ...".
@@ -566,7 +572,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `beginTavernRound`, `run.sea` / `run.nextSea`, `sea` / `nextSea` in the state). So far only Heeling (since the evening of 9 Nov **rolled on the sea die**, below):
   **listing to starboard** every die thrown lands one higher (no 1s), **to port** one lower (no 6s), both
   sides (`seaRoll` under `rollFaceFor`; the Loaded Die's magic and the Devil's 6s untouched, Kram still
-  no 1s). The opponents' solver knows it (`shift` in strategy.js: landings weighted by the leaning faces).
+  no 1s; since 10 Nov, the user's, to port the Loaded Die's high faces are 4-5, so no die shows a 6). The opponents' solver knows it (`shift` in strategy.js: landings weighted by the leaning faces).
   A careful player dusts no more often either way (a 2 and a 4 stay 1 in 6); scores move (about 22 and
   16 on average) and to port no 24 is possible. On screen: the plaque under Roll, always aboard (`SeaPlaque`,
   `HintLine`: a little ship leaning and rocking, this round's sea and the next's; over the tip, and taking
@@ -610,8 +616,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`art/salty-swallow-quay.jpg`), two lines in a bubble, the sea die explained, "Climb aboard"; Bren is the user's
   painting (`art/bust-bren.jpg` → `bren.webp`, 9 Nov; a silhouette, `BrenSilhouette`, if it fails to load). Dev: `preview.sail('dock')`,
   `preview.sea(id, from, hold, face)`.
-  Dev: `/sea?now=starboard&next=port`. Next (the brainstorm's order): the Squall and the
-  Rogue Wave, St Elmo's Fire, Fog; the player's say (Compass, Spyglass, Yvesil's forecast, a Ginger Thonic);
+  **Heavy seas, the Rogue wave** (10 Nov, the user's, from the brainstorm): a sea of its own (`SEAS.rogue`, `wave: true`, on the Hangman's dial faces 1-2, a first guess): as a hand's second throw is made, once a hand, a wave takes one loose die at random over the rail (`rogueWave` in performRoll, before `thrownNow`: status STOLEN with `washed`, `turn.waveDone`); it spares a last loose die; both sides; the hand ends on five dice (best 18). Its moment (`rogueWave` event, `WAVE_SHOW_MS` 2.4 s on both sides, before the throw): the crest breaks across with spray, "Rogue wave!", the page heaves, the swell's sound, and the die rides the crest over the right-hand rail (`table.washedAt`, `washPose` in Dice.tsx, `WASH_MS`); the other dice are thrown after. Dev: `preview.wave(dieId)`, `/sea?now=rogue`. Tests: two in server.test.js.
+  Dev: `/sea?now=starboard&next=port`. Next (the Rogue wave is built, 10 Nov; the brainstorm's order; the whole brainstorm, with its simulated numbers and each leg's weather mix, is
+  `docs/voyage-brainstorm.md`): the Squall, St Elmo's Fire, Fog (Becalmed for Rokr's leg); the player's say (Compass, Spyglass, Yvesil's forecast, a Ginger Thonic);
   choosing a course; events aboard.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
@@ -749,7 +756,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   keepsakes you don't have, for gold (`keepsakePrices`: Shield 30, Trap Card and Velvet Cushion
   15, Loyalty Card and Potion Belt 13, Loaded Die 8; priced under what each adds when bought
   around fight 3, `balance/experiments/keepsake-when.js`; `buyKeepsake`, `pickThomKeepsakes`; since 30 Oct also the Miser's Purse, Gambler's Charm and Bottomless Flask, and the Loaded Die at 12). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
-  between fights. Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
+  between fights (since 10 Nov a shelf may hold more than its size for a while: leaving the Potion Belt for a boss's
+  keepsake keeps its Thonic, drawn in an extra slot, until it's drunk). Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
   handler; the client's `drinkable()` mirrors it), with a cork pop:
 
   | Thonic | Price | When | Effect |
@@ -779,7 +787,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
   brings the two spots, or "Or challenge X right away" skips them. The random events: about 1
   walk in 4 a **pickpocket** strikes first, at most twice at any one place (`pickpocketMaxPerPlace`, `run.thieves`; 4 Nov, the user's call): roll one die, a 4+ catches the thief
-  (`pickpocketCatch`; the text says "to spot them"), else they take half the purse (a quarter until 21 Oct). Else, 20% of the
+  (`pickpocketCatch`; the text, button and result say "spot them", 10 Nov), else they take half the purse (a quarter until 21 Oct). Else, 20% of the
   time (`strangerChance`), the **Hooded Stranger** finds you (a random event since 19 Oct, no
   longer a spot): one of two keepsakes, the next fight a heart short (on 2), or turn him
   down; only while keepsakes remain (`startInterlude`, `strangerOffer`). The Lady's Favour adds
@@ -881,20 +889,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 1. **Play the Salty Swallow on a phone** (everything up to 9 Nov is pushed and on the test site; the ship test server
    starts just after Brodor): the sea die and its dial, the heave, Bren's welcome and the sailing scene, the ship's new
-   abilities and crew, Yvesil's and Jorvash's round portraits (first guesses; the Portraits tab), whether the floating
-   constellations over Starry Form's dice should stay on top of the night-sky faces, and the intro's last scene
-   after the 6 Nov fix. Yvesil's pronouns aren't settled: the scene text says "her" (`docs/character-text.md`).
+   abilities and crew, Yvesil's and Jorvash's round portraits (first guesses; the Portraits tab), how the
+   constellations now look appearing with the throw (10 Nov). Settled on 10 Nov: Yvesil is a her; the intro's last
+   scene no longer glitches; the floating constellations stay.
 2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
-3. **The voyage, more** (step 1, Heeling on the sea die, built 9 Nov; see "The sea"): next in the brainstorm's order,
-   the Squall and the Rogue Wave, St Elmo's Fire, Fog; then the player's say (a Compass, a Spyglass, Yvesil's
+3. **The voyage, more** (step 1, Heeling on the sea die, built 9 Nov; see "The sea"): next in the brainstorm's order (`docs/voyage-brainstorm.md`),
+   the Squall, St Elmo's Fire, Fog (the Rogue wave built 10 Nov, as Heavy seas); then the player's say (a Compass, a Spyglass, Yvesil's
    forecast, a Ginger Thonic), choosing a course, events aboard. The sea die's faces per opponent
    (`BALANCE.voyage`) are first guesses. The ship's other ability names are still working names (Smooth Talk, the
    Cloak, All In).
-4. **Small things waiting on the user's word:**
+4. **Small things waiting on the user's word** (all open questions are in `docs/open-questions.md`):
    - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
-   - The thief's button and result still say "catch" ("Roll to catch the thief"); the sentence above says "spot".
-   - Leaving the Potion Belt behind for a boss's keepsake with 3 Thonics carried hides the third (read in the code,
-     not reproduced): `claimDrop` doesn't trim the shelf, and `Shelf` draws only `shelfSize` slots.
    - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
    - The Dirty 20! colour (`#c5d04a`) hasn't been seen by eye; a sound for it, and for Astral Flood's wave, if wanted.
 5. **Play-test and set the numbers** (the user plays, then decides; simulate first with `balance/`): the Ghoul
