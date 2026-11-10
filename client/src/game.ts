@@ -798,7 +798,7 @@ export const WASH_MS = 1100; // the die's ride over the rail
 function showWave(data: RogueWave, hold = 0) {
     const at = performance.now();
     update({ waveMoment: { ...data, at: at + hold } });
-    playSeaSwell('heel');
+    playSound('rogueWave'); // (the user's clip, 10 Nov)
     table.washedAt.set(data.dieId, at + WAVE_TAKE_MS);
     setTimeout(() => { heave(1); table.seaLurchAt = performance.now(); table.seaLurch = 1; }, WAVE_TAKE_MS - 150);
 }

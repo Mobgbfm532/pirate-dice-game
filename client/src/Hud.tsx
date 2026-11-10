@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
-import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell, setBossMusic } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
@@ -2583,8 +2583,18 @@ function WaveMoment({ snap }: { snap: Snapshot }) {
 // A Squall's round (10 Nov): the intro's rain, heavier and driven by the wind, over the whole table.
 function SquallRain({ snap }: { snap: Snapshot }) {
     const squall = snap.state?.mode === 'tavern-crawl' && snap.state.tavernRun?.sea?.id === 'squall' && !snap.betweenShown;
+    useEffect(() => (squall ? startSceneAmbience('squall') : undefined), [squall]); // (the user's wind and rain, 10 Nov)
     if (!squall) return null;
     return createPortal(<div className="squall-rain" aria-hidden="true"><Rain className="squall-drops" slant={22} heavy={1.6} /></div>, document.body);
+}
+
+// Jaguar's own music while his fight lasts (the user's, 10 Nov), until the run-over screen.
+function BossMusic({ snap }: { snap: Snapshot }) {
+    const run = snap.state?.mode === 'tavern-crawl' ? snap.state.tavernRun : undefined;
+    const on = !!run && (run.seated ?? run.enemy)?.id === 'jaguar' && !snap.betweenShown && snap.modal?.type !== 'tavernOver' && snap.modal?.type !== 'gameOver';
+    useEffect(() => setBossMusic(on), [on]);
+    useEffect(() => () => setBossMusic(false), []);
+    return null;
 }
 
 function FloodWave() {
@@ -2870,6 +2880,7 @@ export function Hud() {
             <SeaMoment snap={snap} />
             <WaveMoment snap={snap} />
             <SquallRain snap={snap} />
+            <BossMusic snap={snap} />
             <Celebration snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}

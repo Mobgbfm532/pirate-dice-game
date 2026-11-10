@@ -12,9 +12,8 @@ day they happen, with what's been built marked as it lands.
 ### The voyage (`docs/voyage-brainstorm.md`)
 - **The final dials (proposed 10 Nov):** the table in `docs/voyage-brainstorm.md` ("The final dials"), Jaguar's changing with his phase. Waiting on the user.
 - **Sea dials now** (`BALANCE.voyage`, first guesses): 1 port and 6 starboard on every leg (the user, 10 Nov); faces 2-5 calm, except the Hangman's 2 Squall and 3 Heavy seas, until the other weathers are built.
-- **The Rogue wave's sound:** the user will send a clip (10 Nov); until then the swell's synthesized wave plays.
 - **The opponents and the Rogue wave:** their solver doesn't know a wave is coming, so they keep as on a calm sea. Teach it (and the balance simulator) before setting the dial's numbers?
-- **The Squall's sound:** no wind yet (rain shows, silently). A clip of the user's, if wanted.
+- **Sound levels to hear by ear (10 Nov):** the Squall's wind at 0.22 and Jaguar's music at 0.15 were set by measuring (both are loud recordings), the rogue wave at full volume (a quiet one).
 - **Jaguar's storm following his phases** (calm or fog, then squalls and waves, then heeling and waves)
   isn't built; his dial is a plain mix for now.
 - The ship's ability names are still working names: Smooth Talk, the Cloak, All In.
@@ -40,6 +39,7 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ## Settled
+- 10 Nov: the user's clips: `RogueWave.mp3` for the rogue wave, `Wind.mp3` looping through a Squall round, `JaguarBossBattle.mp3` as the music for Jaguar's fight, trimmed (the user's yes) of its silent start and the 5 s of dead air after its fade, so it loops without a gap (6:46).
 - 10 Nov: St Elmo's fire is cut. So is the player's say over the sea: no Compass, Spyglass, Yvesil's forecast or Ginger Thonic.
 - 10 Nov: on every sea dial a 1 is listing to port and a 6 listing to starboard; faces 2-5 are each leg's own weather.
 - 10 Nov: the Rogue wave spares your last loose die: dice kept after the first throw stay, so a hand that kept five finishes with six.

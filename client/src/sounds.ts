@@ -68,7 +68,9 @@ const sfx = {
     loseHeart: load('LoseHeart.mp3', 0.8),
     healthPickup: load('Perfect24Health.mp3', 0.8),
     // Sylvester's Back of the Head (the user's, 5 Nov; it was the swoosh).
-    sylvesterPunch: load('SylvesterPunch.mp3', ABILITY_VOLUME)
+    sylvesterPunch: load('SylvesterPunch.mp3', ABILITY_VOLUME),
+    // Heavy seas: a rogue wave takes a die over the rail (the user's, 10 Nov; it was the synthesized swell).
+    rogueWave: load('RogueWave.mp3', 1) // (a quiet recording)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
@@ -91,9 +93,17 @@ const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
 // The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
 // scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
 // (The Lady's music a little louder than the hot tub's bubbling: the user, 28 Oct.)
-const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.5, kram: 0.8, yvesil: 1 }; // (Yvesil's theme is a quiet recording)
+const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.5, kram: 0.8, yvesil: 1, squall: 0.22 }; // (the wind is a loud recording: about the music's level at 0.22) // (Yvesil's theme is a quiet recording)
 // (Thom's cart since 28 Oct: the user's loop; the Bard's lute and the Cult of Kram's chant too.)
-const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('ThreeStrings.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true) }; // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
+const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('ThreeStrings.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true), squall: load('Wind.mp3', 0, true) };
+// (The Squall's wind and rain, the user's, 10 Nov: loops for the whole round, the music only a little quieter under it.)
+const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall: 0.7 };
+// Jaguar's fight has its own music (the user's, 10 Nov): it takes over from the tavern tune as he sits
+// down and gives way again when the run ends. 9.9 MB, so fetched only then; streamed, not decoded.
+const BOSS_VOLUME = 0.15; // (a loud recording, about three times the tavern tune: so as loud as it at 0.4)
+const bossMusic = load('JaguarBossBattle.mp3', 0, true);
+bossMusic.preload = 'none';
+let bossOn = false; // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
 Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
 export type SceneAmbience = keyof typeof sceneAmbience;
 
@@ -465,6 +475,7 @@ let muted = readSetting('tavernSoundsOff'); // game sounds
 music.muted = musicOff;
 ambience.muted = musicOff;
 Object.values(sceneAmbience).forEach(el => { el.muted = musicOff; });
+bossMusic.muted = musicOff;
 
 export function playSound(name: SoundName, playbackRate = 1) {
     if (muted) return;
@@ -506,9 +517,33 @@ export const SWITCH_LEAD_MS = 750;
 // Browsers only allow audio after the player has interacted with the page.
 export function startMusic() {
     audio(); // the impact sounds need the audio context unlocked by a tap, like the music
-    if (musicOff || !music.paused) return;
-    music.play().catch(() => {});
+    if (musicOff) return;
+    const tune = bossOn ? bossMusic : music;
+    if (!tune.paused) return;
+    if (bossOn) bossMusic.volume = BOSS_VOLUME;
+    tune.play().catch(() => {});
     ambience.play().catch(() => {});
+}
+
+// The music playing now (the tavern's tune, or Jaguar's) and its full volume.
+function tune(): [HTMLAudioElement, number] {
+    return bossOn ? [bossMusic, BOSS_VOLUME] : [music, MUSIC_VOLUME];
+}
+
+// Jaguar's music on or off, crossfading with the tavern's tune.
+export function setBossMusic(on: boolean) {
+    if (on === bossOn) return;
+    bossOn = on;
+    if (musicOff) return;
+    const [from, to] = on ? [music, bossMusic] : [bossMusic, music];
+    const volume = on ? BOSS_VOLUME : MUSIC_VOLUME;
+    if (on) to.currentTime = 0;
+    if (!music.paused || !bossMusic.paused) { // (the music has started: after the first tap)
+        to.volume = 0;
+        to.play().catch(() => {});
+        fade(to, volume, 1800);
+        fade(from, 0, 1800, () => from.pause());
+    }
 }
 
 // Volume fades (one at a time per element; a new one takes over from wherever the last got to).
@@ -530,6 +565,31 @@ function fade(el: HTMLAudioElement, to: number, ms: number, then?: () => void) {
 // small gap at the join; Thom's is a perfect loop); an <audio> element otherwise.
 const sceneBuffers = new Map<string, Promise<AudioBuffer>>();
 const playingScenes = new Set<GainNode>();
+// A clip that fades in and out at its ends (the Squall's wind) loops over its middle, each pass
+// crossfaded into the next: [from, to, crossfade] in seconds.
+const CROSSFADE_LOOPS: Partial<Record<SceneAmbience, [number, number, number]>> = { squall: [2.2, 45.6, 2] };
+const FADE_IN = Float32Array.from({ length: 64 }, (_, i) => Math.sin((i / 63) * Math.PI / 2));
+const FADE_OUT = FADE_IN.slice().reverse();
+function crossfadeLoop(ctx: AudioContext, buffer: AudioBuffer, out: AudioNode, [from, to, cross]: [number, number, number]) {
+    const sources: AudioBufferSourceNode[] = [];
+    let timer = 0, stopped = false;
+    const pass = (at: number) => {
+        if (stopped) return;
+        const source = ctx.createBufferSource(), level = ctx.createGain();
+        source.buffer = buffer;
+        source.connect(level).connect(out);
+        const end = at + (to - from);
+        level.gain.setValueCurveAtTime(FADE_IN, at, cross); // (equal power: a straight crossfade of noise dips 3 dB at the join)
+        level.gain.setValueCurveAtTime(FADE_OUT, end - cross, cross);
+        source.start(at, from, to - from);
+        sources.push(source);
+        source.onended = () => { sources.splice(sources.indexOf(source), 1); };
+        const next = end - cross;
+        timer = window.setTimeout(() => pass(next), Math.max(0, (next - ctx.currentTime - 1) * 1000));
+    };
+    pass(ctx.currentTime + 0.02);
+    return () => { stopped = true; clearTimeout(timer); sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); };
+}
 function startSceneLoop(ctx: AudioContext, name: SceneAmbience) {
     const url = sceneAmbience[name].src;
     if (!sceneBuffers.has(url)) sceneBuffers.set(url, fetch(url).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)));
@@ -537,9 +597,15 @@ function startSceneLoop(ctx: AudioContext, name: SceneAmbience) {
     level.gain.value = 0;
     level.connect(ctx.destination);
     playingScenes.add(level);
-    let source: AudioBufferSourceNode | null = null, stopped = false;
+    let source: AudioBufferSourceNode | null = null, stopped = false, stopLoop: (() => void) | null = null;
     sceneBuffers.get(url)!.then(buffer => {
         if (stopped) return;
+        const cross = CROSSFADE_LOOPS[name];
+        if (cross) {
+            stopLoop = crossfadeLoop(ctx, buffer, level, cross);
+            level.gain.setTargetAtTime(SCENE_VOLUME[name], ctx.currentTime, 0.25);
+            return;
+        }
         source = ctx.createBufferSource();
         source.buffer = buffer;
         source.loop = true;
@@ -550,19 +616,21 @@ function startSceneLoop(ctx: AudioContext, name: SceneAmbience) {
     return () => {
         stopped = true;
         level.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
-        setTimeout(() => { source?.stop(); level.disconnect(); playingScenes.delete(level); }, 1500);
+        setTimeout(() => { source?.stop(); stopLoop?.(); level.disconnect(); playingScenes.delete(level); }, 1500);
     };
 }
 
 export function startSceneAmbience(name: SceneAmbience) {
     if (musicOff) return () => {};
+    const duck = SCENE_DUCK[name] ?? 0.25;
+    const [song, full] = tune();
     if (audioContext && audioContext.state === 'running') {
         const stop = startSceneLoop(audioContext, name);
-        fade(music, MUSIC_VOLUME * 0.25, 700);
-        fade(ambience, AMBIENCE_VOLUME * 0.25, 700);
+        fade(song, full * duck, 700);
+        fade(ambience, AMBIENCE_VOLUME * duck, 700);
         return () => {
             stop();
-            fade(music, MUSIC_VOLUME, 1000);
+            if (song === tune()[0]) fade(song, full, 1000);
             fade(ambience, AMBIENCE_VOLUME, 1000);
         };
     }
@@ -571,11 +639,11 @@ export function startSceneAmbience(name: SceneAmbience) {
     el.volume = 0;
     el.play().catch(() => {});
     fade(el, SCENE_VOLUME[name], 700);
-    fade(music, MUSIC_VOLUME * 0.25, 700);
-    fade(ambience, AMBIENCE_VOLUME * 0.25, 700);
+    fade(song, full * duck, 700);
+    fade(ambience, AMBIENCE_VOLUME * duck, 700);
     return () => {
         fade(el, 0, 700, () => el.pause());
-        fade(music, MUSIC_VOLUME, 1000);
+        if (song === tune()[0]) fade(song, full, 1000);
         fade(ambience, AMBIENCE_VOLUME, 1000);
     };
 }
@@ -587,7 +655,8 @@ export function setMusicOff(value: boolean) {
     Object.values(sceneAmbience).forEach(el => { el.muted = value; if (value) el.pause(); });
     if (value && audioContext) playingScenes.forEach(level => level.gain.setTargetAtTime(0, audioContext!.currentTime, 0.1));
     saveSettings();
-    if (value) { music.pause(); ambience.pause(); } else startMusic();
+    bossMusic.muted = value;
+    if (value) { music.pause(); bossMusic.pause(); ambience.pause(); } else startMusic();
 }
 
 export function isMusicOff() {
