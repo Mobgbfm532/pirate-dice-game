@@ -23,6 +23,7 @@ day they happen, with what's been built marked as it lands.
 - The Dirty 20! colour (`#c5d04a`) hasn't been seen by eye; a sound for it, and for Astral Flood's wave, if wanted.
 - The Potion Belt left behind with 3 Thonics carried: the third is kept in an extra slot (10 Nov).
   Or should it be lost?
+- Cotton Candy Cloud in a fog bank (found 10 Nov, checking the code): the fog already hides your score from him, so a puff there does nothing more, but it still uses up the puff. Leave it, or don't offer it in fog?
 
 ### Numbers to set (after play-testing; simulate first with `balance/`)
 - The Ghoul and Gourd's lives; the Duke's `devilWhenBelow` (0.7); keepsake prices (Miser's Purse 12,

@@ -435,7 +435,10 @@ function withPendingTaps(turn: TurnView | null): TurnView | null {
     if (pendingTaps.size === 0 || turn.finalized) return turn;
     const dice = turn.dice.map(d => (pendingTaps.has(d.id) ? { ...d, status: pendingTaps.get(d.id)!.status } : d));
     const locksThisRoll = dice.filter(d => d.status === 'lockedThisTurn').length;
-    const canRoll = dice.some(d => d.status === 'active') && !(turn.maxThrows && turn.rollCount >= turn.maxThrows) && (!turn.hasRolled || locksThisRoll >= keepsNeeded({ ...turn, dice, locksThisRoll }));
+    // A free roll (Second Thoughts, Lemon Levitation) isn't in the view: the server allowed a roll with
+    // fewer dice kept than a throw needs, so that stands while the taps are on their way.
+    const freeRoll = turn.canRoll && turn.hasRolled && turn.locksThisRoll < keepsNeeded(turn);
+    const canRoll = dice.some(d => d.status === 'active') && !(turn.maxThrows && turn.rollCount >= turn.maxThrows) && (!turn.hasRolled || freeRoll || locksThisRoll >= keepsNeeded({ ...turn, dice, locksThisRoll }));
     return { ...turn, dice, locksThisRoll, canRoll };
 }
 

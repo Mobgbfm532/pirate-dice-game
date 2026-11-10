@@ -1030,6 +1030,14 @@ function throwAgain(roomCode, room, turn, rerolled) {
     setTimeout(() => {
         if (rooms[roomCode] === room && room.turn && room.turn.key === key) io.to(roomCode).emit('diceRolled', thrown);
     }, lead);
+    // Becalmed: dice thrown again after the hand's last throw stay as they lie too, as after the throw itself.
+    if (turn.maxThrows && turn.rollCount >= turn.maxThrows && turn.dice.some(d => d.status === Rules.STATUS.ACTIVE)) {
+        setTimeout(() => {
+            if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+            let result = Rules.keepRest(room.turn);
+            if (result) emitKept(roomCode, result);
+        }, lead + delay(animationMs));
+    }
 }
 
 // Yvesil the oracle (a spot on the Salty Swallow, 6 Nov): pay, and she reads your next fight.
@@ -3241,6 +3249,7 @@ io.on('connection', (socket) => {
             if (!rerolled) return;
             text = 'Your 1s roll again';
         } else if (thonicId === 'secondThoughts') {
+            if (turn.maxThrows && turn.rollCount >= turn.maxThrows) return; // (Becalmed: no throw left)
             if (!Number.isInteger(dieId) || !Rules.putBackDie(turn, dieId)) return;
             text = 'A kept die goes back in play';
         } else if (thonicId === 'steady') {

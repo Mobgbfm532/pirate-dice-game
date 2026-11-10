@@ -337,7 +337,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 171 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, saves after each place. 172 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
     for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);

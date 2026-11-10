@@ -405,6 +405,41 @@ test('Becalmed: three throws a hand, then the dice stay as they lie; the opponen
     assert.ok(S.chanceFromStart(null, { throws: 3 }) < S.chanceFromStart(null) - 0.05);
 });
 
+test('Becalmed: after the last throw, Second Thoughts is refused and Watermelon Hindsight leaves the dice as they lie', async () => {
+    const hero = await tavernAgainst(fightOf('rokr'), 'Becalmed Hindsight');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'becalmed';
+    room.tavernRun.abilityUsed = { constellationBlur: 99 };
+    room.tavernRun.shelf = ['secondThoughts', 'watermelonHindsight'];
+    room.tavernRun.puffs = { watermelonHindsight: 3 };
+    const throwOnce = async (faces) => {
+        const unpin = pinFaces(faces);
+        hero.emit('rollDice');
+        const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === room.turn.rollCount, 4000);
+        unpin();
+        await sleep(rolled.animationMs * 0.01 + 40);
+        return rolled;
+    };
+    await throwOnce([2, 1, 1, 3, 5, 6]);
+    hero.emit('toggleDie', 0); await sleep(40);
+    await throwOnce([4, 1, 3, 5, 6]);
+    hero.emit('toggleDie', 1); await sleep(40);
+    await throwOnce([1, 3, 5, 6]);
+    await sleep(80);
+    assert.ok(room.turn.dice.every(d => d.status !== 'active'), 'the third throw stays as it lies');
+    // Second Thoughts: no throw left to put a die back for.
+    hero.emit('drinkThonic', 0, 0);
+    await sleep(80);
+    assert.deepEqual(room.tavernRun.shelf, ['secondThoughts', 'watermelonHindsight'], 'not drunk');
+    // Watermelon Hindsight: the last throw again, and its dice stay as they lie too.
+    room.turn.busyUntil = 0;
+    hero.emit('drinkThonic', 1);
+    await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.rerolled, 4000);
+    await sleep(120);
+    assert.equal(room.tavernRun.puffs.watermelonHindsight, 2, 'puffed');
+    assert.ok(room.turn.dice.every(d => d.status !== 'active'), 'the thrown-again dice stay as they lie');
+});
+
 test('a fog bank: his dice land hidden and stay hidden, his finished score is kept from you, and he plays blind', async () => {
     const hero = await tavernAgainst(fightOf('hangman'), 'Fog');
     const room = roomOf(hero);

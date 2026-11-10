@@ -71,7 +71,7 @@ module.exports = {
     devilWhenBelow: 0.7,
 
     // MONEY: since 23 Oct (the user's calls) every amount here is in whole gold, nearer D&D's
-    // prices: beating Jaguar pays 140 gold, a Healing Thonic costs 11. The old numbers were these
+    // prices: beating Jaguar pays 36 gold (10 for the first win, 2 more each fight), a Healing Thonic costs 11. The old numbers were these
     // x10 (halves rounded against you).
     // Gold during a run goes into the purse as it is won; it is spent between fights.
     gold: {

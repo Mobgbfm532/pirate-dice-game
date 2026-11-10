@@ -917,7 +917,8 @@ function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
         case 'healing': return !turn.hasRolled && me.lives < state.startingLives;
         case 'clearEye': return !turn.hasRolled && !!run.enemy.ability && !!run.abilityLeft && !run.clearEye;
         case 'fizzy': return turn.hasRolled && !turn.finalized && turn.dice.some(d => d.status === 'active' && !d.hidden && d.value === 1);
-        case 'secondThoughts': return turn.dice.some(d => canPutBack(turn, d.status));
+        // (Becalmed: not once the hand's throws are used up, as on the server.)
+        case 'secondThoughts': return !(turn.maxThrows && turn.rollCount >= turn.maxThrows) && turn.dice.some(d => canPutBack(turn, d.status));
         case 'steady': return !turn.steady;
         // Elf Bars: one puff a fight (the server checks the same).
         case 'purpleHaze': {
@@ -927,7 +928,7 @@ function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
         }
         case 'cottonCandyCloud': {
             const bot = state.players[BOT_ID];
-            return !t.puffed && !run.cloud && !turn.finalized && !!bot && state.roundPlayers.includes(BOT_ID) && bot.score === null;
+            return !t.puffed && !run.cloud && !turn.finalized && !!bot && state.roundPlayers.includes(BOT_ID) && bot.score === null && !bot.scoreHidden; // (in fog a finished hand shows no score)
         }
         case 'lemonLevitation': return !t.puffed && turn.hasRolled && !turn.finalized && turn.locksThisRoll === 0 && !turn.canRoll;
         case 'watermelonHindsight': return !t.puffed && turn.hasRolled;
