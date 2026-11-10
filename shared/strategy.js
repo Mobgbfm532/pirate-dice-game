@@ -15,6 +15,8 @@
 // The Salty Swallow's sea (9 Nov) can lean every die one higher or lower (shift +1 / -1): the
 // landings are then weighted by the leaning faces (a 6 twice as likely, no 1s; or the reverse).
 // A Squall (10 Nov) makes everyone keep two dice a throw (minKeep 2; never more than were thrown).
+// Becalmed (10 Nov) gives a hand three throws, then the dice stay as they lie (throws 3: the tables
+// are then worked out for each number of throws left, solveLimited).
 // Two rounds change what "beat" means: a cursed one (low: the lowest valid score wins, and a
 // sensible player plays for the fewest points), and the Devil's (cap: a score counts as no
 // more than cap).
@@ -121,12 +123,44 @@ function solve(finish, shift = 0, minKeep = 1) {
     return V;
 }
 
+// The same with a limit of `throws` throws a hand: Vs[t] is the value before a throw with t left
+// (the last one's dice all stay as they lie).
+function solveLimited(finish, shift = 0, minKeep = 1, throws = 3) {
+    const LANDINGS = landingsFor(shift);
+    const Vs = [];
+    for (let t = 0; t <= throws; t++) {
+        const V = new Float64Array(STATES);
+        for (let s = 0; s <= MAX_S; s++) for (let h = 0; h < 4; h++) V[at(0, s, h)] = finish(s, h === 3);
+        if (t > 0) for (let n = 1; n <= 6; n++) {
+            for (let s = 0; s <= MAX_S; s++) for (let h = 0; h < 4; h++) {
+                let total = 0;
+                for (const landing of LANDINGS[n]) {
+                    if (t === 1) { const all = afterKeeping(s, h, landing.counts); total += landing.p * V[at(0, all.s, all.h)]; continue; }
+                    let best = -1;
+                    for (const choice of landing.keeps) {
+                        if (choice.k < Math.min(minKeep, n)) continue;
+                        if (!takesNeeded(h, landing.counts, choice.keep)) continue;
+                        const next = afterKeeping(s, h, choice.keep);
+                        const v = Vs[t - 1][at(n - choice.k, next.s, next.h)];
+                        if (v > best) best = v;
+                    }
+                    total += landing.p * best;
+                }
+                V[at(n, s, h)] = total;
+            }
+        }
+        Vs.push(V);
+    }
+    return Vs;
+}
+
 // The player's likely final scores, if they play for the most points (or, low, the fewest):
 // { dust, score[] }.
 const playerScores = {};
-function sensiblePlayerScores(low = false, shift = 0, minKeep = 1) {
-    const key = `${low}|${shift}|${minKeep}`;
+function sensiblePlayerScores(low = false, shift = 0, minKeep = 1, throws = 0) {
+    const key = `${low}|${shift}|${minKeep}|${throws}`;
     if (playerScores[key]) return playerScores[key];
+    if (throws) return (playerScores[key] = limitedPlayerScores(low, shift, minKeep, throws));
     const LANDINGS = landingsFor(shift);
     const V = solve((s, valid) => (valid ? (low ? 24 - Math.min(s, 24) : s) / 24 : 0), shift, minKeep);
     const P = new Float64Array(STATES);
@@ -156,11 +190,42 @@ function sensiblePlayerScores(low = false, shift = 0, minKeep = 1) {
     return result;
 }
 
+// As above, with a limit of `throws` throws a hand (Becalmed).
+function limitedPlayerScores(low, shift, minKeep, throws) {
+    const LANDINGS = landingsFor(shift);
+    const Vs = solveLimited((s, valid) => (valid ? (low ? 24 - Math.min(s, 24) : s) / 24 : 0), shift, minKeep, throws);
+    const result = { dust: 0, score: new Array(MAX_S + 1).fill(0) };
+    const end = (p, s, h) => { if (h === 3) result.score[s] += p; else result.dust += p; };
+    let P = new Float64Array(STATES);
+    P[at(6, 0, 0)] = 1;
+    for (let t = throws; t >= 1; t--) {
+        const next = new Float64Array(STATES);
+        for (let n = 1; n <= 6; n++) for (let s = 0; s <= MAX_S; s++) for (let h = 0; h < 4; h++) {
+            const p = P[at(n, s, h)];
+            if (!p) continue;
+            for (const landing of LANDINGS[n]) {
+                if (t === 1) { const all = afterKeeping(s, h, landing.counts); end(p * landing.p, all.s, all.h); continue; }
+                let best = -1, bestNext = null;
+                for (const choice of landing.keeps) {
+                    if (choice.k < Math.min(minKeep, n)) continue;
+                    const after = afterKeeping(s, h, choice.keep);
+                    const v = Vs[t - 1][at(n - choice.k, after.s, after.h)];
+                    if (v > best) { best = v; bestNext = { n: n - choice.k, ...after }; }
+                }
+                if (bestNext.n === 0) end(p * landing.p, bestNext.s, bestNext.h);
+                else next[at(bestNext.n, bestNext.s, bestNext.h)] += p * landing.p;
+            }
+        }
+        P = next;
+    }
+    return result;
+}
+
 // Going first: the value of finishing on a score is the chance the player then fails to
 // beat it (they dust, score lower, or tie and lose the sudden death half the time). Cursed
 // (low), beating it means scoring lower.
-function firstMoverValue(score, low = false, shift = 0, minKeep = 1) {
-    const d = sensiblePlayerScores(low, shift, minKeep);
+function firstMoverValue(score, low = false, shift = 0, minKeep = 1, throws = 0) {
+    const d = sensiblePlayerScores(low, shift, minKeep, throws);
     let fails = d.dust;
     for (let x = 0; x <= MAX_S; x++) if (low ? x > score : x < score) fails += d.score[x];
     return fails + 0.5 * d.score[score];
@@ -169,10 +234,10 @@ function firstMoverValue(score, low = false, shift = 0, minKeep = 1) {
 // The finish value for what the bot knows. toBeat: the player's score, null if they dusted,
 // undefined if they haven't played yet. aceAt16: the Hangman can turn 16+ into 24. low: a
 // cursed round. cap: the bot's score counts as no more than this (the Devil's round).
-function finishFor(toBeat, { aceAt16 = false, low = false, cap = null, shift = 0, minKeep = 1 } = {}) {
+function finishFor(toBeat, { aceAt16 = false, low = false, cap = null, shift = 0, minKeep = 1, throws = 0 } = {}) {
     const lift = s => Math.min(aceAt16 && !low && s >= 16 && s < 24 ? 24 : s, cap ?? MAX_S);
     if (toBeat === null) return (s, valid) => (valid ? 1 : 0);
-    if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S), low, shift, minKeep) : 0);
+    if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S), low, shift, minKeep, throws) : 0);
     return (s, valid) => {
         if (!valid) return 0;
         const score = lift(s);
@@ -183,18 +248,25 @@ function finishFor(toBeat, { aceAt16 = false, low = false, cap = null, shift = 0
 
 const tables = new Map();
 function tableFor(toBeat, options = {}) {
-    const key = `${toBeat}|${options.aceAt16 ? 1 : 0}|${options.low ? 1 : 0}|${options.cap ?? ''}|${options.shift || 0}|${options.minKeep || 1}`;
-    if (!tables.has(key)) tables.set(key, { V: solve(finishFor(toBeat, options), options.shift || 0, options.minKeep || 1), finish: finishFor(toBeat, options) });
+    const key = `${toBeat}|${options.aceAt16 ? 1 : 0}|${options.low ? 1 : 0}|${options.cap ?? ''}|${options.shift || 0}|${options.minKeep || 1}|${options.throws || 0}`;
+    if (!tables.has(key)) {
+        const finish = finishFor(toBeat, options);
+        const Vs = options.throws ? solveLimited(finish, options.shift || 0, options.minKeep || 1, options.throws) : null;
+        tables.set(key, { V: Vs ? Vs[options.throws] : solve(finish, options.shift || 0, options.minKeep || 1), Vs, finish });
+    }
     return tables.get(key);
 }
 
 // The dice to keep from a turn the bot has just rolled (dice: [{ id, value, status }]).
 // Returns die ids, at least one (none allowed with options.optional, when this throw's keep is
 // already made, as after Mind Whip). Ties go to keeping more (ending sooner).
+// Becalmed: options.throws (a hand's limit) and options.throwsLeft (throws still to come after this keep).
 function bestKeeps(dice, toBeat, options = {}) {
-    const { V } = tableFor(toBeat, options);
+    const table = tableFor(toBeat, options);
     const active = dice.filter(d => d.status === 'active');
     if (active.length === 0) return [];
+    if (table.Vs && !(options.throwsLeft > 0)) return active.map(d => d.id); // (no throws left: they stay as they lie)
+    const V = table.Vs ? table.Vs[options.throwsLeft] : table.V;
     let s = 0, h = 0;
     dice.filter(d => d.status !== 'active' && d.status !== 'stolen').forEach(d => {
         ({ s, h } = afterKeeping(s, h, [1, 2, 3, 4, 5, 6].map(v => (v === d.value ? 1 : 0))));

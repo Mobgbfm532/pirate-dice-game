@@ -349,6 +349,42 @@ test('every sea dial: a 1 is always port and a 6 always starboard (the user, 10 
     }
 });
 
+test('Becalmed: three throws a hand, then the dice stay as they lie; the opponent plays it too', async () => {
+    const hero = await tavernAgainst(fightOf('rokr'), 'Becalmed');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'becalmed';
+    room.tavernRun.abilityUsed = { constellationBlur: 99 }; // (no Starry Form in the way)
+    const throwOnce = async (faces) => {
+        const unpin = pinFaces(faces);
+        hero.emit('rollDice');
+        const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id && d.turn.rollCount === room.turn.rollCount, 4000);
+        unpin();
+        await sleep(rolled.animationMs * 0.01 + 40);
+        return rolled;
+    };
+    const first = await throwOnce([2, 1, 1, 3, 5, 6]);
+    assert.equal(first.turn.maxThrows, 3);
+    hero.emit('toggleDie', 0); await sleep(40);
+    await throwOnce([4, 1, 3, 5, 6]);
+    hero.emit('toggleDie', 1); await sleep(40);
+    const kept = waitFor(hero, 'turnState', s => s.turn && s.turn.playerId === hero.id && s.turn.finalized, 4000);
+    await throwOnce([1, 3, 5, 6]);
+    const done = await kept;
+    assert.equal(room.turn.rollCount, 3);
+    assert.ok(room.turn.dice.every(d => d.status !== 'active'), 'the third throw stays as it lies');
+    assert.equal(done.turn.outcome.score, 1 + 3 + 5 + 6);
+    assert.equal(Rules.canRoll(room.turn), false);
+    // His hand: never more than three throws.
+    let most = 0;
+    hero.on('diceRolled', d => { if (d.turn.playerId === 'BOT_MOLAR') most = Math.max(most, d.turn.rollCount); });
+    hero.emit('endTurn');
+    await waitFor(hero, 'turnState', s => s.turn && s.turn.playerId === 'BOT_MOLAR' && s.turn.finalized, 10000);
+    assert.ok(most >= 1 && most <= 3, `he threw ${most} times`);
+    // The solver knows the limit: from the start his chance of a valid hand is lower with three throws.
+    const S = require('../shared/strategy');
+    assert.ok(S.chanceFromStart(null, { throws: 3 }) < S.chanceFromStart(null) - 0.05);
+});
+
 test('a fog bank: his dice land hidden and stay hidden, his finished score is kept from you, and he plays blind', async () => {
     const hero = await tavernAgainst(fightOf('hangman'), 'Fog');
     const room = roomOf(hero);

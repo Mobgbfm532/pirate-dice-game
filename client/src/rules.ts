@@ -42,6 +42,7 @@ export interface TurnView {
     stars?: { next: number[] | null; now: number[] | null } | null;
     cloaked?: boolean; // Jaguar's Cloak: his dice hidden until his hand is done
     mustKeep?: number; // a Squall (10 Nov): dice to keep from each throw (never more than were thrown)
+    maxThrows?: number; // Becalmed (10 Nov): a hand's throws, after which the dice stay as they lie
 }
 
 // How many dice must be kept from this throw before the next (the server's Rules.keepsNeeded).

@@ -45,7 +45,7 @@ module.exports = {
     // to starboard, on every leg; legs differ only in faces 2-5 (calm and the storms). First guesses.
     voyage: {
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
-        rokr: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'], // (Becalmed to come on 2-3)
+        rokr: ['port', 'becalmed', 'becalmed', 'calm', 'calm', 'starboard'],
         hangman: ['port', 'squall', 'rogue', 'fog', 'calm', 'starboard'],
         jaguar: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'] // (his dial by phase to come)
     },

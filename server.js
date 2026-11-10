@@ -609,12 +609,20 @@ const SEAS = {
     // A fog bank (10 Nov, the user's; docs/voyage-brainstorm.md): neither side sees the other's hand until
     // both have finished. His dice land hidden and stay so (turn.fogged, viewTurn), his score is kept out
     // of the state (fogMask), and he can't see yours (getTavernScoreToBeat), so he plays for his best.
-    fog: { name: 'Fog bank', text: "Neither side sees the other's hand until both have finished.", shift: 0, fog: true }
+    fog: { name: 'Fog bank', text: "Neither side sees the other's hand until both have finished.", shift: 0, fog: true },
+    // Becalmed (10 Nov, the user's; docs/voyage-brainstorm.md): the sails hang slack. A hand gets three
+    // throws (turn.maxThrows, Rules.canRoll), and the dice the third leaves stay as they lie
+    // (Rules.keepRest, as it lands). Both sides; the solver counts the throws left.
+    becalmed: { name: 'Becalmed', text: 'The sails hang slack: three throws, then the dice stay as they lie.', shift: 0, maxThrows: 3 }
 };
 // How many dice each throw must keep this round (the Squall's two, else one).
 function seaKeeps(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
     return sea && SEAS[sea] && SEAS[sea].mustKeep ? SEAS[sea].mustKeep : 1;
+}
+function seaThrows(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return sea && SEAS[sea] && SEAS[sea].maxThrows ? SEAS[sea].maxThrows : 0;
 }
 function seaFog(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
@@ -1043,7 +1051,7 @@ function performRoll(roomCode) {
     let signatureMoves = [];
     let preRollCallout = null;
     room.rollMoments = []; // moments raised while the dice are thrown wait until they land
-    if (!turn.hasRolled) turn.mustKeep = seaKeeps(room); // (the Squall: set as the hand begins)
+    if (!turn.hasRolled) { turn.mustKeep = seaKeeps(room); turn.maxThrows = seaThrows(room); } // (the Squall, Becalmed: set as the hand begins)
     rogueWave(roomCode, room, turn);
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
@@ -1105,9 +1113,18 @@ function performRoll(roomCode) {
         }, lead + delay(animationMs));
     }
 
+    // Becalmed: the last of the hand's throws leaves its dice as they lie, kept as they land.
+    let stillActive = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (turn.maxThrows && turn.rollCount >= turn.maxThrows && stillActive.length) {
+        setTimeout(() => {
+            if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+            let result = Rules.keepRest(room.turn);
+            if (result) emitKept(roomCode, result);
+        }, lead + delay(animationMs));
+        return leadMs + animationMs;
+    }
     // The last die has nothing to choose: once it lands it goes into its slot by itself.
     // The player still presses End Turn.
-    let stillActive = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
     if (stillActive.length === 1) {
         let lastDieId = stillActive[0].id;
         setTimeout(() => {
@@ -1447,7 +1464,7 @@ function runBotDecision(roomCode) {
     // A cursed round is played for the fewest points; under the player's Devil the bot's
     // score counts as no more than the cap.
     let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
-    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room), minKeep: seaKeeps(room) };
+    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room), minKeep: seaKeeps(room), throws: turn.maxThrows || 0, throwsLeft: turn.maxThrows ? turn.maxThrows - turn.rollCount : undefined };
     let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });

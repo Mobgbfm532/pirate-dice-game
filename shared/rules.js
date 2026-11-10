@@ -113,6 +113,8 @@
     function canRoll(turn) {
         if (turn.finalized) return false;
         if (!turn.dice.some(isActive)) return false;
+        // Becalmed (10 Nov): a hand gets maxThrows throws, then the dice stay as they lie.
+        if (turn.maxThrows && turn.rollCount >= turn.maxThrows) return false;
         // freeRoll: a die put back by Second Thoughts may be rolled without keeping another.
         return !turn.hasRolled || turn.locksThisRoll >= keepsNeeded(turn) || !!turn.freeRoll;
     }
@@ -226,6 +228,15 @@
         turn.complete = hold && !turn.dice.some(isActive);
         if (!turn.complete) settleTurn(turn);
         return { finalizedNow: !wasFinalized && turn.finalized };
+    }
+
+    // Every die still in play kept as it lies (a becalmed hand's last throw), and the hand fixed.
+    function keepRest(turn) {
+        if (!turn.hasRolled || turn.finalized) return null;
+        turn.dice.forEach(d => { if (d.status === STATUS.ACTIVE) { d.status = STATUS.LOCKED_THIS_ROLL; turn.locksThisRoll++; } });
+        turn.complete = false;
+        settleTurn(turn);
+        return { finalizedNow: turn.finalized };
     }
 
     // End Turn on a hand held complete: it is fixed now. Returns true if it was.
@@ -383,6 +394,7 @@
             outcome: turn.fogged ? null : turn.outcome,
             canRoll: canRoll(turn),
             ...(turn.mustKeep > 1 ? { mustKeep: turn.mustKeep } : {}),
+            ...(turn.maxThrows ? { maxThrows: turn.maxThrows } : {}),
             steady: !!turn.steady,
             // Rokr's Written in the Stars: the faces marked for the next throw (this turn), and
             // whether this turn is under the stars at all.
@@ -488,6 +500,6 @@
         formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        finishTurn, keepsNeeded, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        finishTurn, keepRest, keepsNeeded, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

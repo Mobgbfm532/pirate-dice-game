@@ -525,8 +525,8 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
 // The Salty Swallow's sea (9 Nov, the user's), on the plaque under Roll: a little ship leaning
 // the way she lists and rocking, this round's weather and the next's (the forecast). (A chip in
 // the header sat over the opponent's bust: the user's call, it moved here.)
-const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw', squall: 'keep two dice from every throw', fog: "neither sees the other's hand" };
-const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas', squall: 'squall', fog: 'fog' };
+const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw', squall: 'keep two dice from every throw', fog: "neither sees the other's hand", becalmed: 'three throws, then dice stay' };
+const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas', squall: 'squall', fog: 'fog', becalmed: 'becalmed' };
 function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
     return (
         <div className={`round-plaque round-sea sea-${sea.id}`} title={`${sea.name}. ${sea.text}${next ? ` Next round: ${next.name}.` : ''}`}>
@@ -564,6 +564,7 @@ const SEA_EXPLAIN: Record<SeaState['id'], string> = {
     port: 'The ship leans to port: every die thrown lands one lower. A 6 becomes a 5, a 2 a 1, and a 1 stays a 1, so there are no 6s, and no hand can reach 24 this round.',
     calm: 'A steady deck: the dice land as they fall.',
     squall: 'A squall: rain and wind lash the deck, and every hand must keep two dice from each throw instead of one (or every die left, if only one or two were thrown). Hands are rushed: a 2 or a 4 is easy to miss. Your opponent keeps two as well.',
+    becalmed: "Becalmed: the wind drops and the sails hang slack. Each hand gets three throws, and whatever dice the third leaves stay just as they lie: no fourth throw, so keep a 2 and a 4 early. Your opponent has three as well.",
     fog: "A fog bank: neither side can see across the table. Your opponent's dice land hidden and stay hidden, and their score with them, until both hands are done; they can't see yours either. You play to a target you can't see, so going second is no help this round.",
     rogue: "Heavy seas: as each hand's second throw is made, a rogue wave crosses the deck and one loose die, at random, goes over the rail. That hand finishes with five dice, so the best it can score is 18. Keep your 2 and your 4 the moment they show. (If only one loose die is left, the wave spares it.)"
 };
@@ -659,7 +660,11 @@ function TurnControls({ snap }: { snap: Snapshot }) {
     const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : NO_BADGE;
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
         : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && !turn.canRoll && turn.locksThisRoll < keepsNeeded(turn)
-            ? (keepsNeeded(turn) < 2 ? 'Tap dice to keep them, then roll again' : turn.locksThisRoll === 0 ? 'Squall: keep two dice, then roll again' : 'Squall: keep one more die')
+            ? (keepsNeeded(turn) >= 2 ? (turn.locksThisRoll === 0 ? 'Squall: keep two dice, then roll again' : 'Squall: keep one more die')
+                // (Becalmed: how many throws the hand has left.)
+                : turn.maxThrows && turn.maxThrows - turn.rollCount === 1 ? 'Keep some: your last throw, and they stay as they lie'
+                : turn.maxThrows ? `Becalmed: ${turn.maxThrows - turn.rollCount} throws left`
+                : 'Tap dice to keep them, then roll again')
             : '';
     // (Rokr's stars come before the tip: which faces can't be kept is what you need to know.)
     const badgeFirst = badge.kind === 'stars' || !tip;
@@ -2364,7 +2369,8 @@ const SEA_WORDS: Record<SeaState['id'], { title: string; rule: string; sub: stri
     calm: { title: 'The sea calms', rule: 'The dice land true', sub: 'A steady deck' },
     rogue: { title: 'Heavy seas', rule: 'A rogue wave is coming', sub: 'At the second throw it takes a loose die' },
     squall: { title: 'Squall!', rule: 'Keep two dice every throw', sub: 'Rain and wind · hands rushed' },
-    fog: { title: 'Fog bank', rule: "Neither sees the other's hand", sub: 'Until both are done · play blind' }
+    fog: { title: 'Fog bank', rule: "Neither sees the other's hand", sub: 'Until both are done · play blind' },
+    becalmed: { title: 'Becalmed', rule: 'Three throws a hand', sub: 'The sails hang slack · the third throw stays' }
 };
 // A brass ship's clinometer: its needle (.sea-needle) swings by CSS, from --from to --to (or rocks).
 function Clinometer({ className = '' }: { className?: string }) {
@@ -2420,7 +2426,7 @@ function DockScene() {
             </div>
             <div className="dock-counter">
                 <div className="dock-plate"><strong>Skipper Bren</strong><span>Master of the Salty Swallow</span></div>
-                <p>At sea the weather turns every round. From each fight's second round the <b>sea die</b> is rolled first, and its dial tells you what the sea brings: a list to port or starboard, a squall, a rogue wave, a fog bank. It plays your dice and your opponent's alike.</p>
+                <p>At sea the weather turns every round. From each fight's second round the <b>sea die</b> is rolled first, and its dial tells you what the sea brings: a list to port or starboard, a squall, a rogue wave, a fog bank, a dead calm. It plays your dice and your opponent's alike.</p>
                 <button className="primary" onClick={() => { playSound('click'); actions.boardShip(); }}>Climb aboard</button>
             </div>
         </div>,
@@ -2520,7 +2526,7 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
 // the die tumbles, then swings onto the face it landed on (with overshoot) and that sector lights up.
 // The painting's geometry, in `sea-dial.webp`'s pixels (1245x679): the needle's pivot, and the sectors'
 // radii; the needle (`sea-dial-needle.webp`, 186x701) turns about the middle of its hub ring.
-const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#22c7c0', '#b8fff6'], squall: ['#8a5cf0', '#d8c8ff'], fog: ['#aeb8c4', '#ffffff'] }; // (10 Nov: brighter, as the tints are screen-blended onto the painting and the old slate and indigo barely showed)
+const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#22c7c0', '#b8fff6'], squall: ['#8a5cf0', '#d8c8ff'], fog: ['#aeb8c4', '#ffffff'], becalmed: ['#d9a441', '#ffe2a0'] }; // (10 Nov: brighter, as the tints are screen-blended onto the painting and the old slate and indigo barely showed)
 const faceAngle = (face: number) => -75 + (face - 1) * 30;
 const DIAL = { w: 1245, h: 679, cx: 621, cy: 626, R: 414, r: 72 };
 const NEEDLE = { w: 186, h: 701, px: 92.6, py: 603.6, reach: 372 };

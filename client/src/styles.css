@@ -3264,6 +3264,10 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .round-plaque.sea-fog { --accent: #e8eef5; --tint: rgba(150, 160, 175, 0.32); }
 .sea-fog .sea-ship { opacity: 0.75; filter: blur(0.4px); }
 @media (prefers-reduced-motion: reduce) { .fog-bank, .fog-layer { animation: none; } }
+/* Becalmed (10 Nov): a dead calm, warm and still; the little ship on the plaque doesn't rock. */
+.round-plaque.sea-becalmed { --accent: #ffe2a0; --tint: rgba(150, 110, 40, 0.3); }
+.sea-becalmed .sea-ship { animation: none; transform: none; }
+.sea-becalmed.round-plaque::after { animation: none; opacity: 0.35; }
 .sea-moment.wave-moment .sea-crest { animation: sea-crest 1.3s cubic-bezier(0.3, 0.6, 0.4, 1) 0.1s both; }
 .wave-moment .sea-news { animation-delay: 0.35s; }
 .wave-moment .sea-title { text-shadow: 0 0 18px rgba(230, 248, 255, 0.9), 0 0 42px rgba(90, 150, 190, 0.8), 0 3px 4px #000; }

@@ -60,7 +60,7 @@ fight odds.
    to keep your 2 or 4 the moment it shows.
 3. **Squall. Built 10 Nov** (on the Hangman's dial, face 2): every hand keeps two dice from each throw (or every die left when only one or two were thrown), both sides; the opponents' solver plays it; driven rain over the table, a storm-violet plaque, "Squall!" on the sea die. No wind sound yet. As brainstormed: rain and wind: you must keep two dice every throw. The intro's rain drawn over the table,
    wind howling. Hands are rushed; dust rises to 32%.
-4. **Becalmed.** The sails hang slack: three throws, then every die stays as it lies. Mild (28% dust),
+4. **Becalmed. Built 10 Nov** (on Rokr's dial, faces 2-3): three throws a hand, the third's dice kept as they lie, both sides; the opponents' solver counts the throws left. As brainstormed: the sails hang slack: three throws, then every die stays as it lies. Mild (28% dust),
    more tension than danger; good for a quiet night leg.
 5. **St Elmo's fire (the storm's gift). Cut 10 Nov (the user: "I do not like that one").** Blue fire dances on one die of your first throw, and it can
    count as the 2 or 4 you need. Dust falls from 25% to 7%. With the Squall, 9% dust: the storm takes
