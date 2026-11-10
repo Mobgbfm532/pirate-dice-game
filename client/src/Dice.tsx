@@ -47,8 +47,21 @@ function washPose(from: THREE.Vector3, t: number, out: THREE.Vector3) {
     const drop = t > 0.7 ? ((t - 0.7) / 0.3) ** 2 * 4 : 0;
     out.y = from.y + lift - drop;
 }
+// How far the steal has got (0..1). Counted frame by frame, at most 50 ms a frame, not by the clock:
+// a phone dropping frames as the ability's banner leaves made the paw jump part of its way in and
+// the die with it (the user, 10 Nov: "glitches a little bit before it is taken"). A slow frame now
+// only slows the reach a little.
+const stealState = new Map<number, { start: number; t: number; last: number }>();
 function stealProgress(id: number, now: number) {
-    return Math.min(1, Math.max(0, now - (table.stolenAt.get(id) ?? now)) / STEAL_MS);
+    const start = table.stolenAt.get(id);
+    if (start === undefined) return 0;
+    let s = stealState.get(id);
+    if (!s || s.start !== start) { s = { start, t: 0, last: now }; stealState.set(id, s); }
+    if (now > s.last) {
+        if (now > start) s.t = Math.min(1, s.t + Math.min(now - Math.max(s.last, start), 50) / STEAL_MS);
+        s.last = now;
+    }
+    return s.t;
 }
 const farAway = new THREE.Vector3();
 const overDie = new THREE.Vector3();
@@ -309,7 +322,7 @@ export function Dice() {
                     if (rest) {
                         if (t >= GRIP) {
                             stealGrip(rest.position, t, mesh.position);
-                            mesh.rotateY(delta * 3 * ((t - GRIP) / (1 - GRIP)));
+                            mesh.rotateY(Math.min(delta, 0.05) * 3 * ((t - GRIP) / (1 - GRIP)));
                         } else mesh.position.copy(rest.position);
                     }
                     mesh.scale.setScalar(1 - 0.25 * Math.max(0, (t - GRIP) / (1 - GRIP)));

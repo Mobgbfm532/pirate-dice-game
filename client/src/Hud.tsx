@@ -609,16 +609,20 @@ function useTakingTurns(both: boolean, ms = 3500) {
 
 // The opponent's ability on their nameplate: one ✦ per use this fight, lit while it's left and
 // dark once spent. The plate flashes when one is spent.
-function AbilityMarks({ state }: { state: GameState }) {
+// The opponent's ✦ marks: all of them (the nameplate), or one power's own (`power`: its place in
+// `powers`, on the entrance card).
+function AbilityMarks({ state, power }: { state: GameState; power?: number }) {
     const run = state.tavernRun!;
-    const ability = (run.seated ?? run.enemy).ability;
-    const max = run.abilityMax ?? 0;
+    const enemy = run.seated ?? run.enemy;
+    const ability = enemy.ability;
+    const own = power !== undefined ? run.powerMarks?.[power] : undefined;
+    const max = own ? own[0] : run.abilityMax ?? 0;
     if (!ability || !max) return null;
     const raw = run.abilityUsed?.[ability];
-    const used = Math.min(max, run.abilitySpent ?? (raw === true ? 1 : Number(raw || 0)));
-    const name = Rules.ABILITY_NAMES[ability as keyof typeof Rules.ABILITY_NAMES] ?? ability;
-    const several = (run.seated ?? run.enemy).powers?.length ?? 1;
-    const label = several > 1 ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
+    const used = Math.min(max, own ? own[1] : run.abilitySpent ?? (raw === true ? 1 : Number(raw || 0)));
+    const name = own ? enemy.powers?.[power!]?.name ?? '' : Rules.ABILITY_NAMES[ability as keyof typeof Rules.ABILITY_NAMES] ?? ability;
+    const several = !own && (enemy.powers?.length ?? 1) > 1;
+    const label = several ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
     return (
         <span key={used} className={`ability-marks ${used > 0 ? 'spent-now' : ''}`} title={label} aria-label={label}>
             {Array.from({ length: max }, (_, i) => <span key={i} className={i < max - used ? 'left' : 'used'}>✦</span>)}
@@ -1258,7 +1262,7 @@ function OpponentCard({ enemy, place, state, close, leaving }: { enemy: Enemy; p
                                 ? <img src={`${import.meta.env.BASE_URL}art/${ABILITY_ART[power.name]}`} alt="" draggable={false} />
                                 : <span className="no-art" aria-hidden="true">✦</span>}
                             <div>
-                                <span className="power-name">{power.name}{i === 0 && <AbilityMarks state={state} />}</span>
+                                <span className="power-name">{power.name}{state.tavernRun?.powerMarks?.length === enemy.powers.length ? <AbilityMarks state={state} power={i} /> : i === 0 && <AbilityMarks state={state} />}</span>
                                 <span className="power-text">{power.text}</span>
                             </div>
                         </div>
@@ -2400,16 +2404,19 @@ function DockScene() {
         <div className="dock-scene" role="dialog" aria-label="Skipper Bren welcomes you aboard">
             <div className="dock-harbour" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/salty-swallow-quay.webp")` }} />
             <div className="dock-stage">
-                <div key={line} className="thom-speech dock-speech">{BREN_LINES[line]}</div>
-                <div className="dock-figure">
-                    {painted
-                        ? <img src={`${import.meta.env.BASE_URL}art/bren.webp`} alt="" draggable={false} onError={() => setPainted(false)} />
-                        : <BrenSilhouette />}
+                {/* (The bubble over his head, sized with him: a wrapper the size of the figure.) */}
+                <div className={`dock-bren${painted ? '' : ' silhouette'}`}>
+                    <div className="dock-figure">
+                        {painted
+                            ? <img src={`${import.meta.env.BASE_URL}art/bren.webp`} alt="" draggable={false} onError={() => setPainted(false)} />
+                            : <BrenSilhouette />}
+                    </div>
+                    <div key={line} className={`thom-speech dock-speech${line ? " quick" : ""}`}>{BREN_LINES[line]}</div>
                 </div>
             </div>
             <div className="dock-counter">
                 <div className="dock-plate"><strong>Skipper Bren</strong><span>Master of the Salty Swallow</span></div>
-                <p>At sea, from the second round of each fight, the <b>sea die</b> is rolled first. If the ship lists to starboard, every die thrown that round lands one higher; to port, one lower. Your dice and your opponent's alike.</p>
+                <p>At sea the weather turns every round. From each fight's second round the <b>sea die</b> is rolled first, and its dial tells you what the sea brings: a list to port or starboard, a squall, a rogue wave. It plays your dice and your opponent's alike.</p>
                 <button className="primary" onClick={() => { playSound('click'); actions.boardShip(); }}>Climb aboard</button>
             </div>
         </div>,

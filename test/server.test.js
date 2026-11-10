@@ -588,6 +588,7 @@ test('the nameplate counts every ability use: the Hangman two, Jaguar four', asy
     roomOf(hangman).players.BOT_MOLAR.name = 'The Hangman'; // (who sits at a fresh test table)
     let st = server.getRoomState(codeOf(hangman));
     assert.deepEqual([runOf(st).abilityMax, runOf(st).abilitySpent], [2, 0]);
+    assert.deepEqual(runOf(st).powerMarks, [[1, 0], [1, 0]]); // (one beside each of his powers)
     const jaguar = await tavernAgainst(fightOf('jaguar'), 'MarksJag');
     const room = roomOf(jaguar);
     room.players.BOT_MOLAR.name = 'Jaguar Cantona';
@@ -595,6 +596,7 @@ test('the nameplate counts every ability use: the Hangman two, Jaguar four', asy
     room.tavernRun.jaguarPhase = 'cloak';
     st = server.getRoomState(codeOf(jaguar));
     assert.deepEqual([runOf(st).abilityMax, runOf(st).abilitySpent], [4, 1]);
+    assert.deepEqual(runOf(st).powerMarks, [[2, 0], [1, 1], [1, 0]]);
 });
 
 test('Johnny Elf Bar stays ashore: not a spot aboard the Salty Swallow', () => {

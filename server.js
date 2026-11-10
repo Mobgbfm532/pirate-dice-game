@@ -1523,19 +1523,18 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
 
 function abilityMarks(room, seated) {
     let run = room.tavernRun;
-    let max = 0, spent = 0;
-    for (let a of abilitiesOf(seated)) {
+    // [uses, spent] for each power, in the order of `powers` (the entrance card marks each power's own, 10 Nov).
+    let marks = abilitiesOf(seated).map(a => {
         let uses = BALANCE.abilityUses[a] || 0;
-        max += uses;
-        spent += Math.min(uses, getAbilityUseCount(room, a));
-    }
+        return [uses, Math.min(uses, getAbilityUseCount(room, a))];
+    });
     // Jaguar's Cloak and All In: one each, spent as his phase reaches them.
     if (seated.ability === 'jaguarPhases') {
-        max += 2;
         let phase = run.jaguarPhase;
-        spent += (phase === 'cloak' || phase === 'allIn' ? 1 : 0) + (phase === 'allIn' ? 1 : 0);
+        marks.push([1, phase === 'cloak' || phase === 'allIn' ? 1 : 0], [1, phase === 'allIn' ? 1 : 0]);
     }
-    return { abilityMax: max, abilitySpent: spent };
+    let max = marks.reduce((n, m) => n + m[0], 0), spent = marks.reduce((n, m) => n + m[1], 0);
+    return { abilityMax: max, abilitySpent: spent, powerMarks: marks };
 }
 
 function getAbilityUseCount(room, abilityId) {

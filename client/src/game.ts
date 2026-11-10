@@ -84,6 +84,7 @@ export interface TavernRun {
     encounterKeepsakeUses?: Record<string, boolean>; // keepsakes that have worked this fight
     abilityMax?: number; // the opponent's uses a fight, every ability of theirs
     abilitySpent?: number; // how many of them are spent
+    powerMarks?: [number, number][]; // [uses, spent] for each of their powers, in order
     jaguarPhase?: 'talk' | 'cloak' | 'allIn' | null; // Jaguar's phase this round
     klargHand?: number | null; // the die Klarg snatched, shown on his nameplate until his turn
     sea?: SeaState | null; // aboard the Salty Swallow: this round's weather (9 Nov)

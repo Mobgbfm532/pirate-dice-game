@@ -40,7 +40,10 @@ const MOMENTS = {
     react: `(() => { const s = store.get(); const o = s.state.playerOrder.filter(i => i !== s.myId); preview.react(o[0], '🍻'); preview.react(o[1] ?? o[0], '💔'); preview.react(s.myId, '🃏'); })()`,
     grace: `preview.ability('Shrine to the Lady', "The Lady's Grace", { text: 'The Lady saves you from the dust', extra: '♥ saved', blessing: 'ladysGrace' })`,
     bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`,
-    floodwave: `preview.floodWave()`
+    floodwave: `preview.floodWave()`,
+    dock: `preview.sail('dock')`, // (Skipper Bren on the quay)
+    sail: `preview.sail()`,
+    card: `document.querySelector('.plate-info').click()` // (the opponent's card, from the i on the nameplate)
 };
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
     const [wh, dpr] = s.split('@');

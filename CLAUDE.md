@@ -326,6 +326,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   script removes it, with per-image fixes. Prompts now ask for a flat magenta background.
 - **Phone access:** the PC's Wi-Fi address changes; `npm start` prints the current link.
   A DHCP reservation on the router (user's job) or Render fixes it for good.
+- **Fonts:** every speech bubble is Alegreya bold italic; it must be loaded (`1,700` in index.html's font link, 10 Nov), or the browser fakes the bold and some letters (the "Y") draw as outlines.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
 ## Status (9 November 2026)
@@ -542,14 +543,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   smouldering edges with rising embers, Rokr's blur twinkling stars, Klarg claw marks, Jaguar a
   gold sweep, the Hangman a gun-metal banner. The opponent's nameplate/chip
   shows one ✦ per use a fight (`AbilityMarks`, `abilityMax`), dark once spent, flaring after
-  the banner. Since 9 Nov (the user's) it counts every ability they have (`abilityMarks` in server.js, `abilitySpent`): the Hangman 2 (Penitent Stare, the Ace), Jaguar 4 (Smooth Talk twice, the Cloak, All In; those two spent as his phase reaches them).
+  the banner. Since 9 Nov (the user's) it counts every ability they have (`abilityMarks` in server.js, `abilitySpent`): the Hangman 2 (Penitent Stare, the Ace), Jaguar 4 (Smooth Talk twice, the Cloak, All In; those two spent as his phase reaches them). The entrance card marks each power with its own (`powerMarks` in the state, [uses, spent] in the order of `powers`; 10 Nov: all of them sat beside the first).
 - **The Salty Swallow as the final tier (25 Oct, the user's yes; set by simulation,
   `balance/experiments/final-ship.js`; settings in `shared/balance.js` `finalShip` and `abilityUses`):**
   each goes after a different part of your game. A sensible player, fresh, wins Klarg 27%, Rokr 26%,
   the Hangman 27%, Jaguar 15% (the Yawning Portal ~40%, Brodor 23%; the ship as it was 35, 40, 35, 25).
   - **Klarg** (`keepsStolen`, `klargWaits`): twice a fight he waits for a throw showing a 2 or 4 you
     still need, snatches it (`Rules.stealHighestActiveDie`) and keeps it: his next turn starts with it
-    kept (`run.klargHand` → `syncTurn`). Since 9 Nov (the user's): at most once a round (`turn.reachedAround`), and his banner comes first: the die he takes waits on the felt under it, and his hand lifts it and sweeps it away as the banner leaves (`stealReadyAt`, `STEAL_MS` in game.ts, 1.7 s; the next throw waits for it). The hand is his paw (`KlargPaw` in Dice.tsx, `art/klarg-paw.webp`, cut from his ability painting with its painted die erased by `client/scripts/klarg-paw.cjs`): it swoops in from his side, closes on the die (`GRIP`) and carries it back in its grip (`stealGrip`, one path for both); then the die sits on his nameplate, orange, until his turn starts with it (`klargHand` in the state, `.klarg-hand`, shown once `klargStealing()` is over). (Two first-throw steals cost ~12 points each: too much.)
+    kept (`run.klargHand` → `syncTurn`). Since 9 Nov (the user's): at most once a round (`turn.reachedAround`), and his banner comes first: the die he takes waits on the felt under it, and his hand lifts it and sweeps it away as the banner leaves (`stealReadyAt`, `STEAL_MS` in game.ts, 1.7 s; the next throw waits for it). Since 10 Nov the steal is counted frame by frame, at most 50 ms a frame (`stealProgress` in Dice.tsx): frames dropped as a painted ability's banner leaves made the paw and the die jump. The hand is his paw (`KlargPaw` in Dice.tsx, `art/klarg-paw.webp`, cut from his ability painting with its painted die erased by `client/scripts/klarg-paw.cjs`): it swoops in from his side, closes on the die (`GRIP`) and carries it back in its grip (`stealGrip`, one path for both); then the die sits on his nameplate, orange, until his turn starts with it (`klargHand` in the state, `.klarg-hand`, shown once `klargStealing()` is over). (Two first-throw steals cost ~12 points each: too much.)
   - **Rokr's Starry Form (since 6 Nov, the user's; the id stays `constellationBlur`):** twice a fight your dice land hidden under twinkling constellations (`turn.blurActive`, viewTurn; Constellation in Dice.tsx): you keep blind, and they show at your next throw. Since 10 Nov (the user's) the constellations appear with the throw, not once it lands (`Constellation` reads `table.roll.hidden` mid-throw), and three 6s landing hidden (Starry Form, Jaguar's Cloak) bring no Devil moment (`diceRolled.devil` false): it gave the dice away. Beatable more often than the Stars were (about 40% against 26%, simulated). Its painting `ability-starry-form.jpg` and the hidden dice's night-sky face `art/dice-starry.jpg` (`textures/dice/starry.webp`, cut from inside its rim; `materials.starry` in textures.ts, its stars an emissive map twinkled in Dice.tsx; dice not yet thrown and Jaguar's cloaked dice keep the plain "?") are the user's (9 Nov). Written in the Stars' code is dormant: 3 turns a fight (`startStars`), the
     stars mark two faces before each throw of the turn (`turn.nextMarks` → `turn.marks`); dice landing
     on them are bound (`turn.boundIds`; `Rules.toggleDie` refuses them; all bound: a free roll). The
@@ -611,7 +612,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   bob; it replaced the jitter), with the swell's sound; a hold says "The sea holds" quietly. The moment is portalled
   to the body so it stays level while the page heaves. The explainer shows the dial and the leg's faces in words.
   **Skipper Bren** (9 Nov, the user's): before the sailing scene, Bren, the ship's master, meets you on the quay
-  (`DockScene` in Hud, `sailStage` 'dock' then 'sail', `actions.boardShip`): the user's painting of the ship at the quay
+  (`DockScene` in Hud, `sailStage` 'dock' then 'sail', `actions.boardShip`; 10 Nov: black at once and the quay fading up, since a fade of the whole scene let Klarg, already seated, show through; his bubble over his head; on a phone on its side Bren on the left and the counter a column on the right, where before he didn't show at all; the counter's text explains the dial, squalls and waves included): the user's painting of the ship at the quay
   (`art/salty-swallow-quay.jpg`), two lines in a bubble, the sea die explained, "Climb aboard"; Bren is the user's
   painting (`art/bust-bren.jpg` → `bren.webp`, 9 Nov; a silhouette, `BrenSilhouette`, if it fails to load). Dev: `preview.sail('dock')`,
   `preview.sea(id, from, hold, face)`.
