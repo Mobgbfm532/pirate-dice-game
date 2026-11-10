@@ -1641,7 +1641,9 @@ function Interlude({ state }: { state: GameState }) {
 // After a boss, the story moves on: their keepsake is yours and you're invited on to the next
 // place (after Martha the Yawning Portal; after Brodor the Salty Swallow). Go on now, or keep
 // the run on this phone and come back to it (the lobby's "Continue your crawl").
-const INVITATIONS: Record<string, { title: string; line: (place: string) => string; after?: string; gift: string }> = {
+// courier: who brings it (the sealed letter flutters down by itself; after Brodor the flying snake from the docks
+// carries it in, the user's painting, 10 Nov).
+const INVITATIONS: Record<string, { title: string; line: (place: string) => string; after?: string; gift: string; courier?: 'snake' }> = {
     'Martha Mystery': {
         title: 'You qualify for the Yawning Portal',
         line: place => `Martha Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at ${inSentence(place)}."`,
@@ -1649,8 +1651,9 @@ const INVITATIONS: Record<string, { title: string; line: (place: string) => stri
     },
     Brodor: {
         title: 'Word from the docks',
+        courier: 'snake',
         line: () => `Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"`,
-        after: "Word has spread, the Salty Swallow has just docked - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence",
+        after: "Word has spread, the Salty Swallow is soon to set sail - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence",
         gift: 'are yours: a finished 23 restores a heart, like a 24.'
     }
 };
@@ -1679,7 +1682,12 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
                 <h2 className="interlude-title">{story.title}</h2>
                 {/* (the letter lands where the invitation then unfolds) */}
                 <div className="invitation-slot">
-                {!skip && (
+                {!skip && story.courier === 'snake' && (
+                    <div className="courier-snake" aria-hidden="true">
+                        <img src={`${import.meta.env.BASE_URL}art/flying-snake.webp`} alt="" draggable={false} />
+                    </div>
+                )}
+                {!skip && !story.courier && (
                     <div className="letter" aria-hidden="true">
                         <div className="envelope">
                             <span className="flap" />
@@ -2409,13 +2417,13 @@ function Clinometer({ className = '' }: { className?: string }) {
 // meets you on the quay at dusk (the user's painting of the ship at the quay), welcomes you aboard and tells you of the
 // sea die; "Climb aboard" casts off. Bren's painting (`art/bust-bren.jpg` → `bren.webp`, the prompt is in
 // docs/art-direction.md; the user's, 9 Nov); without it, a silhouette in a captain's hat.
-const BREN_LINES = ["You'll be the one from the Portal. Word travels fast on the docks.", "Welcome aboard the Salty Swallow. Out there, we'll make an honest player of you."];
+const BREN_LINES = ["I suppose you'd be the one causing all the trouble? Word has reached our ears of your skill.", "Welcome aboard the Salty Swallow. Out there, we'll make an honest player of you."];
 function DockScene() {
     const [line, setLine] = useState(0);
     const [painted, setPainted] = useState(true);
     useEffect(() => {
         playSeaSwell('calm');
-        const timer = setTimeout(() => setLine(1), 2600);
+        const timer = setTimeout(() => setLine(1), 5600); // (slower, the user's, 10 Nov: time to read the first)
         return () => clearTimeout(timer);
     }, []);
     return createPortal(

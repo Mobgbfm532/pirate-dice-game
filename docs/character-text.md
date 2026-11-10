@@ -23,7 +23,7 @@ Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a h
 
 ## The voyage (9 Nov)
 
-**Skipper Bren**, "Master of the Salty Swallow" (on the quay before the ship sets sail). Bubble: "You'll be the one from the Portal. Word travels fast on the docks." then "Welcome aboard the Salty Swallow. Out there, we'll make an honest player of you." (the user's). Below: "At sea, from the second round of each fight, the sea die is rolled first. If the ship lists to starboard, every die thrown that round lands one higher; to port, one lower. Your dice and your opponent's alike." (the user asked for it to be rewritten). Button: "Climb aboard".
+**Skipper Bren**, "Master of the Salty Swallow" (on the quay before the ship sets sail). Bubble: "I suppose you'd be the one causing all the trouble? Word has reached our ears of your skill." then "Welcome aboard the Salty Swallow. Out there, we'll make an honest player of you." (the user's). Below: "At sea, from the second round of each fight, the sea die is rolled first. If the ship lists to starboard, every die thrown that round lands one higher; to port, one lower. Your dice and your opponent's alike." (the user asked for it to be rewritten). Button: "Climb aboard".
 
 **Setting sail**: "The bell rings. The lines are cast off…", "The Salty Swallow sets sail", "Four fights at sea. Every round, the sea die decides."
 
@@ -79,7 +79,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 
 **Brodor**: Astral Flood (boss)
 - Entrance card: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
-- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" Then: "Word has spread, the Salty Swallow has just docked - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
+- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" Then: "Word has spread, the Salty Swallow is soon to set sail - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow
 

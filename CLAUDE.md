@@ -612,7 +612,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   bob; it replaced the jitter), with the swell's sound; a hold says "The sea holds" quietly. The moment is portalled
   to the body so it stays level while the page heaves. The explainer shows the dial and the leg's faces in words.
   **Skipper Bren** (9 Nov, the user's): before the sailing scene, Bren, the ship's master, meets you on the quay
-  (`DockScene` in Hud, `sailStage` 'dock' then 'sail', `actions.boardShip`; 10 Nov: black at once and the quay fading up, since a fade of the whole scene let Klarg, already seated, show through; his bubble over his head; on a phone on its side Bren on the left and the counter a column on the right, where before he didn't show at all; the counter's text explains the dial, squalls and waves included): the user's painting of the ship at the quay
+  (`DockScene` in Hud, `sailStage` 'dock' then 'sail', `actions.boardShip`; 10 Nov, the user's: his first line is "I suppose you'd be the one causing all the trouble? Word has reached our ears of your skill.", and his lines come more slowly (the bubble rises over 0.8 s after 1.6 s, the second line at 5.6 s); 10 Nov: black at once and the quay fading up, since a fade of the whole scene let Klarg, already seated, show through; his bubble over his head; on a phone on its side Bren on the left and the counter a column on the right, where before he didn't show at all; the counter's text explains the dial, squalls and waves included): the user's painting of the ship at the quay
   (`art/salty-swallow-quay.jpg`), two lines in a bubble, the sea die explained, "Climb aboard"; Bren is the user's
   painting (`art/bust-bren.jpg` → `bren.webp`, 9 Nov; a silhouette, `BrenSilhouette`, if it fails to load). Dev: `preview.sail('dock')`,
   `preview.sea(id, from, hold, face)`.
@@ -726,8 +726,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   a tap skips (`.invitation.arriving`, `.skip`). The gold count stays as it was (the user's call).
 - **The invitations and saving:** beating a boss gives `interlude.stage = 'invitation'` instead of
   an event (`invitation(room, name)`: `place`, `from`, `boss`, `drop`, `save`): after Martha "You
-  qualify for the Yawning Portal", after Brodor "Word from the docks" (the Salty Swallow has
-  docked; `INVITATIONS` in Hud). "On to ..." or "Save and continue
+  qualify for the Yawning Portal", after Brodor "Word from the docks" (the Salty Swallow is soon to set
+  sail; `INVITATIONS` in Hud). Since 10 Nov Brodor's letter is brought by the user's flying snake from the docks
+  (`art/flying-snake.jpg` → `flying-snake.webp`, `courier: 'snake'`, `.courier-snake`): it swoops in with the scroll in its
+  jaws, hovers beating its wings and flies off as the invitation unrolls, in place of the sealed envelope. "On to ..." or "Save and continue
   later": the server seals the run (`sealSave`, HMAC with `SAVE_SECRET`); the client keeps it in
   `localStorage.tavernSave` and the start screen offers "Continue your crawl" (`actions.resume`,
   `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the

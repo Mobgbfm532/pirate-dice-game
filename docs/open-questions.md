@@ -17,6 +17,13 @@ day they happen, with what's been built marked as it lands.
 - **Sound levels to hear by ear (10 Nov):** the Squall's wind at 0.22 and Jaguar's music at 0.15 were set by measuring (both are loud recordings), the rogue wave at full volume (a quiet one).
 - The ship's ability names are still working names: Smooth Talk, the Cloak, All In.
 
+### Water of the Ebon Shield (`docs/ebon-shield-brainstorm.md`, 10 Nov)
+- It does what the Lady's Favour does (one extra heart next fight). Which new use? Recommended: black water, the sea can't move your dice next fight. If so, against the list and the rogue wave only, or the Squall, Fog and Becalmed too?
+
+### Aed, the dragon sorcerer (`docs/aed-brainstorm.md`, 10 Nov)
+- His ability: recommended metamagic with a pool of sorcery points (Heightened, Quickened, Empowered, Twinned), with his scales as a passive (an extra heart, or his first lost heart stays).
+- Where he fights (a new place after the ship, or in place of someone), his dragon's colour, his hearts, his art.
+
 ### Small things
 - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
 - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
