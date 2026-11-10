@@ -6,7 +6,7 @@ import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell, setBossMusic } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
-import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
+import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, spotPortrait, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, sceneFileOf } from './Backdrop';
 import { lookNext } from './look';
 import { IntroFilm, Rain, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
@@ -1574,10 +1574,10 @@ const SPOTS: Record<Spot, { name: string; line: string; offer: string }> = {
 };
 
 // Who (or what) is at the spot, in a lit round frame.
-function SpotPicture({ spot }: { spot: Spot }) {
+function SpotPicture({ spot, place }: { spot: Spot; place?: string | null }) {
     return (
         <span className={`spot-pic ${spot}`} aria-hidden="true">
-            <span className="face" style={avatarStyle(SPOT_PORTRAITS[spot])} />
+            <span className="face" style={avatarStyle(spotPortrait(spot, place))} />
         </span>
     );
 }
@@ -1617,7 +1617,7 @@ function Interlude({ state }: { state: GameState }) {
                 <div className="spot-cards">
                     {interlude.spots.map((spot, i) => (
                         <button key={spot} className="spot-card" style={{ animationDelay: `${0.25 + i * 0.15}s` }} onClick={() => actions.chooseSpot(spot)}>
-                            <SpotPicture spot={spot} />
+                            <SpotPicture spot={spot} place={run.place} />
                             <strong>{SPOTS[spot].name}</strong>
                             <span className="line">{spot === 'thom' ? `"${thomSays(run, !run.thomMet)}"` : SPOTS[spot].line}</span>
                             <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : spot === 'bard' && run.prices?.bard ? ` · ${coins(run.prices.bard)}` : spot === 'yvesil' && run.prices?.yvesil ? ` · ${coins(run.prices.yvesil)}` : spot === 'jorvash' && run.prices?.jorvash ? ` · ${coins(run.prices.jorvash)}` : ''}</span>
@@ -1797,7 +1797,7 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
                 : interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'blessed surged' : 'escaped surged')
                     : interlude.stage === 'darren' && interlude.roll !== undefined && revealed ? (interlude.outcome === 'smash' ? 'escaped' : 'caught')
                         : '';
-    const portrait = SPOT_PORTRAITS[spot];
+    const portrait = spotPortrait(spot, run.place); // (the Lady's shrine has its own painting aboard the ship)
     // The hot tub, the Lady's shrine, the Bard and the Cult of Kram have their own ambience while their scene is up, and a
     // sound for what the soak or the candle brings (the user's clips, 27 Oct).
     // (Yvesil's theme, and Weal or Woe as her omen is told: the user's, 9 Nov.)

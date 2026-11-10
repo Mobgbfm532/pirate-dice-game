@@ -960,6 +960,7 @@ await cutOutFlat('bust-kram.jpg', 'kram', { holes: [[484, 500]] }); // backgroun
 await cutOutFlat('bust-elf-kid.jpg', 'elf-kid', { tolerance: 30, holes: [[238, 1010]] }); // the vial's pink liquid stays; background enclosed between his sleeve and waistcoat
 await cutOutFlat('hot-tub.jpg', 'hot-tub');
 await spotScene('shrine.jpg', 'shrine');
+await spotScene('shrine-ship.jpg', 'shrine-ship'); // (aboard the Salty Swallow, the user's, 10 Nov)
 // 21 Oct: Martha's three disguises, each face held up as a mask (the eye holes and the gap under her wrist go), and Brodor.
 await cutOutFlat('bust-martha-frak.jpg', 'martha-frak', { holes: [[772, 576], [873, 607], [760, 830]] });
 await cutOutFlat('bust-martha-duke.jpg', 'martha-duke', { tolerance: 30, holes: [[771, 579], [871, 611], [760, 829]] }); // the purple mask stays

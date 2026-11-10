@@ -97,6 +97,10 @@ export const SPOT_PORTRAITS: Record<'thom' | 'shrine' | 'diceDen' | 'stranger' |
     jorvash: seated('jorvash.webp', [46, 20], 1.05, 703, 708, [0.9, -22.1]),
     yvesil: seated('yvesil.webp', [42, 21], 1.7, 840, 720, [4.4, -16.3])
 };
+// The Lady's shrine aboard the Salty Swallow (the user's painting, 10 Nov): the same statue below decks.
+const SHIP_SHRINE = seated('shrine-ship.webp', [50, 44], 1.35, 1024, 1024, [0, 0]);
+export const spotPortrait = (spot: keyof typeof SPOT_PORTRAITS, place?: string | null) =>
+    spot === 'shrine' && place === 'The Salty Swallow' ? SHIP_SHRINE : SPOT_PORTRAITS[spot];
 
 // What a player picks on the start screen: since 30 Oct seven of the game's painted item icons
 // (the user's call; they were six character portraits, still accepted from older devices and the

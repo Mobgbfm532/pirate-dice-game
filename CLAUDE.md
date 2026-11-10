@@ -469,7 +469,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `.disguise-swap`; the dev control `/disguise?as=Danhausen` sets one). Since 26 Oct each place
   has its backdrop (the user's paintings; `SCENES` in Backdrop.tsx by opponent, `placeBackdrop` for the
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
-  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine, Jorvash and Yvesil (Johnny Elf Bar stays ashore since 9 Nov, the user's) and no events of its
+  glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine (its own painting aboard since 10 Nov, the user's: `art/shrine-ship.jpg` → `shrine-ship.webp`, the statue below decks; `spotPortrait(spot, place)` in portraits.ts), Jorvash and Yvesil (Johnny Elf Bar stays ashore since 9 Nov, the user's) and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
   Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
   the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
