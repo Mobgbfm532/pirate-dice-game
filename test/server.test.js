@@ -349,6 +349,34 @@ test('every sea dial: a 1 is always port and a 6 always starboard (the user, 10 
     }
 });
 
+test('a fog bank: his dice land hidden and stay hidden, his finished score is kept from you, and he plays blind', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'Fog');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'fog';
+    // He can't see your hand.
+    room.players[hero.id].score = 20;
+    room.roundPlayers = [hero.id, 'BOT_MOLAR'];
+    assert.equal(server.getTavernScoreToBeat(room), undefined, 'he plays for his best');
+    // His finished hand is hidden from the state until yours is done, then shown.
+    room.players[hero.id].score = null;
+    room.players.BOT_MOLAR.score = 19;
+    let mine = server.getRoomState(codeOf(hero)).players.BOT_MOLAR;
+    assert.deepEqual([mine.score, mine.busted, mine.scoreHidden], [null, false, true]);
+    room.players[hero.id].score = 17;
+    mine = server.getRoomState(codeOf(hero)).players.BOT_MOLAR;
+    assert.equal(mine.score, 19, 'both done: shown');
+    assert.equal(room.players.BOT_MOLAR.score, 19, '(the real score is untouched)');
+    // His throws, and his finished hand, show no values.
+    const turn = { key: 'k', playerId: 'BOT_MOLAR', fogged: true, finalized: true, rollCount: 3, locksThisRoll: 1, hasRolled: true, suspense: 'perfect', outcome: { score: 19 },
+        dice: [2, 4, 6, 5, 4, 0].map((value, id) => ({ id, value, status: 'permanentlyLocked' })) };
+    const view = Rules.viewTurn(turn);
+    assert.ok(view.dice.every(d => d.value === 0 && d.hidden), 'hidden');
+    assert.equal(view.outcome, null);
+    assert.equal(view.suspense, 'none');
+    // The Hangman's dial has its fog bank on the 4.
+    assert.equal(require('../shared/balance').voyage.hangman[3], 'fog');
+});
+
 test('a Squall: two dice must be kept from every throw (never more than were thrown)', async () => {
     const hero = await tavernAgainst(fightOf('hangman'), 'Squall');
     const room = roomOf(hero);

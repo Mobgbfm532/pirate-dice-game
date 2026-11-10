@@ -46,7 +46,7 @@ module.exports = {
     voyage: {
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
         rokr: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'], // (Becalmed to come on 2-3)
-        hangman: ['port', 'squall', 'rogue', 'calm', 'calm', 'starboard'], // (Fog to come on 4)
+        hangman: ['port', 'squall', 'rogue', 'fog', 'calm', 'starboard'],
         jaguar: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'] // (his dial by phase to come)
     },
     finalShip: {

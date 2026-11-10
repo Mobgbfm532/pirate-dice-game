@@ -605,12 +605,20 @@ const SEAS = {
     rogue: { name: 'Heavy seas', text: 'After the first throw a rogue wave takes one loose die over the rail.', shift: 0, wave: true },
     // The Squall (10 Nov, the user's; docs/voyage-brainstorm.md): rain and wind, and every hand must keep two
     // dice from each throw (turn.mustKeep, Rules.keepsNeeded; never more than were thrown). Both sides.
-    squall: { name: 'Squall', text: 'Rain and wind: keep two dice from every throw.', shift: 0, mustKeep: 2 }
+    squall: { name: 'Squall', text: 'Rain and wind: keep two dice from every throw.', shift: 0, mustKeep: 2 },
+    // A fog bank (10 Nov, the user's; docs/voyage-brainstorm.md): neither side sees the other's hand until
+    // both have finished. His dice land hidden and stay so (turn.fogged, viewTurn), his score is kept out
+    // of the state (fogMask), and he can't see yours (getTavernScoreToBeat), so he plays for his best.
+    fog: { name: 'Fog bank', text: "Neither side sees the other's hand until both have finished.", shift: 0, fog: true }
 };
 // How many dice each throw must keep this round (the Squall's two, else one).
 function seaKeeps(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
     return sea && SEAS[sea] && SEAS[sea].mustKeep ? SEAS[sea].mustKeep : 1;
+}
+function seaFog(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return !!(sea && SEAS[sea] && SEAS[sea].fog);
 }
 function seaShift(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
@@ -684,7 +692,7 @@ function getRoomState(roomCode) {
     if (!room) return {};
 
     return {
-        players: room.players,
+        players: fogMask(room),
         playerOrder: room.playerOrder,
         roundPlayers: room.roundPlayers,
         currentTurnId: room.roundPlayers[room.currentTurnIndex],
@@ -694,6 +702,14 @@ function getRoomState(roomCode) {
         mode: room.mode || 'classic',
         tavernRun: getTavernRunState(room)
     };
+}
+
+// In a fog bank his finished hand stays out of sight until yours is done too: no score, no dust.
+function fogMask(room) {
+    let bot = room.players[BOT_ID];
+    let human = room.mode === 'tavern-crawl' && room.players[getHumanPlayerId(room)];
+    if (!bot || !human || !seaFog(room) || bot.score === null || human.score !== null) return room.players;
+    return { ...room.players, [BOT_ID]: { ...bot, score: null, busted: false, scoreHidden: true } };
 }
 
 function getTavernRunState(room) {
@@ -813,6 +829,7 @@ function syncTurn(roomCode) {
             run.klargHand = null;
         }
         if (run.jaguarPhase === 'cloak') room.turn.cloaked = true;
+        if (seaFog(room)) room.turn.fogged = true;
     }
     if (room.turn.playerId === BOT_ID && isTurnPlayable(roomCode)) {
         botLater(roomCode, key, Math.max(1000, Math.round(momentsLeft(room) / TIME_SCALE) + 300), () => runBotRoll(roomCode));
@@ -1057,7 +1074,7 @@ function performRoll(roomCode) {
     let abilitySixes = !!turn.abilitySixes;
     // (No three 6s moment on hidden dice, Starry Form or the Cloak: it would show what they are. 10 Nov.)
     turn.abilitySixes = false;
-    let thrown = { sea: seaShift(room) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let thrown = { sea: seaShift(room) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1312,6 +1329,7 @@ function getTavernScoreToBeat(room) {
     let human = humanId && room.players[humanId];
     if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
     if (room.tavernRun.cloud) return undefined; // Cotton Candy Cloud: they can't see it, and play for their best
+    if (seaFog(room)) return undefined; // (a fog bank: nor in fog)
     if (human.busted) return null;
     let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
     let effect = room.tavernRun.roundEffect;

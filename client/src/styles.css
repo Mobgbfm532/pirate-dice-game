@@ -3253,6 +3253,17 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .round-plaque.sea-squall { --accent: #c3c9ff; --tint: rgba(60, 64, 120, 0.4); }
 .sea-squall .sea-ship { animation: sea-pitch 1.1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .squall-rain { animation: none; } }
+/* A fog bank (10 Nov): soft banks of mist drifting slowly across, thickest over the far side of the table. */
+.fog-bank { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; background: linear-gradient(rgba(190, 200, 212, 0.16), rgba(170, 182, 196, 0.1) 60%, rgba(150, 160, 175, 0.04)); animation: sea-fade-in 1.6s ease-out both; }
+.fog-layer { position: absolute; left: -45%; width: 190%; border-radius: 50%; filter: blur(22px); opacity: 0.55; background: radial-gradient(ellipse at 28% 50%, rgba(226, 232, 240, 0.95), rgba(210, 218, 228, 0.45) 42%, transparent 68%), radial-gradient(ellipse at 72% 45%, rgba(236, 240, 246, 0.9), transparent 58%); animation: fog-drift 34s ease-in-out infinite alternate; }
+.fog-layer.l0 { top: 26%; height: 22%; }
+.fog-layer.l1 { top: 38%; height: 20%; opacity: 0.45; animation-duration: 46s; animation-direction: alternate-reverse; }
+.fog-layer.l2 { top: 8%; height: 26%; opacity: 0.4; animation-duration: 40s; }
+.fog-layer.l3 { top: 50%; height: 16%; opacity: 0.3; animation-duration: 56s; animation-direction: alternate-reverse; }
+@keyframes fog-drift { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
+.round-plaque.sea-fog { --accent: #e8eef5; --tint: rgba(150, 160, 175, 0.32); }
+.sea-fog .sea-ship { opacity: 0.75; filter: blur(0.4px); }
+@media (prefers-reduced-motion: reduce) { .fog-bank, .fog-layer { animation: none; } }
 .sea-moment.wave-moment .sea-crest { animation: sea-crest 1.3s cubic-bezier(0.3, 0.6, 0.4, 1) 0.1s both; }
 .wave-moment .sea-news { animation-delay: 0.35s; }
 .wave-moment .sea-title { text-shadow: 0 0 18px rgba(230, 248, 255, 0.9), 0 0 42px rgba(90, 150, 190, 0.8), 0 3px 4px #000; }

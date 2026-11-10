@@ -361,7 +361,8 @@
     function viewTurn(turn) {
         if (!turn) return null;
         // (Jaguar's Cloak: all his dice hidden until his hand is done.)
-        const cloaked = !!turn.cloaked && !turn.finalized;
+        // (A fog bank: his dice stay hidden even once his hand is done, until both hands are: a new turn.)
+        const cloaked = (!!turn.cloaked && !turn.finalized) || !!turn.fogged;
         const hide = d => (cloaked && d.status !== STATUS.STOLEN) || (turn.blurActive && (d.status === STATUS.ACTIVE || d.status === STATUS.LOCKED_THIS_ROLL));
         const bound = d => d.status === STATUS.ACTIVE && !!turn.boundIds && turn.boundIds.includes(d.id);
         return {
@@ -373,13 +374,13 @@
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,
             blurActive: turn.blurActive,
-            suspense: turn.suspense,
+            suspense: turn.fogged ? 'none' : turn.suspense,
             callout: turn.callout,
             finalized: turn.finalized,
             // Every die kept by the player's own taps: End Turn fixes it (finishTurn); until then a
             // die kept this throw can go back.
             complete: !turn.finalized && !!turn.complete && !turn.dice.some(isActive),
-            outcome: turn.outcome,
+            outcome: turn.fogged ? null : turn.outcome,
             canRoll: canRoll(turn),
             ...(turn.mustKeep > 1 ? { mustKeep: turn.mustKeep } : {}),
             steady: !!turn.steady,

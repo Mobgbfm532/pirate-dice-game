@@ -65,7 +65,7 @@ fight odds.
 5. **St Elmo's fire (the storm's gift). Cut 10 Nov (the user: "I do not like that one").** Blue fire dances on one die of your first throw, and it can
    count as the 2 or 4 you need. Dust falls from 25% to 7%. With the Squall, 9% dust: the storm takes
    away and gives back. Its cyan glow can match Yvesil's staff.
-6. **Fog bank.** Neither side sees the other's score until both have finished: you play to an unknown
+6. **Fog bank. Built 10 Nov** (on the Hangman's dial, face 4): his dice land hidden and stay hidden, his finished score shows "?" until your hand is done, and he can't see yours, so he plays for his best; mist drifts over the table. No sound yet. As brainstormed: neither side sees the other's score until both have finished: you play to an unknown
    target, and going second loses its advantage. The Cotton Candy Cloud already does this, so it's cheap
    to build. Not simulated (it changes decisions, not dice).
 7. **Clear skies.** Nothing happens (built: "Calm seas"). The voyage needs breathing rounds, or the

@@ -7,7 +7,7 @@ import { lookNext } from './look';
 import { playSeaSwell, playChime, playDiceImpacts, playSound, startMusic, ABILITY_SOUNDS, SWITCH_LEAD_MS } from './sounds';
 
 // The Salty Swallow's sea (server SEAS): shift +1 every die one higher, -1 one lower.
-export interface SeaState { id: 'calm' | 'starboard' | 'port' | 'rogue' | 'squall'; name: string; text: string; shift: number }
+export interface SeaState { id: 'calm' | 'starboard' | 'port' | 'rogue' | 'squall' | 'fog'; name: string; text: string; shift: number }
 // The sea die's roll as a round begins (server setSea): its face, the leg's dial, and whether the sea changed.
 // Heavy seas' rogue wave (server rogueWave, 10 Nov): the die it takes over the rail, and whose.
 export interface RogueWave { dieId: number; value: number; playerId: string; name: string }
@@ -26,6 +26,7 @@ export interface Player {
     score: number | null;
     busted: boolean;
     connected: boolean;
+    scoreHidden?: boolean; // a fog bank: they've finished, but their hand stays hidden until yours is done
 }
 
 export interface Keepsake { id: string; name: string; text: string }
@@ -781,7 +782,7 @@ const FLOOD_WAVE_MS = 2200; // (the server's too)
 export const SEA_SHOW_MS = 4000; // the sea changes (the server's too)
 export const SEA_HOLD_MS = 2800; // the sea holds (the server's too)
 export const SEA_LAND_MS = 1150; // the die lands; the needle settles and the news comes just after
-const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1, rogue: 0, squall: 0 };
+const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1, rogue: 0, squall: 0, fog: 0 };
 function showSea(data: SeaRoll, hold = 0) {
     const at = performance.now();
     update({ seaMoment: { ...data, at: at + hold } });
@@ -1297,8 +1298,8 @@ export const preview = {
     sail(stage: 'dock' | 'sail' = 'sail') { update({ sailAt: performance.now(), sailStage: stage }); },
     // Aboard: a change of sea's moment, e.g. sea('starboard', 'calm'); hold keeps it up that much longer.
     sea(id: SeaState['id'] = 'starboard', from: string | null = 'calm', hold = 0, face = 0) {
-        const names = { calm: 'Calm seas', starboard: 'Listing to starboard', port: 'Listing to port', rogue: 'Heavy seas', squall: 'Squall' };
-        const faces: SeaState['id'][] = ['port', 'squall', 'rogue', 'calm', 'calm', 'starboard'];
+        const names = { calm: 'Calm seas', starboard: 'Listing to starboard', port: 'Listing to port', rogue: 'Heavy seas', squall: 'Squall', fog: 'Fog bank' };
+        const faces: SeaState['id'][] = ['port', 'squall', 'rogue', 'fog', 'calm', 'starboard'];
         const landed = face || faces.indexOf(id) + 1;
         showSea({ id, name: names[id], text: '', shift: SEA_SHIFTS[id], from, face: landed, faces, changed: id !== from }, hold);
     },
