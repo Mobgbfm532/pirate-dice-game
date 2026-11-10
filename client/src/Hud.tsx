@@ -2516,7 +2516,7 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
 // the die tumbles, then swings onto the face it landed on (with overshoot) and that sector lights up.
 // The painting's geometry, in `sea-dial.webp`'s pixels (1245x679): the needle's pivot, and the sectors'
 // radii; the needle (`sea-dial-needle.webp`, 186x701) turns about the middle of its hub ring.
-const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#5b6f86', '#e4f4ff'], squall: ['#4b4f7a', '#c3c9ff'] };
+const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#22c7c0', '#b8fff6'], squall: ['#8a5cf0', '#d8c8ff'] }; // (10 Nov: brighter, as the tints are screen-blended onto the painting and the old slate and indigo barely showed)
 const faceAngle = (face: number) => -75 + (face - 1) * 30;
 const DIAL = { w: 1245, h: 679, cx: 621, cy: 626, R: 414, r: 72 };
 const NEEDLE = { w: 186, h: 701, px: 92.6, py: 603.6, reach: 372 };

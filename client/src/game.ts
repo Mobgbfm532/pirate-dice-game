@@ -243,6 +243,11 @@ export function klargStealing() {
     return !!snapshot.turn?.dice.some(d => d.status === 'stolen' && (table.stolenAt.get(d.id) ?? 0) + STEAL_MS > now);
 }
 let stealReadyAt = 0; // when his banner may come up (the dice have settled)
+// Dice he has taken that wait on the felt for his banner: the banner sends his paw, however late it
+// comes (10 Nov: a fallback of 4 s after the landing sent the paw in before a late banner, on slower
+// phones, and the die went before the banner showed).
+const stealWaiting = new Set<number>();
+const STEAL_FALLBACK_MS = 15000; // (only if the banner never comes)
 
 // Read every frame by the 3D table, so it lives outside React state.
 export const table = {
@@ -396,6 +401,7 @@ function setCallout(turn: TurnView | null, callout: string | null, outcome: Turn
 function resetTrayForNewTurn() {
     table.rest.clear();
     table.stolenAt.clear();
+    stealWaiting.clear();
     table.washedAt.clear();
     table.lockOrder.clear();
     for (let id = 0; id < 6; id++) {
@@ -575,7 +581,8 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
                 // the moment his hand comes; this is only in case the banner never does).
                 if (d.status === 'stolen') {
                     stealReadyAt = performance.now() + STEAL_PAUSE_MS;
-                    table.stolenAt.set(d.id, performance.now() + 4000);
+                    table.stolenAt.set(d.id, performance.now() + STEAL_FALLBACK_MS);
+                    stealWaiting.add(d.id);
                 }
             });
             table.roll = null;
@@ -755,7 +762,8 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
         // His hand comes for the die as the banner leaves (its last 0.15 s are it rising away).
         if (steal && !data.cancelled) {
             const hand = performance.now() + MOMENT_SHOW_MS - 150;
-            snapshot.turn?.dice.forEach(d => { if (d.status === 'stolen' && (table.stolenAt.get(d.id) ?? 0) > performance.now()) table.stolenAt.set(d.id, hand); });
+            snapshot.turn?.dice.forEach(d => { if (d.status === 'stolen' && (stealWaiting.has(d.id) || (table.stolenAt.get(d.id) ?? 0) > performance.now())) table.stolenAt.set(d.id, hand); });
+            stealWaiting.clear();
             // (The nameplate shows it in his hand once his paw has got it there.)
             setTimeout(() => update({ klargCaughtAt: performance.now() }), hand - performance.now() + STEAL_MS + 60);
         }

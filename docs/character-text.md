@@ -13,7 +13,7 @@ Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a h
 
 **Rokr**: Starry Form. Card: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." Plaque: "Keep blind: they show at your next throw".
 
-**The Hangman**: Penitent Stare (the user's name). Card: "Once a fight, after he's lost a life: this round your hand scores 2 less for each heart you've taken from him." Plaque: "Your hand scores [n] less".
+**The Hangman**: Penitent Stare (the user's name). Card: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." Moment: "Your [n] becomes [m]." (No plaque since 10 Nov: it isn't telegraphed.)
 
 **Yvesil**, "Oracle of the Salty Swallow". Card: "Shall I read your next fight?" / "A good omen, or a bad one". Scene: "Cross her palm, and she reads your fight with [next]. It may not be what you want to hear." Good: "The sea smiles on you." Bad: "Ah. I am sorry." Walking away: "The sea will tell you itself, then." Omens: Fair Winds, Following Sea, The Albatross, The Black Spot (the user's picks).
 

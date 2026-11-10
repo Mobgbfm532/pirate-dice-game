@@ -423,40 +423,44 @@ test("Rokr's Starry Form hides your dice under constellations: you keep blind, a
     assert.equal(room.tavernRun.abilityUsed.constellationBlur, 1);
 });
 
-test("the Hangman's Penitent Stare takes 2 off your hand per heart you've taken; not before he's lost one; Clear-Eye stops it", async () => {
-    const hero = await tavernAgainst(fightOf('hangman'), 'Stare');
-    const room = roomOf(hero);
-    room.tavernRun.abilityRound = 1;
-    room.players.BOT_MOLAR.lives = server.TAVERN_ENCOUNTERS[fightOf('hangman')].lives;
+test("the Hangman's Penitent Stare: hidden until both hands are done, used only when it saves him the round; Clear-Eye stops it", async () => {
+    const hangman = server.TAVERN_ENCOUNTERS[fightOf('hangman')];
+    // A table where both hands are finished: yours `mine`, his `his`, with `taken` of his hearts gone.
+    const setUp = async (name, mine, his, taken, shelf = []) => {
+        const hero = await tavernAgainst(fightOf('hangman'), name);
+        const room = roomOf(hero);
+        room.tavernRun.abilityRound = 1;
+        room.tavernRun.shelf = shelf;
+        if (shelf.length) { hero.emit('drinkThonic', 0); await sleep(40); }
+        room.players.BOT_MOLAR.lives = hangman.lives - taken;
+        room.roundPlayers = [hero.id, 'BOT_MOLAR'];
+        Object.assign(room.players[hero.id], { score: mine, busted: false });
+        Object.assign(room.players.BOT_MOLAR, { score: his, busted: false });
+        return { hero, room };
+    };
+    // Nothing as a round begins: no banner, no plaque.
+    let { hero, room } = await setUp('StareQuiet', null, null, 2);
     server.beginTavernRound(codeOf(hero), room);
-    assert.equal(room.tavernRun.roundEffect, null, 'he has lost nothing yet');
-    room.players.BOT_MOLAR.lives = 1; // two taken
-    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Penitent Stare', 4000);
-    server.beginTavernRound(codeOf(hero), room);
-    await move;
-    assert.equal(room.tavernRun.roundEffect.off, 4);
-    hero.emit('rollDice');
-    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
-    room.turn.dice.forEach((d, i) => { d.value = [2, 4, 6, 5, 5, 5][i]; }); // 21
-    await sleep(rolled.animationMs * 0.01 + 30);
-    const finished = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && (d.turn.complete || d.turn.finalized), 4000);
-    room.turn.dice.forEach(d => hero.emit('toggleDie', d.id));
-    await finished;
-    const scored = nextState(hero, st => st.currentTurnId !== hero.id);
-    hero.emit('endTurn');
-    assert.equal((await scored).players[hero.id].score, 17);
-    // Once a fight, and a Clear-Eye stops it.
-    const clear = await tavernAgainst(fightOf('hangman'), 'StareClear');
-    const croom = roomOf(clear);
-    croom.tavernRun.abilityRound = 1;
-    croom.tavernRun.shelf = ['clearEye'];
-    clear.emit('drinkThonic', 0);
-    await sleep(40);
-    croom.players.BOT_MOLAR.lives = 2;
-    const cancelled = waitFor(clear, 'signatureMove', m => m.ability === 'Penitent Stare', 4000);
-    server.beginTavernRound(codeOf(clear), croom);
+    assert.equal(room.tavernRun.roundEffect, null, 'not telegraphed');
+    assert.ok(!room.tavernRun.abilityUsed.penitentStare);
+    // Your 20 against his 17, two hearts taken: 4 off, 16, and he wins the round.
+    ({ hero, room } = await setUp('StareWins', 20, 17, 2));
+    assert.equal(server.getTavernScoreToBeat(room), 16, 'he plays knowing he holds it');
+    let move = waitFor(hero, 'signatureMove', m => m.ability === 'Penitent Stare', 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    assert.equal((await move).extra, '20 → 16');
+    assert.equal(room.tavernRun.abilityUsed.penitentStare, 1);
+    // Not when he's winning anyway, nor when it wouldn't save him, nor before he's lost a heart.
+    for (const [name, mine, his, taken] of [['StareAhead', 18, 21, 2], ['StareShort', 24, 17, 2], ['StareFresh', 20, 19, 0]]) {
+        ({ hero, room } = await setUp(name, mine, his, taken));
+        server.evaluateTavernRound(codeOf(hero));
+        assert.ok(!room.tavernRun.abilityUsed.penitentStare, name);
+    }
+    // A Clear-Eye stops it.
+    ({ hero, room } = await setUp('StareClear', 20, 17, 2, ['clearEye']));
+    const cancelled = waitFor(hero, 'signatureMove', m => m.ability === 'Penitent Stare', 4000);
+    server.evaluateTavernRound(codeOf(hero));
     assert.equal((await cancelled).cancelled, true);
-    assert.equal(croom.tavernRun.roundEffect, null);
 });
 
 test('Yvesil reads an omen for the next fight, Jorvash pours a refreshment; both are the ship\'s only', async () => {

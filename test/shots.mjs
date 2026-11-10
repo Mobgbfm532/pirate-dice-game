@@ -43,6 +43,8 @@ const MOMENTS = {
     floodwave: `preview.floodWave()`,
     dock: `preview.sail('dock')`, // (Skipper Bren on the quay)
     sail: `preview.sail()`,
+    searogue: `preview.sea('rogue', 'calm', 60000)`, // (the sea die landing on Heavy seas, the dial held)
+    seainfo: `document.querySelector('.plaque-button').click()`, // (the sea's explainer, with the leg's dial)
     card: `document.querySelector('.plate-info').click()` // (the opponent's card, from the i on the nameplate)
 };
 const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
@@ -150,7 +152,7 @@ try {
             // (hold: a moment's own timers that would hide it, a second and more, never fire.)
             if (args.hold) await evaluate(`(() => { const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms > 1000 ? 1e9 : ms, ...a); })()`);
             await evaluate(`(({ preview, table, store }) => { ${MOMENTS[moment]}; })(window.__game)`);
-            await wait(args.hold ? 50 : 700); // near its brightest (a slow page needs the time to draw the moment)
+            await wait((args.hold ? 50 : 700) + Number(args.after ?? 0)); // near its brightest (after=<ms>: later) (a slow page needs the time to draw the moment)
             // hold=<ms>: every animation stopped at that point of the moment (a still for slow pages).
             if (args.hold) { await evaluate(`(() => { const s = window.__game.store.get(); const at = Math.max(s.ability?.at ?? 0, s.celebration?.at ?? 0, s.floodWaveAt ?? 0, Number(s.callout?.key) || 0); performance.now = () => at + ${Number(args.hold)}; document.getAnimations().forEach(a => { a.pause(); a.currentTime = ${Number(args.hold)}; }); })()`); await wait(1500); }
         }

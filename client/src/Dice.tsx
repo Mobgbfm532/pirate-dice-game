@@ -64,6 +64,8 @@ function stealProgress(id: number, now: number) {
     return s.t;
 }
 const farAway = new THREE.Vector3();
+const gripTurn = new THREE.Quaternion();
+const UP = new THREE.Vector3(0, 1, 0);
 const overDie = new THREE.Vector3();
 function stealGrip(rest: THREE.Vector3, t: number, out: THREE.Vector3) {
     farAway.set(rest.x * 0.35, rest.y + 3.4, TABLE_FAR_EDGE_Z - 1.6);
@@ -78,10 +80,12 @@ function stealGrip(rest: THREE.Vector3, t: number, out: THREE.Vector3) {
         const p = smooth((t - (GRIP - 0.08)) / 0.08);
         return out.set(rest.x, rest.y + DIE_SIZE * 0.7 * (1 - p), rest.z);
     }
-    // A heave, then away with it, quicker as it goes.
+    // A heave up, clear of the rail (10 Nov: carried low, the die dipped behind it), then away with it, quicker as it goes.
     const p = (t - GRIP) / (1 - GRIP);
     overDie.copy(rest);
-    return out.copy(overDie).lerp(farAway, p * p * (1.4 - 0.4 * p));
+    out.copy(overDie).lerp(farAway, p * p * (1.4 - 0.4 * p));
+    out.y += Math.sin(Math.min(1, p * 2.2) * Math.PI / 2) * (1 - p) * (TRAY.wallHeight + DIE_SIZE * 1.4);
+    return out;
 }
 
 // The paw: a picture facing the camera, drawn over the table, its empty grip on the die's path.
@@ -322,8 +326,14 @@ export function Dice() {
                     if (rest) {
                         if (t >= GRIP) {
                             stealGrip(rest.position, t, mesh.position);
-                            mesh.rotateY(Math.min(delta, 0.05) * 3 * ((t - GRIP) / (1 - GRIP)));
-                        } else mesh.position.copy(rest.position);
+                            // A slight turn in his grip, about the upright: its face up stays up (10 Nov: it
+                            // spun on its own axis, so a die lying on another face tumbled and showed others).
+                            gripTurn.setFromAxisAngle(UP, 0.5 * smooth((t - GRIP) / (1 - GRIP)));
+                            mesh.quaternion.copy(rest.quaternion).premultiply(gripTurn);
+                        } else {
+                            mesh.position.copy(rest.position);
+                            mesh.quaternion.copy(rest.quaternion);
+                        }
                     }
                     mesh.scale.setScalar(1 - 0.25 * Math.max(0, (t - GRIP) / (1 - GRIP)));
                     mesh.visible = t < 0.97;

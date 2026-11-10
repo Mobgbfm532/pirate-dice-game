@@ -296,7 +296,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'penitentStare',
         abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
         blurb: "The Hangman and The Ace of Spades, his revolver.",
-        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life: this round your hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
+        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
     },
     {
         id: 'jaguar',
@@ -1169,13 +1169,6 @@ function performEndTurn(roomCode) {
                 emitTurn(roomCode, { type: 'shot', die: shot.id });
             }
         }
-        // The Hangman's Penitent Stare: this round your hand feels every heart you've taken from him.
-        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && effect && effect.kind === 'stare') {
-            let was = score;
-            score = Math.max(0, score - effect.off);
-            room.players[currentId].score = score;
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.penitentStare, text: `Your ${was} becomes ${score}.`, extra: `${was} → ${score}` });
-        }
         // Yvesil's Black Spot, and Jorvash's Notaro Red (your first hand that counts).
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.omen === 'blackSpot') {
             score = Math.max(0, score - (INTERLUDE.blackSpot ?? 1));
@@ -1324,7 +1317,33 @@ function getTavernScoreToBeat(room) {
     let effect = room.tavernRun.roundEffect;
     let cursed = effect && effect.kind === 'curse';
     let score = BALANCE.devilCap != null && effect && effect.kind === 'devil' && effect.by === 'opponent' ? Math.min(human.score, BALANCE.devilCap) : human.score;
+    // The Hangman plays knowing he holds his Penitent Stare: he needs only to reach your hand less it.
+    if (!cursed && !room.tavernRun.clearEyeArmed) score = Math.max(0, score - stareOff(room)); // (as with his Ace, he knows a Clear-Eye is waiting)
     return score + (cushion ? (cursed ? -1 : 1) : 0);
+}
+
+// The Hangman's Penitent Stare (6 Nov; since 10 Nov kept hidden until it's used, the user's): once a
+// fight, after he's lost a life, 2 off your finished hand for each heart you've taken from him. How
+// much it would take now (0: he can't use it).
+function stareOff(room) {
+    let encounter = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] : null;
+    let bot = room.players[BOT_ID];
+    if (!encounter || encounter.ability !== 'penitentStare' || !bot) return 0;
+    let taken = encounter.lives - bot.lives;
+    if (taken <= 0 || !canUseTavernAbility(room, encounter, 'penitentStare')) return 0;
+    return taken * (INTERLUDE.stareEachHeart ?? 2);
+}
+// With both hands done: he stares only when he isn't winning already and the Stare wins or ties him
+// the round (never on a dust hand, his or yours). Its moment shows your score falling.
+function stareTurnsRound(roomCode, room, human, enemy) {
+    let off = stareOff(room);
+    if (!off || human.busted || enemy.busted || !(human.score > 0) || enemy.score > human.score) return;
+    if (human.score - off > enemy.score) return; // (it wouldn't save him)
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!fireTavernAbility(roomCode, room, encounter, 'penitentStare')) return; // (a Clear-Eye saw it coming)
+    let was = human.score;
+    human.score = Math.max(0, was - off);
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.penitentStare, text: `Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}` });
 }
 
 // True when a Tavern Crawl opponent can no longer win or tie the round, whatever the dice
@@ -1942,16 +1961,9 @@ function beginTavernRound(roomCode, room) {
         }
         return;
     }
-    // The Hangman's Penitent Stare (6 Nov, the user's): once a fight, after he's lost a life: this round
-    // your hand scores less for each heart you've taken from him.
-    if (encounter.ability === 'penitentStare') {
-        let taken = bot ? encounter.lives - bot.lives : 0;
-        if (taken > 0 && fireTavernAbility(roomCode, room, encounter, 'penitentStare')) {
-            run.roundEffect = { kind: 'stare', by: 'opponent', ability: 'penitentStare', as: null, off: taken * (INTERLUDE.stareEachHeart ?? 2) };
-            sendMoment(roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, `This round your hand scores ${run.roundEffect.off} less.`));
-        }
-        return;
-    }
+    // The Hangman's Penitent Stare isn't decided as a round begins: he keeps it to himself until both
+    // hands are done, and uses it only when it saves him the round (stareTurnsRound, 10 Nov, the user's).
+    if (encounter.ability === 'penitentStare') return;
     let disguise = encounter.ability === 'disguises' ? DISGUISES[crypto.randomInt(0, DISGUISES.length)] : null;
     let ability = disguise ? disguise.ability : encounter.ability;
     if (!ROUND_ABILITIES[ability] || !canUseTavernAbility(room, encounter, encounter.ability)) return;
@@ -2347,6 +2359,7 @@ function evaluateTavernRound(roomCode) {
         if (!capped.busted) capped.score = Math.min(capped.score, BALANCE.devilCap);
     }
     let cursed = !!effect && effect.kind === 'curse';
+    if (!cursed) stareTurnsRound(roomCode, room, human, enemy);
     let valid = roundPlayers.filter(id => !room.players[id].busted);
     if (valid.length > 1) {
         let scores = valid.map(id => room.players[id].score);
@@ -3244,4 +3257,4 @@ if (require.main === module) start();
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
