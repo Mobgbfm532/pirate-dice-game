@@ -114,7 +114,14 @@
         if (turn.finalized) return false;
         if (!turn.dice.some(isActive)) return false;
         // freeRoll: a die put back by Second Thoughts may be rolled without keeping another.
-        return !turn.hasRolled || turn.locksThisRoll > 0 || !!turn.freeRoll;
+        return !turn.hasRolled || turn.locksThisRoll >= keepsNeeded(turn) || !!turn.freeRoll;
+    }
+
+    // How many dice must be kept from a throw before the next: one, or in a Squall (turn.mustKeep, 10 Nov)
+    // two, but never more than were thrown (keeping both of two ends the hand).
+    function keepsNeeded(turn) {
+        const thrown = turn.locksThisRoll + turn.dice.filter(isActive).length;
+        return Math.max(1, Math.min(turn.mustKeep || 1, thrown));
     }
 
     const CLEARED_ON_NEXT_ROLL = [CALLOUT.EARLY_ROSS, CALLOUT.DIDNT_BITE, CALLOUT.PHEW, CALLOUT.DOOR_OPEN];
@@ -374,6 +381,7 @@
             complete: !turn.finalized && !!turn.complete && !turn.dice.some(isActive),
             outcome: turn.outcome,
             canRoll: canRoll(turn),
+            ...(turn.mustKeep > 1 ? { mustKeep: turn.mustKeep } : {}),
             steady: !!turn.steady,
             // Rokr's Written in the Stars: the faces marked for the next throw (this turn), and
             // whether this turn is under the stars at all.
@@ -479,6 +487,6 @@
         formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        finishTurn, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        finishTurn, keepsNeeded, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });

@@ -10,14 +10,13 @@ day they happen, with what's been built marked as it lands.
 ## Open
 
 ### The voyage (`docs/voyage-brainstorm.md`)
-- **Sea dials per leg are first guesses** (`BALANCE.voyage`), in the fixed order (10 Nov): Klarg 1 port, 2-5 calm, 6 starboard; Rokr 1-2 port, 3-6 calm; the Hangman 1 port, 2-3 Heavy seas, 4-5 calm, 6 starboard; Jaguar 1-3 port, 4 calm, 5-6 starboard. The Hangman's middle faces wait for the Squall, St Elmo's fire and Fog.
+- **The final dials (proposed 10 Nov):** the table in `docs/voyage-brainstorm.md` ("The final dials"), Jaguar's changing with his phase. Waiting on the user.
+- **Sea dials now** (`BALANCE.voyage`, first guesses): 1 port and 6 starboard on every leg (the user, 10 Nov); faces 2-5 calm, except the Hangman's 2 Squall and 3 Heavy seas, until the other weathers are built.
 - **The Rogue wave's sound:** the user will send a clip (10 Nov); until then the swell's synthesized wave plays.
 - **The opponents and the Rogue wave:** their solver doesn't know a wave is coming, so they keep as on a calm sea. Teach it (and the balance simulator) before setting the dial's numbers?
+- **The Squall's sound:** no wind yet (rain shows, silently). A clip of the user's, if wanted.
 - **Jaguar's storm following his phases** (calm or fog, then squalls and waves, then heeling and waves)
   isn't built; his dial is a plain mix for now.
-- **The forecast:** the brainstorm showed each round's weather a round ahead; the sea die (9 Nov)
-  shows it only as the round begins. Fine for the Rogue wave (you see it before your first throw);
-  should a Spyglass or Yvesil bring the round-ahead forecast back?
 - The ship's ability names are still working names: Smooth Talk, the Cloak, All In.
 
 ### Small things
@@ -41,7 +40,8 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ## Settled
-- 10 Nov: the sea dial has one fixed order on every leg: port on the low faces, calm and the storms in the middle, starboard on the high faces.
+- 10 Nov: St Elmo's fire is cut. So is the player's say over the sea: no Compass, Spyglass, Yvesil's forecast or Ginger Thonic.
+- 10 Nov: on every sea dial a 1 is listing to port and a 6 listing to starboard; faces 2-5 are each leg's own weather.
 - 10 Nov: the Rogue wave spares your last loose die: dice kept after the first throw stay, so a hand that kept five finishes with six.
 - 10 Nov: Yvesil is a her. The intro's last scene doesn't glitch. The floating constellations over
   Starry Form's dice stay, appearing with the throw. The thief's text says "spot them". The Loaded Die

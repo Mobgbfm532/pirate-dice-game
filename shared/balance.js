@@ -41,14 +41,13 @@ module.exports = {
     // roll of the sea die, and its face (1-6) on this leg's dial is the round's weather: port (every die
     // lands one lower, no 6s), calm, or starboard (one higher, no 1s). Both sides. The first round is
     // calm. Klarg's leg is the calmest, Jaguar's the roughest. First guesses.
-    // The sea die's dial per leg (the user, 10 Nov: one fixed order on every leg): port always on the low
-    // faces, calm and the storms in the middle, starboard always on the high faces; legs differ only in
-    // how many faces each gets. First guesses for the numbers.
+    // The sea die's dial per leg (the user, 10 Nov): a 1 is always listing to port and a 6 always listing
+    // to starboard, on every leg; legs differ only in faces 2-5 (calm and the storms). First guesses.
     voyage: {
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
-        rokr: ['port', 'port', 'calm', 'calm', 'calm', 'calm'],
-        hangman: ['port', 'rogue', 'rogue', 'calm', 'calm', 'starboard'],
-        jaguar: ['port', 'port', 'port', 'calm', 'starboard', 'starboard']
+        rokr: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'], // (Becalmed to come on 2-3)
+        hangman: ['port', 'squall', 'rogue', 'calm', 'calm', 'starboard'], // (Fog to come on 4)
+        jaguar: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'] // (his dial by phase to come)
     },
     finalShip: {
         klargWaits: true,        // Klarg steals when a 2 or 4 you still need shows (else: on your first throw)

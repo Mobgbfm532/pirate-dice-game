@@ -130,7 +130,8 @@ function Line({ at, out, place = 'low', text }: { at: number[]; out: number; pla
 
 // Rain: streaks drawn afresh each frame on one canvas the size of the screen. (Until 6 Nov, two big
 // scrolling layers per shot, far too much for a phone's graphics memory, with everything else.)
-function Rain() {
+// (Also the Squall's rain over the table, 10 Nov: `className` and a steeper `slant` in the wind.)
+export function Rain({ className = 'film-rain', slant: tilt = 9, heavy = 1 }: { className?: string; slant?: number; heavy?: number } = {}) {
     const canvas = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         const el = canvas.current;
@@ -143,15 +144,15 @@ function Rain() {
         g.scale(ratio, ratio);
         g.lineCap = 'round';
         // A little slant, as the wind has it: for each pixel down, this far left.
-        const slant = Math.tan((9 * Math.PI) / 180);
+        const slant = Math.tan((tilt * Math.PI) / 180);
         const area = W * H;
         const make = (count: number, speed: number, long: number) => Array.from({ length: Math.min(count, 500) }, () => {
             const len = long * (0.5 + Math.random() * 0.8);
             return { x: Math.random() * (W + H * slant), y: Math.random() * (H + 60) - 60, len, v: speed * (0.9 + Math.random() * 0.2) };
         });
         const layers = [
-            { drops: make(area / 1500, 340, 22), width: 0.8, colour: 'rgba(190, 215, 240, 0.1)' },
-            { drops: make(area / 2600, 760, 32), width: 1.2, colour: 'rgba(200, 222, 245, 0.24)' }
+            { drops: make((area / 1500) * heavy, 340, 22), width: 0.8, colour: 'rgba(190, 215, 240, 0.1)' },
+            { drops: make((area / 2600) * heavy, 760, 32), width: 1.2, colour: 'rgba(200, 222, 245, 0.24)' }
         ];
         const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
         let frame = 0, last = performance.now();
@@ -176,8 +177,8 @@ function Rain() {
         };
         frame = requestAnimationFrame(draw);
         return () => cancelAnimationFrame(frame);
-    }, []);
-    return <canvas ref={canvas} className="film-rain" aria-hidden="true" />;
+    }, [tilt, heavy]);
+    return <canvas ref={canvas} className={className} aria-hidden="true" />;
 }
 
 // A part of the film exists only around its own time (6 Nov: with every shot alive for the whole film

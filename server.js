@@ -602,8 +602,16 @@ const SEAS = {
     port: { name: 'Listing to port', text: 'Every die lands one lower: no 6s.', shift: -1 },
     // The Rogue wave (10 Nov, the user's; docs/voyage-brainstorm.md): as each hand's second throw is made,
     // a wave crosses the deck and one loose die goes over the rail (rogueWave). Both sides.
-    rogue: { name: 'Heavy seas', text: 'After the first throw a rogue wave takes one loose die over the rail.', shift: 0, wave: true }
+    rogue: { name: 'Heavy seas', text: 'After the first throw a rogue wave takes one loose die over the rail.', shift: 0, wave: true },
+    // The Squall (10 Nov, the user's; docs/voyage-brainstorm.md): rain and wind, and every hand must keep two
+    // dice from each throw (turn.mustKeep, Rules.keepsNeeded; never more than were thrown). Both sides.
+    squall: { name: 'Squall', text: 'Rain and wind: keep two dice from every throw.', shift: 0, mustKeep: 2 }
 };
+// How many dice each throw must keep this round (the Squall's two, else one).
+function seaKeeps(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return sea && SEAS[sea] && SEAS[sea].mustKeep ? SEAS[sea].mustKeep : 1;
+}
 function seaShift(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
     return sea && SEAS[sea] ? SEAS[sea].shift : 0;
@@ -1005,6 +1013,7 @@ function performRoll(roomCode) {
     let signatureMoves = [];
     let preRollCallout = null;
     room.rollMoments = []; // moments raised while the dice are thrown wait until they land
+    if (!turn.hasRolled) turn.mustKeep = seaKeeps(room); // (the Squall: set as the hand begins)
     rogueWave(roomCode, room, turn);
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
@@ -1388,7 +1397,7 @@ function runBotDecision(roomCode) {
     // A cursed round is played for the fewest points; under the player's Devil the bot's
     // score counts as no more than the cap.
     let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
-    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room) };
+    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room), minKeep: seaKeeps(room) };
     let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
@@ -1401,6 +1410,14 @@ function runBotDecision(roomCode) {
     }
     // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
     // keep everything left at once and end the turn.
+    // (The simple players don't know the Squall: top their keep up to two, best dice first.)
+    let need = Math.min(round.minKeep, turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length);
+    if (toLock.length && toLock.length < need) {
+        let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+        let worth = d => ([2, 4].includes(d.value) && !kept.includes(d.value) ? 10 : round.low ? 7 - d.value : d.value);
+        let more = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !toLock.includes(d.id)).sort((a, b) => worth(b) - worth(a));
+        toLock = [...toLock, ...more.slice(0, need - toLock.length).map(d => d.id)];
+    }
     let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
     if (conceding) toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
 

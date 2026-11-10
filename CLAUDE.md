@@ -336,7 +336,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 165 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, saves after each place. 168 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
     for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);
@@ -600,7 +600,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   would show). **The sea die (9 Nov, the user's: "a dice roll to determine which weather"; it replaced the forecast):** from a
   fight's second round each round aboard begins with a roll of the sea die (`setSea`: `crypto.randomInt(1, 7)`,
   so tests' `pinFaces` pin it); its face on the leg's dial is the round's sea (`BALANCE.voyage` is now six faces
-  per opponent, since 10 Nov in one fixed order on every leg, the user's: port always on the low faces, calm and the storms in the middle, starboard always on the high faces (a test keeps it so); Klarg 1 port, 2-5 calm, 6 starboard; Rokr 1-2 port, 3-6 calm; the Hangman 1 port, 2-3 Heavy seas, 4-5 calm, 6 starboard; Jaguar 1-3 port, 4 calm, 5-6 starboard; first guesses). `seaFace`, `seaFaces` in the state; `nextSea` is always null. Every roll is a
+  per opponent, since 10 Nov, the user's: a 1 is always listing to port and a 6 always to starboard on every leg, faces 2-5 the leg's own weather (a test keeps it so); now 2-5 calm everywhere but the Hangman's 2 Squall and 3 Heavy seas; first guesses). `seaFace`, `seaFaces` in the state; `nextSea` is always null. Every roll is a
   moment (`seaChange` with `face`, `faces`, `changed`; 4 s when the sea changes, 2.8 s when it holds, on both
   sides): the die (the user's painted sea die, `art/dice-sea.jpg` → `sea-die.webp`, six faces in a strip, `seaDie()` in process-art.mjs; `SeaDie` in Hud; the real dice sound) tumbles in and lands, the needle of **the sea
   die's dial** (`SeaDial` in Hud: the user's painting `art/sea-dial.jpg` and needle `art/sea-dial-needle.jpg`, cut to
@@ -616,8 +616,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   painting (`art/bust-bren.jpg` → `bren.webp`, 9 Nov; a silhouette, `BrenSilhouette`, if it fails to load). Dev: `preview.sail('dock')`,
   `preview.sea(id, from, hold, face)`.
   **Heavy seas, the Rogue wave** (10 Nov, the user's, from the brainstorm): a sea of its own (`SEAS.rogue`, `wave: true`, on the Hangman's dial faces 2-3, a first guess): as a hand's second throw is made, once a hand, a wave takes one loose die at random over the rail (`rogueWave` in performRoll, before `thrownNow`: status STOLEN with `washed`, `turn.waveDone`); it spares a last loose die; both sides; the hand ends on five dice (best 18). Its moment (`rogueWave` event, `WAVE_SHOW_MS` 2.4 s on both sides, before the throw): the crest breaks across with spray, "Rogue wave!", the page heaves, the swell's sound, and the die rides the crest over the right-hand rail (`table.washedAt`, `washPose` in Dice.tsx, `WASH_MS`); the other dice are thrown after. Dev: `preview.wave(dieId)`, `/sea?now=rogue`. Tests: three in server.test.js (with the dials' order).
-  Dev: `/sea?now=starboard&next=port`. Next (the Rogue wave is built, 10 Nov; the brainstorm's order; the whole brainstorm, with its simulated numbers and each leg's weather mix, is
-  `docs/voyage-brainstorm.md`): the Squall, St Elmo's Fire, Fog (Becalmed for Rokr's leg); the player's say (Compass, Spyglass, Yvesil's forecast, a Ginger Thonic);
+  **The Squall** (10 Nov, the user's): a sea of its own (`SEAS.squall`, `mustKeep: 2`, the Hangman's face 2): every hand keeps two dice from each throw, never more than were thrown (`turn.mustKeep`, set as a hand begins in performRoll; `Rules.keepsNeeded` in `canRoll`, mirrored in the client's `keepsNeeded` for pending taps), both sides. The solver plays it (`minKeep` in strategy.js, for its own keeps and the sensible player it expects); the simple players top their keep up to two. On screen: the intro's rain, heavier and slanted by the wind, over the page while the round lasts (`SquallRain` in Hud, `Rain` exported from Intro.tsx with `slant`/`heavy`), the plaque in storm violet, "Squall!" on the sea die, the hint "Squall: keep one more die". No wind sound yet. Dev: `/sea?now=squall`. Tests: two.
+  Dev: `/sea?now=starboard&next=port`. Next (the Rogue wave and the Squall are built, 10 Nov; the brainstorm's order; the whole brainstorm, with its simulated numbers and each leg's weather mix, is
+  `docs/voyage-brainstorm.md`): Fog, Becalmed (St Elmo's fire and the player's say cut, 10 Nov, the user's; proposed final dials in the brainstorm);
   choosing a course; events aboard.
 - **Ability paintings (26 Oct, the user's):** an ability with a painting is a scene of its own: a
   stage in its colours over the whole screen (`.ability-stage`, solid underneath: the tavern and the
@@ -893,8 +894,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    scene no longer glitches; the floating constellations stay.
 2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
 3. **The voyage, more** (step 1, Heeling on the sea die, built 9 Nov; see "The sea"): next in the brainstorm's order (`docs/voyage-brainstorm.md`),
-   the Squall, St Elmo's Fire, Fog (the Rogue wave built 10 Nov, as Heavy seas); then the player's say (a Compass, a Spyglass, Yvesil's
-   forecast, a Ginger Thonic), choosing a course, events aboard. The sea die's faces per opponent
+   Fog, Becalmed (the Rogue wave, as Heavy seas, and the Squall built 10 Nov; St Elmo's fire and the player's say
+   cut, 10 Nov), Jaguar's dial by phase; then choosing a course, events aboard. The sea die's faces per opponent
    (`BALANCE.voyage`) are first guesses. The ship's other ability names are still working names (Smooth Talk, the
    Cloak, All In).
 4. **Small things waiting on the user's word** (all open questions are in `docs/open-questions.md`):

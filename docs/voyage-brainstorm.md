@@ -58,11 +58,11 @@ fight odds.
 2. **Rogue wave. Built 10 Nov** as "Heavy seas" on the sea die (the Hangman's dial, faces 2-3, a first guess): as each hand's second throw is made, a wave breaks across the screen and one loose die, at random, rides it over the right-hand rail; the rest are thrown. Both sides. It spares a last loose die (the user, 10 Nov: kept dice stay). The opponents don't yet play around it (their solver doesn't know it's coming). The plan as brainstormed: after your first throw a wave crosses the deck and one loose die goes over the rail.
    You finish with five dice, so the best hand is 18. It's shown in advance ("Heavy seas"), so you know
    to keep your 2 or 4 the moment it shows.
-3. **Squall.** Rain and wind: you must keep two dice every throw. The intro's rain drawn over the table,
+3. **Squall. Built 10 Nov** (on the Hangman's dial, face 2): every hand keeps two dice from each throw (or every die left when only one or two were thrown), both sides; the opponents' solver plays it; driven rain over the table, a storm-violet plaque, "Squall!" on the sea die. No wind sound yet. As brainstormed: rain and wind: you must keep two dice every throw. The intro's rain drawn over the table,
    wind howling. Hands are rushed; dust rises to 32%.
 4. **Becalmed.** The sails hang slack: three throws, then every die stays as it lies. Mild (28% dust),
    more tension than danger; good for a quiet night leg.
-5. **St Elmo's fire (the storm's gift).** Blue fire dances on one die of your first throw, and it can
+5. **St Elmo's fire (the storm's gift). Cut 10 Nov (the user: "I do not like that one").** Blue fire dances on one die of your first throw, and it can
    count as the 2 or 4 you need. Dust falls from 25% to 7%. With the Squall, 9% dust: the storm takes
    away and gives back. Its cyan glow can match Yvesil's staff.
 6. **Fog bank.** Neither side sees the other's score until both have finished: you play to an unknown
@@ -79,7 +79,7 @@ Each fight draws its rounds from that leg's own weather mix:
 |---|---|---|---|
 | Klarg | Casting off | Clear, Heeling up and down | Teaches the system gently; can't double up with his steals |
 | Rokr | Night on open sea | Clear, Becalmed, Heeling down | Calm sea; his hidden dice are the danger, so the weather doesn't hide things too |
-| The Hangman | The squall | Squall, Rogue wave, St Elmo's fire, Fog | The storm, with its gift built in |
+| The Hangman | The squall | Squall, Rogue wave, Fog (St Elmo's fire cut, 10 Nov) | The storm |
 | Jaguar | Eye of the storm | Tied to his phases (below) | A climax |
 
 Jaguar's phases already change with his hearts, so the storm can follow them:
@@ -91,7 +91,25 @@ Jaguar's phases already change with his hearts, so the storm can follow them:
 *Built so far (9 Nov):* every leg's dial has only calm and the two heelings (`BALANCE.voyage`, first
 guesses); the sea die's six faces would take the new weathers as they're built.
 
+## The final dials (proposed 10 Nov, waiting on the user)
+
+The rule (the user, 10 Nov): on every dial a 1 is listing to port and a 6 listing to starboard; each leg
+fills faces 2-5 with its own weather. Jaguar's dial changes with his phase.
+
+| Leg | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Klarg, casting off | port | calm | calm | calm | calm | starboard |
+| Rokr, night on open sea | port | becalmed | becalmed | calm | calm | starboard |
+| The Hangman, the squall | port | squall | heavy seas | fog | calm | starboard |
+| Jaguar, Smooth Talk (3+ hearts) | port | calm | calm | fog | fog | starboard |
+| Jaguar, the Cloak (2 hearts) | port | squall | squall | heavy seas | heavy seas | starboard |
+| Jaguar, All In (last heart) | port | heavy seas | heavy seas | heavy seas | heavy seas | starboard |
+
+Every leg now lists 1 round in 3 (the brainstorm gave Rokr no starboard and the Hangman no heeling;
+the rule wins). The Hangman keeps one calm face, as his storm has no gift without St Elmo's fire. To
+be simulated before the numbers are trusted.
+
 ## After the weather (the later steps)
 
-The player's say (a Compass, a Spyglass, Yvesil's forecast, a Ginger Thonic), choosing a course, events
+**Cut 10 Nov (the user): the player's say** (a Compass, a Spyglass, Yvesil's forecast, a Ginger Thonic): no keepsakes or forecasts for the sea. Still to come: choosing a course, events
 aboard. Not worked out in the brainstorm.

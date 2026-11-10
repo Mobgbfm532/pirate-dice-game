@@ -41,6 +41,13 @@ export interface TurnView {
     // Rokr's Written in the Stars (this turn): the faces marked for the next throw, and this throw's.
     stars?: { next: number[] | null; now: number[] | null } | null;
     cloaked?: boolean; // Jaguar's Cloak: his dice hidden until his hand is done
+    mustKeep?: number; // a Squall (10 Nov): dice to keep from each throw (never more than were thrown)
+}
+
+// How many dice must be kept from this throw before the next (the server's Rules.keepsNeeded).
+export function keepsNeeded(turn: TurnView): number {
+    const thrown = turn.locksThisRoll + turn.dice.filter(d => d.status === 'active').length;
+    return Math.max(1, Math.min(turn.mustKeep ?? 1, thrown));
 }
 
 interface GameRulesApi {

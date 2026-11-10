@@ -2,14 +2,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
-import { Rules, coins, type TurnView } from './rules';
+import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
 import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, sceneFileOf } from './Backdrop';
 import { lookNext } from './look';
-import { IntroFilm, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
+import { IntroFilm, Rain, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
 import { Trailer } from './Trailer';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
@@ -523,8 +523,8 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
 // The Salty Swallow's sea (9 Nov, the user's), on the plaque under Roll: a little ship leaning
 // the way she lists and rocking, this round's weather and the next's (the forecast). (A chip in
 // the header sat over the opponent's bust: the user's call, it moved here.)
-const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw' };
-const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas' };
+const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw', squall: 'keep two dice from every throw' };
+const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas', squall: 'squall' };
 function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
     return (
         <div className={`round-plaque round-sea sea-${sea.id}`} title={`${sea.name}. ${sea.text}${next ? ` Next round: ${next.name}.` : ''}`}>
@@ -561,6 +561,7 @@ const SEA_EXPLAIN: Record<SeaState['id'], string> = {
     starboard: 'The ship leans to starboard: every die thrown lands one higher. A 1 becomes a 2, a 5 a 6, and a 6 stays a 6, so there are no 1s and 6s come twice as often.',
     port: 'The ship leans to port: every die thrown lands one lower. A 6 becomes a 5, a 2 a 1, and a 1 stays a 1, so there are no 6s, and no hand can reach 24 this round.',
     calm: 'A steady deck: the dice land as they fall.',
+    squall: 'A squall: rain and wind lash the deck, and every hand must keep two dice from each throw instead of one (or every die left, if only one or two were thrown). Hands are rushed: a 2 or a 4 is easy to miss. Your opponent keeps two as well.',
     rogue: "Heavy seas: as each hand's second throw is made, a rogue wave crosses the deck and one loose die, at random, goes over the rail. That hand finishes with five dice, so the best it can score is 18. Keep your 2 and your 4 the moment they show. (If only one loose die is left, the wave spares it.)"
 };
 function SeaInfo({ sea, face, faces, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; onClose: () => void }) {
@@ -650,7 +651,8 @@ function TurnControls({ snap }: { snap: Snapshot }) {
 
     const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : NO_BADGE;
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
-        : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && turn.locksThisRoll === 0 && !turn.canRoll ? 'Tap dice to keep them, then roll again'
+        : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && !turn.canRoll && turn.locksThisRoll < keepsNeeded(turn)
+            ? (keepsNeeded(turn) < 2 ? 'Tap dice to keep them, then roll again' : turn.locksThisRoll === 0 ? 'Squall: keep two dice, then roll again' : 'Squall: keep one more die')
             : '';
     // (Rokr's stars come before the tip: which faces can't be kept is what you need to know.)
     const badgeFirst = badge.kind === 'stars' || !tip;
@@ -2353,7 +2355,8 @@ const SEA_WORDS: Record<SeaState['id'], { title: string; rule: string; sub: stri
     starboard: { title: 'Listing to starboard', rule: 'Every die lands one higher', sub: 'No 1s · 6s twice as likely' },
     port: { title: 'Listing to port', rule: 'Every die lands one lower', sub: 'No 6s · no 24 this round' },
     calm: { title: 'The sea calms', rule: 'The dice land true', sub: 'A steady deck' },
-    rogue: { title: 'Heavy seas', rule: 'A rogue wave is coming', sub: 'At the second throw it takes a loose die' }
+    rogue: { title: 'Heavy seas', rule: 'A rogue wave is coming', sub: 'At the second throw it takes a loose die' },
+    squall: { title: 'Squall!', rule: 'Keep two dice every throw', sub: 'Rain and wind · hands rushed' }
 };
 // A brass ship's clinometer: its needle (.sea-needle) swings by CSS, from --from to --to (or rocks).
 function Clinometer({ className = '' }: { className?: string }) {
@@ -2506,7 +2509,7 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
 // the die tumbles, then swings onto the face it landed on (with overshoot) and that sector lights up.
 // The painting's geometry, in `sea-dial.webp`'s pixels (1245x679): the needle's pivot, and the sectors'
 // radii; the needle (`sea-dial-needle.webp`, 186x701) turns about the middle of its hub ring.
-const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#5b6f86', '#e4f4ff'] };
+const SEA_COLOURS: Record<SeaState['id'], [string, string]> = { port: ['#c0392b', '#ff6b5a'], calm: ['#2a7fae', '#7fd0f0'], starboard: ['#2e9a5a', '#5fe29a'], rogue: ['#5b6f86', '#e4f4ff'], squall: ['#4b4f7a', '#c3c9ff'] };
 const faceAngle = (face: number) => -75 + (face - 1) * 30;
 const DIAL = { w: 1245, h: 679, cx: 621, cy: 626, R: 414, r: 72 };
 const NEEDLE = { w: 186, h: 701, px: 92.6, py: 603.6, reach: 372 };
@@ -2575,6 +2578,13 @@ function WaveMoment({ snap }: { snap: Snapshot }) {
         </div>,
         document.body
     );
+}
+
+// A Squall's round (10 Nov): the intro's rain, heavier and driven by the wind, over the whole table.
+function SquallRain({ snap }: { snap: Snapshot }) {
+    const squall = snap.state?.mode === 'tavern-crawl' && snap.state.tavernRun?.sea?.id === 'squall' && !snap.betweenShown;
+    if (!squall) return null;
+    return createPortal(<div className="squall-rain" aria-hidden="true"><Rain className="squall-drops" slant={22} heavy={1.6} /></div>, document.body);
 }
 
 function FloodWave() {
@@ -2859,6 +2869,7 @@ export function Hud() {
             {snap.floodWaveAt && <FloodWave key={snap.floodWaveAt} />}
             <SeaMoment snap={snap} />
             <WaveMoment snap={snap} />
+            <SquallRain snap={snap} />
             <Celebration snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}

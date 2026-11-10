@@ -339,13 +339,56 @@ test('Heavy seas: the wave spares a last loose die', async () => {
     assert.ok(second.turn.dice.every(d => !d.washed));
 });
 
-test('every sea dial keeps one order: port on the low faces, starboard on the high ones (the user, 10 Nov)', () => {
+test('every sea dial: a 1 is always port and a 6 always starboard (the user, 10 Nov)', () => {
     const dials = require('../shared/balance').voyage;
     for (const [leg, faces] of Object.entries(dials)) {
         assert.equal(faces.length, 6, leg);
-        const rank = id => (id === 'port' ? 0 : id === 'starboard' ? 2 : 1);
-        for (let i = 1; i < 6; i++) assert.ok(rank(faces[i - 1]) <= rank(faces[i]), `${leg}: face ${i + 1}`);
+        assert.equal(faces[0], 'port', leg + ': face 1');
+        assert.equal(faces[5], 'starboard', leg + ': face 6');
+        assert.ok(faces.slice(1, 5).every(id => id !== 'port' && id !== 'starboard'), leg + ': faces 2-5 neither list');
     }
+});
+
+test('a Squall: two dice must be kept from every throw (never more than were thrown)', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'Squall');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'squall';
+    let unpin = pinFaces([2, 1, 3, 3, 5, 6]);
+    hero.emit('rollDice');
+    const first = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.equal(first.turn.mustKeep, 2);
+    await sleep(first.animationMs * 0.01 + 30);
+    hero.emit('toggleDie', 0);
+    await sleep(40);
+    assert.equal(Rules.canRoll(room.turn), false, 'one kept is not enough');
+    hero.emit('rollDice');
+    await sleep(60);
+    assert.equal(room.turn.rollCount, 1, 'the roll was refused');
+    hero.emit('toggleDie', 5);
+    await sleep(40);
+    assert.equal(Rules.canRoll(room.turn), true, 'two kept');
+    // Two dice left to throw: both must be kept (the hand ends); one left: just that one.
+    const two = { mustKeep: 2, hasRolled: true, finalized: false, locksThisRoll: 1, dice: [{ status: 'lockedThisTurn' }, { status: 'active' }, { status: 'permanentlyLocked' }] };
+    assert.equal(Rules.keepsNeeded(two), 2);
+    const one = { mustKeep: 2, hasRolled: true, finalized: false, locksThisRoll: 0, dice: [{ status: 'active' }, { status: 'permanentlyLocked' }] };
+    assert.equal(Rules.keepsNeeded(one), 1);
+});
+
+test('a Squall: the opponents keep two every throw and still finish their hand', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'SquallBot');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'squall';
+    await playHand(hero, room, [2, 4, 3, 3, 3, 3]);
+    const counts = [];
+    hero.on('diceRolled', d => { if (d.turn.playerId === 'BOT_MOLAR') counts.push(d.turn.dice.filter(x => x.status === 'active').length); });
+    await waitFor(hero, 'turnState', s => s.turn && s.turn.playerId === 'BOT_MOLAR' && s.turn.finalized, 8000);
+    for (let i = 1; i < counts.length; i++) assert.ok(counts[i - 1] - counts[i] >= Math.min(2, counts[i - 1]), `kept ${counts[i - 1] - counts[i]} of ${counts[i - 1]}`);
+    assert.ok(counts.length >= 1, 'the opponent threw');
+    // The solver plays the Squall: every keep it picks has two dice or more.
+    const S = require('../shared/strategy');
+    const dice = [1, 1, 1, 3, 5, 6].map((value, id) => ({ id, value, status: 'active' }));
+    assert.ok(S.bestKeeps(dice, 18, { minKeep: 2 }).length >= 2);
 });
 
 test('the sea is only aboard the Salty Swallow', async () => {

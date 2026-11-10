@@ -3247,6 +3247,12 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 @keyframes sea-pitch { 0%, 100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(12deg) translateY(-2px); } }
 .sea-rogue.round-plaque::after { animation-duration: 1.6s; opacity: 0.8; }
 .sea-moment.wave-moment { --end: 2.4s; }
+/* A Squall's round (10 Nov): driven rain over everything, under the moments; the plaque in storm violet. */
+.squall-rain { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: linear-gradient(rgba(20, 24, 48, 0.18), rgba(10, 14, 30, 0.08)); animation: sea-fade-in 1.2s ease-out both; }
+.squall-drops { position: absolute; inset: 0; width: 100%; height: 100%; }
+.round-plaque.sea-squall { --accent: #c3c9ff; --tint: rgba(60, 64, 120, 0.4); }
+.sea-squall .sea-ship { animation: sea-pitch 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .squall-rain { animation: none; } }
 .sea-moment.wave-moment .sea-crest { animation: sea-crest 1.3s cubic-bezier(0.3, 0.6, 0.4, 1) 0.1s both; }
 .wave-moment .sea-news { animation-delay: 0.35s; }
 .wave-moment .sea-title { text-shadow: 0 0 18px rgba(230, 248, 255, 0.9), 0 0 42px rgba(90, 150, 190, 0.8), 0 3px 4px #000; }
