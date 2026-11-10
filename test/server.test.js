@@ -339,6 +339,15 @@ test('Heavy seas: the wave spares a last loose die', async () => {
     assert.ok(second.turn.dice.every(d => !d.washed));
 });
 
+test('every sea dial keeps one order: port on the low faces, starboard on the high ones (the user, 10 Nov)', () => {
+    const dials = require('../shared/balance').voyage;
+    for (const [leg, faces] of Object.entries(dials)) {
+        assert.equal(faces.length, 6, leg);
+        const rank = id => (id === 'port' ? 0 : id === 'starboard' ? 2 : 1);
+        for (let i = 1; i < 6; i++) assert.ok(rank(faces[i - 1]) <= rank(faces[i]), `${leg}: face ${i + 1}`);
+    }
+});
+
 test('the sea is only aboard the Salty Swallow', async () => {
     const hero = await tavernAgainst(fightOf('vaelin'), 'NoSea');
     const room = roomOf(hero);

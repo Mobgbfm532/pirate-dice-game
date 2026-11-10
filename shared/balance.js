@@ -41,10 +41,13 @@ module.exports = {
     // roll of the sea die, and its face (1-6) on this leg's dial is the round's weather: port (every die
     // lands one lower, no 6s), calm, or starboard (one higher, no 1s). Both sides. The first round is
     // calm. Klarg's leg is the calmest, Jaguar's the roughest. First guesses.
+    // The sea die's dial per leg (the user, 10 Nov: one fixed order on every leg): port always on the low
+    // faces, calm and the storms in the middle, starboard always on the high faces; legs differ only in
+    // how many faces each gets. First guesses for the numbers.
     voyage: {
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
-        rokr: ['port', 'calm', 'calm', 'calm', 'starboard', 'starboard'],
-        hangman: ['rogue', 'rogue', 'calm', 'calm', 'port', 'starboard'], // (10 Nov: Heavy seas on 1-2, a first guess; the Squall, St Elmo's fire and Fog to come)
+        rokr: ['port', 'port', 'calm', 'calm', 'calm', 'calm'],
+        hangman: ['port', 'rogue', 'rogue', 'calm', 'calm', 'starboard'],
         jaguar: ['port', 'port', 'port', 'calm', 'starboard', 'starboard']
     },
     finalShip: {

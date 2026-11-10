@@ -55,7 +55,7 @@ fight odds.
    higher, at most 6 and at least 1. On the table the dice slide toward the low rail and the page heaves
    (the camera roll was left out: the paintings' edges would show). Up is the greed trap, down a safe
    round where no 24 is possible. (Since 10 Nov the Loaded Die obeys a port list too: no 6s.)
-2. **Rogue wave. Built 10 Nov** as "Heavy seas" on the sea die (the Hangman's dial, faces 1-2, a first guess): as each hand's second throw is made, a wave breaks across the screen and one loose die, at random, rides it over the right-hand rail; the rest are thrown. Both sides. It spares a last loose die (the user, 10 Nov: kept dice stay). The opponents don't yet play around it (their solver doesn't know it's coming). The plan as brainstormed: after your first throw a wave crosses the deck and one loose die goes over the rail.
+2. **Rogue wave. Built 10 Nov** as "Heavy seas" on the sea die (the Hangman's dial, faces 2-3, a first guess): as each hand's second throw is made, a wave breaks across the screen and one loose die, at random, rides it over the right-hand rail; the rest are thrown. Both sides. It spares a last loose die (the user, 10 Nov: kept dice stay). The opponents don't yet play around it (their solver doesn't know it's coming). The plan as brainstormed: after your first throw a wave crosses the deck and one loose die goes over the rail.
    You finish with five dice, so the best hand is 18. It's shown in advance ("Heavy seas"), so you know
    to keep your 2 or 4 the moment it shows.
 3. **Squall.** Rain and wind: you must keep two dice every throw. The intro's rain drawn over the table,
