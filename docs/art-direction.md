@@ -304,6 +304,36 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | The trailer's old-game stills | Done (11 Nov) | `client/public/art/trailer/old-start.webp`, `old-table`, `old-rolled`, `old-kept`: the real old page (`main`) at 384×780, captured headless; not from `art/` |
 | The sea die and its dial | Done (9 Nov) | `art/dice-sea.jpg` → `sea-die.webp` (six faces in a strip, `seaDie()`); `art/sea-dial.jpg` and `art/sea-dial-needle.jpg` → `sea-dial.webp`, `sea-dial-needle.webp` (`SeaDial`: `DIAL`, `NEEDLE` hold the hub and pivot) |
 
+## Sounds and music still missing (checked against the code, 11 Nov)
+
+Every clip the user makes goes in `public/` and is wired in `client/src/sounds.ts`. What has none yet:
+
+**Abilities that play in silence** (`ABILITY_SOUNDS` in sounds.ts has no entry, so their moment has no sound):
+
+| Moment | Who | Notes |
+|---|---|---|
+| Smooth Talk | Jaguar | his first phase: talks a Thonic off your shelf, or 3 off your hand |
+| The Cloak | Jaguar | his second phase: his dice hidden |
+| All In | Jaguar | his last life: the loser loses two hearts |
+| Heightened Spell, Quickened Spell, Empowered Spell, Twinned Spell | Áéd | one sound for all four, or one each |
+
+**Made up by the game for now** (synthesized in sounds.ts; a real clip could replace each):
+
+| Sound | Where | Now |
+|---|---|---|
+| The sea changing | the sea die's news, a heel or a calm (`playSeaSwell`), the sailing scene, Bren's quay | a filtered wave, a boom, a creak |
+| The ship's bell | the sailing scene (`playShipBell`) | two synthesized strikes |
+| The keepsake chime | Trap Card, Velvet Cushion, Loaded Die, Gambler's Charm, Bottomless Flask, Miser's Purse, the Lady's Favour, Kram, Yvesil's and Jorvash's pick, the Bard's pick (`playChime`) | one shared chime |
+| Coins | catching the thief (`playCoins`) | synthesized clinks |
+
+**Scenes between fights with no loop of their own** (`startSceneAmbience`; they have the tavern's music only): Johnny Elf Bar, Jorvash, Darren Snakehands, the Hooded Stranger, the thief. (Thom, the hot tub, the Shrine, the Bard, the Cult of Kram and Yvesil have the user's loops.)
+
+**Weather:** Becalmed has no sound (the Squall has the wind, the Fog bank the foghorn, the Rogue wave its own clip).
+
+**Music:** one tavern tune and its ambience everywhere, and Jaguar's own music for his fight. No tune of its own for the Yawning Portal or the Salty Swallow (step 9 of CLAUDE.md's next steps, "music per place"), none for the other bosses (Martha, Brodor).
+
+**Waiting on the user's word:** `Whoa.mp3` is off until reworked (`WHOA_ON`); Dirty 20! and Astral Flood's wave have none, if wanted; a narrator for the intro film, if wanted (`IntroLine1.mp3` to 5).
+
 ## Processing art
 
 Originals live in `art/` and are never edited. `npm run art` (in `client/`) turns them

@@ -32,6 +32,8 @@ day they happen, with what's been built marked as it lands.
 - The user's trailer track (11 Nov) is fitted by its sections, its boom's section played twice: to hear by ear, the join at the repeat (about 27.8 s into the trailer) and whether the shots land well on its beats.
 
 ### Small things
+
+- Sounds and music: which of the missing ones to make (the list is in `docs/art-direction.md`, "Sounds and music still missing", 11 Nov): Jaguar's three phases and Áéd's spells play in silence; five scenes between fights have no loop; Becalmed has no sound; no music for the Yawning Portal or the ship.
 - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
 - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
 - The Dirty 20! colour (`#c5d04a`) hasn't been seen by eye; a sound for it, and for Astral Flood's wave, if wanted.

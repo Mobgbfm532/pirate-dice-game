@@ -932,9 +932,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    measured in `easier.js`, `tournament-lives.js`. The simulator doesn't know Mystery Flavour (and no longer wears a
    mask), the Elf Bars, the Bard, the Cult, the new keepsakes, the two-thief limit, the Duke's `devilPlan` or Astral Flood
    taking a heart, or Áéd: teach it before trusting its numbers.
-6. **The user's art and sounds waiting:** an ability painting for Áéd (one, or one per trick) and a sound for his
-   spells; music and
-   ambience from Udio; optional repaints of the Potion Belt and the Sunglasses (thin at 26 px). Dice sets for the
+6. **The user's art and sounds waiting:** an ability painting for Áéd (one, or one per trick); every sound and tune
+   still missing is listed in `docs/art-direction.md`, "Sounds and music still missing" (Áéd's four spells and Jaguar's
+   three phases play in silence; no music of its own for the Yawning Portal or the ship); optional repaints of the Potion Belt and the Sunglasses (thin at 26 px). Dice sets for the
    Yawning Portal's and the ship's opponents if wanted (add each id to `DICE_SETS` and `PAINTED_DICE`).
 7. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
