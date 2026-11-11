@@ -1230,8 +1230,10 @@ const FILM_THROWS: FilmSpec[] = [
     { dice: [[0, 5], [2, 1], [3, 4], [4, 3], [5, 2]], keep: [3], seed: 24 },
     { dice: [[0, 6], [2, 6], [4, 6], [5, 6]], keep: [0, 2, 4, 5], seed: 2424, perfect: true }
 ];
+// The film's throw in the air: lands it (now: its keep too, without the beat).
+let filmLanding: ((now?: boolean) => void) | null = null;
 export const film = {
-    begin() { update({ filmPause: true }); },
+    begin() { filmLanding = null; update({ filmPause: true }); },
     // Pre-simulated before the film starts (each throw takes a moment to work out), each played a
     // little faster if it would run past `longest` seconds.
     prepare(longest: number, throws: FilmSpec[] = FILM_THROWS): FilmThrow[] {
@@ -1254,10 +1256,15 @@ export const film = {
     // The table again as it was left (the trailer comes back to it for the last throw).
     showAgain() { update({ filmPause: false }); },
     playThrow(one: FilmThrow) {
+        // A throw still in the air lands now, kept dice and all (11 Nov: the trailer's next throw began as
+        // the 2 was landing, and the 2 never showed; a slow phone's late timers could do the same).
+        filmLanding?.(true);
         table.roll = { track: one.track, startedAt: performance.now(), speed: 1, pace: one.pace, hidden: new Set() };
         update({ rolling: true });
         playDiceImpacts(one.track.impacts, one.pace);
-        setTimeout(() => {
+        const land = (now = false) => {
+            if (filmLanding !== land) return;
+            filmLanding = null;
             if (!snapshot.turn || snapshot.turn.key !== 'film' || table.roll?.track !== one.track) return;
             table.roll = null;
             one.dice.forEach((d, i) => {
@@ -1275,8 +1282,8 @@ export const film = {
                 playSound('devil');
                 update({ devil: { at: performance.now(), who: null } });
             }
-            // A beat to see the faces, then what's wanted goes to its plate.
-            setTimeout(() => {
+            // A beat to see the faces, then what's wanted goes to its plate (at once when the next throw is coming).
+            const keep = () => {
                 if (snapshot.turn?.key !== 'film') return;
                 const turn = shown(true);
                 recordLockOrder(turn);
@@ -1284,10 +1291,14 @@ export const film = {
                 // (The camera leans in as on any perfect hand. Not its gold light here: it paled the green pips.)
                 if (one.perfect) update({ celebration: { kind: 'perfect24', at: performance.now(), who: null } });
                 if (one.cheer) playSound('yay');
-            }, 90);
-        }, one.ms + 30);
+            };
+            if (now) keep(); else setTimeout(keep, 90);
+        };
+        filmLanding = land;
+        setTimeout(land, one.ms + 30);
     },
     end() {
+        filmLanding = null;
         table.roll = null;
         resetTrayForNewTurn();
         screenInsets.bottom = 0;

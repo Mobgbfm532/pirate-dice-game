@@ -15,12 +15,28 @@ import './trailer.css';
 //   every opponent as a blacked-out outline, a line-up by place, Jaguar almost seen;
 //   the three places; "Between fights...": six of the vendors and events, each with their line;
 //   one last die in slow motion for a Perfect 24, and the title with the user's tagline.
-// The music is the intro's (IntroMusic.mp3, a hit every 6 s); its 18-24 s bar plays twice (the vendors
-// ride the repeat), and each section starts on a hit.
-const COLD = 6; // the cold open's length: the music starts after it
-const LEAD = 0.4; // the opening die falls a moment before the music's first hit
-const BAR = 6; // the bar played twice
-const T = (t: number) => t + COLD + LEAD; // music time to the trailer's clock
+// Since 11 Nov the music is the user's own trailer track (TrailerMusic.mp3, about 91 beats a minute): a
+// swell from 0.85 s, the music arriving at 2.76 s, a new section on a low boom at 12.77 s, its last hits at
+// 24.1 s, then a fade. The swell plays under the cold open, as the old 6 lifts; the arrival is the new die's
+// first knock (music time 0); the boom's section plays twice (joined on the boom). The trailer's times below
+// are written as they were on the intro's music (a hit every 6 s, its 18-24 s bar played twice: "old" times),
+// and M moves each onto the track's sections: the Devil's three 6s land on the boom, the rivals and the
+// places ride its first pass, the vendors and the last throw the second, the title its last hits.
+const COLD = 6; // the cold open's length: the music arrives after it
+const LEAD = 0.4; // the opening die falls a moment before the music arrives
+const BAR = 6; // (old times: the intro music's bar that was played twice)
+const TRACK = { swell: 0.85, arrive: 2.76, boom: 12.77, last: 24.1 }; // in the track's own seconds
+const A = TRACK.boom - TRACK.arrive, B = TRACK.last - TRACK.boom; // its first section, and the one played twice
+// Old time to music time: the intro music's sections (0-12, 12-24, 24-34.6, the title) onto the track's.
+const MAP: [number, number][] = [[0, 0], [12, A], [24, A + B], [34.6, A + 2 * B], [39, A + 2 * B + 4.4]];
+const M = (t: number) => {
+    for (let i = 1; i < MAP.length; i++) {
+        const [a0, b0] = MAP[i - 1], [a1, b1] = MAP[i];
+        if (t <= a1 || i === MAP.length - 1) return b0 + ((t - a0) * (b1 - b0)) / (a1 - a0);
+    }
+    return t;
+};
+const T = (t: number) => M(t) + COLD + LEAD; // old time to the trailer's clock
 const ART = `${import.meta.env.BASE_URL}art/`;
 
 // The hand: a 2, then a 4, then three 6s (the Devil), then the last die, a 6, for 24.
@@ -31,7 +47,18 @@ const THROWS: FilmSpec[] = [
     { dice: [[4, 6]], keep: [4], seed: 2424, perfect: true, slow: true, cheer: true }
 ];
 // When each throw lands, by the music (the Devil's on the 12 s hit).
-const LANDS = [7.5, 9.7, 12.0, 26.7 + BAR];
+const LANDS = [7.5, 9.7, 12.0, 26.7 + BAR]; // (old times)
+// When the table's throws land, in music time: the 2 and the 4 spaced for whole throws (each up to 1.8 s, and its
+// keep), the Devil's three 6s on the track's boom, the last throw where its old time falls. (11 Nov: squeezed onto
+// the track by M, the 4's throw began as the 2 was landing, and the 2 never showed.)
+// The track's first section is four bars (its boom on the fourth bar line, 11 Nov): the opening, then a bar
+// each for the 2 and the 4, the Devil's three 6s on the boom.
+const BAR_S = A / 4;
+const LAND_AT = [2 * BAR_S, 3 * BAR_S, A, M(LANDS[3])];
+// The opening die's shot (music time): its words, then it fades and the black lifts, with the table laid
+// underneath before the 2's throw starts (laying it resets the tray), so the whole tumble is seen.
+const OPEN = { words: [0.5, 2.6], end: 2.6, fade: 0.4, black: 3.0, gone: 3.4 };
+const TABLE_AT = 2.7;
 
 // ---- The cold open (trailer seconds, before the music) ----
 // The real old page at 384x780 (art/trailer/old-*.webp, captured from `main` on 11 Nov), and where
@@ -56,9 +83,12 @@ const SIX_LIFT = 4.2; // the 6 lifts off the old table, turns and grows, and is 
 const LINEUP: { place: string; at: number; who: { art: string; seat?: number }[] }[] = [
     { place: 'The Ghoul and Gourd', at: 13.6, who: [{ art: 'mcgrath', seat: 1.25 }, { art: 'frak', seat: 1.1 }, { art: 'danhausen', seat: 1.15 }, { art: 'duke' }, { art: 'martha', seat: 1.08 }] },
     { place: 'The Yawning Portal', at: 14.3, who: [{ art: 'sylvester' }, { art: 'vaelin-inkhand' }, { art: 'stason' }, { art: 'ridgeler' }, { art: 'brodor', seat: 1.15 }] },
-    { place: 'The Salty Swallow', at: 15.0, who: [{ art: 'klarg' }, { art: 'rokr' }, { art: 'hangman' }, { art: 'jaguar' }] }
+    { place: 'The Salty Swallow', at: 15.0, who: [{ art: 'klarg' }, { art: 'rokr' }, { art: 'aed' }, { art: 'hangman' }, { art: 'jaguar' }] } // (Áéd since 11 Nov, the user's)
 ];
 const LINEUP_FROM = 13.6, LINEUP_TO = 18;
+// Its dark background fades in over the Devil's leaving, and stays until the first place has faded in over it
+// (11 Nov: the table showed through at both seams).
+const LINEUP_IN = LINEUP_FROM - 0.45, LINEUP_OUT = LINEUP_TO + 0.4;
 const LIGHTNING = 15.7; // lit from behind, all at once
 const REVEAL = 16.9; // Jaguar, the last of them, lit from the front for a few frames
 
@@ -82,7 +112,7 @@ const VENDORS: { name: string; art: string; line?: string; back?: string; glow: 
 ];
 const VENDORS_FROM = 24, VENDOR_LEN = BAR / VENDORS.length;
 
-const HITS = [6, 12, 18, 24, 24 + BAR];
+const HITS = [A, A + B, A + 2 * B]; // (music time: the track's boom, its repeat, its last hits)
 const TITLE_AT = 28.6 + BAR;
 const END_AT = 33 + BAR;
 
@@ -106,7 +136,7 @@ const pct = (n: number, of: number) => `${(100 * n) / of}%`;
 
 // A part of the trailer, there only from `from` to `to` (music time); its animations start as it appears.
 function Part({ now, from, to, children }: { now: number; from: number; to: number; children: (len: number) => ReactNode }) {
-    return now >= T(from) && now < T(to) ? <>{children(to - from)}</> : null;
+    return now >= T(from) && now < T(to) ? <>{children(T(to) - T(from))}</> : null;
 }
 // Words that fade in as they appear and out before they go.
 function Words({ len, place, className = '', children }: { len: number; place: 'top' | 'low' | 'under'; className?: string; children: ReactNode }) {
@@ -159,6 +189,8 @@ function TitleCard() {
                 <span className="tr-beat" style={vars({ '--d': '1.1s' })}>Keep the 4.</span>
                 <span className="tr-beat gold" style={vars({ '--d': '1.8s' })}>Become a legend.</span>
             </p>
+            {/* (the user's, 11 Nov) */}
+            <p className="tr-soon tr-beat" style={vars({ '--d': '2.6s' })}>Coming Soon</p>
         </>
     );
 }
@@ -228,17 +260,18 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
             ticker = window.setInterval(() => setNow((performance.now() - started.current) / 1000), 40);
             // The cold open's sound: the old tune, its click and roll, cut dead as the new die falls.
             stopOld = playTrailerOld(COLD - 0.1, [{ at: OLD_TAPS[0].at, clip: 'click' }, { at: OLD_TAPS[1].at, clip: 'roll' }, { at: OLD_TAPS[2].at, clip: 'click' }]);
-            // The music, its 18-24 s bar twice: 0-24, the bar again, then 24 to its end.
-            stopMusic = playTrailerMusic(COLD + LEAD, 0, [[0, 0, 24], [24, 18, BAR], [24 + BAR, 24]]);
+            // The track: its swell under the cold open (from before music time 0), through its boom's section,
+            // that section again, then its last hits and fade.
+            stopMusic = playTrailerMusic(COLD + LEAD, 0, [[TRACK.swell - TRACK.arrive, TRACK.swell, TRACK.last - TRACK.swell], [A + B, TRACK.boom, B], [A + 2 * B, TRACK.last]]);
             // The opening die: its first knock on the music's first hit.
             const hit = die.impacts[0]?.frame ?? 0;
             const dieAt = Math.max(0, COLD + LEAD - hit / 60);
             dieClock.current.at = started.current + dieAt * 1000;
             after(dieAt, () => playDiceImpacts(die.impacts));
-            after(T(6.2), () => setOpening(null));
+            after(COLD + LEAD + OPEN.gone, () => setOpening(null));
             // The table: the first three throws, the rivals, places and vendors over it, then the last throw.
-            after(T(4.9), () => film.showTable()); // (before the first throw starts: it resets the tray)
-            throws.forEach((one: FilmThrow, i) => after(T(LANDS[i]) - one.ms / 1000, () => film.playThrow(one)));
+            after(COLD + LEAD + TABLE_AT, () => film.showTable()); // (before the first throw starts: it resets the tray)
+            throws.forEach((one: FilmThrow, i) => after(COLD + LEAD + LAND_AT[i] - one.ms / 1000, () => film.playThrow(one)));
             after(T(13.6), () => film.hideTable());
             after(T(23.7 + BAR), () => film.showAgain());
             after(T(END_AT), () => handlers.current.onDone());
@@ -256,9 +289,9 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
     return (
         <>
             {!ready && <div className="tr-loading">Loading…</div>}
-            {ready && now < T(5.6) && <div className="film-black-plain" />}
+            {ready && now < COLD + LEAD + OPEN.black && <div className="film-black-plain" />}
             {opening && (
-                <div className={ready ? 'film-shot' : 'film-shot waiting'} style={vars({ '--at': `${COLD}s`, '--end': `${T(5.3)}s`, '--fade': '0.4s' })}>
+                <div className={ready ? 'film-shot' : 'film-shot waiting'} style={vars({ '--at': `${COLD}s`, '--end': `${COLD + LEAD + OPEN.end}s`, '--fade': `${OPEN.fade}s` })}>
                     <FilmDie track={opening} clock={dieClock.current} onDrawn={() => dieDrawn.current()} />
                 </div>
             )}
@@ -268,19 +301,21 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
             {ready && now >= SIX_LIFT && now < COLD + 0.8 && <Words len={COLD + 0.8 - SIX_LIFT} place="top" className="old turn">But it was time to rebuild the tavern.</Words>}
             {ready && (
                 <>
-                    <Part now={now} from={1.4} to={5.3}>{len => <Words len={len} place="under">Roll six dice.</Words>}</Part>
+                    {now >= COLD + LEAD + OPEN.words[0] && now < COLD + LEAD + OPEN.words[1] && <Words len={OPEN.words[1] - OPEN.words[0]} place="under">It's time to roll the dice.</Words>}
 
                     {/* The table shows through here: the 2, the 4, then the Devil. */}
-                    <Part now={now} from={LANDS[0]} to={11.6}>{len => <Words len={len} place="top" className="lesson">Keep the 2.</Words>}</Part>
-                    <Part now={now} from={LANDS[1]} to={11.6}>{len => <Words len={len} place="top" className="lesson second">Keep the 4.</Words>}</Part>
+                    {[['Keep the 2.', LAND_AT[0], 'lesson'], ['Keep the 4.', LAND_AT[1], 'lesson second']].map(([words, at, kind]) => {
+                        const from = COLD + LEAD + (at as number), to = COLD + LEAD + A - 0.4;
+                        return now >= from && now < to ? <Words key={words} len={to - from} place="top" className={kind as string}>{words}</Words> : null;
+                    })}
 
                     {/* The rivals, blacked out. */}
-                    <Part now={now} from={LINEUP_FROM} to={LINEUP_TO}>
+                    <Part now={now} from={LINEUP_IN} to={LINEUP_OUT}>
                         {len => (
-                            <div className="tr-lineup" style={vars({ '--len': `${len}s`, '--bolt': `${LIGHTNING - LINEUP_FROM}s`, '--reveal': `${REVEAL - LINEUP_FROM}s` })}>
+                            <div className="tr-lineup" style={vars({ '--len': `${len}s`, '--bolt': `${M(LIGHTNING) - M(LINEUP_IN)}s`, '--reveal': `${M(REVEAL) - M(LINEUP_IN)}s` })}>
                                 <i className="tr-bolt" />
                                 {LINEUP.map(row => (
-                                    <div key={row.place} className="tr-row" style={vars({ '--d': `${row.at - LINEUP_FROM}s` })}>
+                                    <div key={row.place} className="tr-row" style={vars({ '--d': `${M(row.at) - M(LINEUP_IN)}s` })}>
                                         <span className="tr-row-place">{row.place}</span>
                                         <div className="tr-row-figures">
                                             {row.who.map(w => (
@@ -293,11 +328,11 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
                             </div>
                         )}
                     </Part>
-                    <Part now={now} from={LIGHTNING + 0.1} to={LINEUP_TO}>{len => <Words len={len} place="top" className="lesson">Fourteen rivals.</Words>}</Part>
+                    <Part now={now} from={LIGHTNING + 0.1} to={LINEUP_TO}>{len => <Words len={len} place="top" className="lesson">Fifteen rivals.</Words>}</Part>
 
                     {/* The places. */}
                     {PLACES.map((p, i) => (
-                        <Part key={p.art} now={now} from={PLACES_FROM + i * PLACE_LEN} to={PLACES_FROM + (i + 1) * PLACE_LEN + (i < 2 ? 0.3 : 0.05)}>
+                        <Part key={p.art} now={now} from={PLACES_FROM + i * PLACE_LEN} to={PLACES_FROM + (i + 1) * PLACE_LEN + (i < 2 ? 0.3 : 0.25)}>
                             {len => (
                                 <div className="tr-place" style={vars({ '--len': `${len}s` })}>
                                     <img src={ART + p.art} alt="" draggable={false} style={{ objectPosition: p.focus }} />
@@ -329,7 +364,7 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
                     {/* Back at the table: the last die. */}
                     <Part now={now} from={24.1 + BAR} to={26.5 + BAR}>{len => <Words len={len} place="top" className="lesson">One last throw...</Words>}</Part>
 
-                    {HITS.map(t => <Part key={t} now={now} from={t - 0.05} to={t + 0.8}>{() => <i className="film-flash" style={vars({ '--at': '0s' })} />}</Part>)}
+                    {HITS.map(t => (now >= t + COLD + LEAD - 0.05 && now < t + COLD + LEAD + 0.8 ? <i key={t} className="film-flash" style={vars({ '--at': '0s' })} /> : null))}
 
                     <Part now={now} from={TITLE_AT} to={99}>{() => <div className="tr-card"><TitleCard /></div>}</Part>
                 </>

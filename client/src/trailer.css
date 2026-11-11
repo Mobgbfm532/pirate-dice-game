@@ -72,7 +72,7 @@
    Each row rises on its beat; lightning lights them all from behind; Jaguar is lit from the front for
    a few frames. --bolt and --reveal are from the section's start. */
 .tr-lineup { --h: min(17vh, 25vw); position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: space-evenly;
-    padding: max(90px, 15vh) 0 max(24px, 4vh); background: radial-gradient(ellipse at 50% 62%, #24170c, #050302 72%); animation: tr-fade-in 0.25s linear both; }
+    padding: max(90px, 15vh) 0 max(24px, 4vh); background: radial-gradient(ellipse at 50% 62%, #24170c, #050302 72%); animation: tr-fade-in 0.4s ease-out both; }
 .tr-bolt { position: absolute; inset: 0; opacity: 0; pointer-events: none;
     background: radial-gradient(ellipse at 50% 35%, rgba(255, 246, 225, 0.95), rgba(255, 196, 120, 0.45) 38%, transparent 72%);
     animation: tr-bolt 0.9s ease-out var(--bolt) forwards; }
@@ -130,6 +130,9 @@
 .tr-card.still .tr-title, .tr-card.still .tr-beat { animation: none; opacity: 1; }
 .tr-tagline { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.25em; font-size: clamp(24px, 7vw, 40px); }
 .tr-beat { opacity: 0; animation: tr-word 0.6s ease-out var(--d) both; }
+/* Coming Soon (11 Nov, the user's): last, under the tagline, in small spaced capitals. */
+.tr-soon { margin: 3vh 0 0; padding: 0.35em 1.1em; border-top: 1px solid rgba(255, 210, 79, 0.45); border-bottom: 1px solid rgba(255, 210, 79, 0.45);
+    font-size: clamp(16px, 4.6vw, 26px); letter-spacing: 0.32em; text-transform: uppercase; color: #f6ead0; text-shadow: 0 0 14px rgba(255, 170, 40, 0.6), 0 2px 4px #000; }
 .tr-beat.gold { color: #ffd24f; text-shadow: 0 0 22px rgba(255, 170, 40, 0.8), 0 2px 4px #000; }
 .tr-after { position: absolute; bottom: max(30px, 6vh); display: flex; gap: 12px; }
 .tr-after button { height: 40px; padding: 0 16px; border: 1px solid rgba(246, 234, 208, 0.4); border-radius: 20px; background: rgba(0, 0, 0, 0.5); color: #f6ead0; font: inherit; font-size: 16px; cursor: pointer; }

@@ -749,9 +749,10 @@ export function playFilmSound(lead: number, elapsed: number) {
 // The trailer's sound (9 Nov): the intro's music alone, its 0 at `lead` on the trailer's clock.
 // segments: [when, from, length?] in music seconds, each a piece of the track (since 11 Nov one bar is
 // played twice, so the trailer runs longer than the track): joined on a hit with a short crossfade.
+// Since 11 Nov it plays the user's trailer track (loaded with the cold open's sounds), else the intro's music.
 export function playTrailerMusic(lead: number, elapsed: number, segments: [number, number, number?][] = [[0, 0]]) {
     const ctx = audio();
-    const buffer = filmBuffers.get('music');
+    const buffer = oldBuffers.get('track') ?? filmBuffers.get('music');
     if (!ctx || musicOff || !buffer) return () => {};
     const start = ctx.currentTime + 0.02 - elapsed + lead;
     const level = ctx.createGain();
@@ -784,7 +785,8 @@ export function playTrailerMusic(lead: number, elapsed: number, segments: [numbe
 
 // The trailer's cold open (11 Nov, the user's): the old game's tavern tune, thin as an old phone's
 // speaker, with its click and its roll; it stops dead at `until` (seconds from now), as the new die falls.
-const OLD_CLIPS = { tune: 'BackgroundMusic.mp3', click: 'click.mp3', roll: 'roll.mp3' } as const;
+// (track: the trailer's own music, the user's TrailerMusic.mp3, 11 Nov; played by playTrailerMusic.)
+const OLD_CLIPS = { tune: 'BackgroundMusic.mp3', click: 'click.mp3', roll: 'roll.mp3', track: 'TrailerMusic.mp3' } as const;
 const oldBuffers = new Map<keyof typeof OLD_CLIPS, AudioBuffer>();
 export async function loadTrailerOld() {
     const ctx = audio();

@@ -26,11 +26,10 @@ day they happen, with what's been built marked as it lands.
 - His Squall is on face 3 (a first guess): another face, or another storm?
 - Art and sound: an ability painting (one, or one per trick) and a sound for his spells, if wanted; his dragon's colour (the card and banners use his robe's violet and gold).
 - His scales (an extra heart, or his first lost heart stays) were in the brainstorm but not asked for: leave out?
-- The trailer's line-up and "Fourteen rivals." don't have him yet (the trailer kept as it was, 11 Nov).
 - The balance simulator doesn't know him.
 
 ### The trailer, take two (`docs/trailer-brainstorm.md`, built 11 Nov)
-- A ~40 s trailer track from the user (Udio), with hits where the sections change: until then the intro music's 18-24 s bar plays twice.
+- The user's trailer track (11 Nov) is fitted by its sections, its boom's section played twice: to hear by ear, the join at the repeat (about 27.8 s into the trailer) and whether the shots land well on its beats.
 
 ### Small things
 - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
@@ -54,6 +53,7 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ## Settled
+- 11 Nov: the trailer plays the user's own track (TrailerMusic.mp3), and Áéd is in its line-up ("Fifteen rivals.").
 - 11 Nov: Áéd's card line is "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", and his sea dial has a storm on one face: a Squall (on face 3).
 - 11 Nov (evening): Áéd's metamagic is three uses a fight, each any of the four tricks (it was 5 sorcery points with costs).
 - 11 Nov: the new opponent is Áéd (so spelt), a dragon sorcerer, after Rokr aboard the Salty Swallow: metamagic with sorcery points (Heightened, Quickened, Empowered, Twinned), the user's painting. The trailer is kept as it is for now.
