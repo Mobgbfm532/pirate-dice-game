@@ -12,6 +12,7 @@ the short plaque under the Roll button for the abilities that last a round or a 
 Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a half-orc druid of the sea in their forties, with one arm a stump; Jorvash an old upper-class manservant: the user's descriptions).
 
 **Rokr**: Starry Form. Card: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." Plaque: "Keep blind: they show at your next throw".
+**Áéd**: Metamagic (11 Nov). Card: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash." (the user's) Metamagic: "Three times a fight (his gems) he twists the dice with any of four tricks." Heightened Spell: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." Quickened Spell: "He throws again without keeping a die." Empowered Spell: "He rolls one of his own dice again." Twinned Spell: "A die he keeps is copied onto one of his loose dice." (On screen as each lands, only the trick's name; Twinned's line: "His 6 is copied onto another of his dice.")
 
 **The Hangman**: Penitent Stare (the user's name). Card: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." Moment: "Your [n] becomes [m]." (No plaque since 10 Nov: it isn't telegraphed.)
 

@@ -2464,6 +2464,18 @@ button.keepsake.used { opacity: 0.55; }
     100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); filter: blur(4px); }
 }
 
+/* Áéd's metamagic (11 Nov): his sorcery points glow as violet gems on his nameplate, and his four
+   tricks share his arcane violet, edged in his robe's gold, each with its own flash. */
+.ability-marks.gems { gap: 2px; }
+.ability-marks.gems .left { color: #d59bff; text-shadow: 0 0 6px rgba(190, 110, 255, 0.95), 0 0 2px #fff; }
+.ability-marks.gems .used { color: #3d2a4a; text-shadow: none; }
+:is(.heightened-spell, .quickened-spell, .empowered-spell, .twinned-spell) .ability-banner { background: linear-gradient(#3a1a5c, #1a0b2c); border-color: #d6b25e; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 28px rgba(170, 90, 255, 0.55); }
+:is(.heightened-spell, .quickened-spell, .empowered-spell, .twinned-spell) .ability-banner .what { color: #f1dcff; }
+.takeover.heightened-spell { --flare: rgba(170, 90, 255, 0.6); }
+.takeover.quickened-spell { --flare: rgba(120, 200, 255, 0.55); }
+.takeover.empowered-spell { --flare: rgba(255, 120, 200, 0.55); }
+.takeover.twinned-spell { --flare: rgba(214, 178, 94, 0.6); }
+
 /* Stason: Vexing Rapier (Flourish until 3 Nov). Two flashes of a rapier across the screen; steel and silver. */
 .vexing-rapier .ability-banner { background: linear-gradient(#263238, #0e1417); border-color: #cfd8dc; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 26px rgba(207, 216, 220, 0.5); }
 .vexing-rapier .ability-banner .what { color: #eceff1; }

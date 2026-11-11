@@ -632,11 +632,13 @@ function AbilityMarks({ state, power }: { state: GameState; power?: number }) {
     const raw = run.abilityUsed?.[ability];
     const used = Math.min(max, own ? own[1] : run.abilitySpent ?? (raw === true ? 1 : Number(raw || 0)));
     const name = own ? enemy.powers?.[power!]?.name ?? '' : Rules.ABILITY_NAMES[ability as keyof typeof Rules.ABILITY_NAMES] ?? ability;
-    const several = !own && (enemy.powers?.length ?? 1) > 1;
-    const label = several ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
+    // Áéd's metamagic (11 Nov): glowing gems, one a use, in place of the ✦.
+    const gems = ability === 'metamagic';
+    const several = !own && !gems && (enemy.powers?.length ?? 1) > 1;
+    const label = gems ? `Metamagic: ${max - used} of ${max} uses left this fight` : several ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
     return (
-        <span key={used} className={`ability-marks ${used > 0 ? 'spent-now' : ''}`} title={label} aria-label={label}>
-            {Array.from({ length: max }, (_, i) => <span key={i} className={i < max - used ? 'left' : 'used'}>✦</span>)}
+        <span key={used} className={`ability-marks ${gems ? 'gems' : ''} ${used > 0 ? 'spent-now' : ''}`} title={label} aria-label={label}>
+            {Array.from({ length: max }, (_, i) => <span key={i} className={i < max - used ? 'left' : 'used'}>{gems ? '◆' : '✦'}</span>)}
         </span>
     );
 }
@@ -2488,7 +2490,7 @@ function SetSail({ at }: { at: number }) {
                 <span>sets sail</span>
             </div>
             <div className="sail-gauge"><Clinometer className="rocking" /></div>
-            <p className="sail-line last">Four fights at sea. Every round, the sea die decides.</p>
+            <p className="sail-line last">Five fights at sea. Every round, the sea die decides.</p>
             <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endSail(); }}>Skip ›</button>
         </div>,
         document.body

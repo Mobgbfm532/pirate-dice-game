@@ -29,6 +29,8 @@ const MOMENTS = {
     ink: `preview.ability('Vaelin Inkhand', 'Inkfire Brand')`,
     smite: `preview.ability('The Ridgeler', 'Divine Smite')`,
     flood: `preview.ability('Brodor', 'Astral Flood')`,
+    heightened: `preview.ability('Áéd', 'Heightened Spell')`, // (Áéd's metamagic, 11 Nov)
+    twinned: `preview.ability('Áéd', 'Twinned Spell')`,
     keepsake: `preview.ability('Keepsake', 'Trap Card', { keepsake: 'luckySeat' })`,
     shield: `preview.ability('Keepsake', 'Shield', { keepsake: 'bentCopper' })`,
     perfect: `table.celebrateAt = performance.now()`,

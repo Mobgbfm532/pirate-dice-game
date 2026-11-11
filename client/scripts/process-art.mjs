@@ -951,6 +951,8 @@ await cutOutFlat('bust-bard.jpg', 'bard');
 // The Salty Swallow's crew (the user's paintings, 9 Nov).
 await cutOutFlat('bust-yvesil.jpg', 'yvesil', { holes: [[851, 319]], glow: { boxes: [[990, 0, 1260, 768]], colour: 'cyan', min: 0.1 } }); // the staff's cyan glow stays soft and see-through, her hand as it is (it was cut ragged, 9 Nov) stays soft and see-through (it was cut ragged, 9 Nov)
 await cutOutFlat('bust-jorvash.jpg', 'jorvash', { holes: [[977, 483], [565, 604], [1016, 483]] });
+// Áéd, the dragon sorcerer (the user's, 11 Nov): after Rokr aboard the Salty Swallow.
+await cutOutFlat('bust-aed.jpg', 'aed', { redOverBlue: 22 }); // (the violet heart and wisps are bluer than the pink background: kept)
 await cutOutFlat('bust-bren.jpg', 'bren', { holes: [[760, 766]] }); // Skipper Bren on the quay (9 Nov); the gap between his arm and his side
 // The flying snake that brings Brodor's letter from the docks (the user's, 10 Nov).
 await cutOutFlat('flying-snake.jpg', 'flying-snake', { maxHeight: 640, holes: [[482, 286], [420, 876], [432, 911]] }); // behind its neck, under the scroll; inside the tail's curl

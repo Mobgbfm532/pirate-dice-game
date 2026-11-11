@@ -288,6 +288,24 @@ const TAVERN_ENCOUNTERS = [
         powers: [{ name: "Starry Form", text: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." }]
     },
     {
+        // Áéd, the dragon sorcerer (11 Nov, the user's): metamagic with sorcery points (BALANCE.metamagic).
+        id: 'aed',
+        place: 'saltySwallow',
+        name: 'Áéd',
+        avatar: '🐲',
+        lives: BALANCE.opponentLives.aed,
+        ability: 'metamagic',
+        sorcery: true, // three uses a fight (his gems), each any of his four tricks (since 11 Nov; it was a pool of points)
+        blurb: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", // (the user's, 11 Nov)
+        powers: [
+            { name: "Metamagic", text: "Three times a fight (his gems) he twists the dice with any of four tricks." },
+            { name: "Heightened Spell", text: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." },
+            { name: "Quickened Spell", text: "He throws again without keeping a die." },
+            { name: "Empowered Spell", text: "He rolls one of his own dice again." },
+            { name: "Twinned Spell", text: "A die he keeps is copied onto one of his loose dice." }
+        ]
+    },
+    {
         id: 'hangman',
         place: 'saltySwallow',
         name: 'The Hangman',
@@ -532,10 +550,10 @@ function rollFaceFor(room, turn) {
     let omen = room.tavernRun.omen;
     let again = !turn.hasRolled && (omen === 'fairWinds' ? 1 : omen === 'albatross' ? 6 : 0);
     let face = again ? d => { let v = plainFace(d); return v === again ? plainFace(d) : v; } : plainFace;
-    if (!hasKeepsake(room, 'gamblersCharm')) return face;
+    if (!hasKeepsake(room, 'gamblersCharm')) return withHeightened(room, turn, face);
     // The Gambler's Charm: the last die left to throw is thrown twice, and you keep the better (a
     // 2 or 4 you still need, else the higher; in a cursed round the lower). The other rises as a ghost.
-    return d => {
+    return withHeightened(room, turn, d => {
         if (!d || turn.dice.filter(x => x.status === Rules.STATUS.ACTIVE).length !== 1) return face(d);
         let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
         let a = face(d), b = face(d);
@@ -544,6 +562,26 @@ function rollFaceFor(room, turn) {
         for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
         let lost = pick === a ? b : a;
         if (lost !== pick) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        return pick;
+    });
+}
+
+// Áéd's Heightened Spell (11 Nov): your throw at disadvantage. Each die rolls twice and you keep the
+// worse: the one that isn't a 2 or 4 you still need, else the lower (in a cursed round the higher).
+// The other rises from the die as a ghost, like the Vexing Rapier's.
+function withHeightened(room, turn, face) {
+    if (!turn.heightened) return face;
+    return d => {
+        if (!d) return face(d);
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let a = face(d), b = face(d);
+        let cursed = !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+        let pick = cursed ? Math.max(a, b) : Math.min(a, b);
+        let needed = v => (v === 2 || v === 4) && !kept.includes(v);
+        if (needed(a) && !needed(b)) pick = b;
+        else if (needed(b) && !needed(a)) pick = a;
+        let lost = pick === a ? b : a;
+        if (lost !== pick && turn.ghosts) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
         return pick;
     };
 }
@@ -985,6 +1023,119 @@ function startFlourish(roomCode, room, turn) {
     return { name: encounter.name, ability: Rules.ABILITY_NAMES.flourish, text: 'This turn every die he throws rolls twice, and he keeps the better.' };
 }
 
+// ---- Áéd, the dragon sorcerer (11 Nov, the user's): metamagic with sorcery points ----
+// A pool of points a fight (his gems on the nameplate; BALANCE.metamagic), spent on four tricks:
+// Heightened (your next throw at disadvantage), Quickened (he throws again without keeping a die),
+// Empowered (he rolls one of his own dice again), Twinned (a die he keeps is copied onto one of his
+// loose dice). He spends them where the strategy brain says they raise his chance most.
+const METAMAGIC = BALANCE.metamagic;
+const METAMAGIC_TEXT = {
+    heightened: 'Your next throw is at disadvantage: each die rolls twice, and you keep the worse.',
+    quickened: 'He throws again without keeping a die.',
+    empowered: 'He rolls one of his own dice again.',
+    twinned: 'A die he keeps is copied onto one of his loose dice.'
+};
+const aedSeated = room => room.mode === 'tavern-crawl' && !!(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] || {}).sorcery;
+// Spends a trick's points. A Clear-Eye waiting cancels it (its points still spent). Returns true if it goes ahead.
+function castMetamagic(roomCode, room, trick, show = (event, data) => sendMoment(roomCode, event, data), text = METAMAGIC_TEXT[trick]) {
+    let run = room.tavernRun;
+    let cost = METAMAGIC.costs[trick];
+    if (!run || (run.sorcery || 0) < cost) return false;
+    run.sorcery -= cost;
+    markAbilityUsed(room, trick);
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    let name = Rules.ABILITY_NAMES[trick];
+    if (run.clearEyeArmed) {
+        run.clearEyeArmed = false;
+        show('signatureMove', { name: encounter.name, ability: name, text: 'A Clear-Eye Thonic saw it coming.', cancelled: true });
+        show('thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${name} is cancelled` });
+        return false;
+    }
+    show('signatureMove', { name: encounter.name, ability: name, text });
+    return true;
+}
+// Heightened, as your hand's first throw begins: once a round, when he's lost a heart or from the
+// fight's second round. Returns the move to show first, or null.
+function startHeightened(roomCode, room, turn) {
+    if (!aedSeated(room) || turn.playerId === BOT_ID || turn.rollCount !== 0) return null;
+    let run = room.tavernRun;
+    let round = run.encounterRound || 1;
+    if ((run.sorcery || 0) < METAMAGIC.costs.heightened || run.heightenedRound === round) return null;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    let bot = room.players[BOT_ID];
+    if (!bot || !(bot.lives < encounter.lives || round >= 2)) return null;
+    run.heightenedRound = round;
+    let move = null;
+    let show = (event, data) => { if (event === 'signatureMove' && !data.cancelled) move = data; else emitMoment(roomCode, room, event, data); };
+    if (castMetamagic(roomCode, room, 'heightened', show)) turn.heightened = true;
+    return move;
+}
+// His chance of winning the round from these dice, keeping his best.
+const aedChance = (dice, toBeat, opts) => Strategy.chanceAfterKeep(dice, Strategy.bestKeeps(dice, toBeat, opts), toBeat, opts);
+// His own throw, before he keeps: the whole throw again (Quickened) or one die again (Empowered), when
+// it raises his chance enough. One trick a throw. Returns true if he cast one (the turn goes on from it).
+function aedBeforeKeep(roomCode, room, turn, toBeat, opts) {
+    let run = room.tavernRun;
+    if (!aedSeated(room) || turn.finalized || turn.locksThisRoll > 0 || turn.maxThrows || turn.magicAt === turn.rollCount || !(run.sorcery > 0)) return false;
+    let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (active.length < 2) return false;
+    let now = aedChance(turn.dice, toBeat, opts);
+    let options = [];
+    if (run.sorcery >= METAMAGIC.costs.quickened) options.push({ trick: 'quickened', gain: Strategy.chanceAfterKeep(turn.dice, [], toBeat, opts) - now });
+    if (run.sorcery >= METAMAGIC.costs.empowered) {
+        let pick = null;
+        for (let d of active) {
+            let total = 0;
+            for (let face = 1; face <= 6; face++) total += aedChance(turn.dice.map(x => (x.id === d.id ? { ...x, value: face } : x)), toBeat, opts);
+            let gain = total / 6 - now;
+            if (!pick || gain > pick.gain) pick = { trick: 'empowered', gain, die: d.id };
+        }
+        if (pick) options.push(pick);
+    }
+    let choice = options.filter(o => o.gain >= METAMAGIC.minGain[o.trick]).sort((a, b) => b.gain - a.gain)[0];
+    if (!choice) return false;
+    turn.magicAt = turn.rollCount;
+    let cast = castMetamagic(roomCode, room, choice.trick);
+    emitState(roomCode);
+    if (!cast) return false;
+    let key = turn.key;
+    if (choice.trick === 'quickened') {
+        turn.freeRoll = true;
+        botLater(roomCode, key, 400, () => runBotRoll(roomCode));
+        return true;
+    }
+    let die = turn.dice.find(d => d.id === choice.die);
+    die.value = rollFaceFor(room, turn)(die);
+    throwAgain(roomCode, room, turn, [die.id]);
+    botLater(roomCode, key, Math.round(momentsLeft(room) / TIME_SCALE) + 1500, () => runBotDecision(roomCode));
+    return true;
+}
+// Twinned, as he keeps: one of his kept dice copied onto a loose one, when it raises his chance enough.
+// Returns true if he cast it (he then decides his keep again, with the copy).
+function aedTwin(roomCode, room, turn, toBeat, opts, toLock) {
+    let run = room.tavernRun;
+    if (!aedSeated(room) || turn.finalized || turn.maxThrows || turn.magicAt === turn.rollCount || (run.sorcery || 0) < METAMAGIC.costs.twinned) return false;
+    let loose = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !toLock.includes(d.id));
+    let keeps = turn.dice.filter(d => toLock.includes(d.id));
+    if (!loose.length || !keeps.length) return false;
+    let now = aedChance(turn.dice, toBeat, opts);
+    let pick = null;
+    for (let from of keeps) for (let to of loose) {
+        if (to.value === from.value) continue;
+        let gain = aedChance(turn.dice.map(x => (x.id === to.id ? { ...x, value: from.value } : x)), toBeat, opts) - now;
+        if (!pick || gain > pick.gain) pick = { gain, from, to };
+    }
+    if (!pick || pick.gain < METAMAGIC.minGain.twinned) return false;
+    turn.magicAt = turn.rollCount;
+    let cast = castMetamagic(roomCode, room, 'twinned', undefined, `His ${pick.from.value} is copied onto another of his dice.`);
+    emitState(roomCode);
+    if (!cast) return false;
+    pick.to.value = pick.from.value;
+    throwAgain(roomCode, room, turn, [pick.to.id]);
+    botLater(roomCode, turn.key, Math.round(momentsLeft(room) / TIME_SCALE) + 1500, () => runBotDecision(roomCode));
+    return true;
+}
+
 // Rokr's Written in the Stars, as your turn's first throw begins: the whole turn, two faces are
 // marked before each throw (applyTavernRollAbilities). Returns the move to show, or null.
 function startStars(roomCode, room, turn) {
@@ -1073,6 +1224,7 @@ function performRoll(roomCode) {
     rogueWave(roomCode, room, turn);
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
+    let heightened = Rules.canRoll(turn) ? startHeightened(roomCode, room, turn) : null;
     // The Bard's Inspiring Song waits for your first throw of the fight; after it, it's gone.
     let run = room.mode === 'tavern-crawl' ? room.tavernRun : null;
     let firstThrow = run && turn.playerId !== BOT_ID && run.song === 'ready' && !turn.hasRolled;
@@ -1089,6 +1241,7 @@ function performRoll(roomCode) {
     });
     let moments = room.rollMoments;
     room.rollMoments = null;
+    turn.heightened = false; // (Heightened is for the one throw)
     if (!result) return 0;
     if (firstThrow) run.song = turn.key;
     turn.lastThrown = thrownNow;
@@ -1096,6 +1249,7 @@ function performRoll(roomCode) {
     if (firstThrow || songGone) emitState(roomCode);
     if (flourish) signatureMoves.unshift(flourish);
     if (stars) signatureMoves.unshift(stars);
+    if (heightened) signatureMoves.unshift(heightened);
     // The abilities this throw brings play first, banner and effect, and the dice are thrown once
     // they (and anything still on screen, like the round's result) have gone. Only Klarg waits
     // for the dice: his hand takes one that has landed.
@@ -1485,6 +1639,8 @@ function runBotDecision(roomCode) {
     let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room), minKeep: seaKeeps(room), throws: turn.maxThrows || 0, throwsLeft: turn.maxThrows ? turn.maxThrows - turn.rollCount : undefined };
     let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
     let simple = !encounter || encounter.place === 'ghoulAndGourd';
+    // Áéd's metamagic, before he keeps: the whole throw again, or one die again.
+    if (encounter && encounter.sorcery && aedBeforeKeep(roomCode, room, turn, toBeat, { aceAt16, ...round })) return;
     let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
     // The Duke (or Martha in his face) with his Devil waiting: he goes for it only when it helps
     // (devilPlan), keeping then only what it needs, so it has three dice to land on.
@@ -1505,6 +1661,8 @@ function runBotDecision(roomCode) {
     }
     let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
     if (conceding) toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
+    // Áéd's Twinned Spell, as he keeps: a kept die copied onto a loose one.
+    if (!conceding && encounter && encounter.sorcery && aedTwin(roomCode, room, turn, toBeat, { aceAt16, ...round }, toLock)) return;
 
     // Lock the dice one after another, and only then decide what next. (Separate timers for
     // each lock and the check could fire out of order on a busy server, and a check that ran
@@ -1608,6 +1766,12 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
 
 function abilityMarks(room, seated) {
     let run = room.tavernRun;
+    // Áéd: his sorcery points, one gem each (the pool is this fight's).
+    if (seated.sorcery) {
+        let points = METAMAGIC.points;
+        let spent = points - Math.max(0, Math.min(points, run.sorcery ?? points));
+        return { abilityMax: points, abilitySpent: spent, powerMarks: [[points, spent]], sorcery: true };
+    }
     // [uses, spent] for each power, in the order of `powers` (the entrance card marks each power's own, 10 Nov).
     let marks = abilitiesOf(seated).map(a => {
         let uses = BALANCE.abilityUses[a] || 0;
@@ -1635,6 +1799,8 @@ function markAbilityUsed(room, abilityId) {
 // The current opponent's ability still has uses left this fight.
 function encounterAbilityLeft(room) {
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    // (Áéd: while he has the points for a trick)
+    if (encounter && encounter.sorcery) return (room.tavernRun.sorcery || 0) >= Math.min(...Object.values(METAMAGIC.costs));
     // (any of them: the Hangman's Ace is still to come once his Dead Eye is spent)
     return encounter && abilitiesOf(encounter).some(a => getAbilityUseCount(room, a) < BALANCE.abilityUses[a]);
 }
@@ -1918,6 +2084,9 @@ function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
         room.tavernRun.nextFightHearts = null;
         // The hot tub's surge lasts this one fight.
         room.tavernRun.tubSurge = room.tavernRun.nextFightSurge || null;
+        // Áéd's sorcery points, a fresh pool each fight.
+        room.tavernRun.sorcery = encounter.sorcery ? METAMAGIC.points : 0;
+        room.tavernRun.heightenedRound = null;
         room.tavernRun.nextFightSurge = null;
         // The Bard's song, for this one fight.
         let song = room.tavernRun.nextFightSong;

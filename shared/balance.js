@@ -17,7 +17,7 @@ module.exports = {
     opponentLives: {
         molar: 1, frak: 2, danhausen: 3, duke: 3, martha: 3, // McGrath 1, Frak 2, the rest 3 (the user, 5 Nov)
         sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
-        klarg: 3, rokr: 3, hangman: 3, jaguar: 4
+        klarg: 3, rokr: 3, aed: 3, hangman: 3, jaguar: 4 // (Áéd, after Rokr since 11 Nov: 3, a first guess)
     },
     // How many times each opponent's ability can be used in a fight (from a random round 1-3).
     // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
@@ -34,6 +34,16 @@ module.exports = {
         // 6 Nov, the user's: the Hangman's Penitent Stare in place of Dead Eye.
         penitentStare: 1
     },
+    // Áéd, the dragon sorcerer (11 Nov, the user's): metamagic. Since 11 Nov (the user's: "simplify it to 3
+    // uses") three uses a fight (his gems), each any of his four tricks; he casts one when the strategy brain
+    // says it raises his chance of winning the round by at least minGain. Heightened: your next throw at
+    // disadvantage (each die twice, you keep the worse), once a round, when he's lost a heart or from the
+    // second round. First guesses, not yet simulated. (points: the uses; costs: a use each.)
+    metamagic: {
+        points: 3,
+        costs: { heightened: 1, quickened: 1, empowered: 1, twinned: 1 },
+        minGain: { quickened: 0.12, empowered: 0.06, twinned: 0.06 }
+    },
     // How the final tier's abilities play (each set by simulation, 25 Oct): a sensible player,
     // fresh, wins Klarg 27%, Rokr 26%, the Hangman 26%, Jaguar 14% (the Yawning Portal ~40%,
     // Brodor 23%; the ship as it was 36, 41, 35, 24).
@@ -44,6 +54,8 @@ module.exports = {
     // The sea die's dial per leg (the user, 10 Nov): a 1 is always listing to port and a 6 always listing
     // to starboard, on every leg; legs differ only in faces 2-5 (calm and the storms). First guesses.
     voyage: {
+        // Áéd's leg (11 Nov): calm, with a Squall on face 3 (the user's: "give him a storm on one face"; the face a first guess).
+        aed: ['port', 'calm', 'squall', 'calm', 'calm', 'starboard'],
         klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
         rokr: ['port', 'becalmed', 'becalmed', 'calm', 'calm', 'starboard'],
         hangman: ['port', 'squall', 'rogue', 'fog', 'calm', 'starboard'],

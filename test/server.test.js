@@ -369,6 +369,74 @@ test("Jaguar's sea dial follows his phase (the user, 10 Nov)", async () => {
     assert.ok(dial.talk.includes('fog') && dial.cloak.includes('squall') && dial.allIn.slice(1, 5).every(id => id === 'rogue'));
 });
 
+// ---- Áéd, the dragon sorcerer (11 Nov): metamagic with sorcery points ----
+
+test('Áéd sits after Rokr, his three uses a fight shown as gems', async () => {
+    const order = server.TAVERN_ENCOUNTERS.map(e => e.id);
+    assert.equal(order.indexOf('aed'), order.indexOf('rokr') + 1);
+    assert.equal(order.indexOf('hangman'), order.indexOf('aed') + 1);
+    const hero = await tavernAgainst(fightOf('aed'), 'Aed Gems');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.name = 'Áéd'; // (the nameplate is the opponent seated)
+    room.tavernRun.sorcery = 3;
+    const run = server.getRoomState(codeOf(hero)).tavernRun;
+    assert.deepEqual([run.abilityMax, run.abilitySpent], [BALANCE.metamagic.points, BALANCE.metamagic.points - 3]);
+    assert.ok(run.abilityLeft, 'a Clear-Eye can be drunk while he has points');
+    room.tavernRun.sorcery = 0;
+    assert.ok(!server.getRoomState(codeOf(hero)).tavernRun.abilityLeft, 'none left: nothing to cancel');
+});
+
+test('Áéd\'s Heightened Spell: your hand\'s first throw at disadvantage, each die the worse of two', async () => {
+    const hero = await tavernAgainst(fightOf('aed'), 'Aed Heightened');
+    const room = roomOf(hero);
+    room.tavernRun.sorcery = BALANCE.metamagic.points;
+    room.tavernRun.encounterRound = 2; // (from the second round)
+    room.tavernRun.sea = 'calm';
+    const moves = [];
+    hero.on('signatureMove', m => moves.push(m.ability));
+    // Pairs for the six dice: the worse is kept; a 2 or 4 you need never is, if the other isn't one.
+    const unpin = pinFaces([6, 1, 2, 5, 4, 4, 3, 6, 5, 5, 1, 2]);
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.deepEqual(room.turn.dice.map(d => d.value), [1, 5, 4, 3, 5, 1]);
+    assert.ok(moves.includes('Heightened Spell'));
+    assert.equal(room.tavernRun.sorcery, BALANCE.metamagic.points - BALANCE.metamagic.costs.heightened);
+    assert.ok(rolled.ghosts && rolled.ghosts.length >= 4, 'the lost rolls rise as ghosts');
+    assert.ok(!room.turn.heightened, 'only the one throw');
+});
+
+test('Áéd\'s own tricks: a throw of all 1s, he throws again or rolls a die again, never spending more than he has', async () => {
+    const hero = await tavernAgainst(fightOf('aed'), 'Aed Tricks');
+    const room = roomOf(hero);
+    room.tavernRun.sorcery = BALANCE.metamagic.points;
+    room.tavernRun.encounterRound = 1; // (no Heightened on your hand)
+    room.tavernRun.sea = 'calm';
+    room.players.BOT_MOLAR.name = 'Áéd';
+    room.players.BOT_MOLAR.lives = BALANCE.opponentLives.aed; // (unhurt: no Heightened on your hand in round 1)
+    const moves = [];
+    hero.on('signatureMove', m => moves.push(m.ability));
+    // Your hand: 2, 4, 4, 4, 4, 3 (15): one he can still beat.
+    let unpin = pinFaces([2, 4, 4, 4, 4, 3]);
+    hero.emit('rollDice');
+    await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    // Keep all six (a tap refused while the dice still settle is tapped again), until the hand is whole.
+    const until = async (done, ms) => { const t0 = Date.now(); while (!done() && Date.now() - t0 < ms) await sleep(20); return done(); };
+    await until(() => {
+        room.turn.dice.filter(d => d.status === 'active').forEach(d => hero.emit('toggleDie', d.id));
+        return room.turn.dice.every(d => d.status !== 'active');
+    }, 3000);
+    // His first throw: six 1s, as bad as it gets.
+    unpin = pinFaces([1, 1, 1, 1, 1, 1]);
+    hero.emit('endTurn');
+    assert.ok(await until(() => room.turn && room.turn.playerId === 'BOT_MOLAR' && room.turn.rollCount >= 1, 8000), 'he threw');
+    unpin();
+    await waitFor(hero, 'turnState', s => s.turn && s.turn.playerId === 'BOT_MOLAR' && s.turn.finalized, 15000);
+    assert.ok(moves.some(m => m === 'Quickened Spell' || m === 'Empowered Spell'), `he used a trick: ${moves.join(', ')}`);
+    assert.ok(room.tavernRun.sorcery >= 0 && room.tavernRun.sorcery < BALANCE.metamagic.points);
+});
+
 test('Becalmed: three throws a hand, then the dice stay as they lie; the opponent plays it too', async () => {
     const hero = await tavernAgainst(fightOf('rokr'), 'Becalmed');
     const room = roomOf(hero);
@@ -2047,19 +2115,19 @@ test('a rolled 24 from an opponent restores a life, up to their lives for the fi
 
 const roomOf = socket => server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[socket.id])];
 
-test("the run is fourteen fights: the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow", async () => {
+test("the run is fifteen fights: the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow (Áéd after Rokr, 11 Nov)", async () => {
     const names = server.TAVERN_ENCOUNTERS.map(e => e.name);
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
-        'Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4]);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(4).fill('saltySwallow')]);
+        'Klarg', 'Rokr', 'Áéd', 'The Hangman', 'Jaguar Cantona']);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(5).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);
     server.emitState(roomCode);
     const state = await next;
     assert.equal(runOf(state).place, 'The Ghoul and Gourd');
-    assert.equal(runOf(state).totalEncounters, 14);
+    assert.equal(runOf(state).totalEncounters, 15);
 });
 
 test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at random", async () => {
@@ -2606,10 +2674,12 @@ test('a run saved after the Yawning Portal carries on at the Salty Swallow', asy
 test('the Yawning Portal and the ship play their best; every ability has a name and uses', () => {
     const places = Object.fromEntries(server.TAVERN_ENCOUNTERS.map(e => [e.id, e.place]));
     for (const id of ['sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor']) assert.equal(places[id], 'yawningPortal');
-    for (const id of ['klarg', 'rokr', 'hangman', 'jaguar']) assert.equal(places[id], 'saltySwallow');
+    for (const id of ['klarg', 'rokr', 'aed', 'hangman', 'jaguar']) assert.equal(places[id], 'saltySwallow');
     for (const e of server.TAVERN_ENCOUNTERS) if (e.ability) {
         assert.ok(Rules.ABILITY_NAMES[e.ability], `${e.ability} has a name`);
-        assert.ok(BALANCE.abilityUses[e.ability] >= 1, `${e.ability} has uses`);
+        // (Áéd's metamagic: a pool of sorcery points instead, each trick with its cost)
+        if (e.sorcery) assert.ok(BALANCE.metamagic.points >= 1 && ['heightened', 'quickened', 'empowered', 'twinned'].every(t => BALANCE.metamagic.costs[t] >= 1 && Rules.ABILITY_NAMES[t]), 'his points and tricks');
+        else assert.ok(BALANCE.abilityUses[e.ability] >= 1, `${e.ability} has uses`);
     }
 });
 // ---- One thing at a time; the user's fixes of 21 Oct ----

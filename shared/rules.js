@@ -58,7 +58,13 @@
         penitentStare: 'Penitent Stare', // the Hangman's, beside his Ace
         jaguarPhases: 'Smooth Talk', // Jaguar's first phase (the use is a Thonic he talks off your shelf)
         cloak: 'The Cloak', // Jaguar's second phase
-        allIn: 'All In' // and his last
+        allIn: 'All In', // and his last
+        // Áéd's metamagic (11 Nov, the user's): his sorcery points, spent on four tricks.
+        metamagic: 'Metamagic',
+        heightened: 'Heightened Spell',
+        quickened: 'Quickened Spell',
+        empowered: 'Empowered Spell',
+        twinned: 'Twinned Spell'
     };
 
     function getAbilityMaxUses(abilityId) {

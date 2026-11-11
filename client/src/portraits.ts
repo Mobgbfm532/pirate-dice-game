@@ -56,6 +56,8 @@ export const PORTRAITS: Record<string, Portrait> = {
     'Martha as Duke Morrigan': { ...seated('martha-duke.webp', [57, 33], 0.9, 718, 720, [4.5, -11.3]), seat: 1.15 },
     Klarg: seated('klarg.webp', [62, 26], 1.3, 907, 720, [10.2, -11.9]),
     Rokr: seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]),
+    // Áéd, the dragon sorcerer (the user's painting, 11 Nov): framed on his face, a first guess (the Portraits tab).
+    'Áéd': seated('aed.webp', [54, 20], 1.7, 625, 720),
     'The Hangman': seated('hangman.webp', [45, 36], 1.25, 793, 720, [-10.1, -4]),
     // His second painting (27 Oct): the same pose with his cloak flowing out to the right (faded at the painting's edge); the head as in the first, so no seat.
     'Jaguar Cantona': seated('jaguar.webp', [45.7, 35.5], 2, 969, 720, [-3, 4]),

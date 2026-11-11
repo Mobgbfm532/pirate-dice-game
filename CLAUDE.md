@@ -19,10 +19,10 @@ the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with li
 **The league (4 Nov, the user's call):** at table code `JUGS` (`LEAGUE_ROOMS` in server.js; add a code there for another) every finished multiplayer game counts, by player name (trimmed, any case): games played and won (`recordLeagueGame`, `leagueUpdate`). It shows on the game-over screen and behind a 🏆 in the header (`LeagueTable` in Hud), most wins first, then fewest games. A table of one doesn't count; `previews/scenes/jugs-player.cjs` seats a second player for trying it. (Kram was given one win and one game by hand on the real database, the user's call, 4 Nov.)
 
 Table codes: any code = classic multiplayer (`COMP`, solo vs The Molar, was taken out on 4 Nov, the user's call; a bot sits only at a Tavern Crawl table now); `TAVERN` = Tavern
-Crawl (since 21 Oct a tournament of fourteen fights across three places: the Ghoul and Gourd, a
+Crawl (since 21 Oct a tournament of fifteen fights (fourteen until 11 Nov) across three places: the Ghoul and Gourd, a
 qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal
 (Sylvester Stonefist, Vaelin Inkhand, Stason Jatham, The Ridgeler, Brodor), then the final aboard
-the Salty Swallow, a docked ship (Klarg, Rokr, The Hangman, Jaguar Cantona); each from Frak on has
+the Salty Swallow, a docked ship (Klarg, Rokr, Áéd, The Hangman, Jaguar Cantona); each from Frak on has
 an ability; between fights a random event now and then, then a choice of two spots; gold to spend
 (Thonics, keepsakes, the Shrine, the hot tub; prices rise as you buy) and a leaderboard by points; the run can be saved after
 each place). See "Tavern Crawl now" below.
@@ -259,7 +259,7 @@ env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; `shared/balance.js` unchange
 every table on their server).
 
 Env: `PORT`, `GAME_TIME_SCALE` (tests use 0.01), `LEADERBOARD_READONLY`,
-`TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 13 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
+`TAVERN_START_ENCOUNTER` (1 = Frak … 5 = Sylvester … 10 = Klarg … 12 = Áéd … 14 = Jaguar, for testing), `GAME_SERVER` (dev proxy target),
 `DATABASE_URL` (the Neon Postgres link: the leaderboard and who has met whom survive deploys and
 sleeps; without it, files),
 `SAVE_SECRET` (seals saved runs; set on the Render test service since 21 Oct; the live service needs
@@ -336,7 +336,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 - **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site; see git log for the latest commit):**
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
-  Tavern Crawl: the 14-fight tournament across three places, Thonics, events between fights,
+  Tavern Crawl: the 15-fight tournament across three places, Thonics, events between fights,
   keepsakes, gold, saves after each place. 172 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
@@ -460,9 +460,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   with its `place`, a key of `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak,
   Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal (Sylvester Stonefist, Vaelin
   Inkhand, Stason Jatham, The Ridgeler, Brodor), then aboard the Salty Swallow, a docked ship
-  (Klarg, Rokr, the Hangman, Jaguar). McGrath is the Molar renamed (keeps the id `molar`, plays
+  (Klarg, Rokr, Áéd, the Hangman, Jaguar). McGrath is the Molar renamed (keeps the id `molar`, plays
   simply). A boss (`boss`, `drops`: Martha, Brodor) drops a keepsake (`BOSS_DROPS`) and leads to an
-  invitation on to the next place (its backdrop is the place just won, `interlude.from`: by then the run's place is the next one). All fourteen have painted busts (Brodor's since 21 Oct, `seat: 1.3`). Martha has three
+  invitation on to the next place (its backdrop is the place just won, `interlude.from`: by then the run's place is the next one). All fifteen have painted busts (Áéd's since 11 Nov, `art/bust-aed.jpg` → `aed.webp`, cut with `redOverBlue` so his violet heart and wisps stay) (Brodor's since 21 Oct, `seat: 1.3`). Martha has three
   more, holding up Frak's, Danhausen's or the Duke's face as a mask: while one of her disguises
   is the round's effect, her bust and chip show that painting (`opponentPortraitKey` in
   Backdrop, PORTRAITS `'Martha as Frak'` etc.; a violet shimmer as she swaps,
@@ -472,7 +472,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine (its own painting aboard since 10 Nov, the user's: `art/shrine-ship.jpg` → `shrine-ship.webp`, the statue below decks; `spotPortrait(spot, place)` in portraits.ts), Jorvash and Yvesil (Johnny Elf Bar stays ashore since 9 Nov, the user's) and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
   Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
-  the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 4 lives (`shared/balance.js`,
+  the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 3, 4 lives (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
@@ -555,6 +555,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     stars mark two faces before each throw of the turn (`turn.nextMarks` → `turn.marks`); dice landing
     on them are bound (`turn.boundIds`; `Rules.toggleDie` refuses them; all bound: a free roll). The
     client: stars over bound dice (Constellation), the plaque "Bound: ... Next: ...".
+  - **Áéd, the dragon sorcerer** (11 Nov, the user's; after Rokr; 3 hearts; `sorcery: true`, `ability: 'metamagic'`; numbers in `BALANCE.metamagic`, first guesses, not simulated): **metamagic**: since the evening of 11 Nov (the user's: "simplify it to 3 uses") three uses a fight, each any of his four tricks (`BALANCE.metamagic.points` 3, every cost 1; it was a pool of 5 points with 5e's costs; `run.sorcery`, reset in `resetTavernEncounter`), shown as violet gems ◆ on his nameplate and card (`abilityMarks` returns the pool; `AbilityMarks` draws gems for `metamagic`), spent with `castMetamagic` (a Clear-Eye cancels a trick, its use still spent; `encounterAbilityLeft` counts his uses): **Heightened Spell** (as your hand's first throw begins, once a round, once he's lost a heart or from the second round, `startHeightened`; that throw is at disadvantage, each die rolled twice and the worse kept: a needed 2 or 4 never when the other isn't one, else the lower (the higher in a cursed round), the lost roll a ghost; `withHeightened` in `rollFaceFor`), and on his own throws, one trick a throw (`turn.magicAt`), judged by the strategy brain (`aedChance`: his chance of winning the round keeping his best), never in a becalmed round: **Quickened Spell** (the whole throw again without keeping, `turn.freeRoll`, when rethrowing beats his best keep by `minGain.quickened` 0.12), **Empowered Spell** (one loose die rolled again, the one that helps most on average, by 0.06; `aedBeforeKeep`), **Twinned Spell** (as he keeps, a kept die's face copied onto a loose die, by 0.06; `aedTwin`; the die tumbles onto it and he decides his keep again). Each is a moment (`signatureMove`; names in `Rules.ABILITY_NAMES`, listed in `ABILITY_MOMENTS` in game.ts) in his violet with a gold edge, each its own flash. His sea dial (`BALANCE.voyage.aed`): port on 1, calm on 2, 4 and 5, a Squall on 3 (the user's: "give him a storm on one face", 11 Nov; which face, a first guess). His card line is the user's: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash." No ability painting or sound of his own yet; the trailer's line-up doesn't have him (kept as it was, the user's call). Tests: three in server.test.js. Brainstorm: `docs/aed-brainstorm.md`. Stills: `test/shots.mjs ... fight=12 moment=heightened|twinned|card`.
   - **The Hangman** (`abilities: ['penitentStare', 'deadeye24']`, since 6 Nov, the user's): **Penitent Stare**, once a fight, once he's lost a life: your finished hand scores 2 less for each heart you've taken (`stareEachHeart`). Since 10 Nov (the user's) it isn't telegraphed (no banner, plaque or glow as the round begins; the round effect `stare` is dormant): with both hands done, in `evaluateTavernRound`, he uses it only if he isn't already winning and it wins or ties him the round, never on a dust hand (`stareOff`, `stareTurnsRound`), its moment showing "20 → 16"; he plays his hand knowing he holds it (`getTavernScoreToBeat` takes it off the target, unless a Clear-Eye waits). Its painting and the Ace of Spades' are the user's (9 Nov), and so is All In's. **Dead Eye** (dormant since 6 Nov), once a fight, as you end
     a hand that counts he shoots your best scoring die and it rolls again (`deadEyeRerolls`; turnState
     event `shot`); his **Ace of Spades** stays, for his last life. Clear-Eye counts all his abilities

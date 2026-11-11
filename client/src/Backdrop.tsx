@@ -36,7 +36,7 @@ const SALTY_SWALLOW: Scene = {
 const SCENES: Record<string, Scene> = {
     'Sperm McGrath': OUTSIDE,
     ...Object.fromEntries(['Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor'].map(n => [n, YAWNING_PORTAL])),
-    ...Object.fromEntries(['Klarg', 'Rokr', 'The Hangman', 'Jaguar Cantona'].map(n => [n, SALTY_SWALLOW]))
+    ...Object.fromEntries(['Klarg', 'Rokr', 'Áéd', 'The Hangman', 'Jaguar Cantona'].map(n => [n, SALTY_SWALLOW]))
 };
 // A place's painting, for the scenes between fights (by the place's name).
 const PLACE_FILES: Record<string, string> = { 'The Yawning Portal': YAWNING_PORTAL.file, 'The Salty Swallow': SALTY_SWALLOW.file };

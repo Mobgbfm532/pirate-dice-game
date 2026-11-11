@@ -1,7 +1,14 @@
 # Aed, the dragon sorcerer: a new opponent (brainstorm, 10 Nov)
 
 The user's idea, 10 Nov: a new opponent called Aed, a dragon sorcerer, his ability drawn from the
-sorcerer class in D&D 5e. Nothing here is built yet; the user chooses.
+sorcerer class in D&D 5e.
+
+**Built 11 Nov** (the user: idea 1, "metamagic with sorcery points", and "he can go after Rokr"; the name
+is spelt **Áéd**; the user's painting, `art/bust-aed.jpg`): 5 sorcery points a fight as violet gems;
+Heightened 3, Quickened 2, Empowered 1, Twinned 1 (5e's own costs, Twinned at a 1st-level spell's); 3 hearts;
+idea 6's scales were not asked for and aren't built. **Simplified the same evening** (the user: "just simplify
+it to 3 uses and he can choose any of the 4 options"): three uses a fight, each any trick. Details in CLAUDE.md under the Salty Swallow. The
+rest of this file is the brainstorm as it was.
 
 ## What a 5e sorcerer has to draw on
 

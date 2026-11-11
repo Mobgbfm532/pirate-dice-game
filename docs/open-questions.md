@@ -20,9 +20,14 @@ day they happen, with what's been built marked as it lands.
 ### Water of the Ebon Shield (`docs/ebon-shield-brainstorm.md`, 10 Nov)
 - It does what the Lady's Favour does (one extra heart next fight). Which new use? Recommended: black water, the sea can't move your dice next fight. If so, against the list and the rogue wave only, or the Squall, Fog and Becalmed too?
 
-### Aed, the dragon sorcerer (`docs/aed-brainstorm.md`, 10 Nov)
-- His ability: recommended metamagic with a pool of sorcery points (Heightened, Quickened, Empowered, Twinned), with his scales as a passive (an extra heart, or his first lost heart stays).
-- Where he fights (a new place after the ship, or in place of someone), his dragon's colour, his hearts, his art.
+### Áéd, the dragon sorcerer (`docs/aed-brainstorm.md`, built 11 Nov)
+- His numbers, all first guesses, not simulated: 3 uses a fight (the user's), how keen he is to spend them (`minGain` 0.12 and 0.06), 3 hearts, Heightened at most once a round, once he's lost a heart or from the second round.
+- His words: the four tricks' texts are Claude's. Anything he says?
+- His Squall is on face 3 (a first guess): another face, or another storm?
+- Art and sound: an ability painting (one, or one per trick) and a sound for his spells, if wanted; his dragon's colour (the card and banners use his robe's violet and gold).
+- His scales (an extra heart, or his first lost heart stays) were in the brainstorm but not asked for: leave out?
+- The trailer's line-up and "Fourteen rivals." don't have him yet (the trailer kept as it was, 11 Nov).
+- The balance simulator doesn't know him.
 
 ### The trailer, take two (`docs/trailer-brainstorm.md`, built 11 Nov)
 - A ~40 s trailer track from the user (Udio), with hits where the sections change: until then the intro music's 18-24 s bar plays twice.
@@ -49,6 +54,9 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ## Settled
+- 11 Nov: Áéd's card line is "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", and his sea dial has a storm on one face: a Squall (on face 3).
+- 11 Nov (evening): Áéd's metamagic is three uses a fight, each any of the four tricks (it was 5 sorcery points with costs).
+- 11 Nov: the new opponent is Áéd (so spelt), a dragon sorcerer, after Rokr aboard the Salty Swallow: metamagic with sorcery points (Heightened, Quickened, Empowered, Twinned), the user's painting. The trailer is kept as it is for now.
 - 11 Nov: the trailer's words over the old game are the user's: "The original game was fine...", then, as the old 6 turns, "But it was time to rebuild the tavern."
 - 11 Nov: the trailer, rebuilt on Claude's recommendations (the user: "go with your recommendations and build it"): real old-game stills in an old phone, a fond memory, the old tune muffled; the old flat 6 turning into the new die; every opponent as a silhouette in a line-up by place, all fourteen, one gold rim, no names, Jaguar almost seen; the ability paintings out; "Between fights..." with Thom, the thief, the Shrine, the hot tub, Johnny and Yvesil; one bar of the music repeated; upright phone only.
 - 10 Nov: "build the next item": Jaguar's sea dial follows his phase, as in the proposed final dials.
