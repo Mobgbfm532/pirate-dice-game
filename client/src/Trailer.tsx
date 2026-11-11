@@ -217,7 +217,6 @@ function ColdOpen({ now }: { now: number }) {
                 {/* The old flat 6 (outside the phone, which dims): it lifts off the table and turns into the new die. */}
                 <span className="tr-old-six" style={vars({ left: pct(OLD_SIX.x, OLD_W), top: pct(OLD_SIX.y, OLD_H), width: pct(OLD_SIX.w, OLD_W) })}><b>6</b></span>
             </div>
-            <span className="tr-old-stamp">Version 1</span>
             {at(0.25, 3.95) && <Words len={3.7} place="top" className="old">The original game was fine...</Words>}
         </div>
     );
