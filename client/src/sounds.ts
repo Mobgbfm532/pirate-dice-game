@@ -747,20 +747,91 @@ export function playFilmSound(lead: number, elapsed: number) {
 }
 
 // The trailer's sound (9 Nov): the intro's music alone, its 0 at `lead` on the trailer's clock.
-export function playTrailerMusic(lead: number, elapsed: number) {
+// segments: [when, from, length?] in music seconds, each a piece of the track (since 11 Nov one bar is
+// played twice, so the trailer runs longer than the track): joined on a hit with a short crossfade.
+export function playTrailerMusic(lead: number, elapsed: number, segments: [number, number, number?][] = [[0, 0]]) {
     const ctx = audio();
     const buffer = filmBuffers.get('music');
     if (!ctx || musicOff || !buffer) return () => {};
     const start = ctx.currentTime + 0.02 - elapsed + lead;
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
     const level = ctx.createGain();
     level.gain.value = 0.85;
-    source.connect(level).connect(ctx.destination);
-    source.start(Math.max(ctx.currentTime, start), Math.max(0, ctx.currentTime - start));
+    level.connect(ctx.destination);
+    const XF = 0.03; // the crossfade at each join
+    const sources = segments.map(([when, from, length]) => {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const fade = ctx.createGain();
+        source.connect(fade).connect(level);
+        const at = start + when;
+        const skip = Math.max(0, ctx.currentTime - at); // (already under way: start part-way in)
+        const begin = Math.max(ctx.currentTime, at);
+        if (when > 0) { fade.gain.setValueAtTime(0, begin); fade.gain.linearRampToValueAtTime(1, begin + XF); }
+        if (length !== undefined) {
+            const end = at + length;
+            if (end <= ctx.currentTime) return source;
+            fade.gain.setValueAtTime(1, Math.max(begin, end - XF));
+            fade.gain.linearRampToValueAtTime(0, end);
+            source.start(begin, from + skip, Math.max(0, length - skip));
+        } else source.start(begin, from + skip);
+        return source;
+    });
     return () => {
         level.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
-        setTimeout(() => { try { source.stop(); } catch { /* not started */ } level.disconnect(); }, 1500);
+        setTimeout(() => { sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); level.disconnect(); }, 1500);
+    };
+}
+
+// The trailer's cold open (11 Nov, the user's): the old game's tavern tune, thin as an old phone's
+// speaker, with its click and its roll; it stops dead at `until` (seconds from now), as the new die falls.
+const OLD_CLIPS = { tune: 'BackgroundMusic.mp3', click: 'click.mp3', roll: 'roll.mp3' } as const;
+const oldBuffers = new Map<keyof typeof OLD_CLIPS, AudioBuffer>();
+export async function loadTrailerOld() {
+    const ctx = audio();
+    if (!ctx || musicOff) return;
+    await Promise.all((Object.keys(OLD_CLIPS) as (keyof typeof OLD_CLIPS)[]).map(async name => {
+        if (oldBuffers.has(name)) return;
+        try { oldBuffers.set(name, await ctx.decodeAudioData(await (await fetch(`/${OLD_CLIPS[name]}`)).arrayBuffer())); } catch { /* the trailer plays on without it */ }
+    }));
+}
+export function playTrailerOld(until: number, taps: { at: number; clip: 'click' | 'roll' }[]) {
+    const ctx = audio();
+    if (!ctx || musicOff) return () => {};
+    const t0 = ctx.currentTime + 0.02;
+    const out = ctx.createGain();
+    out.connect(ctx.destination);
+    const sources: AudioBufferSourceNode[] = [];
+    const tune = oldBuffers.get('tune');
+    if (tune) {
+        const source = ctx.createBufferSource();
+        source.buffer = tune;
+        // A small speaker: no bass, no air.
+        const low = ctx.createBiquadFilter(); low.type = 'highpass'; low.frequency.value = 420;
+        const high = ctx.createBiquadFilter(); high.type = 'lowpass'; high.frequency.value = 2600;
+        const level = ctx.createGain();
+        level.gain.setValueAtTime(0, t0);
+        level.gain.linearRampToValueAtTime(0.6, t0 + 0.4);
+        level.gain.setValueAtTime(0.6, t0 + until - 0.04);
+        level.gain.linearRampToValueAtTime(0, t0 + until);
+        source.connect(low).connect(high).connect(level).connect(out);
+        source.start(t0, 1);
+        source.stop(t0 + until + 0.05);
+        sources.push(source);
+    }
+    taps.forEach(({ at, clip }) => {
+        const buffer = oldBuffers.get(clip);
+        if (!buffer) return;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const level = ctx.createGain();
+        level.gain.value = 0.7;
+        source.connect(level).connect(out);
+        source.start(t0 + at);
+        sources.push(source);
+    });
+    return () => {
+        out.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+        setTimeout(() => { sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); out.disconnect(); }, 400);
     };
 }
 

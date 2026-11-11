@@ -24,6 +24,9 @@ day they happen, with what's been built marked as it lands.
 - His ability: recommended metamagic with a pool of sorcery points (Heightened, Quickened, Empowered, Twinned), with his scales as a passive (an extra heart, or his first lost heart stays).
 - Where he fights (a new place after the ship, or in place of someone), his dragon's colour, his hearts, his art.
 
+### The trailer, take two (`docs/trailer-brainstorm.md`, built 11 Nov)
+- A ~40 s trailer track from the user (Udio), with hits where the sections change: until then the intro music's 18-24 s bar plays twice.
+
 ### Small things
 - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
 - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
@@ -46,6 +49,8 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ## Settled
+- 11 Nov: the trailer's words over the old game are the user's: "The original game was fine...", then, as the old 6 turns, "But it was time to rebuild the tavern."
+- 11 Nov: the trailer, rebuilt on Claude's recommendations (the user: "go with your recommendations and build it"): real old-game stills in an old phone, a fond memory, the old tune muffled; the old flat 6 turning into the new die; every opponent as a silhouette in a line-up by place, all fourteen, one gold rim, no names, Jaguar almost seen; the ability paintings out; "Between fights..." with Thom, the thief, the Shrine, the hot tub, Johnny and Yvesil; one bar of the music repeated; upright phone only.
 - 10 Nov: "build the next item": Jaguar's sea dial follows his phase, as in the proposed final dials.
 - 10 Nov: in fog the Hangman's Ace of Spades (and the Bard's Cutting Words on his hand, and a Clear-Eye cancelling his Ace) shows at the round's end, not as it happens. The Fog bank's sound is the user's foghorn.
 - 10 Nov: Penitent Stare isn't telegraphed: no banner or plaque as a round begins; with both hands done he uses it only when he isn't already winning and it wins or ties him the round. (Whether a tie is worth it to him is a guess of mine: say if it should be only for a win.)

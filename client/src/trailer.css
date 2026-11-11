@@ -8,7 +8,7 @@
 .tr-start-note { font-family: 'Alegreya', Georgia, serif; font-size: 14px; opacity: 0.55; }
 
 /* Words. */
-.tr-words { position: absolute; left: 0; right: 0; margin: 0; padding: 0 18px; text-align: center; font-size: clamp(28px, 8.4vw, 50px); line-height: 1.2; pointer-events: none;
+.tr-words { font-variant-ligatures: no-common-ligatures no-discretionary-ligatures no-historical-ligatures; font-feature-settings: "liga" 0, "dlig" 0, "hlig" 0; position: absolute; left: 0; right: 0; margin: 0; padding: 0 18px; text-align: center; font-size: clamp(28px, 8.4vw, 50px); line-height: 1.2; pointer-events: none;
     text-shadow: 0 2px 4px #000, 0 0 22px rgba(0, 0, 0, 0.95), 0 0 46px rgba(0, 0, 0, 0.7);
     animation: tr-word 0.55s ease-out both, tr-out 0.35s linear calc(var(--len) - 0.35s) forwards; }
 .tr-words.top { top: max(28px, 7vh); }
@@ -20,14 +20,100 @@
 @keyframes tr-word { from { opacity: 0; transform: translateY(0.3em) scale(1.06); } to { opacity: 1; transform: none; } }
 @keyframes tr-out { to { opacity: 0; } }
 
-/* The rivals: a painting a beat, punching in out of a flash of its own colour. */
-.tr-rival { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: radial-gradient(ellipse at 50% 46%, color-mix(in srgb, var(--c) 70%, #000) 0%, color-mix(in srgb, var(--c) 22%, #000) 48%, #050304 85%); }
-.tr-rival::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 46%, #fff, var(--c) 40%, transparent 75%); animation: tr-flash 0.32s ease-out both; pointer-events: none; }
-.tr-rival img { width: min(92vw, 70vh); height: min(92vw, 62vh); object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8)); animation: tr-punch 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
-.tr-rival-name { margin-top: 1vh; font-size: clamp(22px, 6.4vw, 38px); color: #fff3d6; text-shadow: 0 0 18px var(--c), 0 2px 4px #000; letter-spacing: 1px; animation: tr-word 0.3s ease-out both; }
-@keyframes tr-flash { from { opacity: 0.85; } to { opacity: 0; } }
-@keyframes tr-punch { from { transform: scale(1.22); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+/* ==== The cold open (11 Nov): the old game in an old phone, a fond memory ====
+   Its delays are trailer seconds (it's there from the start). --cold: its length; --lift: when the 6 lifts. */
+.tr-old { position: absolute; inset: 0; z-index: 5; overflow: hidden; background: radial-gradient(ellipse at 50% 58%, #22170d, #000 72%);
+    animation: tr-old-out 0.3s linear calc(var(--cold) - 0.3s) forwards; }
+@keyframes tr-old-out { to { opacity: 0; visibility: hidden; } }
+/* The phone: the old page's own shape (384x780). The frame is drawn outside the screen, so the
+   pictures' pixels and the 6 line up with the box. */
+.tr-phone-box { --pw: calc(min(66vh, 130vw) * 0.4923); position: absolute; left: 50%; top: 56%; width: var(--pw); aspect-ratio: 384 / 780; transform: translate(-50%, -50%); perspective: 600px; }
+.tr-phone { position: absolute; inset: 0; border-radius: calc(var(--pw) * 0.07);
+    box-shadow: 0 0 0 calc(var(--pw) * 0.026) #111, 0 0 0 calc(var(--pw) * 0.031) #3b3631, 0 30px 70px rgba(0, 0, 0, 0.85), 0 0 90px rgba(255, 170, 80, 0.12);
+    animation: tr-phone-in 0.7s ease-out both, tr-phone-dim 0.9s ease-in var(--lift) forwards; }
+@keyframes tr-phone-in { from { opacity: 0; transform: translateY(2%) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes tr-phone-dim { to { filter: brightness(0.12) blur(1.5px); transform: scale(0.95); } }
+.tr-phone-screen { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; background: #120c07; }
+/* Each still cuts in at --from and out at --to; washed out a little, like an old memory. */
+.tr-old-shot { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; filter: saturate(0.62) sepia(0.24) contrast(0.92) brightness(0.93);
+    animation: tr-cut 0.05s linear var(--from) forwards, tr-uncut 0.05s linear var(--to) forwards; }
+@keyframes tr-cut { to { opacity: 1; } }
+@keyframes tr-uncut { to { opacity: 0; } }
+/* A finger's tap on the old page. */
+.tr-tap { position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(0.2);
+    border: 2px solid rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.28); animation: tr-tap 0.55s ease-out var(--at) forwards; }
+@keyframes tr-tap { 0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+/* Film grain and faint scan lines over the old screen. */
+.tr-old-grain { position: absolute; inset: -20%; pointer-events: none; opacity: 0.32; mix-blend-mode: overlay;
+    background: repeating-linear-gradient(rgba(0, 0, 0, 0.35) 0 1px, transparent 1px 3px),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    animation: tr-grain 0.5s steps(4) infinite; }
+@keyframes tr-grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-1%, 3%); } }
+.tr-old-stamp { position: absolute; right: max(16px, 6vw); bottom: max(16px, 3.5vh); font-family: 'Courier New', monospace; font-size: clamp(12px, 3.4vw, 16px); letter-spacing: 2px; text-transform: uppercase;
+    color: #ffcf6a; text-shadow: 0 0 6px rgba(255, 180, 60, 0.7); animation: tr-fade-in 0.6s linear 0.3s both; }
+.tr-old-stamp::before { content: '▶ '; animation: tr-blink 1s steps(2) infinite; }
+@keyframes tr-blink { 50% { opacity: 0; } }
+.tr-words.old { font-size: clamp(24px, 7.2vw, 42px); text-wrap: balance; }
+.tr-words.turn { z-index: 6; } /* (over the cold open, as the old 6 turns) */
+/* The old flat 6: it glows, lifts off the table, turns over as it flies to the middle and grows, and
+   is gone into the light, where the new die falls. */
+.tr-old-six { position: absolute; z-index: 2; aspect-ratio: 1; display: grid; place-items: center; opacity: 0; border-radius: 16%;
+    background: linear-gradient(160deg, #fffaf0, #e7d9bb); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 2px 3px rgba(0, 0, 0, 0.5);
+    font-family: 'Almendra', Georgia, serif; font-weight: 700; font-size: calc(var(--pw) * 0.062); color: #2e7d32;
+    animation: tr-six 1.75s cubic-bezier(0.45, 0, 0.25, 1) var(--lift) forwards; }
+@keyframes tr-six {
+    0% { opacity: 1; transform: none; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 2px 3px rgba(0, 0, 0, 0.5); }
+    18% { opacity: 1; transform: translateY(-30%) scale(1.25); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 0 18px 4px rgba(255, 200, 90, 0.9); }
+    80% { opacity: 1; transform: translate(230%, -121%) rotateY(540deg) rotateZ(-10deg) scale(3.4); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 0 40px 14px rgba(255, 210, 120, 0.85); }
+    100% { opacity: 0; transform: translate(230%, -121%) rotateY(720deg) rotateZ(-10deg) scale(4.6); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 0 80px 40px rgba(255, 230, 170, 1); }
+}
+
+/* ==== The rivals (11 Nov): every opponent as a blacked-out outline, a row per place ====
+   Each row rises on its beat; lightning lights them all from behind; Jaguar is lit from the front for
+   a few frames. --bolt and --reveal are from the section's start. */
+.tr-lineup { --h: min(17vh, 25vw); position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: space-evenly;
+    padding: max(90px, 15vh) 0 max(24px, 4vh); background: radial-gradient(ellipse at 50% 62%, #24170c, #050302 72%); animation: tr-fade-in 0.25s linear both; }
+.tr-bolt { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 35%, rgba(255, 246, 225, 0.95), rgba(255, 196, 120, 0.45) 38%, transparent 72%);
+    animation: tr-bolt 0.9s ease-out var(--bolt) forwards; }
+@keyframes tr-bolt { 0% { opacity: 0; } 6% { opacity: 1; } 14% { opacity: 0.15; } 22% { opacity: 0.85; } 100% { opacity: 0; } }
+.tr-row { position: relative; display: flex; flex-direction: column; align-items: center; opacity: 0; animation: tr-rise 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) var(--d) forwards; }
+@keyframes tr-rise { from { opacity: 0; transform: translateY(30%); } to { opacity: 1; transform: none; } }
+.tr-row-place { position: relative; z-index: 1; margin-bottom: 0.3vh; font-size: clamp(11px, 3.1vw, 16px); letter-spacing: 3px; text-transform: uppercase; color: #e9c27a; text-shadow: 0 2px 4px #000, 0 0 10px #000; }
+.tr-row-figures { display: flex; justify-content: center; align-items: flex-end; height: var(--h); }
+.tr-sil { height: calc(var(--h) * var(--s)); width: auto; margin: 0 calc(var(--h) * -0.22);
+    filter: brightness(0) drop-shadow(0 0 1.5px rgba(255, 196, 120, 0.95)) drop-shadow(0 0 9px rgba(255, 140, 50, 0.5));
+    animation: tr-backlit 1.2s ease-out var(--bolt) both; }
+.tr-sil.reveal { animation: tr-backlit 1.2s ease-out var(--bolt) both, tr-reveal 1s linear var(--reveal) both; }
+@keyframes tr-backlit {
+    0%, 100% { filter: brightness(0) drop-shadow(0 0 1.5px rgba(255, 196, 120, 0.95)) drop-shadow(0 0 9px rgba(255, 140, 50, 0.5)); }
+    8% { filter: brightness(0) drop-shadow(0 0 3px rgba(255, 255, 255, 1)) drop-shadow(0 0 24px rgba(255, 220, 160, 0.95)); }
+}
+/* Jaguar: a flicker of him, twice, then dark again. */
+@keyframes tr-reveal {
+    0%, 3%, 13%, 17%, 25%, 100% { filter: brightness(0) drop-shadow(0 0 1.5px rgba(255, 196, 120, 0.95)) drop-shadow(0 0 9px rgba(255, 140, 50, 0.5)); }
+    4%, 12% { filter: brightness(1.05) drop-shadow(0 0 1.5px rgba(255, 196, 120, 0.95)) drop-shadow(0 0 9px rgba(255, 140, 50, 0.5)); }
+    18%, 24% { filter: brightness(0.8) drop-shadow(0 0 1.5px rgba(255, 196, 120, 0.95)) drop-shadow(0 0 9px rgba(255, 140, 50, 0.5)); }
+}
+
+/* ==== Between fights (11 Nov): a vendor or event a beat ====
+   A cut-out rising behind its counter in its own light over its place, or a painting that is the whole
+   stage (the Shrine, the hot tub); its line in a parchment bubble and its sign below. */
+.tr-vendor { position: absolute; inset: 0; overflow: hidden; background: #000; animation: tr-fade-in 0.12s linear both; }
+.tr-vendor-back { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.32) blur(2px) saturate(0.8); transform: scale(1.08); }
+.tr-vendor:not(.scene)::before { content: ''; position: absolute; left: 50%; bottom: -12%; width: 140vw; height: 92vh; transform: translateX(-50%);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 50%, transparent), transparent); }
+.tr-vendor::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 32%; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); }
+.tr-vendor-figure { position: absolute; left: 50%; bottom: 0; height: min(64vh, 118vw); width: auto; transform: translateX(-50%);
+    filter: drop-shadow(0 0 18px color-mix(in srgb, var(--c) 55%, transparent)); animation: tr-vendor-rise 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes tr-vendor-rise { from { transform: translate(-50%, 16%); opacity: 0.3; } to { transform: translate(-50%, 0); opacity: 1; } }
+.tr-vendor-scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: tr-push var(--len) linear both; }
+.tr-vendor-line { position: absolute; z-index: 2; left: 50%; top: 23vh; max-width: 86vw; padding: 10px 16px; border: 3px solid #5a3a1c; border-radius: 16px;
+    background: #f4e6c4; color: #3b2410; font-family: 'Alegreya', Georgia, serif; font-style: italic; font-weight: 700; font-size: clamp(18px, 5.6vw, 30px);
+    text-align: center; white-space: nowrap; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6); animation: tr-pop 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) 0.12s both; }
+@keyframes tr-pop { from { opacity: 0; transform: translateX(-50%) scale(0.5); } to { opacity: 1; transform: translateX(-50%); } }
+.tr-vendor-name { position: absolute; z-index: 2; left: 0; right: 0; bottom: max(40px, 8vh); text-align: center; font-size: clamp(20px, 6vw, 34px);
+    color: #ffe2a0; text-shadow: 0 0 16px var(--c), 0 2px 4px #000; animation: tr-word 0.35s ease-out 0.05s both; }
 
 /* The places: each painting pushing slowly in. */
 .tr-place { position: absolute; inset: 0; overflow: hidden; background: #000; animation: tr-fade-in 0.3s linear both; }
@@ -49,5 +135,6 @@
 .tr-after button { height: 40px; padding: 0 16px; border: 1px solid rgba(246, 234, 208, 0.4); border-radius: 20px; background: rgba(0, 0, 0, 0.5); color: #f6ead0; font: inherit; font-size: 16px; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
-    .tr-place img, .tr-rival img { animation: none; }
+    .tr-place img, .tr-vendor-scene, .tr-vendor-figure { animation: none; }
+    .tr-old-grain { animation: none; }
 }
