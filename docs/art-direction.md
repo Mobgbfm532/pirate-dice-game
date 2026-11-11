@@ -190,6 +190,21 @@ Everything here is on a flat solid magenta background, no checkerboard, no glow 
 
 When these come in: the backdrop goes in `SALTY_SWALLOW` in `client/src/Backdrop.tsx` (and the docked one could stay for the first scene), the sailing painting replaces the gun deck in `SetSail` (Hud.tsx); in the meantime the scene rocks the docked deck.
 
+### Áéd, the dragon sorcerer (11 Nov; his bust painted by the user, `art/bust-aed.jpg`)
+
+**His ability painting (wanted; one for Metamagic, or one per trick)** (flat solid magenta background, like the
+other ability paintings; his violet and gold, so it matches his bust)
+
+- `art/ability-metamagic.jpg`: *Áéd, a smug, handsome young dragon sorcerer with spiky brown hair, in a high-collared
+  violet coat embroidered with gold dragons and star charts, silver bracers carved with runes, holding up a glowing
+  violet crystal heart in one hand; with the other hand he flicks his fingers and four small dice hang in the air before
+  him, each wrapped in a ribbon of violet and gold magic, one doubled like a reflection, one blurred as if spinning
+  fast. A confident half-smile. Waist up, dynamic pose, magic light on his face from below. On a flat solid magenta
+  background, no checkerboard, no glow or shadow on the background, crisp clean edges, no text, no lettering. + style line*
+- Per trick, if wanted (same character and style): **Heightened** (a die splitting into two, the worse face glowing),
+  **Quickened** (dice blurring with speed lines in a swirl of violet), **Empowered** (one die burning with violet fire),
+  **Twinned** (a die and its glowing mirror-copy side by side).
+
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
 A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the
@@ -283,6 +298,10 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | Backdrop: the Salty Swallow at sea | Done (9 Nov) | `art/salty-swallow-at-sea.jpg` → `salty-swallow-at-sea.webp` (1584×672); the ship's four fights and its scenes between fights (`SALTY_SWALLOW` in Backdrop.tsx) |
 | The Salty Swallow sets sail | Done (9 Nov) | `art/salty-swallow-sets-sail.jpg` → `salty-swallow-sets-sail.webp` (1584×672); the sailing scene before Klarg (`SetSail`), the trailer's "One ship." |
 | Skipper Bren and the quay | Done (9 Nov) | `art/bust-bren.jpg` → `bren.webp` (cut out); `art/salty-swallow-quay.jpg` → `salty-swallow-quay.webp` (1167×912), behind Bren's welcome (`DockScene`) |
+| Áéd's bust | Done (11 Nov) | `art/bust-aed.jpg` → `aed.webp` (`redOverBlue: 22`, so his violet heart and wisps stay); round frame `PORTRAITS['Áéd']` |
+| Áéd's ability painting | Wanted | `art/ability-metamagic.jpg` (prompt above); until then his tricks show their banner only |
+| The flying snake (Brodor's letter) | Done (10 Nov) | `art/flying-snake.jpg` → `flying-snake.webp` (`holes` behind its neck and in its tail's curl); brings Brodor's invitation (`.courier-snake`) |
+| The trailer's old-game stills | Done (11 Nov) | `client/public/art/trailer/old-start.webp`, `old-table`, `old-rolled`, `old-kept`: the real old page (`main`) at 384×780, captured headless; not from `art/` |
 | The sea die and its dial | Done (9 Nov) | `art/dice-sea.jpg` → `sea-die.webp` (six faces in a strip, `seaDie()`); `art/sea-dial.jpg` and `art/sea-dial-needle.jpg` → `sea-dial.webp`, `sea-dial-needle.webp` (`SeaDial`: `DIAL`, `NEEDLE` hold the hub and pivot) |
 
 ## Processing art

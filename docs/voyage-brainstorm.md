@@ -71,7 +71,7 @@ fight odds.
 7. **Clear skies.** Nothing happens (built: "Calm seas"). The voyage needs breathing rounds, or the
    weather turns into noise.
 
-## Four fights, four legs
+## Four fights, four legs (five since 11 Nov: Áéd, the dragon sorcerer, after Rokr; his leg calm but for a Squall on face 3, the user's "a storm on one face")
 
 Each fight draws its rounds from that leg's own weather mix:
 
@@ -100,6 +100,7 @@ fills faces 2-5 with its own weather. Jaguar's dial changes with his phase.
 |---|---|---|---|---|---|---|
 | Klarg, casting off | port | calm | calm | calm | calm | starboard |
 | Rokr, night on open sea | port | becalmed | becalmed | calm | calm | starboard |
+| Áéd (added 11 Nov, after Rokr) | port | calm | squall | calm | calm | starboard |
 | The Hangman, the squall | port | squall | heavy seas | fog | calm | starboard |
 | Jaguar, Smooth Talk (3+ hearts) | port | calm | calm | fog | fog | starboard |
 | Jaguar, the Cloak (2 hearts) | port | squall | squall | heavy seas | heavy seas | starboard |

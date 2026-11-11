@@ -251,7 +251,7 @@ read and follow the file):
 `npm run dev:test-server` (`test/dev-server.js`): the game on :3002 plus controls on :3003 that
 set up Tavern Crawl situations: `curl localhost:3003/shop?purse=200`, `/lives?n=1`,
 `/shelf?ids=healing,lastGasp`, `/purse?n=150`, `/keepsakes?ids=loadedDie,mysteryFlavour`, `/fight?n=2` (a fight
-against opponent 0-13, ability ready), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
+against opponent 0-14, ability ready; 12 is Áéd), `/won?hearts=2` (the fight won: its summary, then the event), `/invitation` (Martha beaten; `?boss=brodor` for Brodor), `/disguise?as=Frak` (Martha's mask for the round), `/seed?n=42` (every server draw follows a seed: the same throw each time; `/seed` ends it), `/between?spots=thom,shrine` (add
 `&pickpocket=1`, or `&stage=shrine|diceDen|hotTub|stranger|darren|bard|kram`), `/song?song=inspiringSong|cuttingWords` (the Bard's song this fight), `/kram?more=1` (sworn to Kram); `/between?spots=elfKid,thom` for Johnny Elf Bar, `/shelf?ids=purpleHaze,lemonLevitation` for Elf Bars. The pane's launch entry for it is `dev-test-server`;
 `dev-test-server-portal` starts every crawl at Sylvester (opponents' lives can be changed on a dev server only with the `OPPONENT_LIVES`
 env, or `/opponent-lives?ids=sylvester,vaelin&n=2`; `shared/balance.js` unchanged), and every new run there (a reload starts one) begins with 3 Healings and the Potion Belt, Shield, Loaded Die, Velvet Cushion and Trap Card (`START_SHELF`, `START_KEEPSAKES` env); `dev-test-server-ship` (:3008, controls :3009, with `client-dev-ship` on :5176, `--host` so a phone on the Wi-Fi reaches it; 9 Nov) places every new crawl just after beating Brodor (his fight's summary, then the invitation to the Salty Swallow, the sailing scene, Klarg) with 3 Healings and the Potion Belt, Loaded Die, Shield, Trap Card and Velvet Cushion (`START_AFTER=brodor`, `TAVERN_START_ENCOUNTER=9`; the dev server sets a new run up before it's first shown through `server.devHooks.newRun`, seating the opponent quietly, `resetTavernEncounter(code, false, true)`); `dev-test-server-b` (:3006, controls :3007) with
@@ -329,7 +329,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 - **Fonts:** every speech bubble is Alegreya bold italic; it must be loaded (`1,700` in index.html's font link, 10 Nov), or the browser fakes the bold and some letters (the "Y") draw as outlines.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (9 November 2026)
+## Status (11 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -337,7 +337,19 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 15-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 172 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, saves after each place. 175 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+- **10-11 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
+  - the voyage's weather built: the Rogue wave (Heavy seas), the Squall, the Fog bank, Becalmed, Jaguar's dial by phase;
+    the user's sounds for the wave, the wind, the foghorn and Jaguar's music; the Lady's shrine aboard;
+  - a full check of the code (10 Nov): four bugs fixed (Becalmed with Watermelon Hindsight and Second Thoughts, Cotton
+    Candy Cloud in fog, the Roll button after a free roll), a test added;
+  - Brodor's letter brought by the user's flying snake, its new text, Bren's new first line shown more slowly;
+  - **Áéd**, the dragon sorcerer, a fifteenth opponent after Rokr: metamagic, three uses a fight (Heightened,
+    Quickened, Empowered, Twinned), the user's painting and card line, a Squall on his sea die;
+  - the trailer rebuilt: the old game's cold open, the rivals as silhouettes (Áéd too), "Between fights...", the
+    user's own music fitted to its bars, "It's time to roll the dice.", "Coming Soon", no "Version 1" stamp;
+  - brainstorms written up: the Water of the Ebon Shield, Áéd, the trailer (`docs/*-brainstorm.md`);
+  - all pushed and on the test site (11 Nov).
 - **5-9 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the intro film, with the user's three paintings, three sounds and five lines (`Intro.tsx`), a start-screen tick box
     for it, and on 6 Nov each of its parts existing only around its own time (the door scene glitched on a phone);
@@ -456,7 +468,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 Design doc (shared with the user, kept current):
 https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
-- **Fights (14 since 21 Oct, the design doc's tournament):** in order (`TAVERN_ENCOUNTERS`, each
+- **Fights (15 since 11 Nov, 14 since 21 Oct, the design doc's tournament):** in order (`TAVERN_ENCOUNTERS`, each
   with its `place`, a key of `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak,
   Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal (Sylvester Stonefist, Vaelin
   Inkhand, Stason Jatham, The Ridgeler, Brodor), then aboard the Salty Swallow, a docked ship
@@ -473,7 +485,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
   Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
   the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 3, 4 lives (`shared/balance.js`,
-  the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 36; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
+  the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 38 since Áéd joined; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,
   name card). Signature moves play on the table after the dice stop (Klarg's die swept away,
   Rokr's constellations, the Hangman's shot, Jaguar's -3); no commentary pop-ups. Klarg steals a
@@ -597,12 +609,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`SetSail` in Hud, `snapshot.sailAt`, `actions.endSail`, `SAIL_MS` 6.4 s; not for test scripts with
   `tavernIntroAuto`): the gun deck rolling under swinging lantern light, the ship's bell twice (`playShipBell`,
   synthesized), "The bell rings. The lines are cast off…", a wave rising with spray and the swell's sound, "The
-  Salty Swallow sets sail", the clinometer rocking (`Clinometer`, shared with the sea's moment), "Four fights at
-  sea. The sea changes every round."; a tap skips it. Dev: `preview.sail()`. The user's paintings (9 Nov): the gun deck at sea (`art/salty-swallow-at-sea.jpg` → `salty-swallow-at-sea.webp`, laid out as the docked one: the ship's four fights and its scenes between fights; the docked `salty-swallow.webp` stays in the intro film) and the ship leaving harbour (`art/salty-swallow-sets-sail.jpg`: this scene, panning from the quay to the lighthouse and the open sea, `sail-pan`, a small pan on wide screens; and the trailer's "One ship."). Rolling the whole view was left out (the paintings' edges
+  Salty Swallow sets sail", the clinometer rocking (`Clinometer`, shared with the sea's moment), "Five fights at
+  sea. Every round, the sea die decides." (five since Áéd, 11 Nov); a tap skips it. Dev: `preview.sail()`. The user's paintings (9 Nov): the gun deck at sea (`art/salty-swallow-at-sea.jpg` → `salty-swallow-at-sea.webp`, laid out as the docked one: the ship's four fights and its scenes between fights; the docked `salty-swallow.webp` stays in the intro film) and the ship leaving harbour (`art/salty-swallow-sets-sail.jpg`: this scene, panning from the quay to the lighthouse and the open sea, `sail-pan`, a small pan on wide screens; and the trailer's "One ship."). Rolling the whole view was left out (the paintings' edges
   would show). **The sea die (9 Nov, the user's: "a dice roll to determine which weather"; it replaced the forecast):** from a
   fight's second round each round aboard begins with a roll of the sea die (`setSea`: `crypto.randomInt(1, 7)`,
   so tests' `pinFaces` pin it); its face on the leg's dial is the round's sea (`BALANCE.voyage` is now six faces
-  per opponent, since 10 Nov, the user's: a 1 is always listing to port and a 6 always to starboard on every leg, faces 2-5 the leg's own weather (a test keeps it so); now 2-5 calm everywhere but Rokr's 2-3 Becalmed and the Hangman's 2 Squall, 3 Heavy seas and 4 Fog bank; first guesses). `seaFace`, `seaFaces` in the state; `nextSea` is always null. Every roll is a
+  per opponent, since 10 Nov, the user's: a 1 is always listing to port and a 6 always to starboard on every leg, faces 2-5 the leg's own weather (a test keeps it so); now 2-5 calm everywhere but Rokr's 2-3 Becalmed, Áéd's 3 Squall and the Hangman's 2 Squall, 3 Heavy seas and 4 Fog bank; first guesses). `seaFace`, `seaFaces` in the state; `nextSea` is always null. Every roll is a
   moment (`seaChange` with `face`, `faces`, `changed`; 4 s when the sea changes, 2.8 s when it holds, on both
   sides): the die (the user's painted sea die, `art/dice-sea.jpg` → `sea-die.webp`, six faces in a strip, `seaDie()` in process-art.mjs; `SeaDie` in Hud; the real dice sound) tumbles in and lands, the needle of **the sea
   die's dial** (`SeaDial` in Hud: the user's painting `art/sea-dial.jpg` and needle `art/sea-dial-needle.jpg`, cut to
@@ -748,7 +760,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   not after a resume). The event scenes show only the purse now.
 - **Money (since 23 Oct, the user's calls: nearer D&D's prices, all in whole gold):** a tenth of
   the old amounts (`Rules.formatGold`, client `coins()`): 10 x the opponent's place per win
-  (since 28 Oct 10 for the first opponent and 2 more for each after: `gold.winFirst`, `winStep`; Jaguar 36), 2 a heart left, Healing 11, the Shrine 10, a soak 5. **Prices rise**: each
+  (since 28 Oct 10 for the first opponent and 2 more for each after: `gold.winFirst`, `winStep`; Jaguar 38), 2 a heart left, Healing 11, the Shrine 10, a soak 5. **Prices rise**: each
   Thonic of a kind, candle or soak bought costs half its first price more than the last
   (`priceRise` 0.5; `risingPrice`, `run.bought`, saved with the run; `SAVE_VERSION` 2, so older
   saves don't open). Keepsakes are bought once.
@@ -895,12 +907,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Play the Salty Swallow on a phone** (everything up to 9 Nov is pushed and on the test site; the ship test server
-   starts just after Brodor): the sea die and its dial, the heave, Bren's welcome and the sailing scene, the ship's new
+1. **Play the Salty Swallow on a phone** (everything up to 11 Nov is pushed and on the test site; the ship test server
+   starts just after Brodor, and `/fight?n=12` on its controls jumps to Áéd): the sea die and its dial, the weather (Rogue
+   wave, Squall, Fog bank, Becalmed), the heave, Bren's welcome and the sailing scene, Áéd and his metamagic, the ship's new
    abilities and crew, Yvesil's and Jorvash's round portraits (first guesses; the Portraits tab), how the
    constellations now look appearing with the throw (10 Nov). Settled on 10 Nov: Yvesil is a her; the intro's last
    scene no longer glitches; the floating constellations stay.
-2. **The intro film, by ear and eye** (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
+2. **The trailer and the intro film, by ear and eye:** the trailer (rebuilt 11 Nov, on the user's track) to watch on a phone
+   and screen-record: the join where its second section repeats (about 28 s in) and the shots on its beats. The intro film (built 5 Nov): the user watches it and tunes the sound mix and timing; a narrator's voice if wanted (`IntroLine1.mp3` to 5; the prompt is in `docs/art-direction.md`, with the user's final words).
 3. **The voyage, more** (step 1, Heeling on the sea die, built 9 Nov; see "The sea"): next in the brainstorm's order (`docs/voyage-brainstorm.md`),
    (the Rogue wave, as Heavy seas, the Squall, the Fog bank and Becalmed built 10 Nov; St Elmo's fire and the player's say
    cut, 10 Nov), Jaguar's dial by phase (built 10 Nov); then choosing a course, events aboard. The sea die's faces per opponent
@@ -913,12 +927,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 5. **Play-test and set the numbers** (the user plays, then decides; simulate first with `balance/`): the Ghoul
    and Gourd's new lives; the Duke's `devilWhenBelow` (0.7); the keepsake prices (Miser's Purse 12, Gambler's Charm 14,
    Bottomless Flask 12, the reworked Loaded Die 12) and whether the Miser's Purse needs a cap; the Elf Bars (8-14); the
-   Bard (8); the Cult (15% of walks, 2 fights); uses per fight for the Yawning Portal's five (1 each, Stason 2).
+   Bard (8); the Cult (15% of walks, 2 fights); uses per fight for the Yawning Portal's five (1 each, Stason 2); Áéd's three uses, his keenness (`minGain`) and 3 hearts, and where his Squall sits on his dial.
    Then difficulty overall: the simulator says the game is hard (0.3% finish) but the user finds it easier; options
    measured in `easier.js`, `tournament-lives.js`. The simulator doesn't know Mystery Flavour (and no longer wears a
    mask), the Elf Bars, the Bard, the Cult, the new keepsakes, the two-thief limit, the Duke's `devilPlan` or Astral Flood
-   taking a heart: teach it before trusting its numbers.
-6. **The user's art and sounds waiting:** music and
+   taking a heart, or Áéd: teach it before trusting its numbers.
+6. **The user's art and sounds waiting:** an ability painting for Áéd (one, or one per trick) and a sound for his
+   spells; music and
    ambience from Udio; optional repaints of the Potion Belt and the Sunglasses (thin at 26 px). Dice sets for the
    Yawning Portal's and the ship's opponents if wanted (add each id to `DICE_SETS` and `PAINTED_DICE`).
 7. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare

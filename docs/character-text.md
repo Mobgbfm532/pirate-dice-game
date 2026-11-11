@@ -185,3 +185,13 @@ here too. Where: `MULTIPLAYER_CALLOUTS` and `showSeatFlash` in `client/src/game.
 - The round's result card: "Round result", then each player with their score or "Dust", "−1 ♥" for whoever loses a life or "tied", and "Sudden death: [names]" or "No lives lost" under it.
 - At table JUGS: "JUGS league", with "Won" and "Played" columns ("No games finished yet." before the first).
 - The reactions have names only as tooltips on their coins: Cheers, Ha!, Ooh, Smug, Woe.
+
+## The trailer (`/next/?trailer`, 11 Nov)
+
+- Over the old game: "The original game was fine..." then, as the old 6 turns, "But it was time to rebuild the tavern." (the user's)
+- Under the opening die: "It's time to roll the dice." (the user's; it was "Roll six dice.")
+- On the table: "Keep the 2." "Keep the 4."
+- Over the silhouettes: "Fifteen rivals."; over the places: "Two taverns." "One ship."
+- "Between fights...", with each one's line: Thom "What ya havin'?", the thief "Finders keepers!", the hot tub "*bubble bubble* ✨", Johnny "Psst! Wanna touch the sky?", Yvesil "Shall I read your next fight?" (the Shrine has only its name)
+- "One last throw..."
+- The title: "2, 4, 24", then "Keep the 2." "Keep the 4." "Become a legend." (the user's tagline), then "Coming Soon" (the user's)
