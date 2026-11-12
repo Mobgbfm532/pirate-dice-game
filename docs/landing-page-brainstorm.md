@@ -47,7 +47,7 @@ Recommended first, roughly in order of how much each changes the look for the wo
    Name, 1,240 points" opening the leaderboard; the 🏆 league for JUGS players.
 7. **Tidy the small print.** **Built 12 Nov.** Drop the "Prototype of the 3D table" line (or make it a quiet "Classic
    game" link in a corner) before the switch-over.
-8. **On a computer, use the width.** The title and the die on the left over the fireplace, the two doors
+8. **On a computer, use the width.** **Built 12 Nov:** the die, title and tagline on the left over the fireplace, the panel on the right, on a landscape window at least 1100 by 620 (the panel larger from 1700 by 900); smaller windows keep the column. The title and the die on the left over the fireplace, the two doors
    on the right; or the panel larger and lower, sat on the painted tabletop.
 9. **Music on the first tap.** The tavern tune and its ambience as soon as a player touches the page
    (browsers allow no sound before), under the music switch. Optional.
