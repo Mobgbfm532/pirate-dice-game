@@ -18,9 +18,9 @@ import { join } from 'node:path';
 // The abilities with paintings so far: their opponent's fight (0 McGrath ... 13 Jaguar) and banner.
 const ABILITIES = {
     mindWhip: { fight: 1, name: 'Mind Whip', who: 'Frak' },
-    cursed: { fight: 2, name: 'You are Cursed', who: 'Danhausen' },
+    cursed: { fight: 2, name: 'You are Cursed!', who: 'Danhausen' },
     devil: { fight: 3, name: 'Sympathy for the Devil', who: 'Duke Morrigan' },
-    disguises: { fight: 4, name: 'Disguises', who: 'Martha Mystery' },
+    disguises: { fight: 4, name: 'Disguise Self', who: 'Martha/Mystery' },
     backOfTheHead: { fight: 5, name: 'Back of the Head', who: 'Sylvester Stonefist' },
     inkfire: { fight: 6, name: 'Inkfire Brand', who: 'Vaelin Inkhand' },
     flourish: { fight: 7, name: 'Vexing Rapier', who: 'Stason Jatham' },

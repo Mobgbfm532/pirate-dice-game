@@ -48,18 +48,18 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - Entrance card: "Frak, a repugnant ne'er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep one of your dice, at random."
 - Badge (on your turn, once it has landed): "Mind Whip: the selected die stays kept"
 
-**Danhausen**: You are Cursed
-- Entrance card: "Danhausen: Very Nice, Very Evil and Mayor of Waterdeep? You are Cursed: for a round, the lowest valid score wins."
+**Danhausen**: You are Cursed!
+- Entrance card: "Danhausen: Very Nice, Very Evil and Mayor of Waterdeep? You are Cursed!: for a round, the lowest valid score wins."
 - Badge: "Cursed round: the lowest valid score wins"
 
 **Duke Morrigan**: Sympathy for the Devil
 - Entrance card: "Duke Morrigan, noble, roguish and scion of Avernus. Sympathy for the Devil: his roll comes up three 6s."
 - Badge: none when he plays it.
 
-**Martha Mystery**: Disguises (boss)
+**Martha/Mystery**: Disguise Self (boss)
 - Entrance card: "Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
-- Ability screens: "Disguises", then the trick she copies ("Mind Whip", "You are Cursed" or "Sympathy for the Devil").
-- Invitation after beating her: title "You qualify for the Yawning Portal"; "Martha Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at the Yawning Portal."" Her keepsake, Mystery Flavour: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random." (Until 4 Nov she gave her mask.)
+- Ability screens: "Disguise Self", then the trick she copies ("Mind Whip", "You are Cursed!" or "Sympathy for the Devil").
+- Invitation after beating her: title "You qualify for the Yawning Portal"; "Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at the Yawning Portal."" Her keepsake, Mystery Flavour: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random." (Until 4 Nov she gave her mask.)
 - Since 30 Oct a boss's keepsake is yours to take or leave: "Take it" / "Leave it". With five keepsakes already: "Your pockets are full: taking it means leaving one of yours behind." then "Leave which behind for [keepsake]?" Left: "You leave [keepsake] behind." The same for Brodor's Sunglasses.
 
 ### The Yawning Portal

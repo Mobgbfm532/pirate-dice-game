@@ -2117,7 +2117,7 @@ const roomOf = socket => server.rooms[Object.keys(server.rooms).find(c => server
 
 test("the run is fifteen fights: the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow (Áéd after Rokr, 11 Nov)", async () => {
     const names = server.TAVERN_ENCOUNTERS.map(e => e.name);
-    assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha Mystery',
+    assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha/Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
         'Klarg', 'Rokr', 'Áéd', 'The Hangman', 'Jaguar Cantona']);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 3, 4]);
@@ -2296,7 +2296,7 @@ test("beating Martha wins her Elf Bar and the invitation to the Yawning Portal",
     const run = room.tavernRun;
     assert.equal(run.interlude.stage, 'invitation');
     assert.equal(run.interlude.place, 'The Yawning Portal');
-    assert.equal(run.interlude.boss, 'Martha Mystery');
+    assert.equal(run.interlude.boss, 'Martha/Mystery');
     assert.equal(run.interlude.drop.id, 'mysteryFlavour');
     assert.equal(run.interlude.claim, 'open', 'yours to take or leave');
     assert.ok(!run.keepsakes.some(k => k.id === 'mysteryFlavour'));
@@ -2709,7 +2709,7 @@ test("Mind Whip in Martha's face: her disguise shows first, then Frak's trick", 
     hero.on('signatureMove', m => moves.push(m.ability));
     hero.emit('rollDice');
     await waitFor(hero, 'signatureMove', m => m.ability === 'Mind Whip');
-    assert.deepEqual(moves, ['Disguises', 'Mind Whip']);
+    assert.deepEqual(moves, ['Disguise Self', 'Mind Whip']);
     assert.equal(room.tavernRun.abilityUsed.disguises, 1);
 });
 

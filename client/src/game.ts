@@ -743,8 +743,8 @@ socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
 });
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
-const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed', 'Sympathy for the Devil',
-    'Disguises', 'Back of the Head', 'Inkfire Brand', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed!', 'Sympathy for the Devil',
+    'Disguise Self', 'Back of the Head', 'Inkfire Brand', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In',
     // Áéd's metamagic (11 Nov)
@@ -762,7 +762,7 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
     enqueueMoment(() => {
         const sound = ABILITY_SOUNDS[data.ability];
         if (data.cancelled) { /* a Clear-Eye stopped it: silent */ }
-        else if (data.disguise && data.ability !== 'Disguises') {
+        else if (data.disguise && data.ability !== 'Disguise Self') {
             playSound('marthaSwitch');
             if (sound) setTimeout(() => playSound(sound), SWITCH_LEAD_MS);
         } else if (sound) playSound(sound);

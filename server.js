@@ -192,7 +192,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.danhausen,
         ability: 'cursed',
         blurb: "Danhausen: Very Nice, Very Evil and Mayor of Waterdeep?",
-        powers: [{ name: "You are Cursed", text: "For a round, the lowest valid score wins." }]
+        powers: [{ name: "You are Cursed!", text: "For a round, the lowest valid score wins." }]
     },
     {
         id: 'duke',
@@ -207,14 +207,14 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'martha',
         place: 'ghoulAndGourd',
-        name: 'Martha Mystery',
+        name: 'Martha/Mystery',
         avatar: '🎭',
         lives: BALANCE.opponentLives.martha,
         ability: 'disguises',
         boss: true, // beating her wins her Elf Bar, Mystery Flavour, and the invitation to the Yawning Portal
         drops: 'mysteryFlavour',
         blurb: "Martha? Mystery? Who knows?",
-        powers: [{ name: "Disguises", text: "Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick." }]
+        powers: [{ name: "Disguise Self", text: "Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick." }]
     },
     {
         id: 'sylvester',

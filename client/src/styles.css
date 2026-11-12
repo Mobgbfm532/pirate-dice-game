@@ -2721,9 +2721,9 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .shield .ability-banner .what { color: #e1f5fe; }
 
 /* Martha: Disguises. Her mask flares before the trick she copies. */
-.takeover.disguises { --flare: rgba(206, 147, 216, 0.55); }
-.disguises .ability-banner { background: linear-gradient(#4a148c, #1a0630); border-color: #ce93d8; }
-.disguises .ability-banner .what { color: #f3e5f5; }
+.takeover.disguise-self { --flare: rgba(206, 147, 216, 0.55); }
+.disguise-self .ability-banner { background: linear-gradient(#4a148c, #1a0630); border-color: #ce93d8; }
+.disguise-self .ability-banner .what { color: #f3e5f5; }
 .mask-flare {
     position: fixed; left: 50%; top: 10%; transform: translateX(-50%); font-size: 4rem;
     filter: drop-shadow(0 0 18px rgba(206, 147, 216, 0.9));
@@ -3860,11 +3860,37 @@ body.sea-heave { background: #050302; }
 /* Whose turn: the nameplate's gold glow says it (no die stuck on the portrait); on yours a small
    "Your turn" tab as well. */
 .look-next .player.current::after { content: none; }
-.look-next .player.me.current::before {
-    content: 'Your turn'; position: absolute; z-index: 1; left: 50%; top: 0; transform: translate(-50%, -62%);
-    padding: 1px 9px; border-radius: 999px; white-space: nowrap; pointer-events: none;
-    font-family: 'Almendra', Georgia, serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; color: #2b1a0c;
-    background: linear-gradient(#fbe7ae, #dcb25a 60%, #b8892f); border: 1px solid #6d4c1a; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+/* (The "Your turn" tab over your nameplate was taken out the same day, the user's call: the glow says it.) */
+
+/* A computer's dock (12 Nov, the user: the turn score's plaque ran into a round's plaque under it, and the
+   "Your turn" tab, since taken out, sat on the chip's rim): the dock is the score's frame there, as before. */
+@media (orientation: landscape) and (min-height: 501px) {
+    .look-next .controls .turn-score { padding: 0 2px; margin: 0; border: none; border-top: 1px solid rgba(224, 180, 76, 0.2); border-radius: 0; background: none; box-shadow: none; align-items: baseline; }
 }
-/* (A table of friends: their cards are small and sit in a bar; the glow alone is enough there.) */
-.look-next .player.rival.me.current::before { content: none; }
+
+/* ==== One button family (12 Nov, docs/ui-brainstorm.md idea 8) ==== */
+/* The big buttons already share one mould (.primary, .secondary, Thom's .buy, Roll). The small quiet
+   ones each had a look of their own: the film's and the sailing scene's Skip, the trailer's end buttons,
+   the ✕ on a panel. Now they're one kind: dark glass in a thin brass rim, with the same press. */
+button.film-skip, button.sail-skip, div.tr-after button {
+    border: 1.5px solid transparent; color: #f6ead0; text-shadow: 0 1px 2px #000;
+    background: linear-gradient(rgba(36, 22, 10, 0.72), rgba(14, 8, 3, 0.78)) padding-box, linear-gradient(#f6dc8e, #c9973a 45%, #7a5318) border-box;
+    box-shadow: inset 0 1px 0 rgba(255, 236, 179, 0.18), 0 2px 0 rgba(20, 10, 4, 0.8), 0 4px 10px rgba(0, 0, 0, 0.45);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.2s;
+}
+button.legends-close {
+    border: 1.5px solid transparent; color: #2a1a0e; font-size: 0.95rem; line-height: 1;
+    background: radial-gradient(circle at 40% 30%, #fbecc4, #e0bf6e 60%, #b88a36) padding-box, linear-gradient(#f6dc8e, #c9973a 45%, #7a5318) border-box;
+    box-shadow: inset 0 1px 0 rgba(255, 250, 230, 0.6), 0 2px 0 rgba(60, 35, 12, 0.7), 0 3px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.2s;
+}
+button.legends-close:hover { background: radial-gradient(circle at 40% 30%, #fff3d6, #e8c97a 60%, #c39440) padding-box, linear-gradient(#f6dc8e, #c9973a 45%, #7a5318) border-box; }
+button.film-skip:active, button.sail-skip:active, div.tr-after button:active, button.legends-close:active {
+    transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(20, 10, 4, 0.8);
+}
+/* A computer's pointer: every button of the family brightens a little under it. */
+@media (hover: hover) {
+    .look-next .primary:hover:not(:disabled), .look-next .secondary:hover:not(:disabled), .look-next .thonic-card .buy:hover:not(:disabled),
+    .look-next .keepsake-ware .buy:hover:not(:disabled), .look-next .roll:hover:not(:disabled),
+    button.film-skip:hover, button.sail-skip:hover, div.tr-after button:hover { filter: brightness(1.1); }
+}

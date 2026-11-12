@@ -685,7 +685,7 @@ function SeaInfo({ sea, face, faces, phase, onClose }: { sea: SeaState; face: nu
 }
 
 // An opponent's ability (or a round's effect) on the plaque: its painting and what it does.
-const KIND_ABILITY: Record<string, string> = { curse: 'You are Cursed', ink: 'Inkfire Brand', stare: 'Penitent Stare', smite: 'Divine Smite', mind: 'Mind Whip', devil: 'Sympathy for the Devil', cloak: 'The Cloak', allin: 'All In' };
+const KIND_ABILITY: Record<string, string> = { curse: 'You are Cursed!', ink: 'Inkfire Brand', stare: 'Penitent Stare', smite: 'Divine Smite', mind: 'Mind Whip', devil: 'Sympathy for the Devil', cloak: 'The Cloak', allin: 'All In' };
 function AbilityInfo({ badge, powers, onClose }: { badge: RoundBadge; powers: { name: string; text: string }[]; onClose: () => void }) {
     const name = KIND_ABILITY[badge.kind] ?? badge.title;
     const power = powers.find(p => p.name === name || p.name === badge.title);
@@ -1455,9 +1455,9 @@ function AbilityAura({ snap, state }: { snap: Snapshot; state: GameState }) {
 // moment plays, like the devil's three 6s. Fetched ahead, so the first showing isn't blank.
 const ABILITY_ART: Record<string, string> = {
     'Mind Whip': 'ability-mind-whip.webp',
-    'You are Cursed': 'ability-cursed.webp',
+    'You are Cursed!': 'ability-cursed.webp',
     'Sympathy for the Devil': 'ability-devil.webp',
-    'Disguises': 'ability-disguises.webp',
+    'Disguise Self': 'ability-disguises.webp',
     // 26 Oct: the Yawning Portal's and the ship's.
     'Back of the Head': 'ability-back-of-the-head.webp',
     'Inkfire Brand': 'ability-inkfire.webp',
@@ -1481,7 +1481,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
     const [visible] = useMoment(moment?.at ?? 0, MOMENT_SHOW_MS);
     if (!visible || !moment) return null;
-    const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-');
+    const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, ''); // ("You are Cursed!" is you-are-cursed)
     // An opponent's ability (or your mask) takes over the screen: a flash in its colours and a
     // banner across it with what happened (the user asked for more flare, 21 Oct). So does a
     // keepsake as it works, with its picture in a burst of gold (the Shield: a force field).
@@ -1557,7 +1557,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             )}
             {fx && moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
             {fx && moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
-            {moment.ability === 'Disguises' && <div className="mask-flare" aria-hidden="true">🎭</div>}
+            {moment.ability === 'Disguise Self' && <div className="mask-flare" aria-hidden="true">🎭</div>}
             {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) || PAINTED_KEEPSAKES.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : keepsakeIcon(keepsake)}</div>}
             {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
             {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
@@ -1751,9 +1751,9 @@ function Interlude({ state }: { state: GameState }) {
 // courier: who brings it (the sealed letter flutters down by itself; after Brodor the flying snake from the docks
 // carries it in, the user's painting, 10 Nov).
 const INVITATIONS: Record<string, { title: string; line: (place: string) => string; after?: string; gift: string; courier?: 'snake' }> = {
-    'Martha Mystery': {
+    'Martha/Mystery': {
         title: 'You qualify for the Yawning Portal',
-        line: place => `Martha Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at ${inSentence(place)}."`,
+        line: place => `Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at ${inSentence(place)}."`,
         gift: "is yours: it never runs out. One puff a fight, and each fight it tastes of one of Johnny's four, at random."
     },
     Brodor: {
@@ -1770,7 +1770,7 @@ const inSentence = (place: string) => place.replace(/^The /, 'the ');
 function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: GameState; interlude: Extract<Interlude, { stage: 'invitation' }>; next: string; leaving: boolean; onMoveOn: () => void }) {
     const run = state.tavernRun!;
     const me = Object.values(state.players).find(p => p.id !== BOT_ID);
-    const story = INVITATIONS[interlude.boss ?? ''] ?? INVITATIONS['Martha Mystery'];
+    const story = INVITATIONS[interlude.boss ?? ''] ?? INVITATIONS['Martha/Mystery'];
     const drop = interlude.drop ?? { id: 'mysteryFlavour', name: 'Mystery Flavour', text: '' };
     const save = () => actions.saveAndLeave(interlude.save, { name: me?.name ?? 'Traveller', place: interlude.place, next, purse: run.purse });
     // The end of a place (visuals plan step 5, 25 Oct): a sealed letter flutters down, its wax seal

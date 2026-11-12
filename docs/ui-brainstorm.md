@@ -42,9 +42,9 @@ Recommended first, roughly by how much each helps for the work.
    does) when it's there.
 6. **Ability marks that read.** **Built 12 Nov, then reverted the same day (the user's call): the ✦ marks are back as they were.** The ✦ marks as small glowing gems in the ability's colour, dark when
    spent, with a faint ring, so "two left" can be seen.
-7. **The turn marker as a glow.** **Built 12 Nov:** no die on the portrait in the new look; the nameplate's gold glow, and on yours a small gold "Your turn" tab (not on a table of friends' small cards). Whose turn it is shown by the nameplate glowing gold (it already does
+7. **The turn marker as a glow.** **Built 12 Nov:** no die on the portrait in the new look; the nameplate's gold glow, and on yours a small gold "Your turn" tab (not on a table of friends' small cards). The tab was taken out the same day, the user's call: the glow alone. Whose turn it is shown by the nameplate glowing gold (it already does
    for the opponent) and a small label "Your turn", not a die on the avatar.
-8. **One button family.** Every button already shares one mould; check the remaining odd ones (the
+8. **One button family.** **Built 12 Nov:** the big buttons already shared the mould (the scenes' Next, Thom's Buy, the thief's roll, the run-over screen all checked); the small quiet ones (the film's and sailing scene's Skip, the trailer's end buttons) are now dark glass in a thin brass rim with the same press, a panel's ✕ a small brass coin, and on a computer every button brightens under the pointer. Every button already shares one mould; check the remaining odd ones (the
    between-fights scenes' "Next", Thom's "Buy", the run-over screen) use it, with the same press.
 
 ## Suggested first step

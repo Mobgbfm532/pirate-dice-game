@@ -20,7 +20,7 @@ the fight; the Hangman's Ace of Spades 24 doesn't heal him). Last player with li
 
 Table codes: any code = classic multiplayer (`COMP`, solo vs The Molar, was taken out on 4 Nov, the user's call; a bot sits only at a Tavern Crawl table now); `TAVERN` = Tavern
 Crawl (since 21 Oct a tournament of fifteen fights (fourteen until 11 Nov) across three places: the Ghoul and Gourd, a
-qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal
+qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha/Mystery), the Yawning Portal
 (Sylvester Stonefist, Vaelin Inkhand, Stason Jatham, The Ridgeler, Brodor), then the final aboard
 the Salty Swallow, a docked ship (Klarg, Rokr, Áéd, The Hangman, Jaguar Cantona); each from Frak on has
 an ability; between fights a random event now and then, then a choice of two spots; gold to spend
@@ -379,7 +379,7 @@ one too, or saves only last until the server restarts, which on the free tier is
   - the scenes between fights on a computer: characters behind a counter, parchment speech bubbles by their
     faces, keepsake descriptions on short windows; the opponents' painted dice switched off (back on 5 Nov); the tuning panel hidden;
   - abilities louder, the screen shaking for Sylvester, Vaelin and the Ridgeler, Astral Flood's wave after its banner;
-  - the user's sounds: Elf Bar puff, Martha's Disguises, coin tally, two victories, thief's laugh, Sylvester's punch
+  - the user's sounds: Elf Bar puff, Martha's Disguise Self, coin tally, two victories, thief's laugh, Sylvester's punch
     (Whoa is in but off); new lines for Sperm and Brodor, "to spot them" for the thief; no "1 of 14" on intro cards;
   - the Neon database's link went on the Render test service (the user, 4 Nov).
 - **1-4 Nov (the user's calls):** depth behind the table (the tavern and the opponent drift slowly on
@@ -471,7 +471,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 - **Fights (15 since 11 Nov, 14 since 21 Oct, the design doc's tournament):** in order (`TAVERN_ENCOUNTERS`, each
   with its `place`, a key of `PLACES`; `placeOf(room)`): the Ghoul and Gourd (McGrath, Frak,
-  Danhausen, Duke Morrigan, Martha Mystery), the Yawning Portal (Sylvester Stonefist, Vaelin
+  Danhausen, Duke Morrigan, Martha/Mystery), the Yawning Portal (Sylvester Stonefist, Vaelin
   Inkhand, Stason Jatham, The Ridgeler, Brodor), then aboard the Salty Swallow, a docked ship
   (Klarg, Rokr, Áéd, the Hangman, Jaguar). McGrath is the Molar renamed (keeps the id `molar`, plays
   simply). A boss (`boss`, `drops`: Martha, Brodor) drops a keepsake (`BOSS_DROPS`) and leads to an
@@ -526,14 +526,14 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   Brodor's **Astral Flood** (in `beginTavernRound`, once he has lost a life, he heals one and, since
   3 Nov, takes one of yours: the Shield catches it, and it never takes your last heart). After its banner, the flood itself (5 Nov, the user's): 2.2 s of aurora light pouring down over the whole screen, rings from the felt, falling stars (`FloodWave` in Hud, `showFloodWave`, `FLOOD_WAVE_MS` on both sides; the next throw waits for it, and the heart breaks as it hits). **Brodor's Sunglasses** (his drop): a finished 23 restores a heart, like a 24
   (`performEndTurn`). Each has its own colours, moment and, for the round ones, a badge and edge
-  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Back of the Head has the user's `SylvesterPunch.mp3` (5 Nov; it was the swoosh), and the screen shakes for it, Inkfire Brand and Divine Smite (`SHAKING_ABILITIES` in game.ts; 5 Nov, the user's); every ability clip plays at `ABILITY_VOLUME` 0.95 (it was 0.75; the Devil's three 6s 0.8, it was 0.6). Since 3 Nov the other four have the user's clips (`InkfireBrand.mp3` 2.9 s, `Flourish.mp3` 1.7 s, `DivineSmite.mp3` 6.7 s, rings on past its 1.85 s moment, `AstralFlood.mp3` 2.8 s, the user's second clip, 6 Nov; `ABILITY_SOUNDS`). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaAbility.mp3` with Disguises since 4 Nov (4.9 s, rings on under the copied trick; it was `MarthaPuff.mp3`), `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
+  glow (`.ink-veil` flames in the bottom corners, `.smite-veil` gold). Back of the Head has the user's `SylvesterPunch.mp3` (5 Nov; it was the swoosh), and the screen shakes for it, Inkfire Brand and Divine Smite (`SHAKING_ABILITIES` in game.ts; 5 Nov, the user's); every ability clip plays at `ABILITY_VOLUME` 0.95 (it was 0.75; the Devil's three 6s 0.8, it was 0.6). Since 3 Nov the other four have the user's clips (`InkfireBrand.mp3` 2.9 s, `Flourish.mp3` 1.7 s, `DivineSmite.mp3` 6.7 s, rings on past its 1.85 s moment, `AstralFlood.mp3` 2.8 s, the user's second clip, 6 Nov; `ABILITY_SOUNDS`). Since 26 Oct the user's clips for the Ghoul and Gourd (`ABILITY_SOUNDS` in sounds.ts, `public/MindWhip.mp3`, `YouAreCursed.mp3`, `SympathyForTheDevil.mp3`, `MarthaAbility.mp3` with Disguise Self since 4 Nov (4.9 s, rings on under the copied trick; it was `MarthaPuff.mp3`), `MarthaSwitch.mp3` as a face goes on, then the copied trick's sound `SWITCH_LEAD_MS` later; your mask too). The Ghoul and Gourd's are **round effects**, decided as a round
   begins (`beginTavernRound`, `tavernRun.roundEffect = { kind, by, ability, as }`): Frak's
   **Mind Whip** (since 20 Oct, replacing Psychic Fog; like the Devil it waits, `pendingMind`, and is spent only as it
   lands, so his ✦ flashes then (21 Oct): on your first throw he keeps one of your dice
   for you, at random since 21 Oct (it was your worst), `Rules.mindWhip(turn, pick)`;
   `turn.mindDieId`, `mind` in the view; it counts as the throw's keep, can't be tapped back, and you
   may keep others; the solver's `optional`; its mist and badge show only once it has landed on
-  your throw, and only while it's still your turn: the user's call, 20 Oct); Danhausen's **You are Cursed** (the lowest valid
+  your throw, and only while it's still your turn: the user's call, 20 Oct); Danhausen's **You are Cursed!** (the lowest valid
   score wins the round; dust still loses; Ace and Smooth Talk don't fire; the solver plays it
   with `low`); the Duke's **Sympathy for the Devil** (waits, `pendingDevil`, until he has kept a 2 and a 4
   with 3+ dice to throw (the user's rule, 19 Oct); that throw gets three 6s and the devil effect
@@ -544,7 +544,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`Strategy.chanceAfterKeep`) is under `devilWhenBelow` (0.7 in balance.js: about your 18 and up);
   first to play, always. Going for it he keeps only the 2 and 4 he needs (`Rules.devilWaitLocks`),
   plus a 5 or 6 if three dice stay to throw; otherwise he plays his usual way and saves it);
-  Martha's **Disguises** (each use one of the three at random, `as` = whose face). The client
+  Martha's **Disguise Self** (each use one of the three at random, `as` = whose face). The client
   shows a takeover (since 21 Oct: a flash in the ability's colours, `--flare`, and a banner across
   the screen with who, what and the move's text; since 26 Oct, the user's call, it rises like the devil's
   three 6s: a sheet of light in the move's colours sweeps up, plumes lick up from the bottom
@@ -644,12 +644,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   bust behind it overlapped the painting, the user's call), motes of light rising, the painting
   pushing slowly in, the banner below it (on phones on their side the painting left, the banner
   right), 1.85 s like every moment (turning light rays behind the painting); not when a Clear-Eye cancels it.
-  So far Mind Whip, You are Cursed, Sympathy for the Devil, Disguises, Back of the Head, Inkfire
+  So far Mind Whip, You are Cursed!, Sympathy for the Devil, Disguise Self, Back of the Head, Inkfire
   Brand, Flourish, Astral Flood, Reach Around, Written in the Stars, since 27 Oct Jaguar's Smooth Talk and The Cloak, since 28 Oct the Ridgeler's Divine Smite, and since 9 Nov Starry Form, Penitent Stare, The Ace of Spades and All In: every ability has one now (`ABILITY_ART` in Hud,
   `art/ability-<id>.jpg`, cut out with `holes` seeds for enclosed pockets; `cutOutFlat` also has
   `minPiece` (keep a flying die), `trails` (see-through streaks; a list for several colours), `fade` (fades out where the painting itself crops the character), `soften` (a fading
   edge), `glow` (a bright flame over the background keeps its own warm colours, see-through by brightness; Divine Smite's hammer) and `smokeMinBlue`). Since 28 Oct an ability's screen shows only its name (keepsakes and Thonics keep their lines); Astral Flood's stage has its painting's aurora and stars (`.aurora`, `.twinkle`). Every character's text is listed in `docs/character-text.md` for the user to edit. Brodor's bust is a new painting since 26 Oct (the first is
-  `art/bust-brodor-v1.webp`); so is Jaguar's since 27 Oct, his cloak faded where it runs off the painting (the first is `art/bust-jaguar-v1.jpg`). Martha's Disguises
+  `art/bust-brodor-v1.webp`); so is Jaguar's since 27 Oct, his cloak faded where it runs off the painting (the first is `art/bust-jaguar-v1.jpg`). Martha's Disguise Self
   painting shows ~1.7 s, then the trick she copies with its own painting. Check new ones with
   `node test/ability-shots.mjs <dir> only=<key>` (plays the ability for real headless, holds the
   moment, shoots it at phone sizes and checks it stays above the rail; works with the pane hidden;
@@ -671,7 +671,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (any time in your turn with 3+ dice to throw, since 21 Oct: the next throw lands three 6s)
   yourself (`wearMask`, `by: 'player'`). On the strip it lights up and shows its choices inline
   (never over the rail); when it can't be worn a tap is a reminder. Martha herself shows a
-  "Disguises" moment first, then the trick she copies (`disguiseMoves`).
+  "Disguise Self" moment first, then the trick she copies (`disguiseMoves`).
 - **Perfect hands (23 Oct, the user's):** a finished 24 gets "Perfect 24!" (gold lettering, rays and
   sparks in the middle of the green felt since 24 Oct (`--felt-y`, from `setRailAnchor`; smaller
   on phones on their side), the room lit gold); in a cursed round (lowest valid hand wins) four 1s with the 2 and 4 (a score of 4) get
@@ -732,7 +732,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   and a synthesized chime (`playChime`); the Shield's is a force-field dome over the table
   (`.forcefield`), its line "Shield protects a life." The Lady's Grace moment shows only its name and "♥ saved" (no
   "Shrine to the Lady" over it since 4 Nov, the user's call).
-- **Hearts you can count and a Roll button that says why it waits** (12 Nov, `docs/ui-brainstorm.md`, new look): every heart of the fight is a heart shape rimmed in gold, full ones glossy red, lost ones dark (`.look-next .hearts`, a CSS mask); Roll Dice after a throw reads "Keep a die" ("Keep 2 dice", "Keep 1 more" in a Squall) on parchment instead of greying out, and glows slowly when it can roll (`mode` in the controls); the old tip "Tap dice to keep them..." is gone. Also 12 Nov: the header's back, music and sound buttons are brass coins with drawn icons (`HeaderIcon`); the purse a leather pouch with a drawn coin; empty Thonic slots slim and faint; the turn score on a small plaque (its margins give back its padding, so the footer and the camera don't move). And: no "–" before a score (ability marks as gems were tried and reverted, the user's call; the ✦ stay); whose turn is the nameplate's glow plus a gold "Your turn" tab on yours (no die on the portrait).
+- **Hearts you can count and a Roll button that says why it waits** (12 Nov, `docs/ui-brainstorm.md`, new look): every heart of the fight is a heart shape rimmed in gold, full ones glossy red, lost ones dark (`.look-next .hearts`, a CSS mask); Roll Dice after a throw reads "Keep a die" ("Keep 2 dice", "Keep 1 more" in a Squall) on parchment instead of greying out, and glows slowly when it can roll (`mode` in the controls); the old tip "Tap dice to keep them..." is gone. Also 12 Nov: the header's back, music and sound buttons are brass coins with drawn icons (`HeaderIcon`); the purse a leather pouch with a drawn coin; empty Thonic slots slim and faint; the turn score on a small plaque (its margins give back its padding, so the footer and the camera don't move). On a computer's dock (12 Nov, the user saw them overlap) the turn score keeps its old frameless look, so a round's plaque under it stays clear. On 12 Nov too (the user's): no "Your turn" tab over your nameplate (the glow alone says it); Danhausen's ability is "You are Cursed!", Martha is "Martha/Mystery" (her name on screen) and her ability "Disguise Self" (the banner's class is the name in lower case, `you-are-cursed`, `disguise-self`; names are keys in `ABILITY_ART`, `ABILITY_SOUNDS`, `ABILITY_MOMENTS`, `PORTRAITS`, `INVITATIONS`). One button family (12 Nov): the small quiet buttons (Skip, the trailer's end buttons) are dark glass in a brass rim, a panel's ✕ a brass coin, and buttons brighten under a computer's pointer. And: no "–" before a score (ability marks as gems were tried and reverted, the user's call; the ✦ stay); whose turn is the nameplate's glow (no die on the portrait).
 - **Hearts that react, and the end of a place** (visuals plan step 5, 25 Oct): a heart that's lost
   swells, cracks along a jagged line and its halves fall away; one that comes back pops in with a
   pink glow (`Hearts` in Hud, `HEART_MS` 0.9 s, `.heart.breaking` / `.healing`; a new fight resets

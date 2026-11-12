@@ -122,7 +122,7 @@ export function opponentName(): string | null {
 // 21 Oct): 'Martha as Frak' and so on in PORTRAITS. Otherwise the opponent's own name.
 export function opponentPortraitKey(name: string): string {
     const effect = store.get().state?.tavernRun?.roundEffect;
-    const disguised = name === 'Martha Mystery' && effect?.by === 'opponent' && effect.as ? `Martha as ${effect.as}` : null;
+    const disguised = name === 'Martha/Mystery' && effect?.by === 'opponent' && effect.as ? `Martha as ${effect.as}` : null;
     return disguised && PORTRAITS[disguised] ? disguised : name;
 }
 

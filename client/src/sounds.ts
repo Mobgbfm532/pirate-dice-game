@@ -508,9 +508,9 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Divine Smite': 'smite',
     'Astral Flood': 'astralFlood',
     'Mind Whip': 'mindWhip',
-    'You are Cursed': 'cursed',
+    'You are Cursed!': 'cursed',
     'Sympathy for the Devil': 'sympathy',
-    'Disguises': 'marthaAbility' // the user's clip (4 Nov); her switch of faces comes with the trick she copies
+    'Disguise Self': 'marthaAbility' // the user's clip (4 Nov); her switch of faces comes with the trick she copies
 };
 // A face put on (Martha's copied trick, or your mask): her switch sound, then the trick's own
 // sound this long after it starts.

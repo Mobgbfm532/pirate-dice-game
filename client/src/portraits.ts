@@ -49,7 +49,7 @@ export const PORTRAITS: Record<string, Portrait> = {
     Danhausen: { ...seated('danhausen.webp', [54, 15], 1.65, 549, 720, [7.1, -8.2]), seat: 1.6 },
     'Duke Morrigan': seated('duke.webp', [72, 37], 1.2, 582, 720, [16.5, 9.9]),
     // (Her vape's clouds are painted in already: no smoke of our own, it couldn't be told apart.)
-    'Martha Mystery': { ...seated('martha.webp', [44, 27], 1.2, 694, 720, [-5.8, -12]), seat: 1.15 },
+    'Martha/Mystery': { ...seated('martha.webp', [44, 27], 1.2, 694, 720, [-5.8, -12]), seat: 1.15 },
     // Her Disguises: the same pose holding up each face as a mask. Behind the table they sit like her own bust (seat); a round avatar shows her face and the mask.
     'Martha as Frak': { ...seated('martha-frak.webp', [55, 32], 0.95, 703, 720, [1.2, -12.9]), seat: 1.15 },
     'Martha as Danhausen': { ...seated('martha-danhausen.webp', [58, 33], 1, 729, 720, [-19.1, -9.5]), seat: 1.15 },
@@ -185,7 +185,7 @@ export interface SeatEdit { size: number; shift: [number, number] }
 // The user's own placing (6 Nov), from that tab.
 const SEATS: Record<string, SeatEdit> = {
     'Duke Morrigan': { size: 1, shift: [11, 0] },
-    'Martha Mystery': { size: 1.15, shift: [-4, 0] },
+    'Martha/Mystery': { size: 1.15, shift: [-4, 0] },
     Frak: { size: 1.37, shift: [0, -2.5] },
     'Martha as Frak': { size: 1.15, shift: [0, -3] },
     'Martha as Danhausen': { size: 1.12, shift: [0, -5.5] },

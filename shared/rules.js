@@ -44,9 +44,9 @@
         deadeye24: 'The Ace of Spades',
         smoothTalk: 'Smooth Talk',
         mindWhip: 'Mind Whip',
-        cursed: 'You are Cursed',
+        cursed: 'You are Cursed!',
         devil: 'Sympathy for the Devil',
-        disguises: 'Disguises',
+        disguises: 'Disguise Self',
         suckerPunch: 'Back of the Head', // Sylvester's (the id is the simulator's)
         inkfire: 'Inkfire Brand',
         flourish: 'Vexing Rapier', // (Flourish until 3 Nov; the id stays)
