@@ -105,8 +105,9 @@ const PLACES_FROM = 18, PLACE_LEN = 2;
 const VENDORS: { name: string; art: string; line?: string; back?: string; glow: string; scene?: boolean }[] = [
     { name: "Thom's Thonics", art: 'thom', line: "What ya havin'?", back: 'tavern.webp', glow: '#ffb35c' },
     { name: 'Stop, thief!', art: 'pickpocket', line: 'Finders keepers!', back: 'tavern.webp', glow: '#ff6a4a' },
-    { name: 'Shrine to the Lady', art: 'shrine', scene: true, glow: '#8fd8ff' },
-    { name: 'Wild Magic Hot Tub', art: 'hot-tub', line: '*bubble bubble* ✨', scene: true, glow: '#5ff0d8' },
+    // (Shown whole across the screen since 12 Nov, the user's: filling an upright screen zoomed into their middles.)
+    { name: 'Shrine to the Lady', art: 'shrine', back: 'shrine.webp', scene: true, glow: '#8fd8ff' },
+    { name: 'Wild Magic Hot Tub', art: 'hot-tub', line: '*bubble bubble* ✨', back: 'tavern.webp', scene: true, glow: '#5ff0d8' },
     { name: 'Johnny Elf Bar', art: 'elf-kid', line: 'Psst! Wanna touch the sky?', back: 'yawning-portal.webp', glow: '#c77dff' },
     { name: 'Yvesil', art: 'yvesil', line: 'Shall I read your next fight?', back: 'salty-swallow-at-sea.webp', glow: '#5fe0ff' }
 ];
@@ -349,7 +350,7 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
                                 <div className={`tr-vendor${v.scene ? ' scene' : ''}`} style={vars({ '--len': `${len}s`, '--c': v.glow })}>
                                     {v.back && <img className="tr-vendor-back" src={ART + v.back} alt="" draggable={false} />}
                                     {v.scene
-                                        ? <img className="tr-vendor-scene" src={`${ART}${v.art}.webp`} alt="" draggable={false} />
+                                        ? <img className={`tr-vendor-scene ${v.art}`} src={`${ART}${v.art}.webp`} alt="" draggable={false} />
                                         : <img className="tr-vendor-figure" src={`${ART}${v.art}.webp`} alt="" draggable={false} />}
                                     {v.line && <span className="tr-vendor-line">{v.line}</span>}
                                     <span className="tr-vendor-name">{v.name}</span>
