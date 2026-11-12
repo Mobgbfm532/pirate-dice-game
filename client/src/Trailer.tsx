@@ -327,7 +327,6 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
                             </div>
                         )}
                     </Part>
-                    <Part now={now} from={LIGHTNING + 0.1} to={LINEUP_TO}>{len => <Words len={len} place="top" className="lesson">Fifteen rivals.</Words>}</Part>
 
                     {/* The places. */}
                     {PLACES.map((p, i) => (
