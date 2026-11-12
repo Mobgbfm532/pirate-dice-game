@@ -30,10 +30,10 @@ Recommended first, roughly by how much each helps for the work.
    for a keep (the button reads "Keep a die" in parchment and dark ink, not greyed), rolling (dimmed,
    dice icon turning), End Turn (green, as now). The faint hint under it can then go, giving the table
    a little room.
-3. **Brass header buttons.** Back, music and sound as small brass coins like the Legends plaque, with
+3. **Brass header buttons.** **Built 12 Nov:** brass coins with drawn icons in dark ink (`HeaderIcon` in Hud: back, music, sound; the league's cup and the ⚙ keep their emoji), off dimmed with a red slash; in the same corners. Back, music and sound as small brass coins like the Legends plaque, with
    clear icons and an "off" look (dimmed with a slash in red), up in the corners clear of the bust's
    face.
-4. **A tidier strip under the table.**
+4. **A tidier strip under the table.** **Built 12 Nov:** the purse a leather pouch with a drawn gold coin; empty Thonic slots slim (22 px) and faint; the turn score on a small brass-rimmed plaque. It stays where it was rather than moving into your chip: that would change the phone footer's height, which the camera fits the table to.
    - The purse as a coin pouch with its gold on it, easy to read.
    - Empty Thonic slots small and quiet (a faint outline), so filled ones stand out; when the shelf is
      empty, one small slot with "Thom's" on it.

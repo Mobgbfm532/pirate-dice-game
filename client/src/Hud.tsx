@@ -813,7 +813,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
     if (!run) return null;
     return (
         <div className="tavern-strip">
-            <span className="purse" aria-label={coins(run.purse)}><span aria-hidden="true">🪙</span> {run.purse}</span>
+            <span className="purse" aria-label={coins(run.purse)}><span className="coin-emoji" aria-hidden="true">🪙</span><i className="coin" aria-hidden="true" /> {run.purse}</span>
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
                 (the user, 21 Oct). Tap one for its info panel; it dims once spent this fight. */}
@@ -980,6 +980,14 @@ function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
 const PAINTED_THONICS = new Set(['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye']);
 
 // A Thonic's bottle: its painting, or a small bottle drawn in CSS (the colour says which).
+// The header's buttons (12 Nov): simple drawn icons in the button's ink, clearer than emoji on brass.
+function HeaderIcon({ kind }: { kind: 'back' | 'music' | 'sound' }) {
+    const common = { width: '1.15em', height: '1.15em', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
+    if (kind === 'back') return <svg {...common}><path d="M19 12H5" /><path d="M11 6l-6 6 6 6" /></svg>;
+    if (kind === 'music') return <svg {...common}><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" fill="currentColor" /><circle cx="17" cy="16" r="3" fill="currentColor" /></svg>;
+    return <svg {...common}><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19 6a8.5 8.5 0 0 1 0 12" /></svg>;
+}
+
 function Bottle({ thonic }: { thonic: Thonic | null }) {
     if (thonic?.elf) return <Vape bar={thonic} />;
     if (thonic && PAINTED_THONICS.has(thonic.id)) {
@@ -3050,7 +3058,7 @@ export function Hud() {
     return (
         <div className={`hud ${multiplayer ? 'multiplayer' : ''}`}>
             <header>
-                <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table">⟵</button>
+                <button className="leave" onClick={actions.leave} aria-label="Leave table" title="Leave table"><HeaderIcon kind="back" /></button>
                 {snap.league && <button className="mute league-button" onClick={() => setLeagueOpen(true)} aria-label="League table" title="League table">🏆</button>}
                 <span className="room">{snap.roomLabel}</span>
                 {/* While an ability lasts, the screen's edges glow in its colours (pointer-free, clear of the dice). */}
@@ -3060,9 +3068,9 @@ export function Hud() {
                 <div className="sound-toggles">
                     {tunePanel && <button className="mute" onClick={() => setTuneOpen(!tuneOpen)} aria-label="Tuning" title="Tuning">⚙</button>}
                     <button className={`mute ${musicOff ? 'off' : ''}`} onClick={() => { setMusicOff(!musicOff); setMusicOffState(!musicOff); }}
-                        aria-label={musicOff ? 'Music on' : 'Music off'} aria-pressed={!musicOff} title={musicOff ? 'Music is off' : 'Music is on'}>🎵</button>
+                        aria-label={musicOff ? 'Music on' : 'Music off'} aria-pressed={!musicOff} title={musicOff ? 'Music is off' : 'Music is on'}><HeaderIcon kind="music" /></button>
                     <button className={`mute ${soundsOff ? 'off' : ''}`} onClick={() => { setSoundsOff(!soundsOff); setSoundsOffState(!soundsOff); }}
-                        aria-label={soundsOff ? 'Game sounds on' : 'Game sounds off'} aria-pressed={!soundsOff} title={soundsOff ? 'Game sounds are off' : 'Game sounds are on'}>🔊</button>
+                        aria-label={soundsOff ? 'Game sounds on' : 'Game sounds off'} aria-pressed={!soundsOff} title={soundsOff ? 'Game sounds are off' : 'Game sounds are on'}><HeaderIcon kind="sound" /></button>
                 </div>
             </header>
             {state && multiplayer && <Rivals snap={snap} state={state} />}

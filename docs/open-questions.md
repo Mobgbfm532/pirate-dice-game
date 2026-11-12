@@ -10,7 +10,7 @@ day they happen, with what's been built marked as it lands.
 ## Open
 
 ### The game's interface (`docs/ui-brainstorm.md`, 12 Nov)
-- The hearts and Roll Dice are built (12 Nov). Next: brass header buttons and a tidier strip under the table (ideas 3 and 4)?
+- Ideas 1-4 are built (12 Nov). Next: scores without the "—", ability marks as glowing gems, the turn as a glow (ideas 5-7)? Should the turn score move into your chip after all (it would shift the table a little on phones)?
 - The hearts: drawn in CSS/SVG first, or a painted heart (full, empty) from the user?
 
 ### The voyage (`docs/voyage-brainstorm.md`)

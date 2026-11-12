@@ -3823,3 +3823,35 @@ body.sea-heave { background: #050302; }
 }
 .look-next .roll.rolling:disabled { filter: brightness(0.75) saturate(0.8); }
 @media (prefers-reduced-motion: reduce) { .look-next .roll.ready { animation: none; } }
+
+/* ==== Brass header buttons and a tidier strip (12 Nov, docs/ui-brainstorm.md ideas 3 and 4) ==== */
+.coin { display: none; }
+/* Back, music, sound (and the league's cup): small brass coins with dark ink icons; off is dimmed with
+   a red slash. (They were faint grey circles over the opponent's face.) */
+.look-next header .mute, .look-next header .leave {
+    display: inline-flex; align-items: center; justify-content: center; color: #2b1a0c;
+    background: radial-gradient(circle at 38% 30%, #fbe7ae, #dcb25a 55%, #a87a2a); border: 1px solid #6d4c1a;
+    box-shadow: inset 0 1px 0 rgba(255, 247, 214, 0.85), inset 0 -2px 0 rgba(90, 58, 10, 0.4), 0 2px 6px rgba(0, 0, 0, 0.55);
+    transition: transform 0.08s, filter 0.15s;
+}
+.look-next header .mute:active, .look-next header .leave:active { transform: scale(0.94); }
+.look-next header .mute.off { opacity: 1; filter: saturate(0.25) brightness(0.72); }
+.look-next header .mute.off::after { left: 7px; right: 7px; height: 2.5px; background: #b71c1c; box-shadow: 0 0 0 1px rgba(255, 230, 200, 0.6); }
+
+/* The purse: a leather pouch with a gold coin and the amount. */
+.look-next .coin-emoji { display: none; }
+.look-next .coin { display: inline-block; width: 1.05em; height: 1.05em; border-radius: 50%; vertical-align: -0.18em;
+    background: radial-gradient(circle at 35% 30%, #fff3c4, #f2c94c 45%, #b8860b 80%); box-shadow: inset 0 0 0 1.5px #8a5a00, 0 1px 2px rgba(0, 0, 0, 0.6); }
+.look-next .tavern-strip .purse { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 6px; border-radius: 999px;
+    font-family: 'Almendra', Georgia, serif; font-size: 1.05rem; color: #ffe08a; text-shadow: 0 1px 2px #000;
+    background: radial-gradient(ellipse at 50% 30%, #6b4426, #3d2412 75%); border: 1px solid #a8823e;
+    box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 2px 5px rgba(0, 0, 0, 0.5); }
+
+/* Empty Thonic slots: slim and faint, so the full ones are what you see. */
+.look-next .shelf-slot:disabled { width: 22px; background: rgba(0, 0, 0, 0.18); border: 1px dashed rgba(224, 180, 76, 0.35); box-shadow: none; }
+.look-next .shelf-slot:disabled .bottle.empty { display: none; }
+
+/* The turn score: on a small brass-rimmed plaque, not floating alone. */
+.look-next .controls .turn-score { padding: 2px 12px; margin-top: -3px; margin-bottom: -3px; border-radius: 10px; align-items: center; /* (the margins give back the padding and rim: the footer keeps its height, so the table doesn't move) */
+    background: linear-gradient(rgba(40, 24, 12, 0.78), rgba(24, 14, 6, 0.86)); border: 1px solid rgba(224, 180, 76, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.15), 0 2px 6px rgba(0, 0, 0, 0.45); }
