@@ -54,6 +54,17 @@ function savePrefs(name: string, avatar: string, code: string) {
     } catch { /* storage unavailable */ }
 }
 
+// The Tavern Crawl's door shows its three places (the start screen, 12 Nov).
+const CRAWL_PLACES = ['tavern.webp', 'yawning-portal.webp', 'salty-swallow-sets-sail.webp'];
+// "Start a table": a code of four letters no one is likely to have (no I or O, nor the game's own codes).
+function newTableCode() {
+    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = '';
+    do code = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+    while (['COMP', 'JUGS', 'TAVERN'].includes(code));
+    return code;
+}
+
 // An invite link looks like /next/?table=CODE.
 function invitedTable() {
     const code = new URLSearchParams(location.search).get('table');
@@ -70,7 +81,8 @@ function JoinScreen() {
     // The die over the title (12 Nov): where it sits, and a tap throwing it again. Not on a phone on its side.
     const dieSlot = useRef<HTMLButtonElement>(null);
     const rethrow = useRef(() => {});
-    const roomForDie = !useMedia('(orientation: landscape) and (max-height: 500px)');
+    // (Nor on a short upright phone, where the doors need the room.)
+    const roomForDie = !useMedia('(orientation: landscape) and (max-height: 500px), (orientation: portrait) and (max-height: 740px)');
 
     const join = (tableCode: string) => {
         savePrefs(name, avatar, tableCode);
@@ -87,6 +99,7 @@ function JoinScreen() {
         const wait = setTimeout(preloadIntro, 1200);
         return () => clearTimeout(wait);
     }, [playIntro, invite]);
+    const beginCrawl = () => { if (playIntro) setFilm('crawl'); else join('TAVERN'); };
     if (film) return <IntroFilm onDone={() => {
         liftCurtain();
         if (film === 'crawl') join('TAVERN');
@@ -103,49 +116,73 @@ function JoinScreen() {
                 <p className="join-tagline">Keep the 2. Keep the 4. <span>Become a legend.</span></p>
             </header>
             <div className="panel join">
-                <p className="token-label">Your token at the table</p>
+                <p className="token-label">Your token at the table: <strong>{avatar}</strong></p>
                 <div className="avatars">
                     {AVATAR_IDS.map(id => (
                         <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
                     ))}
                 </div>
-                <p className="token-name">{avatar}</p>
                 <input value={name} maxLength={15} placeholder="Adventurer name" onChange={e => setName(e.target.value)} />
-                {invite && <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>}
-                {saved && !invite && (
-                    <div className="saved-run">
-                        <button className="primary" onClick={() => actions.resume(saved, avatar)}>
-                            Continue your crawl
-                            <span className="detail">{saved.name}: {saved.next} at {saved.place} · {coins(saved.purse)}</span>
-                        </button>
-                        <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
-                    </div>
-                )}
-                {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
-                <button className={invite ? 'secondary' : 'primary'} onClick={() => { if (playIntro) setFilm('crawl'); else join('TAVERN'); }}>Tavern Crawl</button>
-                <div className="row">
-                    <input value={code} maxLength={10} placeholder="Table code" onChange={e => setCode(e.target.value.toUpperCase())} />
-                    <button className="secondary" onClick={() => join(code)}>Join table</button>
+                {/* Two doors (12 Nov, the user's pick, docs/landing-page-brainstorm.md): the Tavern Crawl, or a
+                    table of friends. An invite puts the friends' door first. */}
+                <div className={`doors${invite ? ' invited' : ''}`}>
+                    <section className="door crawl" aria-label="Tavern Crawl">
+                        <div className="door-head">
+                            <div className="door-places" aria-hidden="true">
+                                {CRAWL_PLACES.map(art => <img key={art} src={`${import.meta.env.BASE_URL}art/${art}`} alt="" draggable={false} />)}
+                            </div>
+                            <h2>Tavern Crawl</h2>
+                            <p className="door-line">Fifteen rivals. Two taverns. One ship.</p>
+                        </div>
+                        {saved && !invite && (
+                            <div className="saved-run">
+                                <button className="primary" onClick={() => actions.resume(saved, avatar)}>
+                                    Continue your crawl
+                                    <span className="detail">{saved.name}: {saved.next} at {saved.place} · {coins(saved.purse)}</span>
+                                </button>
+                                <div className="saved-links">
+                                    <button className="link-button" onClick={beginCrawl}>Start a new crawl</button>
+                                    <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
+                                </div>
+                            </div>
+                        )}
+                        {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
+                        {!(saved && !invite) && <button className={invite ? 'secondary' : 'primary'} onClick={beginCrawl}>Begin the crawl</button>}
+                        {!invite && (
+                            <div className="intro-row">
+                                <label className="intro-check">
+                                    <input type="checkbox" checked={playIntro} onChange={e => { saveIntroChoice(e.target.checked); setChoice(e.target.checked); }} />
+                                    Play the intro first
+                                </label>
+                                <button className="link-button watch-intro" onClick={() => setFilm('watch')}>Watch it</button>
+                            </div>
+                        )}
+                    </section>
+                    <section className="door friends" aria-label="Play with friends">
+                        <div className="door-head">
+                            <h2>Play with friends</h2>
+                            <p className="door-line">{invite ? `You're invited to table ${invite}.` : 'Start a table and send them the link.'}</p>
+                        </div>
+                        {invite ? (
+                            <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>
+                        ) : (
+                            <div className="row start-row">
+                                <button className="primary alt" onClick={() => join(newTableCode())}>Start a table</button>
+                                {/* Lives at a new table: a tap goes 2, 3, 4. */}
+                                <button className="lives-cycle" aria-label={`Lives at a new table: ${lives}. Tap to change.`} title="Lives at a new table"
+                                    onClick={() => { setLives(n => (n >= 4 ? 2 : n + 1)); playSound('click'); }}>
+                                    {'♥'.repeat(lives)}
+                                </button>
+                            </div>
+                        )}
+                        {!invite && (
+                            <div className="row">
+                                <input value={code} maxLength={10} placeholder="Table code" aria-label="Table code" onChange={e => setCode(e.target.value.toUpperCase())} />
+                                <button className="secondary" disabled={!code.trim()} onClick={() => join(code.trim())}>Join</button>
+                            </div>
+                        )}
+                    </section>
                 </div>
-                {code && !invite && (
-                    <div className="lives-pick" role="radiogroup" aria-label="Starting lives for a new table">
-                        <span>Lives (new tables)</span>
-                        {[2, 3, 4].map(n => (
-                            <button key={n} role="radio" aria-checked={lives === n} className={lives === n ? 'selected' : ''} onClick={() => setLives(n)}>
-                                {'♥'.repeat(n)}
-                            </button>
-                        ))}
-                    </div>
-                )}
-                {!invite && (
-                    <div className="intro-row">
-                        <label className="intro-check">
-                            <input type="checkbox" checked={playIntro} onChange={e => { saveIntroChoice(e.target.checked); setChoice(e.target.checked); }} />
-                            Play intro before a Tavern Crawl
-                        </label>
-                        <button className="link-button watch-intro" onClick={() => setFilm('watch')}>Watch it</button>
-                    </div>
-                )}
             </div>
             <a className="classic-link" href="/">Classic game</a>
         </div>

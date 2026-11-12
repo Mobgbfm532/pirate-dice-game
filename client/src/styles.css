@@ -3585,3 +3585,81 @@ body.sea-heave { background: #050302; }
 }
 /* (A short upright phone has no room left for it beside the panel.) */
 @media (orientation: portrait) and (max-height: 700px) { .classic-link { display: none; } }
+
+/* ==== The start screen's two doors (12 Nov, the user's pick: docs/landing-page-brainstorm.md) ====
+   Inside the parchment, under your token and name: the Tavern Crawl, headed by its three places'
+   paintings, and Play with friends (Start a table makes a code; or join one). Side by side on a wide
+   screen, one above the other on a phone; an invite puts the friends' door first. */
+.join-screen > .panel.join { width: min(100%, 440px); }
+.doors { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.doors.invited .door.friends { order: -1; }
+.door { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid #b08a4e; border-radius: 12px;
+    background: rgba(255, 248, 228, 0.5); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 0 rgba(80, 50, 20, 0.15); }
+.door-head h2 { margin: 0; font-family: 'Almendra', Georgia, serif; font-size: 1.35rem; font-weight: 700; line-height: 1.1; color: var(--red); }
+.look-next .panel.join .door-line, .panel.join .door-line { margin: 2px 0 0; font-size: 0.88rem; font-style: italic; color: #6d4c2a; }
+/* The crawl's head: the Ghoul and Gourd, the Yawning Portal, the Salty Swallow, with its name over them. */
+.door.crawl .door-head { position: relative; overflow: hidden; border-radius: 8px; min-height: 76px; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 8px 8px 7px; box-shadow: 0 0 0 1px #6d4c2a, 0 2px 6px rgba(0, 0, 0, 0.35); }
+.door-places { position: absolute; inset: 0; display: flex; }
+.door-places img { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; }
+.door-places img + img { border-left: 1px solid rgba(255, 213, 79, 0.45); }
+.door.crawl .door-head::after { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(10, 5, 2, 0.05), rgba(10, 5, 2, 0.78)); }
+.door.crawl .door-head h2, .door.crawl .door-head .door-line { position: relative; z-index: 1; }
+.door.crawl .door-head h2 { color: #ffd24f; text-shadow: 0 0 14px rgba(255, 170, 40, 0.55), 0 2px 3px #000; }
+.look-next .panel.join .door.crawl .door-line, .panel.join .door.crawl .door-line { color: #f6ead0; text-shadow: 0 1px 3px #000; }
+.door .saved-run .primary { width: 100%; }
+.door .intro-row { gap: 0 8px; }
+.door .intro-check { font-size: 0.85rem; }
+.door .row { display: flex; gap: 8px; }
+.door .row input { flex: 1; min-width: 0; }
+.start-row .primary { flex: 1; }
+.lives-cycle { flex: none; min-width: 64px; padding: 0 10px; border: 2px solid #b39461; border-radius: 10px; background: #fffaf0; color: #c62828;
+    font-size: 1.05rem; letter-spacing: -1px; white-space: nowrap; box-shadow: inset 0 -2px 0 rgba(80, 50, 20, 0.12); }
+.lives-cycle:active { transform: scale(0.95); }
+.door .secondary:disabled { opacity: 0.55; }
+/* A wide screen: the doors side by side. */
+@media (min-width: 720px) and (min-height: 560px) {
+    .join-screen > .panel.join { width: min(100%, 720px); }
+    .doors { flex-direction: row; align-items: stretch; }
+    .door { flex: 1 1 0; min-width: 0; }
+    .door.friends .door-head { min-height: 76px; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px 8px 7px; }
+    .door .row:last-child, .door .intro-row:last-child { margin-top: auto; }
+}
+/* A phone on its side: short, so the doors sit side by side and the crawl's paintings go. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .join-screen > .panel.join { width: min(100%, 600px); }
+    .doors { flex-direction: row; gap: 8px; }
+    .door { flex: 1 1 0; min-width: 0; gap: 6px; padding: 6px; }
+    .door.crawl .door-head { min-height: 0; padding: 5px 8px; }
+    .door-line { display: none; }
+}
+/* (Taller than the screen: it scrolls, starting at the top. The font's joined "st" stays off.) */
+.join-screen { overflow-y: auto; }
+.panel.join { font-variant-ligatures: no-common-ligatures no-discretionary-ligatures no-historical-ligatures; font-feature-settings: "liga" 0, "dlig" 0, "hlig" 0; }
+.join-screen > .panel.join { gap: 9px; max-height: none; overflow: visible; }
+.panel.join .token-label strong { font-family: 'Almendra', Georgia, serif; font-weight: 400; color: #7a2418; }
+.panel.join > input { padding: 9px 12px; }
+.door.crawl .door-head { min-height: 64px; }
+.lobby-die-slot { width: clamp(52px, 9.5vh, 96px); height: clamp(52px, 9.5vh, 96px); }
+.join-title { font-size: clamp(48px, min(15vw, 9.5vh), 108px); }
+/* The classic link goes under the panel, in the page's flow, so it never sits on a button. */
+.classic-link { position: relative; right: auto; bottom: auto; align-self: center; flex: none; }
+@media (orientation: portrait) and (max-height: 700px) { .classic-link { display: block; } }
+@media (orientation: portrait) and (max-height: 740px) {
+    .join-screen { gap: 8px; }
+    .join-title { font-size: clamp(40px, 12vw, 56px); }
+    .join-tagline { font-size: 15px; }
+    .door.friends .door-line { display: none; }
+}
+/* (Upright phones: a little less spacing everywhere, and the classic link left out, so it all fits a 384x780 screen.) */
+@media (orientation: portrait) and (max-width: 600px) {
+    .join-screen { padding: 10px 12px; }
+    .join-screen > .panel.join { padding: 12px 14px; gap: 8px; }
+    .door { gap: 7px; }
+    .door .primary, .door .secondary { padding-top: 9px; padding-bottom: 9px; }
+    .classic-link, .classic-link:is(*) { display: none; }
+}
+/* (A wide screen: the crawl's tick box stays under its button. A phone on its side: no room for the classic link.) */
+@media (min-width: 720px) and (min-height: 560px) { .door .intro-row:last-child { margin-top: 0; } }
+@media (orientation: landscape) and (max-height: 500px) { .classic-link, .classic-link:is(*) { display: none; } }
+.saved-links { display: flex; justify-content: center; gap: 4px 14px; flex-wrap: wrap; }

@@ -35,7 +35,7 @@ Recommended first, roughly in order of how much each changes the look for the wo
 3. **A living tavern.** The painting breathing as the table's does: the fire and candles flickering
    (a mask, like the devil painting's), dust drifting in the light, and on a phone the slow parallax
    drift (`parallax.ts`). All of it exists already somewhere in the game.
-4. **Two doors, not a form.** Two big painted cards instead of a button and a code box:
+4. **Two doors, not a form.** **Built 12 Nov.** Two big painted cards instead of a button and a code box:
    - **Tavern Crawl**: "Fifteen rivals. Two taverns. One ship." with the three places in a strip, or the
      rivals as the trailer's silhouettes; "Continue your crawl" on it when there's a save, saying where.
    - **Play with friends**: "Start a table" (makes a code and copies the invite link) and "Join with a
@@ -72,3 +72,17 @@ changes how a multiplayer table is started.
   (hidden on short upright phones, where there's no room).
 - The loading screen's title and die disappear at once, only its painting fading (index.html).
 - Checked at 375x812, 360x640, 844x390 and 1440x900: nothing scrolls or overlaps.
+
+## The two doors (built 12 Nov)
+
+- Inside the parchment, under the token and name: **Tavern Crawl** (headed by the three places'
+  paintings, "Fifteen rivals. Two taverns. One ship.", Begin the crawl, the intro tick box; with a save,
+  Continue your crawl, with Start a new crawl and Forget this save as small links) and **Play with
+  friends** (Start a table, which makes a four-letter code of its own, `newTableCode` in Hud, and seats
+  you there, where Share invite link already is; a hearts button beside it, tapped 2, 3, 4, for a new
+  table's lives; a code box and Join). An invite puts the friends' door first with Join table CODE.
+- Side by side on a computer and on a phone on its side; one above the other on an upright phone.
+- The token's label and name share one line; the die gives way on short upright phones (under 740 px
+  tall); the classic link shows only on a computer.
+- Fits without scrolling at 384x780, 360x640, 844x390 and 1440x900 (with a save, 384x780 scrolls 26 px).
+  Stills: `node test/start-shots.mjs <dir> client=... [sizes=...] [save=1] [query=table=ABCD]`.
