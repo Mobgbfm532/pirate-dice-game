@@ -266,7 +266,7 @@ function TurnBanner({ snap, state }: { snap: Snapshot; state: GameState | null }
 }
 
 function scoreText(p: GameState['players'][string]) {
-    return !p.connected ? 'Offline' : p.lives <= 0 ? 'Out' : p.scoreHidden ? '?' : p.score === null ? '–' : p.busted ? 'Dust' : String(p.score);
+    return !p.connected ? 'Offline' : p.lives <= 0 ? 'Out' : p.scoreHidden ? '?' : p.score === null ? '' : p.busted ? 'Dust' : String(p.score);
 }
 
 // Scores of players who have finished this round and didn't dust.

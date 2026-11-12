@@ -3855,3 +3855,16 @@ body.sea-heave { background: #050302; }
 .look-next .controls .turn-score { padding: 2px 12px; margin-top: -3px; margin-bottom: -3px; border-radius: 10px; align-items: center; /* (the margins give back the padding and rim: the footer keeps its height, so the table doesn't move) */
     background: linear-gradient(rgba(40, 24, 12, 0.78), rgba(24, 14, 6, 0.86)); border: 1px solid rgba(224, 180, 76, 0.55);
     box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.15), 0 2px 6px rgba(0, 0, 0, 0.45); }
+
+/* ==== Whose turn as a glow (12 Nov, docs/ui-brainstorm.md idea 7; new look). (Idea 6, the ability marks as gems, was built and taken out the same day, the user's call.) ==== */
+/* Whose turn: the nameplate's gold glow says it (no die stuck on the portrait); on yours a small
+   "Your turn" tab as well. */
+.look-next .player.current::after { content: none; }
+.look-next .player.me.current::before {
+    content: 'Your turn'; position: absolute; z-index: 1; left: 50%; top: 0; transform: translate(-50%, -62%);
+    padding: 1px 9px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+    font-family: 'Almendra', Georgia, serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; color: #2b1a0c;
+    background: linear-gradient(#fbe7ae, #dcb25a 60%, #b8892f); border: 1px solid #6d4c1a; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+/* (A table of friends: their cards are small and sit in a bar; the glow alone is enough there.) */
+.look-next .player.rival.me.current::before { content: none; }

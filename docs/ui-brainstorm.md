@@ -38,11 +38,11 @@ Recommended first, roughly by how much each helps for the work.
    - Empty Thonic slots small and quiet (a faint outline), so filled ones stand out; when the shelf is
      empty, one small slot with "Thom's" on it.
    - The turn score inside your chip, beside your hearts, instead of floating alone.
-5. **Scores: nothing until there is one.** No "—"; the score appears (and pops, as the finished one
+5. **Scores: nothing until there is one.** **Built 12 Nov** (`scoreText` gives '' before a score; its space is kept). No "—"; the score appears (and pops, as the finished one
    does) when it's there.
-6. **Ability marks that read.** The ✦ marks as small glowing gems in the ability's colour, dark when
+6. **Ability marks that read.** **Built 12 Nov, then reverted the same day (the user's call): the ✦ marks are back as they were.** The ✦ marks as small glowing gems in the ability's colour, dark when
    spent, with a faint ring, so "two left" can be seen.
-7. **The turn marker as a glow.** Whose turn it is shown by the nameplate glowing gold (it already does
+7. **The turn marker as a glow.** **Built 12 Nov:** no die on the portrait in the new look; the nameplate's gold glow, and on yours a small gold "Your turn" tab (not on a table of friends' small cards). Whose turn it is shown by the nameplate glowing gold (it already does
    for the opponent) and a small label "Your turn", not a die on the avatar.
 8. **One button family.** Every button already shares one mould; check the remaining odd ones (the
    between-fights scenes' "Next", Thom's "Buy", the run-over screen) use it, with the same press.
