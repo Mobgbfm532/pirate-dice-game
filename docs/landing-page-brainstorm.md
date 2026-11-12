@@ -32,7 +32,7 @@ Recommended first, roughly in order of how much each changes the look for the wo
 2. **A real die on the screen.** **Built 12 Nov.** One of the game's 3D dice (the intro film's `FilmDie`) falling into
    lantern light beside or under the title as the page opens, landing on a 6 with its knock, then
    resting there, turning slowly. Tapping it throws it again. It says "dice game" before any words do.
-3. **A living tavern.** The painting breathing as the table's does: the fire and candles flickering
+3. **A living tavern.** **Built 12 Nov.** The painting breathing as the table's does: the fire and candles flickering
    (a mask, like the devil painting's), dust drifting in the light, and on a phone the slow parallax
    drift (`parallax.ts`). All of it exists already somewhere in the game.
 4. **Two doors, not a form.** **Built 12 Nov.** Two big painted cards instead of a button and a code box:
@@ -86,3 +86,15 @@ changes how a multiplayer table is started.
   tall); the classic link shows only on a computer.
 - Fits without scrolling at 384x780, 360x640, 844x390 and 1440x900 (with a save, 384x780 scrolls 26 px).
   Stills: `node test/start-shots.mjs <dir> client=... [sizes=...] [save=1] [query=table=ABCD]`.
+
+## The living tavern (built 12 Nov)
+
+- `LivingTavern.tsx`: the start screen's painting drawn through a WebGL shader, with the vignette drawn
+  in. Each light in the painting (`LIGHTS`, placed by hand in its pixels: the fire, the table candle, the
+  mantel candles, the lanterns, the chandeliers, the far lights) flickers on its own and brightens what
+  it lights; the fire's flames lick and sway; 26 motes of dust drift up through the air. On a phone the
+  picture drifts a few pixels, slowly; a computer holds still. About 30 frames a second, one canvas pixel
+  per screen point. Not drawn with reduced motion or without WebGL (the plain painting shows).
+- On an upright phone the fire is off the side of the picture, so there it's the lanterns, chandeliers
+  and the dust.
+- A flipbook of the fire and the candle: `previews/living/clip.html` (gitignored).

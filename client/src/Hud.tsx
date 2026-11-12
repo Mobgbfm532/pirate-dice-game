@@ -12,6 +12,7 @@ import { lookNext } from './look';
 import { IntroFilm, Rain, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
 import { Trailer } from './Trailer';
 import { LobbyDie } from './LobbyDie';
+import { LivingTavern } from './LivingTavern';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
 // The tavern's five reactions (the user's, 3 Nov), painted by the user the same day (art/reaction-<id>.jpg
@@ -108,6 +109,7 @@ function JoinScreen() {
 
     return (
         <div className="modal-backdrop join-screen">
+            {lookNext && <LivingTavern />}
             {roomForDie && <LobbyDie slot={dieSlot} rethrow={rethrow} />}
             {/* The title over the painting, not on the parchment (12 Nov, docs/landing-page-brainstorm.md). */}
             <header className="join-hero">
