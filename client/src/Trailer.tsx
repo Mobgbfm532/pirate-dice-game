@@ -314,7 +314,7 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
                             <div className="tr-lineup" style={vars({ '--len': `${len}s`, '--bolt': `${M(LIGHTNING) - M(LINEUP_IN)}s`, '--reveal': `${M(REVEAL) - M(LINEUP_IN)}s` })}>
                                 <i className="tr-bolt" />
                                 {LINEUP.map(row => (
-                                    <div key={row.place} className="tr-row" style={vars({ '--d': `${M(row.at) - M(LINEUP_IN)}s` })}>
+                                    <div key={row.place} className="tr-row" style={vars({ '--d': `${M(row.at) - M(LINEUP_IN)}s`, '--lift': Math.max(...row.who.map(w => w.seat ?? 1)) })}>
                                         <span className="tr-row-place">{row.line}</span>
                                         <div className="tr-row-figures">
                                             {row.who.map(w => (
