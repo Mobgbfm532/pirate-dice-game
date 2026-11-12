@@ -80,10 +80,10 @@ const SIX_LIFT = 4.2; // the 6 lifts off the old table, turns and grows, and is 
 
 // ---- The rivals: every opponent as a blacked-out outline, a row per place ----
 // seat: how much larger their cut-out is drawn at the table so heads match (portraits.ts), eased here.
-const LINEUP: { place: string; at: number; who: { art: string; seat?: number }[] }[] = [
-    { place: 'The Ghoul and Gourd', at: 13.6, who: [{ art: 'mcgrath', seat: 1.25 }, { art: 'frak', seat: 1.1 }, { art: 'danhausen', seat: 1.15 }, { art: 'duke' }, { art: 'martha', seat: 1.08 }] },
-    { place: 'The Yawning Portal', at: 14.3, who: [{ art: 'sylvester' }, { art: 'vaelin-inkhand' }, { art: 'stason' }, { art: 'ridgeler' }, { art: 'brodor', seat: 1.15 }] },
-    { place: 'The Salty Swallow', at: 15.0, who: [{ art: 'klarg' }, { art: 'rokr' }, { art: 'aed' }, { art: 'hangman' }, { art: 'jaguar' }] } // (Áéd since 11 Nov, the user's)
+const LINEUP: { place: string; line: string; at: number; who: { art: string; seat?: number }[] }[] = [
+    { place: 'The Ghoul and Gourd', line: 'An expanded roster', at: 13.6, who: [{ art: 'mcgrath', seat: 1.25 }, { art: 'frak', seat: 1.1 }, { art: 'danhausen', seat: 1.15 }, { art: 'duke' }, { art: 'martha', seat: 1.08 }] },
+    { place: 'The Yawning Portal', line: 'Of familiar faces', at: 14.3, who: [{ art: 'sylvester' }, { art: 'vaelin-inkhand' }, { art: 'stason' }, { art: 'ridgeler' }, { art: 'brodor', seat: 1.15 }] },
+    { place: 'The Salty Swallow', line: 'To test your mettle against', at: 15.0, who: [{ art: 'klarg' }, { art: 'rokr' }, { art: 'aed' }, { art: 'hangman' }, { art: 'jaguar' }] } // (Áéd since 11 Nov, the user's)
 ];
 const LINEUP_FROM = 13.6, LINEUP_TO = 18;
 // Its dark background fades in over the Devil's leaving, and stays until the first place has faded in over it
@@ -300,7 +300,7 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
             {ready && now >= SIX_LIFT && now < COLD + 0.8 && <Words len={COLD + 0.8 - SIX_LIFT} place="top" className="old turn">But it was time to rebuild the tavern.</Words>}
             {ready && (
                 <>
-                    {now >= COLD + LEAD + OPEN.words[0] && now < COLD + LEAD + OPEN.words[1] && <Words len={OPEN.words[1] - OPEN.words[0]} place="under">It's time to roll the dice.</Words>}
+                    {now >= COLD + LEAD + OPEN.words[0] && now < COLD + LEAD + OPEN.words[1] && <Words len={OPEN.words[1] - OPEN.words[0]} place="under">Let's really roll some dice.</Words>}
 
                     {/* The table shows through here: the 2, the 4, then the Devil. */}
                     {[['Keep the 2.', LAND_AT[0], 'lesson'], ['Keep the 4.', LAND_AT[1], 'lesson second']].map(([words, at, kind]) => {
@@ -315,7 +315,7 @@ function Reel({ onReady, onDone }: { onReady: () => void; onDone: () => void }) 
                                 <i className="tr-bolt" />
                                 {LINEUP.map(row => (
                                     <div key={row.place} className="tr-row" style={vars({ '--d': `${M(row.at) - M(LINEUP_IN)}s` })}>
-                                        <span className="tr-row-place">{row.place}</span>
+                                        <span className="tr-row-place">{row.line}</span>
                                         <div className="tr-row-figures">
                                             {row.who.map(w => (
                                                 <img key={w.art} className={`tr-sil${w.art === 'jaguar' ? ' reveal' : ''}`} src={`${ART}${w.art}.webp`} alt="" draggable={false}
