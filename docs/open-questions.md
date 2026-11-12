@@ -54,6 +54,11 @@ day they happen, with what's been built marked as it lands.
   keepsake pool per place was offered and not taken.
 - A warning on the opponent's nameplate before an ability fires.
 
+### The start screen (`docs/landing-page-brainstorm.md`, 12 Nov)
+- The first step is built (12 Nov). Next: the two doors (Tavern Crawl / Play with friends), the living tavern, the leaderboard plaque, the wider computer layout, music on the first tap? Which, and in what order?
+- Two doors: should "Play with friends" make a table code for you (and copy the invite link), instead of making one up?
+- The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
+
 ## Settled
 - 11 Nov: the trailer plays the user's own track (TrailerMusic.mp3), and Áéd is in its line-up ("Fifteen rivals.").
 - 11 Nov: Áéd's card line is "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", and his sea dial has a storm on one face: a Squall (on face 3).

@@ -3550,3 +3550,38 @@ body.sea-heave { background: #050302; }
     .dock-counter .primary { min-width: 0; width: 100%; max-width: 260px; }
 }
 @media (prefers-reduced-motion: reduce) { .dock-harbour { animation: none; } }
+
+/* ==== The start screen's title and die (12 Nov, the user's pick: docs/landing-page-brainstorm.md) ====
+   The title stands over the tavern painting in the trailer's gold, the tagline under it, and the
+   game's real die (LobbyDie.tsx, a see-through canvas over the whole screen, behind the panel) lands
+   in the slot above them; a tap there throws it again. The parchment keeps only the choices. */
+.join-screen { flex-direction: column; justify-content: center; justify-content: safe center; gap: clamp(8px, 2.2vh, 24px); }
+.join-screen > .join-hero, .join-screen > .panel { position: relative; z-index: 1; flex: none; }
+.join-hero { display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: none; font-family: 'Almendra', Georgia, serif;
+    font-variant-ligatures: no-common-ligatures no-discretionary-ligatures no-historical-ligatures; font-feature-settings: "liga" 0, "dlig" 0, "hlig" 0; }
+.lobby-die-slot { pointer-events: auto; width: clamp(60px, 11vh, 104px); height: clamp(60px, 11vh, 104px); margin: 0 0 clamp(2px, 1vh, 12px); padding: 0;
+    border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.join-title { margin: 0; font-size: clamp(52px, min(16vw, 10.5vh), 112px); font-weight: 400; line-height: 1; color: #ffd24f;
+    text-shadow: 0 0 30px rgba(255, 170, 40, 0.7), 0 4px 6px #000; animation: join-rise 0.9s ease-out 0.1s both; }
+.join-tagline { margin: 0.35em 0 0; font-size: clamp(17px, min(4.8vw, 3vh), 27px); line-height: 1.25; color: #f6ead0;
+    text-shadow: 0 0 14px rgba(255, 170, 40, 0.45), 0 2px 5px #000; animation: join-rise 0.9s ease-out 0.35s both; }
+.join-tagline span { display: block; color: #ffd24f; }
+@keyframes join-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.join-screen > .panel { animation: join-rise 0.7s ease-out 0.5s both; }
+/* The tokens, labelled: what they are, and the one chosen named under them. */
+.panel.join .token-label { margin: 0; text-align: center; font-size: 0.95rem; color: #6d4c2a; }
+.panel.join .token-name { margin: -2px 0 0; text-align: center; font-family: 'Almendra', Georgia, serif; font-size: 1.05rem; color: #7a2418; }
+/* The classic page, quietly, in a corner (until the switch-over). */
+.classic-link { position: absolute; z-index: 1; right: max(12px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom));
+    font-size: 0.8rem; color: rgba(246, 234, 208, 0.55); text-decoration: none; }
+.classic-link:hover { color: #f6ead0; text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .join-title, .join-tagline, .join-screen > .panel { animation: none; } }
+/* A phone on its side: the title beside the panel, no die. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .join-screen { flex-direction: row; gap: 18px; }
+    .join-title { font-size: clamp(40px, 13vh, 64px); }
+    .join-tagline { font-size: 15px; }
+    .panel.join .token-label { display: none; }
+}
+/* (A short upright phone has no room left for it beside the panel.) */
+@media (orientation: portrait) and (max-height: 700px) { .classic-link { display: none; } }

@@ -11,6 +11,7 @@ import { acrossTheTable, opponentName, opponentPortraitKey, placeBackdrop, scene
 import { lookNext } from './look';
 import { IntroFilm, Rain, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
 import { Trailer } from './Trailer';
+import { LobbyDie } from './LobbyDie';
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
 // The tavern's five reactions (the user's, 3 Nov), painted by the user the same day (art/reaction-<id>.jpg
@@ -66,6 +67,10 @@ function JoinScreen() {
     const [avatar, setAvatar] = useState(AVATAR_IDS.includes(prefs.avatar) ? prefs.avatar : AVATAR_IDS[0]);
     const [code, setCode] = useState(invite || (['COMP', 'TAVERN'].includes(prefs.code) ? '' : prefs.code));
     const [lives, setLives] = useState(3);
+    // The die over the title (12 Nov): where it sits, and a tap throwing it again. Not on a phone on its side.
+    const dieSlot = useRef<HTMLButtonElement>(null);
+    const rethrow = useRef(() => {});
+    const roomForDie = !useMedia('(orientation: landscape) and (max-height: 500px)');
 
     const join = (tableCode: string) => {
         savePrefs(name, avatar, tableCode);
@@ -89,15 +94,22 @@ function JoinScreen() {
     }} />;
 
     return (
-        <div className="modal-backdrop">
+        <div className="modal-backdrop join-screen">
+            {roomForDie && <LobbyDie slot={dieSlot} rethrow={rethrow} />}
+            {/* The title over the painting, not on the parchment (12 Nov, docs/landing-page-brainstorm.md). */}
+            <header className="join-hero">
+                {roomForDie && <button ref={dieSlot} className="lobby-die-slot" aria-label="Throw the die" onClick={() => rethrow.current()} />}
+                <h1 className="join-title">2, 4, 24</h1>
+                <p className="join-tagline">Keep the 2. Keep the 4. <span>Become a legend.</span></p>
+            </header>
             <div className="panel join">
-                <h1>2, 4, 24</h1>
-                <p className="subtitle">Find a 2, find a 4, then chase 24.</p>
+                <p className="token-label">Your token at the table</p>
                 <div className="avatars">
                     {AVATAR_IDS.map(id => (
                         <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
                     ))}
                 </div>
+                <p className="token-name">{avatar}</p>
                 <input value={name} maxLength={15} placeholder="Adventurer name" onChange={e => setName(e.target.value)} />
                 {invite && <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>}
                 {saved && !invite && (
@@ -134,8 +146,8 @@ function JoinScreen() {
                         <button className="link-button watch-intro" onClick={() => setFilm('watch')}>Watch it</button>
                     </div>
                 )}
-                <p className="fine">Prototype of the 3D table. The classic game is still at <a href="/">the main page</a>.</p>
             </div>
+            <a className="classic-link" href="/">Classic game</a>
         </div>
     );
 }
