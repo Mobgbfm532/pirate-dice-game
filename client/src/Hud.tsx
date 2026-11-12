@@ -754,8 +754,14 @@ function TurnControls({ snap }: { snap: Snapshot }) {
 
     let label = 'Roll Dice';
     let disabled = !turn.canRoll;
-    if (snap.rolling) { label = 'Rolling…'; disabled = true; }
-    else if (turn.finalized || handComplete(turn)) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; }
+    // (12 Nov, docs/ui-brainstorm.md: waiting for a keep, the button says so instead of greying out.)
+    let mode: 'ready' | 'waiting' | 'rolling' | 'end' = turn.canRoll ? 'ready' : 'waiting';
+    const keepsLeft = keepsNeeded(turn) - turn.locksThisRoll;
+    if (snap.rolling) { label = 'Rolling…'; disabled = true; mode = 'rolling'; }
+    else if (turn.finalized || handComplete(turn)) { label = snap.endingTurn ? 'Ending…' : 'End Turn'; disabled = snap.endingTurn; mode = 'end'; }
+    else if (!turn.canRoll && turn.hasRolled && keepsLeft > 0) {
+        label = keepsNeeded(turn) >= 2 ? (turn.locksThisRoll === 0 ? 'Keep 2 dice' : 'Keep 1 more') : 'Keep a die';
+    }
 
     const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : NO_BADGE;
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
@@ -764,7 +770,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 // (Becalmed: how many throws the hand has left.)
                 : turn.maxThrows && turn.maxThrows - turn.rollCount === 1 ? 'Keep some: your last throw, and they stay as they lie'
                 : turn.maxThrows ? `Becalmed: ${turn.maxThrows - turn.rollCount} throws left`
-                : 'Tap dice to keep them, then roll again')
+                : '')
             : '';
     // (Rokr's stars come before the tip: which faces can't be kept is what you need to know.)
     const badgeFirst = badge.kind === 'stars' || !tip;
@@ -786,7 +792,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
                 <span className={`value ${dust ? 'dust' : standing}`}>{scoreText}</span>
             </div>
             <button
-                className={`roll ${turn.finalized || handComplete(turn) ? 'end' : ''} ${snap.isMyTurn ? '' : 'idle'}`}
+                className={`roll ${mode} ${turn.finalized || handComplete(turn) ? 'end' : ''} ${snap.isMyTurn ? '' : 'idle'}`}
                 disabled={disabled || !snap.isMyTurn}
                 onClick={actions.roll}
                 aria-hidden={!snap.isMyTurn}

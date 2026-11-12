@@ -9,6 +9,10 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
+### The game's interface (`docs/ui-brainstorm.md`, 12 Nov)
+- The hearts and Roll Dice are built (12 Nov). Next: brass header buttons and a tidier strip under the table (ideas 3 and 4)?
+- The hearts: drawn in CSS/SVG first, or a painted heart (full, empty) from the user?
+
 ### The voyage (`docs/voyage-brainstorm.md`)
 - **The dials' numbers** (`BALANCE.voyage`, built as proposed in `docs/voyage-brainstorm.md`, "The final dials", 10 Nov): first guesses, not simulated. Klarg 2-5 calm; Rokr 2-3 Becalmed; the Hangman 2 Squall, 3 Heavy seas, 4 Fog; Jaguar by phase: talking 4-5 Fog, the Cloak 2-3 Squall and 4-5 Heavy seas, All In 2-5 Heavy seas. Is All In with a rogue wave two rounds in three too cruel?
 - **Becalmed and Starry Form:** on Rokr's leg his Starry Form can come in a becalmed round: you keep blind with only three throws. Too harsh, or a fair storm-free danger? (Option: no Starry Form while becalmed.)
