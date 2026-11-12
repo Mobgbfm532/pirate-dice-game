@@ -12,7 +12,7 @@ import { lookNext } from './look';
 import { IntroFilm, Rain, introChoice, introSeen, liftCurtain, preloadIntro, saveIntroChoice } from './Intro';
 import { Trailer } from './Trailer';
 import { LobbyDie } from './LobbyDie';
-import { LivingTavern } from './LivingTavern';
+// import { LivingTavern } from './LivingTavern'; // (off since 12 Nov, the user's call)
 import { QUALITY, TUNE_LABELS, framesPerSecond, quality, resetTune, setQuality, setTune, tunePanel, tuneStore, tuning, type Quality, type Tuning } from './tuning';
 
 // The tavern's five reactions (the user's, 3 Nov), painted by the user the same day (art/reaction-<id>.jpg
@@ -83,6 +83,8 @@ function JoinScreen() {
     const dieSlot = useRef<HTMLButtonElement>(null);
     const rethrow = useRef(() => {});
     // (Nor on a short upright phone, where the doors need the room.)
+    // The Hall of Legends (12 Nov): the crawl's leaderboard and the leagues, behind a plaque in the corner.
+    const [legendsOpen, setLegendsOpen] = useState(false);
     const roomForDie = !useMedia('(orientation: landscape) and (max-height: 500px), (orientation: portrait) and (max-height: 740px)');
 
     const join = (tableCode: string) => {
@@ -100,6 +102,7 @@ function JoinScreen() {
         const wait = setTimeout(preloadIntro, 1200);
         return () => clearTimeout(wait);
     }, [playIntro, invite]);
+    const continuing = !!saved && !invite;
     const beginCrawl = () => { if (playIntro) setFilm('crawl'); else join('TAVERN'); };
     if (film) return <IntroFilm onDone={() => {
         liftCurtain();
@@ -109,7 +112,7 @@ function JoinScreen() {
 
     return (
         <div className="modal-backdrop join-screen">
-            {lookNext && <LivingTavern />}
+            {/* The living tavern (LivingTavern.tsx) was taken out, 12 Nov, the user's call; its code stays: {lookNext && <LivingTavern />} */}
             {roomForDie && <LobbyDie slot={dieSlot} rethrow={rethrow} />}
             {/* The title over the painting, not on the parchment (12 Nov, docs/landing-page-brainstorm.md). */}
             <header className="join-hero">
@@ -118,38 +121,29 @@ function JoinScreen() {
                 <p className="join-tagline">Keep the 2. Keep the 4. <span>Become a legend.</span></p>
             </header>
             <div className="panel join">
-                <p className="token-label">Your token at the table: <strong>{avatar}</strong></p>
-                <div className="avatars">
-                    {AVATAR_IDS.map(id => (
-                        <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
-                    ))}
-                </div>
-                <input value={name} maxLength={15} placeholder="Adventurer name" onChange={e => setName(e.target.value)} />
+                <input value={name} maxLength={15} placeholder="Adventurer name" aria-label="Your name" onChange={e => setName(e.target.value)} />
                 {/* Two doors (12 Nov, the user's pick, docs/landing-page-brainstorm.md): the Tavern Crawl, or a
                     table of friends. An invite puts the friends' door first. */}
                 <div className={`doors${invite ? ' invited' : ''}`}>
                     <section className="door crawl" aria-label="Tavern Crawl">
-                        <div className="door-head">
-                            <div className="door-places" aria-hidden="true">
+                        {/* The painting is the button (12 Nov, the user's): it starts a crawl, or carries on the saved one. */}
+                        <button className="door-head crawl-play" onClick={continuing ? () => actions.resume(saved!, avatar) : beginCrawl}>
+                            <span className="door-places" aria-hidden="true">
                                 {CRAWL_PLACES.map(art => <img key={art} src={`${import.meta.env.BASE_URL}art/${art}`} alt="" draggable={false} />)}
-                            </div>
+                            </span>
+                            <span className="play-cue" aria-hidden="true">▶ {continuing ? 'Continue' : 'Play'}</span>
                             <h2>Tavern Crawl</h2>
-                            <p className="door-line">Fifteen rivals. Two taverns. One ship.</p>
-                        </div>
-                        {saved && !invite && (
-                            <div className="saved-run">
-                                <button className="primary" onClick={() => actions.resume(saved, avatar)}>
-                                    Continue your crawl
-                                    <span className="detail">{saved.name}: {saved.next} at {saved.place} · {coins(saved.purse)}</span>
-                                </button>
-                                <div className="saved-links">
-                                    <button className="link-button" onClick={beginCrawl}>Start a new crawl</button>
-                                    <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
-                                </div>
+                            <span className="door-line">{continuing
+                                ? `${saved!.name}: ${saved!.next} next, at ${saved!.place} · ${coins(saved!.purse)}`
+                                : 'Fifteen rivals. Two taverns. One ship.'}</span>
+                        </button>
+                        {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
+                        {continuing && (
+                            <div className="saved-links">
+                                <button className="link-button" onClick={beginCrawl}>Start a new crawl</button>
+                                <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
                             </div>
                         )}
-                        {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
-                        {!(saved && !invite) && <button className={invite ? 'secondary' : 'primary'} onClick={beginCrawl}>Begin the crawl</button>}
                         {!invite && (
                             <div className="intro-row">
                                 <label className="intro-check">
@@ -164,6 +158,13 @@ function JoinScreen() {
                         <div className="door-head">
                             <h2>Play with friends</h2>
                             <p className="door-line">{invite ? `You're invited to table ${invite}.` : 'Start a table and send them the link.'}</p>
+                        </div>
+                        {/* Your token: what the others see you as (12 Nov: here, as only a table of friends shows it). */}
+                        <p className="token-label">Your token: <strong>{avatar}</strong></p>
+                        <div className="avatars">
+                            {AVATAR_IDS.map(id => (
+                                <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
+                            ))}
                         </div>
                         {invite ? (
                             <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>
@@ -187,6 +188,8 @@ function JoinScreen() {
                 </div>
             </div>
             <a className="classic-link" href="/">Classic game</a>
+            <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
+            {legendsOpen && <HallOfLegends me={name} onClose={() => setLegendsOpen(false)} />}
         </div>
     );
 }
@@ -2723,6 +2726,66 @@ function RoundResultCard({ rows, myId }: { rows: RoundResultRow[]; myId: string 
             </ol>
             {tied.length > 1 && <p className="round-card-note">Sudden death: {tied.join(' and ')}</p>}
             {nobodyLost && <p className="round-card-note">No lives lost</p>}
+        </div>
+    );
+}
+
+// The start screen's plaque (12 Nov, the user's pick from docs/landing-page-brainstorm.md): a brass
+// plaque in the top corner, the best crawl on it where there's room, opening the Hall of Legends.
+function LegendsPlaque({ onOpen }: { onOpen: () => void }) {
+    const best = useSyncExternalStore(store.subscribe, () => store.get().leaderboard[0]);
+    return (
+        <button className="legends-plaque" onClick={onOpen} aria-label="The Hall of Legends: the leaderboard">
+            <span className="cup" aria-hidden="true">🏆</span>
+            <span className="label">Legends</span>
+            {best && <span className="best">{best.name} · {(best.points ?? 0).toLocaleString()}</span>}
+        </button>
+    );
+}
+
+// The Hall of Legends: the Tavern Crawl's best runs by points, and each league (JUGS) by wins.
+// `me`: the name typed on the start screen, picked out where it appears.
+function HallOfLegends({ me, onClose }: { me: string; onClose: () => void }) {
+    const board = useSyncExternalStore(store.subscribe, () => store.get().leaderboard);
+    const leagues = useSyncExternalStore(store.subscribe, () => store.get().leagueBoards);
+    const [tab, setTab] = useState('crawl');
+    const mine = me.trim().toLowerCase();
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    const league = leagues.find(l => l.room === tab);
+    return (
+        <div className="legends-backdrop" onClick={onClose}>
+            <div className="panel legends" role="dialog" aria-label="The Hall of Legends" onClick={e => e.stopPropagation()}>
+                <button className="legends-close" onClick={onClose} aria-label="Close">✕</button>
+                <h2 className="legends-title">The Hall of Legends</h2>
+                {leagues.length > 0 && (
+                    <div className="legends-tabs" role="tablist">
+                        <button role="tab" aria-selected={tab === 'crawl'} className={tab === 'crawl' ? 'on' : ''} onClick={() => setTab('crawl')}>Tavern Crawl</button>
+                        {leagues.map(l => (
+                            <button key={l.room} role="tab" aria-selected={tab === l.room} className={tab === l.room ? 'on' : ''} onClick={() => setTab(l.room)}>{l.room} league</button>
+                        ))}
+                    </div>
+                )}
+                {tab === 'crawl' || !league ? (
+                    <div className="leaderboard">
+                        {board.length === 0 ? <p className="fine">No crawl finished yet. Be the first legend.</p> : (
+                            <ol>
+                                {board.map((e, i) => (
+                                    <li key={e.name} className={`${e.name.trim().toLowerCase() === mine ? 'me' : ''}${i < 3 ? ` top top${i + 1}` : ''}`}>
+                                        <span className="rank">{i + 1}</span>
+                                        <span className="who">{e.name}</span>
+                                        <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
+                                    </li>
+                                ))}
+                            </ol>
+                        )}
+                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, a little for how far a lost run got, and the gold you end with.</p>
+                    </div>
+                ) : <LeagueTable rows={league.rows} room={league.room} me={me} />}
+            </div>
         </div>
     );
 }

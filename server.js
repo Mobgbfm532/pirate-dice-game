@@ -94,6 +94,8 @@ function leagueTable(roomCode) {
     return [...(leagues.get(roomCode) || new Map()).values()]
         .sort((a, b) => b.wins - a.wins || a.games - b.games || a.name.localeCompare(b.name));
 }
+// Every league, for the start screen's Hall of Legends (12 Nov): sent to everyone, not only its table.
+const leagueBoards = () => [...LEAGUE_ROOMS].map(room => ({ room, rows: leagueTable(room) }));
 LEAGUE_ROOMS.forEach(roomCode => {
     store.loadLeague(roomCode).then(rows => {
         let table = leagues.get(roomCode) || new Map();
@@ -104,6 +106,7 @@ LEAGUE_ROOMS.forEach(roomCode => {
         });
         leagues.set(roomCode, table);
         io.to(roomCode).emit('leagueUpdate', leagueTable(roomCode));
+        io.emit('leagueBoards', leagueBoards());
     }).catch(error => console.warn('Could not load the league:', error.message));
 });
 // A multiplayer game has ended at a league table. (winnerId null: no one survived. A table of one isn't a game.)
@@ -125,6 +128,7 @@ function recordLeagueGame(roomCode, room, winnerId) {
     });
     store.addLeagueResult(roomCode, names, winner).catch(error => console.warn('Could not save the league:', error.message));
     io.to(roomCode).emit('leagueUpdate', leagueTable(roomCode));
+    io.emit('leagueBoards', leagueBoards());
 }
 
 // Who each player has met (3 Nov, the user's call): opponents they have never sat down with show as
@@ -2760,6 +2764,7 @@ const asText = value => (typeof value === 'string' ? value : '');
 
 io.on('connection', (socket) => {
     socket.emit('leaderboardUpdate', tavernLeaderboard);
+    socket.emit('leagueBoards', leagueBoards());
 
     socket.on('checkRoom', (roomCode) => {
         let code = asText(roomCode).trim().toUpperCase() || "PUBLIC";

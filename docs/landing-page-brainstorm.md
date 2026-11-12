@@ -32,7 +32,7 @@ Recommended first, roughly in order of how much each changes the look for the wo
 2. **A real die on the screen.** **Built 12 Nov.** One of the game's 3D dice (the intro film's `FilmDie`) falling into
    lantern light beside or under the title as the page opens, landing on a 6 with its knock, then
    resting there, turning slowly. Tapping it throws it again. It says "dice game" before any words do.
-3. **A living tavern.** **Built 12 Nov.** The painting breathing as the table's does: the fire and candles flickering
+3. **A living tavern.** **Built 12 Nov, then taken out the same day (the user's call); `LivingTavern.tsx` stays, unused.** The painting breathing as the table's does: the fire and candles flickering
    (a mask, like the devil painting's), dust drifting in the light, and on a phone the slow parallax
    drift (`parallax.ts`). All of it exists already somewhere in the game.
 4. **Two doors, not a form.** **Built 12 Nov.** Two big painted cards instead of a button and a code box:
@@ -43,7 +43,7 @@ Recommended first, roughly in order of how much each changes the look for the wo
    The name box above both, as now.
 5. **Your token, labelled.** **Built 12 Nov.** "Your token at the table" over the seven icons, the chosen one bigger and
    named under it (Martha's Mask, the Loaded Die...).
-6. **The leaderboard and the JUGS league one tap away.** A small brass plaque at the foot: "Best crawl:
+6. **The leaderboard and the JUGS league one tap away.** **Built 12 Nov.** A small brass plaque at the foot: "Best crawl:
    Name, 1,240 points" opening the leaderboard; the 🏆 league for JUGS players.
 7. **Tidy the small print.** **Built 12 Nov.** Drop the "Prototype of the 3D table" line (or make it a quiet "Classic
    game" link in a corner) before the switch-over.
@@ -87,7 +87,7 @@ changes how a multiplayer table is started.
 - Fits without scrolling at 384x780, 360x640, 844x390 and 1440x900 (with a save, 384x780 scrolls 26 px).
   Stills: `node test/start-shots.mjs <dir> client=... [sizes=...] [save=1] [query=table=ABCD]`.
 
-## The living tavern (built 12 Nov)
+## The living tavern (built 12 Nov; taken out the same day, the user's call: its use in Hud is commented out)
 
 - `LivingTavern.tsx`: the start screen's painting drawn through a WebGL shader, with the vignette drawn
   in. Each light in the painting (`LIGHTS`, placed by hand in its pixels: the fire, the table candle, the
@@ -98,3 +98,22 @@ changes how a multiplayer table is started.
 - On an upright phone the fire is off the side of the picture, so there it's the lanterns, chandeliers
   and the dust.
 - A flipbook of the fire and the candle: `previews/living/clip.html` (gitignored).
+
+## The Hall of Legends (built 12 Nov)
+
+- A brass "🏆 Legends" plaque in the start screen's top-right corner (`LegendsPlaque` in Hud); on a
+  computer it also shows the best crawl ("Ada · 2,140"); on a short upright phone only the cup.
+- A tap opens the Hall of Legends (`HallOfLegends`): the Tavern Crawl's leaderboard (each player's best
+  crawl by points, the top three marked, your typed name picked out, how points are earned under it; "No
+  crawl finished yet. Be the first legend." when empty) and a tab for each league (JUGS: won and played).
+- The server now sends every league to everyone who connects (`leagueBoards` in server.js, the
+  `leagueBoards` event; before, only players at JUGS got it).
+
+## The doors rearranged (12 Nov, the user's)
+
+- The Tavern Crawl's painting is its button (`.crawl-play`, a "▶ Play" seal on it); "Begin the crawl" is
+  gone. With a save the seal says "▶ Continue" and the line under the title says where you got to; the
+  painting carries the run on, with Start a new crawl and Forget this save as links under it.
+- The name sits at the top of the panel, then the Tavern Crawl, then Play with friends, which now holds
+  the tokens ("Your token: ..."), as only a table of friends shows them. An invite still puts the
+  friends' door first.

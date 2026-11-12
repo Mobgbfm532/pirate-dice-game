@@ -203,6 +203,7 @@ export interface Snapshot {
     modal: Modal | null;
     leaderboard: LeaderboardEntry[];
     league: LeagueRow[] | null; // this table's league (a league table only, e.g. JUGS)
+    leagueBoards: { room: string; rows: LeagueRow[] }[]; // every league, for the start screen's Hall of Legends (12 Nov)
     seatFlash: { playerId: string; text: string; kind: string; color: string; key: string } | null; // "Dirty 20!" over a nameplate
     floodWaveAt: number | null; // Brodor's Astral Flood pouring over the table
     seaMoment: (SeaRoll & { at: number }) | null; // aboard: the sea die's roll (and a change of sea's banner)
@@ -281,6 +282,7 @@ let snapshot: Snapshot = {
     modal: null,
     leaderboard: [],
     league: null,
+    leagueBoards: [],
     seatFlash: null,
     floodWaveAt: null,
     seaMoment: null,
@@ -731,6 +733,9 @@ export function inviteLink(code: string) {
 
 socket.on('leagueUpdate', (rows: LeagueRow[]) => {
     update({ league: Array.isArray(rows) ? rows : [] });
+});
+socket.on('leagueBoards', (boards: { room: string; rows: LeagueRow[] }[]) => {
+    update({ leagueBoards: Array.isArray(boards) ? boards.filter(b => b && typeof b.room === 'string' && Array.isArray(b.rows)) : [] });
 });
 
 socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {

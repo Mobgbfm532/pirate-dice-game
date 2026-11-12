@@ -55,8 +55,8 @@ day they happen, with what's been built marked as it lands.
 - A warning on the opponent's nameplate before an ability fires.
 
 ### The start screen (`docs/landing-page-brainstorm.md`, 12 Nov)
-- The first step is built (12 Nov). Next (the two doors and the living tavern built 12 Nov too): the leaderboard plaque, the wider computer layout, music on the first tap? Which, and in what order?
-- The living tavern (built 12 Nov): how strong should the flicker and the dust be? Judged from stills only; on an upright phone the fire is off screen.
+- The first step is built (12 Nov). Next (the two doors and the Hall of Legends built 12 Nov too; the living tavern built and taken out): the wider computer layout, music on the first tap? Which, and in what order?
+- The Hall of Legends (built 12 Nov): the plaque's place (top right) and name ("Legends"); the text on how points are earned.
 - Two doors (built 12 Nov): "Start a table" now makes a four-letter code for you. Is a hearts button you tap (2, 3, 4) clear enough for a new table's lives? The die is left out on upright phones under 740 px tall to make room: OK?
 - The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
 

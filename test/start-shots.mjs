@@ -1,5 +1,6 @@
 // Stills of the start screen (not a test): node test/start-shots.mjs <dir> [client=http://localhost:5173/next/]
 //   [sizes=384x780,360x640,844x390,1440x900] [query=table=ABCD] [save=1] [frames=3] [every=400]
+//   [click=.legends-plaque|.legends-tabs button:nth-child(2)]: taps those in turn, a still after each
 // Silent and headless. For each size: the screen as it opens (after the die has landed) and, if it's
 // taller than the screen, scrolled to the bottom; prints how tall it is against the screen.
 import { spawn } from 'node:child_process';
@@ -12,6 +13,7 @@ const args = Object.fromEntries(process.argv.slice(3).map(a => [a.slice(0, a.ind
 const CLIENT = args.client ?? 'http://localhost:5173/next/';
 const SIZES = (args.sizes ?? '384x780,360x640,844x390,1440x900').split(',').map(s => s.split('x').map(Number));
 const FRAMES = Number(args.frames ?? 0), EVERY = Number(args.every ?? 400); // extra stills, EVERY ms apart (the living tavern's flicker)
+const CLICKS = args.click ? args.click.split('|') : [];
 const QUERY = args.query ? `?${args.query}` : '';
 // save=1: a saved crawl waiting (its details are made up; only the start screen reads them).
 const SAVE = args.save ? `localStorage.tavernSave = JSON.stringify({ name: 'Ada', next: 'Klarg', place: 'the Salty Swallow', purse: 64, token: 'x' });` : '';
@@ -57,6 +59,13 @@ try {
             await wait(EVERY);
             const { data: more } = await s('Page.captureScreenshot', { format: 'jpeg', quality: 72 });
             writeFileSync(join(outDir, `${name}-f${f}.jpg`), Buffer.from(more, 'base64'));
+        }
+        for (const [i, selector] of CLICKS.entries()) {
+            const found = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (e) e.click(); return !!e; })()`);
+            await wait(700);
+            const { data: shot } = await s('Page.captureScreenshot', { format: 'jpeg', quality: 72 });
+            writeFileSync(join(outDir, `${name}-click${i + 1}.jpg`), Buffer.from(shot, 'base64'));
+            if (!found) console.log(`${name}: nothing matched ${selector}`);
         }
         const tall = await evaluate(`(() => { const e = document.querySelector('.join-screen'); return e.scrollHeight; })()`);
         console.log(`${name}: ${tall}px tall on a ${height}px screen${tall > height ? ' (scrolls)' : ''}; living tavern ${living}`);

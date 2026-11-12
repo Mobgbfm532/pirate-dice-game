@@ -3668,3 +3668,72 @@ body.sea-heave { background: #050302; }
    The painting drawn live (its lights flickering, the fire licking, dust drifting), fading in over
    the plain one, with the same vignette the CSS background has drawn in. */
 .living-tavern { position: fixed; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.8s; pointer-events: none; }
+
+/* ==== The Hall of Legends (12 Nov, the user's pick: docs/landing-page-brainstorm.md) ====
+   A brass plaque in the start screen's top corner (the best crawl on it where there's room) opens the
+   leaderboard and the leagues on parchment. */
+.legends-plaque { position: fixed; z-index: 2; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right));
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 9px; border-radius: 999px; cursor: pointer;
+    font-family: 'Almendra', Georgia, serif; font-size: 0.95rem; color: #2b1a0c;
+    background: linear-gradient(#f2d58a, #c99a3e 55%, #a87a2a); border: 1px solid #6d4c1a;
+    box-shadow: inset 0 1px 0 rgba(255, 247, 214, 0.8), inset 0 -2px 0 rgba(90, 58, 10, 0.4), 0 3px 10px rgba(0, 0, 0, 0.55);
+    animation: join-rise 0.7s ease-out 0.7s both; }
+.legends-plaque:hover { filter: brightness(1.08); }
+.legends-plaque:active { transform: scale(0.96); }
+.legends-plaque .cup { font-size: 1.05rem; line-height: 1; }
+.legends-plaque .label { font-weight: 700; letter-spacing: 0.02em; }
+.legends-plaque .best { padding-left: 8px; border-left: 1px solid rgba(70, 44, 10, 0.45); font-family: 'Alegreya', Georgia, serif; font-style: italic; font-size: 0.85rem; max-width: 16em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* (An upright phone: the cup and its word only, clear of the die in the middle.) */
+@media (max-width: 600px) { .legends-plaque .best { display: none; } }
+.legends-backdrop { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(6, 3, 1, 0.72); animation: legends-fade 0.25s ease-out both; }
+@keyframes legends-fade { from { opacity: 0; } to { opacity: 1; } }
+.panel.legends { position: relative; width: min(100%, 420px); max-height: min(86vh, 640px); overflow-y: auto; gap: 10px; animation: join-rise 0.35s ease-out both; }
+.legends-title { margin: 0; font-family: 'Almendra', Georgia, serif; font-size: 1.6rem; color: var(--red); }
+.legends-close { position: absolute; top: 8px; right: 10px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: #6d4c2a; font-size: 1.1rem; }
+.legends-close:hover { background: rgba(109, 76, 42, 0.12); }
+.legends-tabs { display: flex; justify-content: center; gap: 6px; }
+.legends-tabs button { padding: 5px 12px; border: 1px solid #b08a4e; border-radius: 999px; background: #fffaf0; color: #5d4037; font-size: 0.9rem; }
+.legends-tabs button.on { background: linear-gradient(#5d4037, #3e2723); color: #fff3d6; border-color: #3e2723; }
+.panel.legends .leaderboard li { padding: 4px 8px; }
+.panel.legends .leaderboard li.top1 .rank { color: #b8860b; font-weight: 700; }
+.panel.legends .leaderboard li.top1 { background: rgba(224, 180, 76, 0.22); }
+.panel.legends .leaderboard li.top2 .rank, .panel.legends .leaderboard li.top3 .rank { font-weight: 700; }
+.legends-how { margin-top: 8px; line-height: 1.35; }
+.panel.legends .league > h2 { display: none; }
+/* (A short upright phone has the title higher, with no die: the plaque is only its cup there.) */
+@media (orientation: portrait) and (max-height: 740px) {
+    .legends-plaque { padding: 7px; }
+    .legends-plaque .label { display: none; }
+}
+.panel.legends .leaderboard > .fine:first-child { margin-bottom: 8px; font-size: 1rem; font-style: italic; }
+
+/* ---- The crawl's painting is its button (12 Nov, the user's): no "Begin the crawl" under it ---- */
+.door.crawl .crawl-play { width: 100%; min-height: 104px; margin: 0; border: 0; cursor: pointer; text-align: center; font: inherit; color: inherit;
+    align-items: stretch; transition: transform 0.12s, box-shadow 0.15s, filter 0.15s; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 0 1px #6d4c2a, 0 0 0 3px rgba(224, 180, 76, 0.75), 0 4px 10px rgba(0, 0, 0, 0.4); }
+.door.crawl .crawl-play:hover, .door.crawl .crawl-play:focus-visible { filter: brightness(1.12); box-shadow: 0 0 0 1px #6d4c2a, 0 0 0 3px #ffd54f, 0 0 18px rgba(255, 200, 80, 0.55), 0 4px 10px rgba(0, 0, 0, 0.4); outline: none; }
+.door.crawl .crawl-play:active { transform: scale(0.98); }
+.door.crawl .crawl-play .door-line { display: block; }
+.door.crawl .crawl-play h2 { font-size: 1.55rem; }
+/* The seal that says it's the way in: wax red, top right. */
+.play-cue { position: absolute; z-index: 1; top: 7px; right: 7px; padding: 3px 10px 3px 9px; border-radius: 999px;
+    font-family: 'Almendra', Georgia, serif; font-size: 0.85rem; font-weight: 700; color: #fff3d6;
+    background: linear-gradient(#c62828, #8e1515); border: 1px solid #5a0f0f; box-shadow: inset 0 1px 0 rgba(255, 220, 200, 0.35), 0 2px 5px rgba(0, 0, 0, 0.5); }
+.door .saved-links { margin-top: -2px; }
+/* The tokens, now in the friends' door. */
+.door.friends .token-label { margin: 0; text-align: center; font-size: 0.9rem; color: #6d4c2a; }
+/* A wide screen: the painting fills its door's height beside the taller friends' door. */
+@media (min-width: 720px) and (min-height: 560px) {
+    .door.crawl .crawl-play { flex: 1 1 auto; }
+    .door.crawl .crawl-play h2 { font-size: 1.9rem; }
+}
+/* A phone on its side: short, so the painting is shorter and the tokens' label goes. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .door.crawl .crawl-play { min-height: 0; flex: 1 1 auto; }
+    .door.friends .token-label { display: none; }
+}
+/* (The tokens share the friends' door's width: seven to a row, never past its edge.) */
+.door.friends .avatars { gap: 4px; }
+.panel.join .door.friends .avatar { width: min(48px, calc((100% - 6 * 4px) / 7)); height: auto; aspect-ratio: 1; }
+.door .saved-links .link-button { color: #5d4037; text-shadow: none; animation: none; font-size: 0.85rem; padding: 2px 10px; }
