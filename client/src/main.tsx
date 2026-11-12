@@ -6,7 +6,7 @@ import { Hud } from './Hud';
 import { Backdrop } from './Backdrop';
 import { lookNext } from './look';
 import { renderDpr } from './tuning';
-import { actions, preview, store, table } from './game';
+import { actions, preview, store, table, tableCover } from './game';
 import { simulateRoll } from './physics';
 import { renderCorkPop, renderImpacts } from './sounds';
 import './styles.css';
@@ -23,8 +23,10 @@ function hideLoadingScreen() {
 }
 
 function App() {
-    // (The intro film covers the table: no need to draw it underneath.)
-    const paused = useSyncExternalStore(store.subscribe, () => store.get().filmPause);
+    // (The intro film covers the table, and so does an ability's painting on its stage: no need to draw it underneath.)
+    const filmPaused = useSyncExternalStore(store.subscribe, () => store.get().filmPause);
+    const covered = useSyncExternalStore(tableCover.subscribe, tableCover.get);
+    const paused = filmPaused || covered;
     return (
         <>
             <Backdrop />

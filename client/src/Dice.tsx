@@ -1,4 +1,4 @@
-import { useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
+import { useCallback, useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -9,6 +9,7 @@ import { DIE_SIZE, TRAY, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waiti
 import { OPPONENT_DICE, STARRY_GLOW, artTexture, createDiceMaterials, opponentDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
+import { useWarmShaders } from './warmup';
 
 // A kept die settling into its slot (visuals plan step 2): a wooden clack as it arrives.
 // Arriving: it was well away from the slot and is now right on it.
@@ -269,6 +270,9 @@ export function Dice() {
     const across = run ? (run.seated ?? run.enemy).id : null;
     const theirs = useMemo(() => (across && OPPONENT_DICE.has(across) ? opponentDiceMaterials(across, materials.faces) : null), [across, materials]);
     const own = turn && turn.playerId === BOT_ID && theirs ? theirs : materials.faces;
+    // Every look a die can take, compiled before it's first needed (see warmup.ts).
+    const allLooks = useCallback(() => [materials.faces, materials.hidden, materials.loaded, materials.mind, materials.tub, materials.starry, theirs ?? []].flat(), [materials, theirs]);
+    useWarmShaders(geometry, allLooks, across ?? '');
     const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);
 

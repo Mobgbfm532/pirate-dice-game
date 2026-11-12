@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { tableCover, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell, setBossMusic } from './sounds';
 import { simulateRoll } from './physics';
@@ -1476,10 +1476,36 @@ const ABILITY_ART: Record<string, string> = {
     'Divine Smite': 'ability-divine-smite.webp'
 };
 Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
+// (12 Nov, the user: a few moments stuttered before they appeared fully.) Fetched isn't enough: a painting was
+// decoded only as its moment began, a phone's frames stalling meanwhile. The opponent at the table's (and the
+// next one's) are decoded ahead and held, so they're ready; Martha's Disguise Self brings the tricks she copies.
+const COPIED_TRICKS: Record<string, string[]> = { 'Disguise Self': ['Mind Whip', 'You are Cursed!', 'Sympathy for the Devil'] };
+const warmArt = new Map<string, HTMLImageElement>();
+function warmAbilityArt(names: string[]) {
+    const files = new Set(names.flatMap(n => [n, ...(COPIED_TRICKS[n] ?? [])]).map(n => ABILITY_ART[n]).filter(Boolean));
+    for (const file of [...warmArt.keys()]) if (!files.has(file)) warmArt.delete(file); // (only a few held at once)
+    for (const file of files) {
+        if (warmArt.has(file)) continue;
+        const img = new Image();
+        img.src = `${import.meta.env.BASE_URL}art/${file}`;
+        img.decode().catch(() => {});
+        warmArt.set(file, img);
+    }
+}
+// While the painting's stage covers the screen (opaque from 7% to 88% of its 1.85 s), the table isn't drawn.
+const COVER_FROM_MS = 160, COVER_UNTIL_MS = 1580;
 
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
     const [visible] = useMoment(moment?.at ?? 0, MOMENT_SHOW_MS);
+    const staged = !!(visible && moment && !moment.cancelled && ABILITY_ART[moment.ability] && moment.name !== "Thom's Thonics" && moment.name !== 'Shrine to the Lady' && !moment.blessing);
+    useEffect(() => {
+        if (!staged || !moment) return;
+        const since = performance.now() - moment.at;
+        const on = setTimeout(() => tableCover.set(true), Math.max(0, COVER_FROM_MS - since));
+        const off = setTimeout(() => tableCover.set(false), Math.max(0, COVER_UNTIL_MS - since));
+        return () => { clearTimeout(on); clearTimeout(off); tableCover.set(false); };
+    }, [staged, moment?.at]);
     if (!visible || !moment) return null;
     const kind = moment.ability.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, ''); // ("You are Cursed!" is you-are-cursed)
     // An opponent's ability (or your mask) takes over the screen: a flash in its colours and a
@@ -3042,6 +3068,10 @@ export function Hud() {
     const footerRef = useFooterInset();
     // Phones on their side keep every player in the column at the top left (no room for a bar).
     const sideways = useMedia('(orientation: landscape) and (max-height: 500px)');
+    // The paintings of the abilities that can come up next, decoded ahead (see warmAbilityArt).
+    const run = snap.state?.tavernRun;
+    const artKey = run ? [...(run.seated?.powers ?? []), ...(run.enemy?.powers ?? [])].map(p => p.name).join('|') : '';
+    useEffect(() => { if (artKey) warmAbilityArt(artKey.split('|')); }, [artKey]);
 
     // The trailer (?trailer in the address): the game's own Perfect 24 and three 6s play over the table under it.
     if (trailerWanted) return <><Trailer /><Celebration snap={snap} /><DevilSixes snap={snap} /></>;

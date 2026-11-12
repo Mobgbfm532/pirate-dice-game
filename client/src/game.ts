@@ -313,6 +313,16 @@ function update(patch: Partial<Snapshot>) {
     listeners.forEach(l => l());
 }
 
+// An ability's painting covers the whole screen (12 Nov, the user: some moments stuttered as they came
+// in): the table isn't drawn under it. Its own little signal, so only the canvas hears it, not the HUD.
+let tableCovered = false;
+const coverListeners = new Set<() => void>();
+export const tableCover = {
+    get: () => tableCovered,
+    set(on: boolean) { if (on === tableCovered) return; tableCovered = on; coverListeners.forEach(l => l()); },
+    subscribe(l: () => void) { coverListeners.add(l); return () => { coverListeners.delete(l); }; }
+};
+
 export const store = {
     subscribe(listener: () => void) {
         listeners.add(listener);

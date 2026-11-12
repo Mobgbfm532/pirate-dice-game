@@ -909,6 +909,17 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
+0. **Ability moments without a stutter (12 Nov, the user's; in progress, carry on here):** built so far:
+   the abilities' paintings decoded ahead for the opponent at the table and the next (`warmAbilityArt` in Hud,
+   Disguise Self brings the tricks it copies); the table not drawn while a painting's stage covers the screen
+   (`tableCover` in game.ts, `COVER_FROM_MS`/`COVER_UNTIL_MS`, main.tsx's frameloop); every shader compiled before
+   it's needed (`warmup.ts`, used in Dice.tsx: after load, as each painted look arrives, `diceLooksChanged` in
+   textures.ts, and as a stage covers the screen; compiled into a render target, as the glow pass draws into one,
+   or the variants don't match); the rays behind a painting a third of the pixels; the plumes without blur.
+   Measured (headless, `previews/stutter/`, gitignored: `measure.mjs` frame gaps, `links.mjs` shader links in real
+   play, `diff.py` which recipe changed): Klarg's and Rokr's fights now compile nothing in play; the Ghoul and
+   Gourd's fights still link one program a few seconds after the fight starts (likely the opponent's painted dice:
+   find which with `links.mjs only=cursed` + `diff.py`). Then check on the phone, update the docs, commit and push.
 1. **Play the Salty Swallow on a phone** (everything up to 11 Nov is pushed and on the test site; the ship test server
    starts just after Brodor, and `/fight?n=12` on its controls jumps to Áéd): the sea die and its dial, the weather (Rogue
    wave, Squall, Fog bank, Becalmed), the heave, Bren's welcome and the sailing scene, Áéd and his metamagic, the ship's new

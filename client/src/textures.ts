@@ -201,6 +201,10 @@ const finish = (m: THREE.MeshStandardMaterial) => {
     return m;
 };
 
+// A painted look arrived for some dice (their shader changes): warmup.ts compiles it before it's seen.
+export const diceLooksChanged = new Set<() => void>();
+const looksChanged = () => setTimeout(() => diceLooksChanged.forEach(l => l()), 50);
+
 // How bright Starry Form's stars light themselves (Dice.tsx twinkles them about this).
 export const STARRY_GLOW = 0.55;
 
@@ -227,6 +231,7 @@ export function createDiceMaterials() {
         starryMat.emissive.set('#ffffff');
         starryMat.emissiveIntensity = STARRY_GLOW;
         starryMat.needsUpdate = true;
+        looksChanged();
     };
     sky.src = `${import.meta.env.BASE_URL}textures/dice/starry.webp`;
     return { faces, hidden, loaded, mind, tub, starry };
@@ -278,6 +283,7 @@ export function opponentDiceMaterials(id: string, fallback: THREE.MeshStandardMa
             }
             set[i].needsUpdate = true;
         });
+        looksChanged();
     }).catch(() => { /* keep the usual faces */ });
     return set;
 }
@@ -312,6 +318,7 @@ function loadPaintedFaces(materials: THREE.MeshStandardMaterial[], alike: THREE.
                 set[i].needsUpdate = true;
             });
         });
+        looksChanged();
     };
     image.src = DICE_SHEET_URL;
 }
