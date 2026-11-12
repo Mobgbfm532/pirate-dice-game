@@ -3737,3 +3737,33 @@ body.sea-heave { background: #050302; }
 .door.friends .avatars { gap: 4px; }
 .panel.join .door.friends .avatar { width: min(48px, calc((100% - 6 * 4px) / 7)); height: auto; aspect-ratio: 1; }
 .door .saved-links .link-button { color: #5d4037; text-shadow: none; animation: none; font-size: 0.85rem; padding: 2px 10px; }
+
+/* ==== The start screen on an upright phone, decluttered (12 Nov, the user's "cluttered": brainstorm 1-4) ====
+   No parchment panel and no boxes: the name line, the Tavern Crawl's painting (bigger), the intro as one
+   quiet line, and Play with friends as one brass button opening a sheet from the bottom. */
+.look-next .panel.join.compact, .panel.join.compact { background: none; border: 0; box-shadow: none; padding: 0; gap: 10px; overflow: visible; }
+.panel.join.compact .doors { gap: 12px; margin: 0; }
+.panel.join.compact .door { background: none; border: 0; box-shadow: none; padding: 0; gap: 8px; }
+.panel.join.compact .crawl-play { min-height: clamp(130px, 24vh, 200px); }
+.panel.join.compact .crawl-play h2 { font-size: 1.8rem; }
+.panel.join.compact .door-line { font-size: 0.95rem; }
+.friends-open { width: 100%; padding-top: 12px; padding-bottom: 12px; font-size: 1.15rem; }
+/* The name, once it's set: a line to tap. */
+.name-line { align-self: center; padding: 4px 12px; border: 0; background: none; cursor: pointer; font-size: 0.95rem; color: #6d4c2a; }
+.name-line strong { font-family: 'Almendra', Georgia, serif; color: #7a2418; }
+.panel.join.compact .name-line { color: #e9dcc0; text-shadow: 0 1px 3px #000; }
+.panel.join.compact .name-line strong { color: #ffd24f; }
+.panel.join.compact > input { background: rgba(255, 250, 240, 0.94); }
+/* The intro: two quiet links. */
+.intro-line { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0 6px; font-size: 0.85rem; color: #8a6a44; }
+.intro-line .link-button { color: #5d4037; text-shadow: none; animation: none; font-size: 0.85rem; padding: 2px 4px; }
+.panel.join.compact .intro-line, .panel.join.compact .intro-line .link-button, .panel.join.compact .saved-links .link-button { color: #e0cfae; text-shadow: 0 1px 3px #000; }
+/* The friends' sheet, sliding up from the bottom. */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(6, 3, 1, 0.66); animation: legends-fade 0.2s ease-out both; }
+.panel.join.friends-sheet { position: relative; width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; border-radius: 18px 18px 0 0;
+    padding: 18px 16px max(18px, env(safe-area-inset-bottom)); animation: sheet-rise 0.28s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes sheet-rise { from { transform: translateY(100%); } to { transform: none; } }
+.door.friends.in-sheet { background: none; border: 0; box-shadow: none; padding: 0; gap: 10px; }
+.door.friends.in-sheet .door-head h2 { font-size: 1.5rem; }
+@media (prefers-reduced-motion: reduce) { .panel.join.friends-sheet { animation: none; } }

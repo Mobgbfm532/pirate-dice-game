@@ -117,3 +117,48 @@ changes how a multiplayer table is started.
 - The name sits at the top of the panel, then the Tavern Crawl, then Play with friends, which now holds
   the tokens ("Your token: ..."), as only a table of friends shows them. An invite still puts the
   friends' door first.
+
+## Decluttering the phone screen (brainstorm, 12 Nov; ideas 1-4 built the same day)
+
+The user: "the home screen on mobile looks quite cluttered". Seen at 384x780: four frames nested (the
+parchment panel, the two door boxes, then the inputs and buttons), nine things asked at once (name,
+the crawl, the intro tick box, Watch it, seven tokens, Start a table, lives, a code, Join), and most of
+the space goes to Play with friends, which is only for friends' tables.
+
+Ideas, recommended first:
+
+1. **Friends behind one button.** The friends' door becomes a single brass "Play with friends" button
+   under the crawl's painting. A tap opens a sheet (sliding up from the bottom, like the Hall of
+   Legends) with the tokens, Start a table with its hearts, and the code and Join. An invite link opens
+   the sheet at once, with Join table CODE. Saves about 260 px and six controls.
+2. **No panel round it.** Drop the parchment panel and the boxes on the phone: the painting and the
+   button sit straight on the tavern, like the title. One frame (the painting's own) instead of four.
+3. **The name as a line, not a box.** "Playing as Ada ✎" under the buttons, tapped to change. The
+   first time (no name yet), the box shows, and once a name is set it folds into the line. (Without a
+   name the server gives one; the leaderboard needs a real one.)
+4. **The intro quieter.** "Watch the intro" as a small link under the painting, and the tick box moved
+   into the Hall of Legends' corner or a ⚙: it's a setting, chosen once. (Or keep the tick box and
+   drop Watch it.)
+5. **A bigger painting.** With the room freed, the Tavern Crawl painting grows to about 180 px tall,
+   the one big thing to tap, with Continue and its save details on it as now.
+6. **A smaller hero on short phones.** The die and title a little smaller, so the painting rises
+   higher on the screen.
+
+Suggested: 1 to 4 together. The phone would show the die, the title and tagline, the big Tavern Crawl
+painting, a "Play with friends" button, "Playing as Ada ✎", and the Legends plaque. A computer could
+keep the two doors side by side, as it has the room.
+
+### Built (12 Nov, ideas 1-4)
+
+- On an upright phone (`compact` in `JoinScreen`: portrait, up to 600 px wide): no parchment panel or
+  boxes (`.panel.join.compact`); the Tavern Crawl painting bigger (130-200 px tall); Play with friends is
+  one brass button (`.friends-open`) opening a sheet from the bottom (`.friends-sheet`) with the tokens,
+  Start a table and its hearts, and the code and Join; an invite opens the sheet at once, and the
+  button then says "Join table CODE". The die shows down to 600 px tall there (it went under 740).
+- The name, everywhere: a box the first time; once set, "Playing as Ada ✎" (`.name-line`), tapped to
+  change; it folds back on leaving the box or Enter.
+- The intro, everywhere: one quiet line under the painting, "Watch the intro · Intro before a crawl:
+  on/off" (`.intro-line`), in place of the tick box.
+- A computer and a phone on its side keep the panel and the two doors side by side.
+- Checked at 384x780, 360x640, 844x390 and 1440x900, the first-time box, the sheet, an invite; a real
+  tap on Start a table from the sheet made a table. `start-shots.mjs` takes `name=Ada`.

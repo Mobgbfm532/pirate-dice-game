@@ -1,5 +1,5 @@
 // Stills of the start screen (not a test): node test/start-shots.mjs <dir> [client=http://localhost:5173/next/]
-//   [sizes=384x780,360x640,844x390,1440x900] [query=table=ABCD] [save=1] [frames=3] [every=400]
+//   [sizes=384x780,360x640,844x390,1440x900] [query=table=ABCD] [save=1] [name=Ada] [frames=3] [every=400]
 //   [click=.legends-plaque|.legends-tabs button:nth-child(2)]: taps those in turn, a still after each
 // Silent and headless. For each size: the screen as it opens (after the die has landed) and, if it's
 // taller than the screen, scrolled to the bottom; prints how tall it is against the screen.
@@ -17,9 +17,13 @@ const CLICKS = args.click ? args.click.split('|') : [];
 const QUERY = args.query ? `?${args.query}` : '';
 // save=1: a saved crawl waiting (its details are made up; only the start screen reads them).
 const SAVE = args.save ? `localStorage.tavernSave = JSON.stringify({ name: 'Ada', next: 'Klarg', place: 'the Salty Swallow', purse: 64, token: 'x' });` : '';
+// name=Ada: a name already saved on the device (the start screen then shows it as a line).
+const NAME = args.name ? `localStorage.tavernName = ${JSON.stringify(args.name)};` : '';
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 mkdirSync(outDir, { recursive: true });
+// (A page that never loads, e.g. the dev client stopped, gives up instead of waiting for ever.)
+const giveUp = setTimeout(() => { console.log('Gave up after 2 minutes: is the dev client running?'); chrome.kill(); process.exit(1); }, 120000);
 const port = 9333 + Math.floor(Math.random() * 400);
 const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'start-'))}`,
     '--use-angle=d3d11', '--mute-audio', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
@@ -45,7 +49,7 @@ try {
     const s = (m, p) => cdp.send(m, p, sessionId);
     const evaluate = async expr => (await s('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })).result.value;
     await s('Page.enable');
-    await s('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.tavernMuted = '1'; ${SAVE} } catch {} HTMLMediaElement.prototype.play = () => Promise.resolve();` });
+    await s('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.tavernMuted = '1'; ${SAVE} ${NAME} } catch {} HTMLMediaElement.prototype.play = () => Promise.resolve();` });
     for (const [width, height] of SIZES) {
         await s('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: width < 1000 });
         await s('Page.navigate', { url: CLIENT + QUERY });
@@ -76,4 +80,4 @@ try {
             writeFileSync(join(outDir, `${name}-bottom.jpg`), Buffer.from(low, 'base64'));
         }
     }
-} finally { chrome.kill(); }
+} finally { clearTimeout(giveUp); chrome.kill(); }

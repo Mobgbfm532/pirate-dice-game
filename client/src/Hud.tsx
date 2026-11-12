@@ -85,7 +85,13 @@ function JoinScreen() {
     // (Nor on a short upright phone, where the doors need the room.)
     // The Hall of Legends (12 Nov): the crawl's leaderboard and the leagues, behind a plaque in the corner.
     const [legendsOpen, setLegendsOpen] = useState(false);
-    const roomForDie = !useMedia('(orientation: landscape) and (max-height: 500px), (orientation: portrait) and (max-height: 740px)');
+    // An upright phone (12 Nov, the user's "cluttered"): no panel, the friends behind one button and a sheet,
+    // the name a line once it's set. (Room for the die there down to 600 px tall.)
+    const compact = useMedia('(orientation: portrait) and (max-width: 600px)');
+    const roomForDie = !useMedia(compact ? '(max-height: 600px)' : '(orientation: landscape) and (max-height: 500px), (orientation: portrait) and (max-height: 740px)');
+    const [friendsOpen, setFriendsOpen] = useState(!!invite);
+    // The name: a box the first time, then a line ("Playing as Ada ✎") tapped to change it.
+    const [editingName, setEditingName] = useState<'first' | 'tap' | null>(prefs.name.trim() ? null : 'first');
 
     const join = (tableCode: string) => {
         savePrefs(name, avatar, tableCode);
@@ -120,41 +126,10 @@ function JoinScreen() {
                 <h1 className="join-title">2, 4, 24</h1>
                 <p className="join-tagline">Keep the 2. Keep the 4. <span>Become a legend.</span></p>
             </header>
-            <div className="panel join">
-                <input value={name} maxLength={15} placeholder="Adventurer name" aria-label="Your name" onChange={e => setName(e.target.value)} />
-                {/* Two doors (12 Nov, the user's pick, docs/landing-page-brainstorm.md): the Tavern Crawl, or a
-                    table of friends. An invite puts the friends' door first. */}
-                <div className={`doors${invite ? ' invited' : ''}`}>
-                    <section className="door crawl" aria-label="Tavern Crawl">
-                        {/* The painting is the button (12 Nov, the user's): it starts a crawl, or carries on the saved one. */}
-                        <button className="door-head crawl-play" onClick={continuing ? () => actions.resume(saved!, avatar) : beginCrawl}>
-                            <span className="door-places" aria-hidden="true">
-                                {CRAWL_PLACES.map(art => <img key={art} src={`${import.meta.env.BASE_URL}art/${art}`} alt="" draggable={false} />)}
-                            </span>
-                            <span className="play-cue" aria-hidden="true">▶ {continuing ? 'Continue' : 'Play'}</span>
-                            <h2>Tavern Crawl</h2>
-                            <span className="door-line">{continuing
-                                ? `${saved!.name}: ${saved!.next} next, at ${saved!.place} · ${coins(saved!.purse)}`
-                                : 'Fifteen rivals. Two taverns. One ship.'}</span>
-                        </button>
-                        {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
-                        {continuing && (
-                            <div className="saved-links">
-                                <button className="link-button" onClick={beginCrawl}>Start a new crawl</button>
-                                <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
-                            </div>
-                        )}
-                        {!invite && (
-                            <div className="intro-row">
-                                <label className="intro-check">
-                                    <input type="checkbox" checked={playIntro} onChange={e => { saveIntroChoice(e.target.checked); setChoice(e.target.checked); }} />
-                                    Play the intro first
-                                </label>
-                                <button className="link-button watch-intro" onClick={() => setFilm('watch')}>Watch it</button>
-                            </div>
-                        )}
-                    </section>
-                    <section className="door friends" aria-label="Play with friends">
+            {/* Play with friends: its own door on a wide screen, a sheet behind one button on an upright phone. */}
+            {(() => {
+                const friendsBody = (
+                    <>
                         <div className="door-head">
                             <h2>Play with friends</h2>
                             <p className="door-line">{invite ? `You're invited to table ${invite}.` : 'Start a table and send them the link.'}</p>
@@ -184,9 +159,71 @@ function JoinScreen() {
                                 <button className="secondary" disabled={!code.trim()} onClick={() => join(code.trim())}>Join</button>
                             </div>
                         )}
-                    </section>
-                </div>
-            </div>
+                    </>
+                );
+                const doneNaming = () => { if (name.trim()) setEditingName(null); };
+                return (
+                    <>
+                        <div className={`panel join${compact ? ' compact' : ''}`}>
+                            {editingName ? (
+                                <input value={name} maxLength={15} placeholder="Adventurer name" aria-label="Your name" autoFocus={editingName === 'tap'}
+                                    onChange={e => setName(e.target.value)} onBlur={doneNaming}
+                                    onKeyDown={e => { if (e.key === 'Enter') { doneNaming(); (e.target as HTMLInputElement).blur(); } }} />
+                            ) : (
+                                <button className="name-line" onClick={() => setEditingName('tap')} aria-label={`Playing as ${name}. Tap to change your name.`}>
+                                    Playing as <strong>{name}</strong> <span aria-hidden="true">✎</span>
+                                </button>
+                            )}
+                            {/* Two doors (12 Nov, the user's pick, docs/landing-page-brainstorm.md): the Tavern Crawl, or a
+                                table of friends. An invite puts the friends' door first. */}
+                            <div className={`doors${invite ? ' invited' : ''}`}>
+                                <section className="door crawl" aria-label="Tavern Crawl">
+                                    {/* The painting is the button (12 Nov, the user's): it starts a crawl, or carries on the saved one. */}
+                                    <button className="door-head crawl-play" onClick={continuing ? () => actions.resume(saved!, avatar) : beginCrawl}>
+                                        <span className="door-places" aria-hidden="true">
+                                            {CRAWL_PLACES.map(art => <img key={art} src={`${import.meta.env.BASE_URL}art/${art}`} alt="" draggable={false} />)}
+                                        </span>
+                                        <span className="play-cue" aria-hidden="true">▶ {continuing ? 'Continue' : 'Play'}</span>
+                                        <h2>Tavern Crawl</h2>
+                                        <span className="door-line">{continuing
+                                            ? `${saved!.name}: ${saved!.next} next, at ${saved!.place} · ${coins(saved!.purse)}`
+                                            : 'Fifteen rivals. Two taverns. One ship.'}</span>
+                                    </button>
+                                    {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
+                                    {continuing && (
+                                        <div className="saved-links">
+                                            <button className="link-button" onClick={beginCrawl}>Start a new crawl</button>
+                                            <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
+                                        </div>
+                                    )}
+                                    {/* The intro, quietly (12 Nov): a setting chosen once, as one line of two links. */}
+                                    {!invite && (
+                                        <div className="intro-line">
+                                            <button className="link-button" onClick={() => setFilm('watch')}>Watch the intro</button>
+                                            <span aria-hidden="true">·</span>
+                                            <button className="link-button" role="switch" aria-checked={playIntro}
+                                                onClick={() => { saveIntroChoice(!playIntro); setChoice(!playIntro); playSound('click'); }}>
+                                                Intro before a crawl: {playIntro ? 'on' : 'off'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </section>
+                                {compact
+                                    ? <button className="secondary friends-open" onClick={() => { setFriendsOpen(true); playSound('click'); }}>{invite ? `Join table ${invite}` : 'Play with friends'}</button>
+                                    : <section className="door friends" aria-label="Play with friends">{friendsBody}</section>}
+                            </div>
+                        </div>
+                        {compact && friendsOpen && (
+                            <div className="sheet-backdrop" onClick={() => setFriendsOpen(false)}>
+                                <section className="panel join friends-sheet" role="dialog" aria-label="Play with friends" onClick={e => e.stopPropagation()}>
+                                    <button className="legends-close" onClick={() => setFriendsOpen(false)} aria-label="Close">✕</button>
+                                    <div className="door friends in-sheet">{friendsBody}</div>
+                                </section>
+                            </div>
+                        )}
+                    </>
+                );
+            })()}
             <a className="classic-link" href="/">Classic game</a>
             <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
             {legendsOpen && <HallOfLegends me={name} onClose={() => setLegendsOpen(false)} />}
