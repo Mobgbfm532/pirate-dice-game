@@ -1,11 +1,15 @@
 # The sea die's needle, and the other opponents' dice (brainstorm, 13 Nov)
 
 The user asked two questions on 13 Nov: what sound the needle of the sea die's dial could have, and
-what the dice of every other opponent could look like. Nothing here is built yet. The same day, every
+what the dice of every other opponent could look like. Both were built the same day from the user's own
+clips and paintings (below). Also the same day, every
 roll of the sea die got its wave: a held sea too, port breaking to the left and starboard to the right
 (**Built**, 13 Nov).
 
 ## The needle's sound
+
+**Built (13 Nov), with the user's own two clips:** a tick (`DialNeedle.mp3`) each time the needle sweeps past
+a sector line and a clunk (`DialClunk.mp3`) as it first reaches its face. The ideas as they were:
 
 The needle hunts while the die tumbles (about 1.1 s), then swings onto its face, overshoots twice and
 settles (`dial-needle` in styles.css, 2.1 s in all).
@@ -23,6 +27,8 @@ settles (`dial-needle` in styles.css, 2.1 s in all).
    the ship's timbers. Moody, but it overlaps the swell's own creak.
 
 ## The dice of the other opponents
+
+**Built (13 Nov), with the user's own ten sheets** (their own designs, not these ideas). The ideas as they were:
 
 So far only the Ghoul and Gourd throw their own dice (Frak, Danhausen, the Duke, Martha; McGrath
 throws yours). Every set keeps the house rule: **a red 1 and a green 6** (a 1 that blends in gets a

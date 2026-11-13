@@ -74,11 +74,14 @@ const sfx = {
     // Heavy seas: a rogue wave takes a die over the rail (the user's, 10 Nov; it was the synthesized swell).
     rogueWave: load('RogueWave.mp3', 1), // (a quiet recording)
     // A fog bank rolls in, or holds (the user's, 10 Nov; a loud recording, 2.4 s).
-    fogHorn: load('FogHorn.mp3', 0.6)
+    fogHorn: load('FogHorn.mp3', 0.6),
+    // The sea die's dial (the user's, 13 Nov): the needle ticks past each sector line, and clunks as it lands on its face.
+    dialNeedle: load('DialNeedle.mp3', 0.45),
+    dialClunk: load('DialClunk.mp3', 0.8)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
-const LEAD: Partial<Record<keyof typeof sfx, number>> = { starryForm: 0.24, yvesilWeal: 0.16, devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1, healthPickup: 0.1 };
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { starryForm: 0.24, yvesilWeal: 0.16, devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1, healthPickup: 0.1, dialNeedle: 0.028, dialClunk: 0.06 };
 // The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
 // asked to, where an <audio> element can lag noticeably on phones.
 const buffers = new Map<keyof typeof sfx, AudioBuffer>();

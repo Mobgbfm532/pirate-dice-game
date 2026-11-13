@@ -38,11 +38,6 @@ day they happen, with what's been built marked as it lands.
 ### The trailer, take two (`docs/trailer-brainstorm.md`, built 11 Nov)
 - The user's trailer track (11 Nov) is fitted by its sections, its boom's section played twice: to hear by ear, the join at the repeat (about 27.8 s into the trailer) and whether the shots land well on its beats.
 
-### The sea die's needle, and the other opponents' dice (`docs/sea-and-dice-brainstorm.md`, 13 Nov)
-
-- The needle's sound: a brass ratchet ticking past each sector and a clunk as it settles (recommended, synthesized), or a telegraph ring, a compass's ting, a hull's creak? Or a clip of the user's?
-- Dice for the other ten opponents (ideas in the brainstorm): which to paint, and in what order?
-
 ### Small things
 
 - Sounds and music: which of the missing ones to make (the list is in `docs/art-direction.md`, "Sounds and music still missing", 11 Nov): Jaguar's three phases and Áéd's spells play in silence; five scenes between fights have no loop; Becalmed has no sound; no music for the Yawning Portal or the ship.
@@ -74,6 +69,8 @@ day they happen, with what's been built marked as it lands.
 - The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
 
 ## Settled
+- 13 Nov: the sea die's needle has the user's own clips: a tick past each sector line, and a clunk as it lands on its face.
+- 13 Nov: the other ten opponents' dice: the user painted all ten at once; in the game the same day.
 - 13 Nov: Jaguar's Cloak stays as it was: he throws after you, his dice hidden (the user's). Throwing first with his hand hidden until yours was done was built and taken back out the same day.
 - 13 Nov: Áéd has six uses a fight, and every one of his four tricks comes out at least once (the user's). Jaguar's Smooth Talk is ready from his first round: before, it could wait until round 3, and a fight that took him to 2 hearts in two rounds never saw it.
 - 13 Nov: the stutter fix pushed to the test site (the user's yes).

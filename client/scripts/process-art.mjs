@@ -725,10 +725,12 @@ function blobsOver(map, size, cutoff) {
 // a coloured die (light pips on dark faces, gold on red), so it is found here: a pip is wherever the
 // face's middle differs from the face's own colour (textures/dice/<id>-cut.webp, white high).
 // (McGrath keeps the Molar's id; his painting is dice-mcgrath.jpg.)
-const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha'];
+const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha', 'sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor', 'klarg', 'rokr', 'aed', 'hangman', 'jaguar']; // (the Yawning Portal's and the ship's, the user's, 13 Nov)
 const LIFT = { power: 1.25, vivid: 1.05 }; // how much lighter (1: as painted) and more vivid (1.5 and 1.2 until 5 Nov: neon on the table)
+const LAYOUT_SETS = new Set(['stason', 'ridgeler', 'brodor', 'klarg', 'jaguar']);
+const PIP_LAYOUT = [[[0, 0]], [[1, -1], [-1, 1]], [[1, -1], [0, 0], [-1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
 const CLEAN = { detail: 0.35, radius: 40 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
-const RING_ONE = { duke: [214, 172, 76] }; // his gold
+const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186] }; // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
 async function diceSheets() {
     const dir = path.resolve(here, '../public/textures/dice');
@@ -736,14 +738,14 @@ async function diceSheets() {
     const F = 512;
     const dist = (d, i, c) => Math.hypot(d[i] - c[0], d[i + 1] - c[1], d[i + 2] - c[2]);
     const median = values => { const s = [...values].sort((a, b) => a - b); return s[s.length >> 1]; };
-    for (const id of DICE_SETS) {
+    for (const id of (process.env.SETS ? process.env.SETS.split(',') : DICE_SETS)) { // (SETS=a,b: only those)
         const { data, width, height } = await readRgba(diceFile(id));
         // The background: the median colour along the border.
         const edge = [[], [], []];
         for (let x = 0; x < width; x += 3) for (const y of [2, height - 3]) { const i = (y * width + x) * 4; for (let c = 0; c < 3; c++) edge[c].push(data[i + c]); }
         for (let y = 0; y < height; y += 3) for (const x of [2, width - 3]) { const i = (y * width + x) * 4; for (let c = 0; c < 3; c++) edge[c].push(data[i + c]); }
         const bg = edge.map(median);
-        const faces = [], cuts = [], found = [];
+        const faces = [], cuts = [], found = [], fars = [];
         for (let n = 0; n < 6; n++) {
             const cx0 = Math.round((n % 3) * width / 3), cx1 = Math.round((n % 3 + 1) * width / 3);
             const cy0 = Math.round(Math.floor(n / 3) * height / 2), cy1 = Math.round((Math.floor(n / 3) + 1) * height / 2);
@@ -768,6 +770,7 @@ async function diceSheets() {
             // has pips. Each pip is engraved as a clean disc where its blob is.
             const far = new Float32Array(F * F);
             for (let i = 0; i < F * F; i++) far[i] = Math.hypot(face[i * 3] - own[0], face[i * 3 + 1] - own[1], face[i * 3 + 2] - own[2]);
+            fars.push(Float32Array.from(far));
             const soft = blur(far, F, 6);
             let pips = null;
             for (let t = 110; t >= 20 && !pips; t -= 5) {
@@ -776,12 +779,58 @@ async function diceSheets() {
             }
             // (A 1 painted close to its face's colour, as the Duke's crimson on red, may not stand out
             // enough: it sits in the middle, the size of the set's other pips.)
-            if (!pips && n > 0) throw new Error(`dice-${id}: couldn't find the ${n + 1} pips on face ${n + 1}`);
-            if (!pips) console.log(`dice ${id}: the 1 blends into its face; engraved in the middle`);
+            // (13 Nov: pips that run into a face's engraving, as on Stason's filigree, aren't round blobs;
+            // such a face's pips are placed by the standard layout, measured from the set's other faces, below.)
+            if (!pips && n > 0) console.log(`dice ${id}: the ${n + 1} pips on face ${n + 1} not found; placed by the set's layout`);
+            if (!pips && n === 0) console.log(`dice ${id}: the 1 blends into its face; engraved in the middle`);
             found.push(pips);
             faces.push({ input: face, raw: { width: F, height: F, channels: 3 }, left: (n % 3) * F, top: Math.floor(n / 3) * F });
         }
-        const r = median(found.flat().filter(Boolean).map(b => b.size)) / 2 * 1.04;
+        // (13 Nov) Sets whose pips sit among engraving, shine or knots (LAYOUT_SETS): the pips are placed by the
+        // standard layout fitted to the whole set (its offset from the middle where the pips differ most from the
+        // face, each pip then nudged onto its own), and sized where the difference falls away.
+        let fitR = null;
+        if (LAYOUT_SETS.has(id)) {
+            const at = (m, x, y) => m[Math.round(Math.min(F - 1, Math.max(0, y))) * F + Math.round(Math.min(F - 1, Math.max(0, x)))];
+            const c = F / 2;
+            // How much a disc of radius rr at (x, y) stands out from the ring just around it.
+            const disc = (m, x, y, rr) => {
+                let inside = 0, ni = 0, ring = 0, nr = 0;
+                for (let k = 0.15; k <= 1.45; k += 0.1) for (let a = 0; a < 24; a++) {
+                    const v = at(m, x + Math.cos(a * Math.PI / 12) * k * rr, y + Math.sin(a * Math.PI / 12) * k * rr);
+                    if (k < 0.9) { inside += v; ni++; } else if (k > 1.1) { ring += v; nr++; }
+                }
+                return inside / ni - ring / nr;
+            };
+            // The set's layout: the offset and the pip radius that stand out most over every pip of the set.
+            let best = -Infinity, g = F * 0.25, pr = F * 0.1;
+            for (let t = Math.round(F * 0.21); t <= F * 0.29; t += 2) for (let rr = Math.round(F * 0.06); rr <= F * 0.12; rr += 2) {
+                let sum = 0, cnt = 0;
+                fars.forEach((m, n) => PIP_LAYOUT[n].forEach(([dx, dy]) => { sum += disc(m, c + dx * t, c + dy * t, rr); cnt++; }));
+                if (sum / cnt > best) { best = sum / cnt; g = t; pr = rr; }
+            }
+            // Each pip nudged (a few px) to where its own disc stands out most.
+            fars.forEach((m, n) => {
+                found[n] = PIP_LAYOUT[n].map(([dx, dy]) => {
+                    let bx = c + dx * g, by = c + dy * g, top = -Infinity;
+                    const x0 = bx, y0 = by;
+                    for (let y = y0 - 10; y <= y0 + 10; y += 2) for (let x = x0 - 10; x <= x0 + 10; x += 2) { const v = disc(m, x, y, pr); if (v > top) { top = v; bx = x; by = y; } }
+                    return { x: bx, y: by, size: 0 };
+                });
+            });
+            fitR = pr / 1.04;
+            console.log(`dice ${id}: laid out (offset ${g} px, pip radius ${fitR} px)`);
+        }
+        const r = fitR ?? median(found.flat().filter(Boolean).map(b => b.size)) / 2 * 1.04;
+        // A face whose pips weren't found gets the standard layout (2 and 3 on the top-right to bottom-left
+        // diagonal, 6 in two columns), its offset from the middle the median of the set's found pips.
+        const offs = found.slice(1).flat().filter(Boolean).flatMap(b => [Math.abs(b.x - F / 2), Math.abs(b.y - F / 2)]).filter(d => d > F * 0.1);
+        if (found.some((p, n) => !p && n > 0)) {
+            if (!offs.length) throw new Error(`dice-${id}: no pips found on any face`);
+            const g = median(offs), c = F / 2;
+            const LAYOUT = [null, [[1, -1], [-1, 1]], [[1, -1], [0, 0], [-1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
+            found.forEach((p, n) => { if (!p && n > 0) found[n] = LAYOUT[n].map(([dx, dy]) => ({ x: c + dx * g, y: c + dy * g })); });
+        }
         // Clean, even faces (the user, 3 Nov: the painted dice looked "abrasive" beside the ivory ones).
         // A painting of a die face carries its own lighting: bright streaks, a dark rim, a painted
         // bevel, brush grain; on a lit 3D die that doubled up and looked harsh. So each face's surface
@@ -831,13 +880,17 @@ async function diceSheets() {
                 const v = lift(even);
                 for (let c = 0; c < 3; c++) face[i * 3 + c] = Math.round(face[i * 3 + c] * (1 - k) + v[c] * k);
             }
+            // (13 Nov) A pip close to its face's colour (Brodor's gold studs on gold) gets a dark rim, like a stud's.
+            const surface = lift(mid);
             pipColours.forEach((colour, p) => {
                 const b = centres[p];
+                const rim = Math.hypot(colour[0] - surface[0], colour[1] - surface[1], colour[2] - surface[2]) < 60;
                 for (let y = Math.max(0, Math.floor(b.y - r - 2)); y <= Math.min(F - 1, b.y + r + 2); y++) for (let x = Math.max(0, Math.floor(b.x - r - 2)); x <= Math.min(F - 1, b.x + r + 2); x++) {
                     const edge = Math.min(1, Math.max(0, r + 0.75 - Math.hypot(x - b.x, y - b.y)));
                     if (edge <= 0) continue;
                     const i = (y * F + x) * 3;
-                    for (let c = 0; c < 3; c++) face[i + c] = Math.round(face[i + c] * (1 - edge) + colour[c] * edge);
+                    const shade = rim && Math.hypot(x - b.x, y - b.y) > r * 0.74 ? 0.45 : 1;
+                    for (let c = 0; c < 3; c++) face[i + c] = Math.round(face[i + c] * (1 - edge) + colour[c] * shade * edge);
                 }
             });
         });

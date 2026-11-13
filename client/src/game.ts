@@ -803,9 +803,43 @@ export const SEA_SHOW_MS = 4000; // the sea changes (the server's too)
 export const SEA_HOLD_MS = 2800; // the sea holds (the server's too)
 export const SEA_LAND_MS = 1150; // the die lands; the needle settles and the news comes just after
 const SEA_SHIFTS: Record<string, number> = { calm: 0, starboard: 1, port: -1, rogue: 0, squall: 0, fog: 0, becalmed: 0 };
+// The dial's needle (Hud's SeaDial, CSS `dial-needle`: 2.1 s, each step eased by cubic-bezier(0.3, 0.1,
+// 0.3, 1)) ticks as it sweeps past each sector line, and clunks as it first reaches its face (55%, as the
+// die lands and the sector lights). The user's clips, 13 Nov.
+const NEEDLE_MS = 2100;
+const NEEDLE_KEYS = (to: number): [number, number][] => [[0, -70], [0.14, 55], [0.28, -30], [0.42, 35], [0.55, to + 16], [0.68, to - 7], [0.8, to + 3], [1, to]];
+const CLUNK_AT = 0.55, CLUNK_HIT_MS = 150; // (the clunk's hit comes ~0.15 s after its sound starts)
+function bezier(x: number, x1 = 0.3, y1 = 0.1, x2 = 0.3, y2 = 1) {
+    const at = (t: number, a: number, b: number) => 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (at(mid, x1, x2) < x) lo = mid; else hi = mid; }
+    return at((lo + hi) / 2, y1, y2);
+}
+export function needleTicks(face: number): number[] {
+    const keys = NEEDLE_KEYS(-75 + (face - 1) * 30);
+    const angle = (p: number) => {
+        let i = 0;
+        while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
+        const [p0, a0] = keys[i], [p1, a1] = keys[i + 1];
+        return a0 + (a1 - a0) * bezier((p - p0) / (p1 - p0));
+    };
+    const ticks: number[] = [];
+    let sector = Math.floor((angle(0) + 90) / 30), last = -Infinity;
+    for (let ms = 10; ms <= NEEDLE_MS; ms += 10) {
+        const now = Math.floor((angle(ms / NEEDLE_MS) + 90) / 30);
+        if (now !== sector && ms - last >= 45 && Math.abs(ms - CLUNK_AT * NEEDLE_MS) > 90) { ticks.push(ms); last = ms; }
+        sector = now;
+    }
+    return ticks;
+}
+function playDial(face: number) {
+    needleTicks(face).forEach((ms, i) => setTimeout(() => playSound('dialNeedle', 0.94 + ((i * 37) % 13) / 100), ms));
+    setTimeout(() => playSound('dialClunk'), CLUNK_AT * NEEDLE_MS - CLUNK_HIT_MS);
+}
 function showSea(data: SeaRoll, hold = 0) {
     const at = performance.now();
     update({ seaMoment: { ...data, at: at + hold } });
+    playDial(data.face);
     const news = SEA_LAND_MS + 300;
     // A fog bank's foghorn as the news comes, whether it rolls in or holds (the user's clip, 10 Nov), in place of the swell.
     const fog = data.id === 'fog';

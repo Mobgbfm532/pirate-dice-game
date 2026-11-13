@@ -246,7 +246,7 @@ export function createDiceMaterials() {
 // Off from 4 Nov (the user: everyone threw the default ivory dice), on again since 5 Nov (the user's
 // call, once they were cleaned up). OPPONENT_DICE_ON = false turns them off. (Dev: preview.dice(id) shows a set.)
 export const OPPONENT_DICE_ON = true;
-export const PAINTED_DICE = new Set(['frak', 'danhausen', 'duke', 'martha']);
+export const PAINTED_DICE = new Set(['frak', 'danhausen', 'duke', 'martha', 'sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor', 'klarg', 'rokr', 'aed', 'hangman', 'jaguar']); // (the Yawning Portal's and the ship's since 13 Nov, the user's)
 export const OPPONENT_DICE: Set<string> = OPPONENT_DICE_ON ? PAINTED_DICE : new Set();
 const OPPONENT_DICE_GLOW = 0.16; // (0.22 until 5 Nov: it flattened the dice's shading; at 0.1 the fire turned Frak's green olive)
 const opponentDice = new Map<string, THREE.MeshStandardMaterial[]>();
