@@ -984,7 +984,7 @@ if (!ONLY) {
     await slotPlates();
 }
 await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches: [[684, 300, 760, 700, 85, 110, 190], [668, 555, 760, 705, 255]] });
-await cutOut('bust-klarg.jpg', 'klarg', { fireBox: [1005, 230, 1191, 896], patches: [[888, 408, 1006, 515, 30], [1075, 230, 1191, 896, 255]] });
+await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[1000, 310]], fade: { left: 140 } }); // (background between the die and his fingers) // his second painting (13 Nov), on magenta; his cloak runs off the painting's left edge (the first: bust-klarg-v1.jpg, cut with cutOut)
 await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
 await cutOutFlat('bust-jaguar.jpg', 'jaguar', { holes: [[634, 46], [478, 329]], fade: { right: 140 } }); // his second painting (27 Oct), on a flat background (the first: bust-jaguar-v1.jpg, a checkerboard); his cloak runs off the painting's right edge, so it fades out there
@@ -1039,7 +1039,7 @@ await cutOutFlat('ability-back-of-the-head.jpg', 'ability-back-of-the-head', { m
 await cutOutFlat('ability-inkfire.jpg', 'ability-inkfire', { maxHeight: 900, smokeBox: [500, 60, 800, 700], smokeMinBlue: 5 });
 await cutOutFlat('ability-flourish.jpg', 'ability-flourish', { maxHeight: 900, tolerance: 50, minPiece: 0.001, trails: { colour: [212, 178, 132], reach: 22, boxes: [[0, 0, 340, 1200], [600, 0, 896, 250], [720, 250, 896, 1200], [600, 680, 720, 1200]] }, holes: [[808, 874], [787, 444], [702, 807], [809, 394], [762, 831], [123, 905], [165, 318], [107, 896], [72, 852], [141, 372], [106, 876], [696, 276], [702, 753]] });
 await cutOutFlat('ability-written-in-the-stars.jpg', 'ability-written-in-the-stars', { maxHeight: 900 });
-await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight: 900 });
+await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight: 900, fade: { left: 90, right: 40, bottom: 60 } }); // his second painting (13 Nov; the first: ability-reach-around-v1.jpg, which klarg-paw.cjs cut the paw from)
 await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight: 900, soften: { boxes: [[180, 0, 850, 420]], radius: 12 }, holes: [[839, 728], [221, 751], [951, 800], [122, 857], [247, 863], [749, 890], [135, 832], [903, 819], [312, 845], [762, 832], [32, 723], [996, 741], [739, 865], [136, 792], [886, 798]] });
 await cutOutFlat('ability-smooth-talk.jpg', 'ability-smooth-talk', { maxHeight: 900, tolerance: 30, holes: [[414, 180], [294, 424]], minPiece: 0.00002, trails: [{ colour: [245, 200, 120], reach: 35, boxes: [[90, 320, 325, 660], [520, 420, 660, 525]] }, { colour: [255, 70, 60], reach: 30, boxes: [[565, 120, 640, 330]] }], fade: { bottom: 60 } }); // his golden sparkle swirls and the potion's red glow stay, see-through
 await cutOutFlat('ability-the-cloak.jpg', 'ability-the-cloak', { maxHeight: 900, holes: [[777, 496], [751, 419], [822, 326], [712, 489], [833, 808], [293, 421], [415, 180]], trails: [{ colour: [60, 78, 92], reach: 20, boxes: [[0, 540, 330, 820], [640, 380, 848, 900]] }, { colour: [20, 28, 38], reach: 20, boxes: [[0, 700, 220, 800]] }], fade: { left: 90, right: 40, bottom: 60 } }); // his smoky wisps and the thin cloak's edge stay see-through; background between the folds and the arm
