@@ -729,6 +729,8 @@ const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha', 'sylvester', 
 const LIFT = { power: 1.25, vivid: 1.05 }; // how much lighter (1: as painted) and more vivid (1.5 and 1.2 until 5 Nov: neon on the table)
 const LAYOUT_SETS = new Set(['stason', 'ridgeler', 'brodor', 'klarg', 'jaguar']);
 const PIP_LAYOUT = [[[0, 0]], [[1, -1], [-1, 1]], [[1, -1], [0, 0], [-1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
+// (13 Nov, the user's) The silver sets stay darker, like steel: lifted, they came out nearly white on the table.
+const LIFT_FOR = { stason: { power: 0.7, vivid: 1 }, ridgeler: { power: 0.7, vivid: 1 } };
 const CLEAN = { detail: 0.35, radius: 40 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
 const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186] }; // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
@@ -840,10 +842,11 @@ async function diceSheets() {
         // user, 3 Nov: on a phone the coloured dice sank into the dark felt): the colour is lifted,
         // darks most, and made a little more vivid. Since 5 Nov (the user: as with the ivory dice) each pip
         // is redrawn too, a clean disc of its own colour: the painted ones had pale halos and smudges.
+        const L = LIFT_FOR[id] ?? LIFT;
         const lift = rgb => {
-            const lifted = rgb.map(v => 255 * (1 - Math.pow(1 - v / 255, LIFT.power)));
+            const lifted = rgb.map(v => 255 * (1 - Math.pow(1 - v / 255, L.power)));
             const grey = 0.299 * lifted[0] + 0.587 * lifted[1] + 0.114 * lifted[2];
-            return lifted.map(v => Math.min(255, Math.max(0, grey + (v - grey) * LIFT.vivid)));
+            return lifted.map(v => Math.min(255, Math.max(0, grey + (v - grey) * L.vivid)));
         };
         found.forEach((pips, n) => {
             const face = faces[n].input;
