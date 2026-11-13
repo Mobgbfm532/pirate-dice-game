@@ -39,8 +39,10 @@ module.exports = {
     // says it raises his chance of winning the round by at least minGain. Heightened: your next throw at
     // disadvantage (each die twice, you keep the worse), once a round, when he's lost a heart or from the
     // second round. First guesses, not yet simulated. (points: the uses; costs: a use each.)
+    // 13 Nov (the user's): six uses a fight, each of the four tricks at least once (eachOnce).
     metamagic: {
-        points: 3,
+        points: 6,
+        eachOnce: true,
         costs: { heightened: 1, quickened: 1, empowered: 1, twinned: 1 },
         minGain: { quickened: 0.12, empowered: 0.06, twinned: 0.06 }
     },

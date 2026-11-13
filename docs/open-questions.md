@@ -25,7 +25,7 @@ day they happen, with what's been built marked as it lands.
 - It does what the Lady's Favour does (one extra heart next fight). Which new use? Recommended: black water, the sea can't move your dice next fight. If so, against the list and the rogue wave only, or the Squall, Fog and Becalmed too?
 
 ### Áéd, the dragon sorcerer (`docs/aed-brainstorm.md`, built 11 Nov)
-- His numbers, all first guesses, not simulated: 3 uses a fight (the user's), how keen he is to spend them (`minGain` 0.12 and 0.06), 3 hearts, Heightened at most once a round, once he's lost a heart or from the second round.
+- His numbers, first guesses: 6 uses a fight, each trick at least once (the user's, 13 Nov), how keen he is to spend the spare two (`minGain` 0.12 and 0.06), 3 hearts, Heightened at most once a round. Played headless against the simple player (13 Nov, 40 fights each): the player won 33% against 3 uses and 23% against 6. Is he now too hard for the ship's third fight?
 - His words: the four tricks' texts are Claude's. Anything he says?
 - His Squall is on face 3 (a first guess): another face, or another storm?
 - Art and sound: an ability painting (one, or one per trick) and a sound for his spells, if wanted; his dragon's colour (the card and banners use his robe's violet and gold).
@@ -69,6 +69,8 @@ day they happen, with what's been built marked as it lands.
 - The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
 
 ## Settled
+- 13 Nov: Jaguar's Cloak stays as it was: he throws after you, his dice hidden (the user's). Throwing first with his hand hidden until yours was done was built and taken back out the same day.
+- 13 Nov: Áéd has six uses a fight, and every one of his four tricks comes out at least once (the user's). Jaguar's Smooth Talk is ready from his first round: before, it could wait until round 3, and a fight that took him to 2 hearts in two rounds never saw it.
 - 13 Nov: the stutter fix pushed to the test site (the user's yes).
 - 12 Nov: no "Your turn" tab over your nameplate (the glow alone says it). Danhausen's ability is "You are Cursed!", Martha is "Martha/Mystery" and her ability "Disguise Self".
 - 12 Nov: the ability marks stay ✦ (gems were tried and reverted). Idea 8, one button family, built.

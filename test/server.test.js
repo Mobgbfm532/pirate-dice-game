@@ -414,6 +414,7 @@ test('Áéd\'s own tricks: a throw of all 1s, he throws again or rolls a die aga
     room.tavernRun.sea = 'calm';
     room.players.BOT_MOLAR.name = 'Áéd';
     room.players.BOT_MOLAR.lives = BALANCE.opponentLives.aed; // (unhurt: no Heightened on your hand in round 1)
+    room.tavernRun.abilityUsed = { heightened: 1 }; // (tried already: an untried one comes in round 1)
     const moves = [];
     hero.on('signatureMove', m => moves.push(m.ability));
     // Your hand: 2, 4, 4, 4, 4, 3 (15): one he can still beat.
@@ -435,6 +436,50 @@ test('Áéd\'s own tricks: a throw of all 1s, he throws again or rolls a die aga
     await waitFor(hero, 'turnState', s => s.turn && s.turn.playerId === 'BOT_MOLAR' && s.turn.finalized, 15000);
     assert.ok(moves.some(m => m === 'Quickened Spell' || m === 'Empowered Spell'), `he used a trick: ${moves.join(', ')}`);
     assert.ok(room.tavernRun.sorcery >= 0 && room.tavernRun.sorcery < BALANCE.metamagic.points);
+});
+
+test('Áéd has six uses a fight and saves enough to try each of his four tricks (13 Nov)', async () => {
+    const hero = await tavernAgainst(fightOf('aed'), 'Aed EachOnce');
+    const room = roomOf(hero);
+    server.resetTavernEncounter(codeOf(hero), true, true);
+    assert.equal(room.tavernRun.sorcery, 6);
+    const run = room.tavernRun;
+    // Quickened tried; Heightened, Empowered and Twinned still owed, and three uses left: none spare.
+    run.abilityUsed = { quickened: 1 };
+    run.sorcery = 3;
+    assert.ok(!server.aedMayCast(room, 'quickened'), 'no second Quickened while three tricks are owed');
+    assert.ok(server.aedMayCast(room, 'empowered') && server.aedMayCast(room, 'twinned') && server.aedMayCast(room, 'heightened'));
+    run.sorcery = 4;
+    assert.ok(server.aedMayCast(room, 'quickened'), 'one to spare');
+    // An untried trick needs no gain, and at a last heart any chance at all; a tried one its usual gain.
+    room.players.BOT_MOLAR.lives = 3;
+    assert.equal(server.aedNeedGain(room, 'empowered'), 0);
+    assert.equal(server.aedNeedGain(room, 'quickened'), BALANCE.metamagic.minGain.quickened);
+    room.players.BOT_MOLAR.lives = 1;
+    assert.equal(server.aedNeedGain(room, 'empowered'), -Infinity);
+});
+
+test("Áéd's Heightened Spell, not yet tried, comes in the first round", async () => {
+    const hero = await tavernAgainst(fightOf('aed'), 'Aed Round1');
+    const room = roomOf(hero);
+    room.tavernRun.sorcery = BALANCE.metamagic.points;
+    room.tavernRun.encounterRound = 1;
+    room.tavernRun.sea = 'calm';
+    room.players.BOT_MOLAR.lives = BALANCE.opponentLives.aed;
+    const moves = [];
+    hero.on('signatureMove', m => moves.push(m.ability));
+    hero.emit('rollDice');
+    await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    assert.ok(moves.includes('Heightened Spell'));
+});
+
+test("Jaguar's Smooth Talk is ready from his first round", async () => {
+    const hero = await tavernAgainst(fightOf('jaguar'), 'JagRound1');
+    const room = roomOf(hero);
+    for (let i = 0; i < 10; i++) {
+        server.resetTavernEncounter(codeOf(hero), true, true);
+        assert.equal(room.tavernRun.abilityRound, 1);
+    }
 });
 
 test('Becalmed: three throws a hand, then the dice stay as they lie; the opponent plays it too', async () => {

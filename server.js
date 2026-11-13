@@ -299,10 +299,10 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🐲',
         lives: BALANCE.opponentLives.aed,
         ability: 'metamagic',
-        sorcery: true, // three uses a fight (his gems), each any of his four tricks (since 11 Nov; it was a pool of points)
+        sorcery: true, // six uses a fight (his gems), each of his four tricks at least once (13 Nov, the user's; it was three, any trick)
         blurb: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", // (the user's, 11 Nov)
         powers: [
-            { name: "Metamagic", text: "Three times a fight (his gems) he twists the dice with any of four tricks." },
+            { name: "Metamagic", text: "Six times a fight (his gems) he twists the dice, and every one of his four tricks comes out at least once." },
             { name: "Heightened Spell", text: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." },
             { name: "Quickened Spell", text: "He throws again without keeping a die." },
             { name: "Empowered Spell", text: "He rolls one of his own dice again." },
@@ -1040,6 +1040,23 @@ const METAMAGIC_TEXT = {
     twinned: 'A die he keeps is copied onto one of his loose dice.'
 };
 const aedSeated = room => room.mode === 'tavern-crawl' && !!(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] || {}).sorcery;
+// Each trick at least once a fight (13 Nov, the user's; METAMAGIC.eachOnce): a trick not yet tried this fight
+// is cast whenever it doesn't cost him (no gain needed), and once either side is on its last heart, at the
+// first chance it can be; a trick already tried is cast only while enough uses stay for those not yet tried.
+const aedTried = (room, trick) => getAbilityUseCount(room, trick) > 0;
+function aedMayCast(room, trick) {
+    let left = room.tavernRun.sorcery || 0, cost = METAMAGIC.costs[trick];
+    if (left < cost) return false;
+    if (!METAMAGIC.eachOnce || !aedTried(room, trick)) return true;
+    let owed = Object.keys(METAMAGIC.costs).filter(t => !aedTried(room, t)).reduce((n, t) => n + METAMAGIC.costs[t], 0);
+    return left - cost >= owed;
+}
+function aedLastChance(room) {
+    let bot = room.players[BOT_ID], human = room.players[getHumanPlayerId(room)];
+    return (!!bot && bot.lives <= 1) || (!!human && human.lives <= 1);
+}
+// The gain in his chance of winning the round a trick must bring.
+const aedNeedGain = (room, trick) => (!METAMAGIC.eachOnce || aedTried(room, trick) ? METAMAGIC.minGain[trick] : aedLastChance(room) ? -Infinity : 0);
 // Spends a trick's points. A Clear-Eye waiting cancels it (its points still spent). Returns true if it goes ahead.
 function castMetamagic(roomCode, room, trick, show = (event, data) => sendMoment(roomCode, event, data), text = METAMAGIC_TEXT[trick]) {
     let run = room.tavernRun;
@@ -1064,10 +1081,11 @@ function startHeightened(roomCode, room, turn) {
     if (!aedSeated(room) || turn.playerId === BOT_ID || turn.rollCount !== 0) return null;
     let run = room.tavernRun;
     let round = run.encounterRound || 1;
-    if ((run.sorcery || 0) < METAMAGIC.costs.heightened || run.heightenedRound === round) return null;
+    if (!aedMayCast(room, 'heightened') || run.heightenedRound === round) return null;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     let bot = room.players[BOT_ID];
-    if (!bot || !(bot.lives < encounter.lives || round >= 2)) return null;
+    // (not yet tried this fight: from the first round)
+    if (!bot || !(bot.lives < encounter.lives || round >= 2 || (METAMAGIC.eachOnce && !aedTried(room, 'heightened')))) return null;
     run.heightenedRound = round;
     let move = null;
     let show = (event, data) => { if (event === 'signatureMove' && !data.cancelled) move = data; else emitMoment(roomCode, room, event, data); };
@@ -1085,8 +1103,8 @@ function aedBeforeKeep(roomCode, room, turn, toBeat, opts) {
     if (active.length < 2) return false;
     let now = aedChance(turn.dice, toBeat, opts);
     let options = [];
-    if (run.sorcery >= METAMAGIC.costs.quickened) options.push({ trick: 'quickened', gain: Strategy.chanceAfterKeep(turn.dice, [], toBeat, opts) - now });
-    if (run.sorcery >= METAMAGIC.costs.empowered) {
+    if (aedMayCast(room, 'quickened')) options.push({ trick: 'quickened', gain: Strategy.chanceAfterKeep(turn.dice, [], toBeat, opts) - now });
+    if (aedMayCast(room, 'empowered')) {
         let pick = null;
         for (let d of active) {
             let total = 0;
@@ -1096,7 +1114,8 @@ function aedBeforeKeep(roomCode, room, turn, toBeat, opts) {
         }
         if (pick) options.push(pick);
     }
-    let choice = options.filter(o => o.gain >= METAMAGIC.minGain[o.trick]).sort((a, b) => b.gain - a.gain)[0];
+    // (a trick not yet tried this fight first)
+    let choice = options.filter(o => o.gain >= aedNeedGain(room, o.trick)).sort((a, b) => aedTried(room, a.trick) - aedTried(room, b.trick) || b.gain - a.gain)[0];
     if (!choice) return false;
     turn.magicAt = turn.rollCount;
     let cast = castMetamagic(roomCode, room, choice.trick);
@@ -1118,7 +1137,7 @@ function aedBeforeKeep(roomCode, room, turn, toBeat, opts) {
 // Returns true if he cast it (he then decides his keep again, with the copy).
 function aedTwin(roomCode, room, turn, toBeat, opts, toLock) {
     let run = room.tavernRun;
-    if (!aedSeated(room) || turn.finalized || turn.maxThrows || turn.magicAt === turn.rollCount || (run.sorcery || 0) < METAMAGIC.costs.twinned) return false;
+    if (!aedSeated(room) || turn.finalized || turn.maxThrows || turn.magicAt === turn.rollCount || !aedMayCast(room, 'twinned')) return false;
     let loose = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !toLock.includes(d.id));
     let keeps = turn.dice.filter(d => toLock.includes(d.id));
     if (!loose.length || !keeps.length) return false;
@@ -1129,7 +1148,7 @@ function aedTwin(roomCode, room, turn, toBeat, opts, toLock) {
         let gain = aedChance(turn.dice.map(x => (x.id === to.id ? { ...x, value: from.value } : x)), toBeat, opts) - now;
         if (!pick || gain > pick.gain) pick = { gain, from, to };
     }
-    if (!pick || pick.gain < METAMAGIC.minGain.twinned) return false;
+    if (!pick || pick.gain < aedNeedGain(room, 'twinned')) return false;
     turn.magicAt = turn.rollCount;
     let cast = castMetamagic(roomCode, room, 'twinned', undefined, `His ${pick.from.value} is copied onto another of his dice.`);
     emitState(roomCode);
@@ -1984,6 +2003,9 @@ function createTavernRun() {
 
 function getRandomAbilityRound(encounter) {
     if (!encounter || !encounter.ability) return 0;
+    // Jaguar's Smooth Talk belongs to his first phase (4 and 3 lives): ready from the first round, or a
+    // fight that took him to 2 lives inside two rounds never saw it (13 Nov).
+    if (encounter.ability === 'jaguarPhases') return 1;
     return Math.floor(Math.random() * 3) + 1;
 }
 
@@ -3502,4 +3524,4 @@ if (require.main === module) start();
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
