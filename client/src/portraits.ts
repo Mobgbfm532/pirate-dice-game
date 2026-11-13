@@ -56,8 +56,8 @@ export const PORTRAITS: Record<string, Portrait> = {
     'Martha as Duke Morrigan': { ...seated('martha-duke.webp', [57, 33], 0.9, 718, 720, [4.5, -11.3]), seat: 1.15 },
     Klarg: seated('klarg.webp', [62, 26], 1.3, 907, 720, [10.2, -11.9]),
     Rokr: seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]),
-    // Áéd, the dragon sorcerer (the user's painting, 11 Nov): framed on his face, a first guess (the Portraits tab).
-    'Áéd': seated('aed.webp', [54, 20], 1.7, 625, 720),
+    // Áéd, the dragon sorcerer (the user's painting, 11 Nov): framed by the user in the Portraits tab (13 Nov).
+    'Áéd': seated('aed.webp', [54, 20], 1.7, 625, 720, [-10.8, -9.8]),
     'The Hangman': seated('hangman.webp', [45, 36], 1.25, 793, 720, [-10.1, -4]),
     // His second painting (27 Oct): the same pose with his cloak flowing out to the right (faded at the painting's edge); the head as in the first, so no seat.
     'Jaguar Cantona': seated('jaguar.webp', [45.7, 35.5], 2, 969, 720, [-3, 4]),
@@ -194,7 +194,10 @@ const SEATS: Record<string, SeatEdit> = {
     'Jaguar Cantona': { size: 1, shift: [-3.5, -4] },
     'Vaelin Inkhand': { size: 1, shift: [-9, 0] },
     'Stason Jatham': { size: 1, shift: [-3.5, 0] },
-    'The Ridgeler': { size: 1, shift: [-8.5, -4.5] }
+    'The Ridgeler': { size: 1, shift: [-8.5, -4.5] },
+    // 13 Nov, the user's.
+    'Áéd': { size: 1.24, shift: [-0.5, 0] },
+    Klarg: { size: 1, shift: [6.5, 0] }
 };
 Object.entries(SEATS).forEach(([key, { size, shift }]) => { PORTRAITS[key].seat = size; PORTRAITS[key].seatShift = shift; });
 export const SEATABLE = Object.keys(PORTRAITS).filter(k => PORTRAITS[k].bust && PORTRAITS[k].center && k !== 'The Molar');
