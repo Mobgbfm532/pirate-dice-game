@@ -1574,7 +1574,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {(!takeover && !moment.thonic && moment.name !== 'Shrine to the Lady' || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
-                {moment.ability === 'Smooth Talk' && fx && /knocks/.test(moment.text ?? '') && <span className="minus">−3</span>}
+                {moment.ability === 'Smooth Talk' && fx && /talks you into taking/.test(moment.text ?? '') && <span className="minus">−3</span>}
                 {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>

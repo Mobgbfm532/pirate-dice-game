@@ -1429,13 +1429,13 @@ function performEndTurn(roomCode) {
             let off = FINAL_SHIP.talkThreeWhenEmpty ?? 3;
             score = Math.max(0, score - off);
             room.players[currentId].score = score;
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Jaguar smiles. Smooth Talk knocks ${off} from your finished hand.` });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Jaguar smiles. He talks you into taking ${off} off your finished hand.` });
         }
 
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
             room.players[currentId].score = Math.max(0, score - 3);
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
-            io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.' });
+            io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.', color: "#ffb74d" });
         }
 
         if (currentId !== BOT_ID && room.players[currentId].score === 24 && room.tavernRun.stats) {
@@ -2276,7 +2276,7 @@ function beginJaguarRound(roomCode, room, encounter) {
     if (!id) {
         run.talkThree = true;
         let why = shelf.some(t => !THONICS[t].elf) ? 'He has no need of your Healing' : 'Your shelf is empty';
-        sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `${why}, so he'll talk ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
+        sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `${why}, so he'll talk you into taking ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
         return;
     }
     shelf.splice(shelf.indexOf(id), 1);
