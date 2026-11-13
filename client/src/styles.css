@@ -3201,6 +3201,8 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 @media (max-height: 500px) {
     .with-art .ability-art { left: 4vw; top: 50%; height: 90vh; max-width: 40vw; transform: translateY(-50%); animation-name: ability-art-stage-side; }
     .with-art.takeover .ability-banner { top: 50%; left: 40vw; right: 0; }
+    /* (Áéd's painting has dice at its right edge: the banner a little further over, 13 Nov) */
+    .with-art.takeover:is(.heightened-dice, .quickened-dice, .empowered-dice, .twinned-dice) .ability-banner { left: 47vw; }
 }
 @keyframes ability-art-stage-side {
     0% { opacity: 0; transform: translate(0, 15%) scale(0.88); }

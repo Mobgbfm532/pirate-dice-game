@@ -192,18 +192,21 @@ When these come in: the backdrop goes in `SALTY_SWALLOW` in `client/src/Backdrop
 
 ### Áéd, the dragon sorcerer (11 Nov; his bust painted by the user, `art/bust-aed.jpg`)
 
-**His ability painting (wanted; one for Metamagic, or one per trick)** (flat solid magenta background, like the
-other ability paintings; his violet and gold, so it matches his bust)
+**His ability painting (wanted; Unlimited Power, one painting for all four tricks, or one per trick)** (since 13 Nov on a
+flat solid **lime green** background: his violet magic and heart sit too close to magenta to cut cleanly, as with Martha's vape)
 
-- `art/ability-metamagic.jpg`: *Áéd, a smug, handsome young dragon sorcerer with spiky brown hair, in a high-collared
-  violet coat embroidered with gold dragons and star charts, silver bracers carved with runes, holding up a glowing
-  violet crystal heart in one hand; with the other hand he flicks his fingers and four small dice hang in the air before
-  him, each wrapped in a ribbon of violet and gold magic, one doubled like a reflection, one blurred as if spinning
-  fast. A confident half-smile. Waist up, dynamic pose, magic light on his face from below. On a flat solid magenta
-  background, no checkerboard, no glow or shadow on the background, crisp clean edges, no text, no lettering. + style line*
-- Per trick, if wanted (same character and style): **Heightened** (a die splitting into two, the worse face glowing),
-  **Quickened** (dice blurring with speed lines in a swirl of violet), **Empowered** (one die burning with violet fire),
-  **Twinned** (a die and its glowing mirror-copy side by side).
+- `art/ability-unlimited-power.jpg` (13 Nov, matched to his bust): *Áéd, a smug, handsome dragon sorcerer in his thirties
+  with short spiky brown hair and a confident half-smile, in a high-collared deep violet coat embroidered with gold dragons
+  and faint gold star-chart lines, amethyst clasps down the front, silver bracers carved with runes. He holds up a glowing
+  violet crystal heart in one hand; his other hand is raised with fingers spread, as if conducting, and four ivory dice
+  float in an arc before him, each wrapped in its own ribbon of violet-and-gold magic: one splitting into two ghostly
+  copies, one blurred with speed as it spins, one burning with violet fire, one beside a glowing mirror copy of itself.
+  Violet magic light on his face from below, wisps of violet smoke curling from his wrists. Waist up, dynamic pose, the
+  whole figure and all four dice inside the frame, centred. On a flat solid lime green background, no checkerboard, no glow
+  or shadow on the background, crisp clean edges, no text, no lettering. + style line*
+- Per trick, if wanted (same prompt, the four dice swapped for one): **Heightened Dice** (a die splitting into two, the
+  worse face glowing), **Quickened Dice** (dice blurring with speed lines in a violet swirl), **Empowered Dice** (one die
+  wreathed in violet fire), **Twinned Dice** (a die and its glowing mirror copy side by side).
 
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
@@ -299,7 +302,7 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | The Salty Swallow sets sail | Done (9 Nov) | `art/salty-swallow-sets-sail.jpg` → `salty-swallow-sets-sail.webp` (1584×672); the sailing scene before Klarg (`SetSail`), the trailer's "One ship." |
 | Skipper Bren and the quay | Done (9 Nov) | `art/bust-bren.jpg` → `bren.webp` (cut out); `art/salty-swallow-quay.jpg` → `salty-swallow-quay.webp` (1167×912), behind Bren's welcome (`DockScene`) |
 | Áéd's bust | Done (11 Nov) | `art/bust-aed.jpg` → `aed.webp` (`redOverBlue: 22`, so his violet heart and wisps stay); round frame `PORTRAITS['Áéd']` |
-| Áéd's ability painting | Wanted | `art/ability-metamagic.jpg` (prompt above); until then his tricks show their banner only |
+| Áéd's ability painting | Done (13 Nov) | `art/ability-unlimited-power.jpg` → `ability-unlimited-power.webp` (`cutOutFlat`'s `green: 'all'`, new 13 Nov: the green taken out everywhere, as his see-through magic encloses pockets of it), shown for Unlimited Power and each of his four tricks; his sound `UnlimitedPower.mp3` (2.5 s) plays for each trick; until then his tricks show their banner only |
 | The flying snake (Brodor's letter) | Done (10 Nov) | `art/flying-snake.jpg` → `flying-snake.webp` (`holes` behind its neck and in its tail's curl); brings Brodor's invitation (`.courier-snake`) |
 | The trailer's old-game stills | Done (11 Nov) | `client/public/art/trailer/old-start.webp`, `old-table`, `old-rolled`, `old-kept`: the real old page (`main`) at 384×780, captured headless; not from `art/` |
 | The sea die and its dial | Done (9 Nov) | `art/dice-sea.jpg` → `sea-die.webp` (six faces in a strip, `seaDie()`); `art/sea-dial.jpg` and `art/sea-dial-needle.jpg` → `sea-dial.webp`, `sea-dial-needle.webp` (`SeaDial`: `DIAL`, `NEEDLE` hold the hub and pivot) |
@@ -315,7 +318,6 @@ Every clip the user makes goes in `public/` and is wired in `client/src/sounds.t
 | Smooth Talk | Jaguar | his first phase: talks a Thonic off your shelf, or 3 off your hand |
 | The Cloak | Jaguar | his second phase: his dice hidden |
 | All In | Jaguar | his last life: the loser loses two hearts |
-| Heightened Spell, Quickened Spell, Empowered Spell, Twinned Spell | Áéd | one sound for all four, or one each |
 
 **Made up by the game for now** (synthesized in sounds.ts; a real clip could replace each):
 

@@ -25,6 +25,8 @@ const sfx = {
     // Yvesil's omen as it's told, good (Weal) or bad (Woe).
     starryForm: load('StarryForm.mp3', ABILITY_VOLUME),
     penitentStare: load('PenitentStare.mp3', ABILITY_VOLUME),
+    // Áéd's Unlimited Power (the user's, 13 Nov): one clip for each of his four tricks.
+    unlimitedPower: load('UnlimitedPower.mp3', ABILITY_VOLUME),
     yvesilWeal: load('YvesilWeal.mp3', 0.8),
     yvesilWoe: load('YvesilWoe.mp3', 0.8),
     gunshot: load('Gunshot.mp3', 1),
@@ -501,6 +503,10 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Reach Around': 'reachAround',
     'Starry Form': 'starryForm',
     'Penitent Stare': 'penitentStare',
+    'Heightened Dice': 'unlimitedPower',
+    'Quickened Dice': 'unlimitedPower',
+    'Empowered Dice': 'unlimitedPower',
+    'Twinned Dice': 'unlimitedPower',
     'The Ace of Spades': 'gunshot',
     'Back of the Head': 'sylvesterPunch',
     'Inkfire Brand': 'inkfire',

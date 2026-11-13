@@ -250,7 +250,9 @@ function despillGreen(img, mask, bg, radius) {
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         const p = y * width + x;
         if (mask[p]) continue;
-        let edge = false;
+        // (radius Infinity, `green: 'all'`: everywhere, not only by the edge; for a painting with no
+        // green of its own, whose see-through magic encloses pockets of the background: Áéd's, 13 Nov)
+        let edge = radius === Infinity;
         for (let dy = -radius; dy <= radius && !edge; dy++) for (let dx = -radius; dx <= radius; dx++) {
             const nx = x + dx, ny = y + dy;
             if (nx >= 0 && ny >= 0 && nx < width && ny < height && mask[ny * width + nx]) { edge = true; break; }
@@ -545,7 +547,7 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     if (glow) smoke = glowToAlpha(img, mask, bg, glow, smoke ?? undefined);
     for (const t of trails ? [].concat(trails) : []) smoke = unmixTrails(img, mask, bg, t, smoke ?? undefined);
     if (soften) smoke = feather(img, mask, soften, smoke ?? undefined);
-    if (green) { const a = despillGreen(img, mask, bg, despillRadius); a.forEach((v, p) => { smoke = smoke ?? new Map(); smoke.set(p, Math.min(smoke.get(p) ?? 1, v)); }); }
+    if (green) { const a = despillGreen(img, mask, bg, green === 'all' ? Infinity : despillRadius); a.forEach((v, p) => { smoke = smoke ?? new Map(); smoke.set(p, Math.min(smoke.get(p) ?? 1, v)); }); }
     else despill(img, mask, bg, despillRadius, smoke);
     applyMask(img, mask);
     smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
@@ -990,6 +992,8 @@ await cutOutFlat('ability-starry-form.jpg', 'ability-starry-form', { maxHeight: 
 await cutOutFlat('ability-penitent-stare.jpg', 'ability-penitent-stare', { maxHeight: 900 });
 await cutOutFlat('ability-ace-of-spades.jpg', 'ability-ace-of-spades', { maxHeight: 900, holes: [[315, 373]] });
 await cutOutFlat('ability-all-in.jpg', 'ability-all-in', { maxHeight: 900, minPiece: 0.0005, holes: [[823, 505], [404, 534], [923, 611]] });
+// Áéd's Unlimited Power (the user's, 13 Nov): painted on lime green, as his violet magic sits close to magenta.
+await cutOutFlat('ability-unlimited-power.jpg', 'ability-unlimited-power', { maxHeight: 900, green: 'all' });
 await cutOutFlat('ability-divine-smite.jpg', 'ability-divine-smite', { maxHeight: 900, holes: [[412, 203], [478, 164], [961, 91], [553, 186], [580, 196], [524, 176], [709, 62]], glow: { boxes: [[590, 0, 1024, 440], [680, 440, 1024, 480]] }, fade: { right: 30, bottom: 60 } }); // the hammer's gold flame stays bright and see-through; background between his arm, head and the handle
 // Thom's Thonics (28 Oct): the bottles as square item icons (shelf ~28 px, Thom's cart ~40 px, the drinking moment ~200 px)
 await cutOutFlat('thonic-healing.jpg', 'thonics/healing', { icon: 320 });

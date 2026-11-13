@@ -1473,7 +1473,13 @@ const ABILITY_ART: Record<string, string> = {
     'Smooth Talk': 'ability-smooth-talk.webp',
     'The Cloak': 'ability-the-cloak.webp',
     // 28 Oct: the Ridgeler's.
-    'Divine Smite': 'ability-divine-smite.webp'
+    'Divine Smite': 'ability-divine-smite.webp',
+    // 13 Nov: Áéd's (the user's), one painting for his Unlimited Power and each of its four tricks.
+    'Unlimited Power': 'ability-unlimited-power.webp',
+    'Heightened Dice': 'ability-unlimited-power.webp',
+    'Quickened Dice': 'ability-unlimited-power.webp',
+    'Empowered Dice': 'ability-unlimited-power.webp',
+    'Twinned Dice': 'ability-unlimited-power.webp'
 };
 Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
 // (12 Nov, the user: a few moments stuttered before they appeared fully.) Fetched isn't enough: a painting was
