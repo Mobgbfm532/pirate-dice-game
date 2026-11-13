@@ -386,7 +386,7 @@ test('Áéd sits after Rokr, his three uses a fight shown as gems', async () => 
     assert.ok(!server.getRoomState(codeOf(hero)).tavernRun.abilityLeft, 'none left: nothing to cancel');
 });
 
-test('Áéd\'s Heightened Spell: your hand\'s first throw at disadvantage, each die the worse of two', async () => {
+test('Áéd\'s Heightened Dice: your hand\'s first throw at disadvantage, each die the worse of two', async () => {
     const hero = await tavernAgainst(fightOf('aed'), 'Aed Heightened');
     const room = roomOf(hero);
     room.tavernRun.sorcery = BALANCE.metamagic.points;
@@ -400,7 +400,7 @@ test('Áéd\'s Heightened Spell: your hand\'s first throw at disadvantage, each 
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
     unpin();
     assert.deepEqual(room.turn.dice.map(d => d.value), [1, 5, 4, 3, 5, 1]);
-    assert.ok(moves.includes('Heightened Spell'));
+    assert.ok(moves.includes('Heightened Dice'));
     assert.equal(room.tavernRun.sorcery, BALANCE.metamagic.points - BALANCE.metamagic.costs.heightened);
     assert.ok(rolled.ghosts && rolled.ghosts.length >= 4, 'the lost rolls rise as ghosts');
     assert.ok(!room.turn.heightened, 'only the one throw');
@@ -434,7 +434,7 @@ test('Áéd\'s own tricks: a throw of all 1s, he throws again or rolls a die aga
     assert.ok(await until(() => room.turn && room.turn.playerId === 'BOT_MOLAR' && room.turn.rollCount >= 1, 8000), 'he threw');
     unpin();
     await waitFor(hero, 'turnState', s => s.turn && s.turn.playerId === 'BOT_MOLAR' && s.turn.finalized, 15000);
-    assert.ok(moves.some(m => m === 'Quickened Spell' || m === 'Empowered Spell'), `he used a trick: ${moves.join(', ')}`);
+    assert.ok(moves.some(m => m === 'Quickened Dice' || m === 'Empowered Dice'), `he used a trick: ${moves.join(', ')}`);
     assert.ok(room.tavernRun.sorcery >= 0 && room.tavernRun.sorcery < BALANCE.metamagic.points);
 });
 
@@ -459,7 +459,7 @@ test('Áéd has six uses a fight and saves enough to try each of his four tricks
     assert.equal(server.aedNeedGain(room, 'empowered'), -Infinity);
 });
 
-test("Áéd's Heightened Spell, not yet tried, comes in the first round", async () => {
+test("Áéd's Heightened Dice, not yet tried, comes in the first round", async () => {
     const hero = await tavernAgainst(fightOf('aed'), 'Aed Round1');
     const room = roomOf(hero);
     room.tavernRun.sorcery = BALANCE.metamagic.points;
@@ -470,7 +470,7 @@ test("Áéd's Heightened Spell, not yet tried, comes in the first round", async 
     hero.on('signatureMove', m => moves.push(m.ability));
     hero.emit('rollDice');
     await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
-    assert.ok(moves.includes('Heightened Spell'));
+    assert.ok(moves.includes('Heightened Dice'));
 });
 
 test("Jaguar's Smooth Talk is ready from his first round", async () => {

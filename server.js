@@ -233,7 +233,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🖋️',
         lives: BALANCE.opponentLives.vaelin,
         ability: 'inkfire',
-        blurb: "Vaelin Inkhand, wizard of the inky flame.",
+        blurb: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster.", // (the user's, 13 Nov)
         powers: [{ name: "Inkfire Brand", text: "For a round he burns the 6 into the table, and your dice that land on it roll again." }]
     },
     {
@@ -265,7 +265,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'astralFlood',
         boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
         drops: 'brodorsSunglasses',
-        blurb: "Brodor, Goblin-mania champion of the Madness.",
+        blurb: "Brodor, Goblin-mania champion, will send you to the Mezzanine.", // (the user's, 13 Nov)
         powers: [{ name: "Astral Flood", text: "Once he has lost a life, he floods the table with light, heals one and takes one of yours." }]
     },
     {
@@ -288,7 +288,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
         ability: 'constellationBlur',
-        blurb: "Rokr reads the dice in the stars.",
+        blurb: "Rokr, a druid of the stars who charts his own destiny.", // (the user's, 13 Nov)
         powers: [{ name: "Starry Form", text: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." }]
     },
     {
@@ -302,11 +302,11 @@ const TAVERN_ENCOUNTERS = [
         sorcery: true, // six uses a fight (his gems), each of his four tricks at least once (13 Nov, the user's; it was three, any trick)
         blurb: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", // (the user's, 11 Nov)
         powers: [
-            { name: "Metamagic", text: "Six times a fight (his gems) he twists the dice, and every one of his four tricks comes out at least once." },
-            { name: "Heightened Spell", text: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." },
-            { name: "Quickened Spell", text: "He throws again without keeping a die." },
-            { name: "Empowered Spell", text: "He rolls one of his own dice again." },
-            { name: "Twinned Spell", text: "A die he keeps is copied onto one of his loose dice." }
+            { name: "Unlimited Power", text: "Six times a fight he manipulates his dice, and every one of his four tricks comes out at least once." },
+            { name: "Heightened Dice", text: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." },
+            { name: "Quickened Dice", text: "He throws again without keeping a die." },
+            { name: "Empowered Dice", text: "He rolls one of his own dice again." },
+            { name: "Twinned Dice", text: "A die he keeps is copied onto one of his loose dice." }
         ]
     },
     {
@@ -317,7 +317,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.hangman,
         ability: 'penitentStare',
         abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
-        blurb: "The Hangman and The Ace of Spades, his revolver.",
+        blurb: "The Hangman seals your fate with the Ace of Spades.", // (the user's, 13 Nov)
         powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
     },
     {
@@ -327,8 +327,8 @@ const TAVERN_ENCOUNTERS = [
         avatar: '😎',
         lives: BALANCE.opponentLives.jaguar,
         ability: 'jaguarPhases',
-        blurb: "Jaguar Cantona has the smile, the cloak, and an extra life.",
-        powers: [{ name: "Smooth Talk", text: "He talks your Thonics off your shelf and drinks them. With your shelf empty, he talks 3 off your finished hand." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
+        blurb: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm.", // (the user's, 13 Nov)
+        powers: [{ name: "Smooth Talk", text: "He talks your Thonics off your shelf and drinks them. If your shelf is empty, he talks you into taking 3 off your finished hand." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
     }
 ];
 
@@ -570,7 +570,7 @@ function rollFaceFor(room, turn) {
     });
 }
 
-// Áéd's Heightened Spell (11 Nov): your throw at disadvantage. Each die rolls twice and you keep the
+// Áéd's Heightened Dice (11 Nov): your throw at disadvantage. Each die rolls twice and you keep the
 // worse: the one that isn't a 2 or 4 you still need, else the lower (in a cursed round the higher).
 // The other rises from the die as a ghost, like the Vexing Rapier's.
 function withHeightened(room, turn, face) {
@@ -1684,7 +1684,7 @@ function runBotDecision(roomCode) {
     }
     let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
     if (conceding) toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
-    // Áéd's Twinned Spell, as he keeps: a kept die copied onto a loose one.
+    // Áéd's Twinned Dice, as he keeps: a kept die copied onto a loose one.
     if (!conceding && encounter && encounter.sorcery && aedTwin(roomCode, room, turn, toBeat, { aceAt16, ...round }, toLock)) return;
 
     // Lock the dice one after another, and only then decide what next. (Separate timers for

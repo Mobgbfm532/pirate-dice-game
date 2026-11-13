@@ -726,7 +726,7 @@ function AbilityMarks({ state, power }: { state: GameState; power?: number }) {
     // Áéd's metamagic (11 Nov): glowing gems, one a use, in place of the ✦.
     const gems = ability === 'metamagic';
     const several = !own && !gems && (enemy.powers?.length ?? 1) > 1;
-    const label = gems ? `Metamagic: ${max - used} of ${max} uses left this fight` : several ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
+    const label = gems ? `Unlimited Power: ${max - used} of ${max} uses left this fight` : several ? `Abilities: ${max - used} of ${max} uses left this fight` : `${name}: ${max - used} of ${max} left this fight`;
     return (
         <span key={used} className={`ability-marks ${gems ? 'gems' : ''} ${used > 0 ? 'spent-now' : ''}`} title={label} aria-label={label}>
             {Array.from({ length: max }, (_, i) => <span key={i} className={i < max - used ? 'left' : 'used'}>{gems ? '◆' : '✦'}</span>)}

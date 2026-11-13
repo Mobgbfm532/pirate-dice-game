@@ -60,11 +60,11 @@
         cloak: 'The Cloak', // Jaguar's second phase
         allIn: 'All In', // and his last
         // Áéd's metamagic (11 Nov, the user's): his sorcery points, spent on four tricks.
-        metamagic: 'Metamagic',
-        heightened: 'Heightened Spell',
-        quickened: 'Quickened Spell',
-        empowered: 'Empowered Spell',
-        twinned: 'Twinned Spell'
+        metamagic: 'Unlimited Power',
+        heightened: 'Heightened Dice',
+        quickened: 'Quickened Dice',
+        empowered: 'Empowered Dice',
+        twinned: 'Twinned Dice'
     };
 
     function getAbilityMaxUses(abilityId) {

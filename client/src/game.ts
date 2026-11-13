@@ -758,7 +758,7 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare'
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In',
     // Áéd's metamagic (11 Nov)
-    'Heightened Spell', 'Quickened Spell', 'Empowered Spell', 'Twinned Spell']);
+    'Heightened Dice', 'Quickened Dice', 'Empowered Dice', 'Twinned Dice']);
 
 // The Yawning Portal's hard hitters: the whole screen shakes with their moment.
 const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Brand', 'Divine Smite']);

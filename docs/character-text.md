@@ -12,7 +12,7 @@ the short plaque under the Roll button for the abilities that last a round or a 
 Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a half-orc druid of the sea in their forties, with one arm a stump; Jorvash an old upper-class manservant: the user's descriptions).
 
 **Rokr**: Starry Form. Card: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." Plaque: "Keep blind: they show at your next throw".
-**Áéd**: Metamagic (11 Nov). Card: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash." (the user's) Metamagic: "Six times a fight (his gems) he twists the dice, and every one of his four tricks comes out at least once." Heightened Spell: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." Quickened Spell: "He throws again without keeping a die." Empowered Spell: "He rolls one of his own dice again." Twinned Spell: "A die he keeps is copied onto one of his loose dice." (On screen as each lands, only the trick's name; Twinned's line: "His 6 is copied onto another of his dice.")
+**Áéd**: Unlimited Power (11 Nov; named so 13 Nov, the user's). Card: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash." (the user's) Unlimited Power: "Six times a fight he manipulates his dice, and every one of his four tricks comes out at least once." Heightened Dice: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." Quickened Dice: "He throws again without keeping a die." Empowered Dice: "He rolls one of his own dice again." Twinned Dice: "A die he keeps is copied onto one of his loose dice." (On screen as each lands, only the trick's name; Twinned's line: "His 6 is copied onto another of his dice.")
 
 **The Hangman**: Penitent Stare (the user's name). Card: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." Moment: "Your [n] becomes [m]." (No plaque since 10 Nov: it isn't telegraphed.)
 
@@ -68,7 +68,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - Entrance card: "Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
 
 **Vaelin Inkhand**: Inkfire Brand
-- Entrance card: "Vaelin Inkhand, wizard of the inky flame. Inkfire Brand: for a round he burns the 6 into the table, and your dice that land on it roll again."
+- Entrance card: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Brand: for a round he burns the 6 into the table, and your dice that land on it roll again."
 - Badge: "Inkfire round: your dice can't land on 6"
 
 **Stason Jatham**: Vexing Rapier
@@ -79,7 +79,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - Badge: "Divine Smite: lose this round, lose two hearts"
 
 **Brodor**: Astral Flood (boss)
-- Entrance card: "Brodor, Goblin-mania champion of the Madness. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
+- Entrance card: "Brodor, Goblin-mania champion, will send you to the Mezzanine. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
 - Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" Then: "Word has spread, the Salty Swallow is soon to set sail - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow
@@ -88,14 +88,14 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - Entrance card: "Klarg, bugbear paladin and sworn enemy of Kram. Twice a fight his Reach Around snatches a 2 or 4 you need, and he keeps it for his own hand."
 
 **Rokr**: Written in the Stars
-- Entrance card: "Rokr reads the dice in the stars. Written in the Stars: for a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept."
+- Entrance card: "Rokr, a druid of the stars who charts his own destiny. Written in the Stars: for a whole turn the stars mark two faces before each throw, and dice that land on them cannot be kept."
 - (Written in the Stars, dormant since 6 Nov.) Badge: "Next throw binds [faces]", then "Bound: [faces]. Next: [faces]"
 
 **The Hangman**: Dead Eye, and The Ace of Spades (his revolver)
-- Entrance card: "The Hangman and The Ace of Spades, his revolver. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24."
+- Entrance card: "The Hangman seals your fate with the Ace of Spades. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24."
 
 **Jaguar Cantona**: Smooth Talk, then The Cloak, then All In
-- Entrance card: "Jaguar Cantona has the smile, the cloak, and an extra life. Smooth Talk: he talks your Thonics off your shelf and drinks them. At two lives, The Cloak. At his last, All In."
+- Entrance card: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm. Smooth Talk: he talks your Thonics off your shelf and drinks them. If your shelf is empty, he talks you into taking 3 off your finished hand. At two lives, The Cloak. At his last, All In."
 - Badges: "The Cloak: Jaguar throws after you, his dice hidden"; "All In: whoever loses this round loses two hearts"
 
 ## Between fights
