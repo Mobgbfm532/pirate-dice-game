@@ -2650,17 +2650,17 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
     const words = SEA_WORDS[m.id];
     const dir = Math.sign(m.shift);
     const vars = { '--dir': dir || 1, '--to': `${faceAngle(m.face)}deg` } as React.CSSProperties;
+    // (13 Nov, the user's: every roll brings its wave, held or changed. A list breaks as a wave travelling
+    // to her low side, port to the left and starboard to the right; other seas swell up in place.)
     return (
-        <div className={`sea-moment sea-${m.id} ${m.changed ? 'changed' : 'holds'}`} style={vars} role="status" aria-live="polite">
+        <div className={`sea-moment sea-${m.id} ${m.changed ? 'changed' : 'holds'}${dir ? ' side' : ''}`} style={vars} role="status" aria-live="polite">
             <span className="sea-wash" aria-hidden="true" />
-            {m.changed && <span className="sea-crest" aria-hidden="true" />}
-            {m.changed && (
-                <span className="sea-foam" aria-hidden="true">
-                    {Array.from({ length: 24 }, (_, i) => (
-                        <i key={i} style={{ left: `${(i * 41 + 7) % 100}%`, animationDelay: `${1.65 + ((i * 0.067) % 0.5)}s`, '--dx': `${((i * 29) % 60) - 30 + (dir || 1) * 40}px`, '--dy': `${70 + (i * 53) % 120}px`, '--s': `${4 + (i * 7) % 9}px` } as React.CSSProperties} />
-                    ))}
-                </span>
-            )}
+            {dir ? <SeaBreaker /> : <span className="sea-crest" aria-hidden="true" />}
+            <span className="sea-foam" aria-hidden="true">
+                {Array.from({ length: 24 }, (_, i) => (
+                    <i key={i} style={{ left: `${(i * 41 + 7) % 100}%`, animationDelay: `${1.65 + ((i * 0.067) % 0.5)}s`, '--dx': `${((i * 29) % 60) - 30 + dir * 90}px`, '--dy': `${70 + (i * 53) % 120}px`, '--s': `${4 + (i * 7) % 9}px` } as React.CSSProperties} />
+                ))}
+            </span>
             <div className="sea-card">
                 <span className="sea-kicker">The sea die</span>
                 <SeaDial faces={m.faces} face={m.face} />
@@ -2672,6 +2672,31 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+// A breaking wave for a list (13 Nov): its back rising from behind, a curling lip and a steep face on
+// the side it travels to. Drawn travelling right; CSS mirrors it for port (`--dir` -1).
+function SeaBreaker() {
+    return (
+        <span className="sea-breaker" aria-hidden="true">
+            <svg viewBox="0 0 1000 400" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="breaker-body" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stopColor="#8fe0f4" stopOpacity="0.95" />
+                        <stop offset="0.3" stopColor="#1f86b0" stopOpacity="0.94" />
+                        <stop offset="1" stopColor="#042436" stopOpacity="0.97" />
+                    </linearGradient>
+                    <linearGradient id="breaker-face" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0" stopColor="#063049" stopOpacity="0" />
+                        <stop offset="1" stopColor="#021a28" stopOpacity="0.75" />
+                    </linearGradient>
+                </defs>
+                <path d="M0,400 L0,330 C160,318 320,290 470,245 C600,205 690,140 770,80 C820,44 880,30 920,52 C952,70 958,108 932,126 C910,140 890,124 900,104 C878,136 862,196 874,262 C886,322 944,360 1000,378 L1000,400 Z" fill="url(#breaker-body)" />
+                <path d="M860,120 C850,180 852,240 874,300 C900,350 950,372 1000,380 L1000,400 L780,400 C800,320 820,200 860,120 Z" fill="url(#breaker-face)" />
+                <path d="M0,330 C160,318 320,290 470,245 C600,205 690,140 770,80 C820,44 880,30 920,52 C952,70 958,108 932,126 C910,140 890,124 900,104" fill="none" stroke="#f2fdff" strokeWidth="9" strokeLinecap="round" opacity="0.9" />
+            </svg>
+        </span>
     );
 }
 

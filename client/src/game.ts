@@ -810,12 +810,12 @@ function showSea(data: SeaRoll, hold = 0) {
     // A fog bank's foghorn as the news comes, whether it rolls in or holds (the user's clip, 10 Nov), in place of the swell.
     const fog = data.id === 'fog';
     if (fog) setTimeout(() => playSound('fogHorn'), news);
-    if (!data.changed) return;
+    // (13 Nov, the user's: a held sea brings its wave too, the swell and the heave with it.)
     setTimeout(() => {
         if (!fog) playSeaSwell(data.shift === 0 ? 'calm' : 'heel');
         heave(data.shift);
         table.seaLurchAt = performance.now();
-        table.seaLurch = data.shift - (SEA_SHIFTS[data.from ?? 'calm'] ?? 0) || 1;
+        table.seaLurch = (data.changed ? data.shift - (SEA_SHIFTS[data.from ?? 'calm'] ?? 0) : 0) || data.shift || 1;
     }, news);
 }
 socket.on('seaChange', (data: SeaRoll) => {

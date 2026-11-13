@@ -3456,6 +3456,31 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .sea-moment .sea-wash { animation: sea-wash-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both, sea-drain 0.45s ease-in calc(var(--end, 4s) - 0.45s) forwards; }
 .sea-moment.holds .sea-wash { opacity: 0.75; animation: sea-fade-in 0.4s ease-out both, sea-drain 0.4s ease-in 2.4s forwards; background: radial-gradient(ellipse at 50% 50%, rgba(10, 40, 60, 0.55), rgba(3, 16, 26, 0.75)); }
 .sea-moment.changed .sea-crest { animation: sea-crest 1.5s cubic-bezier(0.3, 0.6, 0.4, 1) 1.4s both; }
+/* (13 Nov, the user's) Every roll brings its wave, a held sea too. A sea with no list (calm, a squall, fog,
+   becalmed) swells up in place and sinks; a list breaks as a wave travelling to her low side
+   (port to the left, starboard to the right), its foam flung that way. A held sea's is a little quicker. */
+.sea-moment:not(.side) .sea-crest { animation: sea-swell 1.6s cubic-bezier(0.3, 0.6, 0.4, 1) 1.35s both; }
+.sea-moment.holds:not(.side) .sea-crest { animation-duration: 1.3s; animation-delay: 1.25s; }
+.sea-calm .sea-crest, .sea-becalmed .sea-crest, .sea-fog .sea-crest { opacity: 0.6; }
+@keyframes sea-swell {
+    0% { transform: translateY(40vh) scaleY(0.5); opacity: 0; }
+    20% { opacity: 1; }
+    50% { transform: translateY(0) scaleY(1); }
+    100% { transform: translateY(42vh) scaleY(0.6); opacity: 0; }
+}
+.sea-breaker { position: absolute; left: 50%; bottom: -8vh; width: 170vw; height: 60vh; margin-left: -85vw;
+    filter: drop-shadow(0 -6px 18px rgba(170, 235, 255, 0.45)); animation: sea-break 1.6s cubic-bezier(0.35, 0.5, 0.45, 1) 1.35s both; }
+.sea-breaker svg { display: block; width: 100%; height: 100%; transform: scaleX(var(--dir)); }
+.sea-moment.holds .sea-breaker { animation-duration: 1.35s; animation-delay: 1.2s; }
+@keyframes sea-break {
+    /* (Its curl, 92% along the drawing, crosses the screen: off the near side, the middle, off the far side.) */
+    0% { transform: translateX(calc(-150vw * var(--dir))) translateY(20vh) scaleY(0.7); opacity: 0; }
+    12% { opacity: 1; }
+    50% { transform: translateX(calc(-71vw * var(--dir))) translateY(0) scaleY(1); }
+    85% { opacity: 1; }
+    100% { transform: translateX(calc(4vw * var(--dir))) translateY(14vh) scaleY(0.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .sea-breaker { display: none; } }
 .sea-kicker { padding: 2px 14px; border: 1px solid rgba(160, 215, 240, 0.45); border-radius: 12px; background: rgba(4, 20, 30, 0.82); font-family: 'Almendra', Georgia, serif; font-size: clamp(13px, min(3.6vw, 3.4vh), 17px); letter-spacing: 3px; text-transform: uppercase; color: #cfe7f3; text-shadow: 0 1px 3px #000; }
 .sea-dial { position: relative; display: block; width: min(70vw, 310px, 44vh); aspect-ratio: 1245 / 679; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 18px rgba(120, 210, 255, 0.25)); }
 .sea-dial > img, .sea-dial > svg { position: absolute; display: block; pointer-events: none; }
