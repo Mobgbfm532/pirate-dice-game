@@ -170,3 +170,12 @@ about 34 s of music after the cold open. Options:
   their lines or new words?
 - The music: loop the intro music, a new track, cut to fit 30 s, or Jaguar's music for the second half?
 - Still upright phone only, or a landscape version too (for YouTube)?
+
+## Changed since (12 Nov, the user's)
+
+- "It's time to roll the dice." is now "Let's really roll some dice."
+- The line-up's "Fifteen rivals." heading is gone; each row rises under a line of its own: "An expanded
+  roster", "Of familiar faces", "To test your mettle against" (they were the places' names). Each line
+  sits clear of its row's tallest head.
+- In "Between fights...", the Shrine's and the hot tub's paintings show whole across the screen over a
+  blurred copy of themselves (zoomed into their middles, an upright screen lost most of them).

@@ -10,7 +10,7 @@ day they happen, with what's been built marked as it lands.
 ## Open
 
 ### The game's interface (`docs/ui-brainstorm.md`, 12 Nov)
-- Ideas 1-7 are built (12 Nov). Left: checking every button uses the one mould (idea 8). Should the turn score move into your chip after all (it would shift the table a little on phones)?
+- All eight ideas are built (12 Nov; the ability marks as gems were reverted, the "Your turn" tab taken out). Should the turn score move into your chip after all (it would shift the table a little on phones)?
 - The hearts: drawn in CSS/SVG first, or a painted heart (full, empty) from the user?
 
 ### The voyage (`docs/voyage-brainstorm.md`)
@@ -31,6 +31,9 @@ day they happen, with what's been built marked as it lands.
 - Art and sound: an ability painting (one, or one per trick) and a sound for his spells, if wanted; his dragon's colour (the card and banners use his robe's violet and gold).
 - His scales (an extra heart, or his first lost heart stays) were in the brainstorm but not asked for: leave out?
 - The balance simulator doesn't know him.
+
+### Moments without a stutter (12-13 Nov, pushed 13 Nov)
+- To feel on the phone: do the ability moments (Starry Form's hidden throw, Mind Whip's die, Inkfire's flame, any painting rising) now come in smoothly? Headless checks show no shader built during play; the phone hasn't been tried.
 
 ### The trailer, take two (`docs/trailer-brainstorm.md`, built 11 Nov)
 - The user's trailer track (11 Nov) is fitted by its sections, its boom's section played twice: to hear by ear, the join at the repeat (about 27.8 s into the trailer) and whether the shots land well on its beats.
@@ -60,12 +63,17 @@ day they happen, with what's been built marked as it lands.
 
 ### The start screen (`docs/landing-page-brainstorm.md`, 12 Nov)
 - Decluttering the phone screen (ideas 1-4 built 12 Nov): does the phone now feel clear enough, or should the painting grow more? A computer now has the title on the left and the panel on the right (12 Nov): good?
-- The first step is built (12 Nov). Next (the two doors and the Hall of Legends built 12 Nov too; the living tavern built and taken out): the wider computer layout, music on the first tap? Which, and in what order?
+- Everything there is built (12 Nov; the living tavern built and taken out) but idea 9, the tavern tune on the first tap: wanted?
 - The Hall of Legends (built 12 Nov): the plaque's place (top right) and name ("Legends"); the text on how points are earned.
 - Two doors (built 12 Nov): "Start a table" now makes a four-letter code for you. Is a hearts button you tap (2, 3, 4) clear enough for a new table's lives? The die is left out on upright phones under 740 px tall to make room: OK?
 - The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
 
 ## Settled
+- 13 Nov: the stutter fix pushed to the test site (the user's yes).
+- 12 Nov: no "Your turn" tab over your nameplate (the glow alone says it). Danhausen's ability is "You are Cursed!", Martha is "Martha/Mystery" and her ability "Disguise Self".
+- 12 Nov: the ability marks stay ✦ (gems were tried and reverted). Idea 8, one button family, built.
+- 12 Nov: the trailer's words: "Let's really roll some dice." (was "It's time to roll the dice."); the rivals' rows under "An expanded roster", "Of familiar faces", "To test your mettle against"; no "Fifteen rivals." heading; the Shrine's and the hot tub's paintings shown whole.
+- 12 Nov: the start screen's living tavern taken out; the Tavern Crawl's painting is its button; the phone screen decluttered (one painting, Play with friends behind one button).
 - 11 Nov: the trailer plays the user's own track (TrailerMusic.mp3), and Áéd is in its line-up ("Fifteen rivals.").
 - 11 Nov: Áéd's card line is "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", and his sea dial has a storm on one face: a Squall (on face 3).
 - 11 Nov (evening): Áéd's metamagic is three uses a fight, each any of the four tricks (it was 5 sorcery points with costs).

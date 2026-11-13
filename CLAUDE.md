@@ -330,7 +330,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 - **Fonts:** every speech bubble is Alegreya bold italic; it must be loaded (`1,700` in index.html's font link, 10 Nov), or the browser fakes the bold and some letters (the "Y") draw as outlines.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (11 November 2026)
+## Status (13 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -339,6 +339,17 @@ one too, or saves only last until the server restarts, which on the free tier is
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 15-fight tournament across three places, Thonics, events between fights,
   keepsakes, gold, saves after each place. 175 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+- **12-13 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
+  - the start screen rebuilt (`docs/landing-page-brainstorm.md`): a gold title and tagline over the tavern, a real
+    die, two doors (the Tavern Crawl's painting as its button, Play with friends), the Hall of Legends, the phone screen
+    decluttered, the computer's title on the left; the living tavern built and taken out;
+  - the interface (`docs/ui-brainstorm.md`, all eight ideas): hearts you can count, a Roll button that says why it
+    waits, brass header buttons, a tidier strip, no dash before a score, the turn shown by the nameplate's glow alone,
+    one button family; the names "You are Cursed!", "Martha/Mystery" and "Disguise Self";
+  - the trailer's new words and line-up lines, its Shrine and hot tub shown whole;
+  - moments without a stutter: paintings decoded ahead, the table paused under a painting's stage, every shader
+    compiled before it's needed;
+  - all pushed and on the test site (13 Nov).
 - **10-11 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the voyage's weather built: the Rogue wave (Heavy seas), the Squall, the Fog bank, Becalmed, Jaguar's dial by phase;
     the user's sounds for the wave, the wind, the foghorn and Jaguar's music; the Lady's shrine aboard;
@@ -910,7 +921,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
-1. **Play the Salty Swallow on a phone** (everything up to 11 Nov is pushed and on the test site; the ship test server
+1. **Play on the phone after the 12-13 Nov changes:** the new start screen and interface, and whether the
+   ability moments now come in without a stutter (the headless checks say no shader is built in play).
+   Then **play the Salty Swallow on a phone** (everything up to 11 Nov is pushed and on the test site; the ship test server
    starts just after Brodor, and `/fight?n=12` on its controls jumps to Áéd): the sea die and its dial, the weather (Rogue
    wave, Squall, Fog bank, Becalmed), the heave, Bren's welcome and the sailing scene, Áéd and his metamagic, the ship's new
    abilities and crew, Yvesil's and Jorvash's round portraits (first guesses; the Portraits tab), how the
