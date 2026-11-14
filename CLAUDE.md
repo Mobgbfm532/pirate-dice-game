@@ -125,6 +125,13 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   column at the left edge); phones on their side use `setViewOffset` to leave a right column
   for the Roll button.
 - **The dice faces (5 Nov, the user's call, new look, every table):** the painted sheet draws a brown line round each face, which read as a cartoon outline on the 3D die: `FACE_INSET` and `clearFaceEdge` in textures.ts cut inside it and paint the corners over.
+  **Clearer faces (14 Nov, the user's: "the greens greener and the reds redder", "make the faces clearer to see"):** the 1 a
+  purer red and the 6 a green leaning a touch to blue (the fire's light had yellowed it to olive), on every set: `clearPips`
+  in textures.ts for the ivory dice, `VIVID` in process-art.mjs for the painted sets (a textured set's painted pips keep their
+  shading); the ivory dice's black pips near-black (`DARK`), the ivory a little lighter (`#fcf4e8`), and the lacquer softer
+  (clearcoat 0.5, roughness 0.26: it glared across the faces). Before/after: `previews/pips/`. `test/shots.mjs` takes
+  `faces=1,6,1,6,6,1` to pin a throw. Klarg's bust re-cut the same day at full size (829 px tall), his soft-painted
+  shoulder clear for 110 px then fading in (`fade: { left: [start, length] }` in `fadeEdges`); `cutOutFlat` logs its trim.
 - `Dice.tsx`: dice meshes, slot placement by lock order, sphere hit targets, tap on pointer-down,
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
 - **Opponents' own dice** (3 Nov, the user's paintings; off on 4 Nov, **on again since 5 Nov**, the user's calls, `OPPONENT_DICE_ON` in

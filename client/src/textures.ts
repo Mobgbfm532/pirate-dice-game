@@ -74,9 +74,12 @@ const diceMaterialProps = { roughness: 0.32, metalness: 0.0 };
 // the pips are engraved (a height map found from the painted face, `engraving`); the edges and
 // corners are worn, the lacquer rubbed thin and the ivory duller there (`wear`).
 const DiceMaterial = lookNext ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-const lacquer = lookNext ? { roughness: 0.55, clearcoat: 0.8, clearcoatRoughness: 0.16, bumpScale: 2.2 } : {};
-// (and a touch of warm ivory under the paint, so strong light doesn't wash the faces white)
-const ivory = lookNext ? { color: new THREE.Color('#f8eedc') } : {};
+// (14 Nov, the user: "make the faces clearer to see") A softer coat: at 0.8 and 0.16 the room's lights
+// glared across the faces and over the pips.
+const lacquer = lookNext ? { roughness: 0.55, clearcoat: 0.5, clearcoatRoughness: 0.26, bumpScale: 2.2 } : {};
+// (and a touch of warm ivory under the paint, so strong light doesn't wash the faces white; lighter since
+// 14 Nov, '#f8eedc' before, so the pips stand out more)
+const ivory = lookNext ? { color: new THREE.Color('#fcf4e8') } : {};
 
 // A face's engraving, from its painting: the ivory stands high, the pips (dark, or the red 1 and
 // green 6) are cut in, with a soft bevel at their rims. Read by the material as a bump map.
@@ -119,12 +122,18 @@ function engraving(face: THREE.Texture) {
 function clearPips(ctx: CanvasRenderingContext2D, size: number) {
     const pixels = ctx.getImageData(0, 0, size, size);
     const d = pixels.data;
-    const RED = [214, 44, 36], GREEN = [58, 178, 72];
+    // (14 Nov, the user: "the greens greener and the reds redder") A purer red, and a green leaning a touch to
+    // blue: the fire's warm light yellowed the old one to olive on the table. Shared with the painted sets
+    // (VIVID in process-art.mjs).
+    const RED = [222, 14, 26], GREEN = [10, 170, 82], DARK = [20, 14, 10];
     for (let i = 0; i < d.length; i += 4) {
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const red = Math.min(1, Math.max(0, (r - Math.max(g, b) - 40) / 50));
         const green = Math.min(1, Math.max(0, (g - Math.max(r, b) - 15) / 35));
-        const k = Math.max(red, green), to = red > green ? RED : GREEN;
+        // (14 Nov) The black pips (2 to 5) were painted a soft dark brown: made near-black, for contrast.
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        const dark = Math.max(red, green) > 0 ? 0 : Math.min(1, Math.max(0, (125 - luma) / 55));
+        const k = Math.max(red, green, dark), to = dark > 0 ? DARK : red > green ? RED : GREEN;
         if (k <= 0) continue;
         for (let c = 0; c < 3; c++) d[i + c] = Math.round(d[i + c] * (1 - k) + to[c] * k);
     }

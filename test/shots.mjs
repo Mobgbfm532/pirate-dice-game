@@ -125,6 +125,8 @@ try {
         if (!args.table) await fetch(`${CONTROLS}/fight?n=${fight}`);
         await wait(6000); // the entrance and the intro card settle
         if (roll) {
+            // faces=1,6,1,6,5,3: the throw lands on these (the dev controls' /faces).
+            if (args.faces) await fetch(`${CONTROLS}/faces?f=${args.faces}`);
             await evaluate(`window.__game.actions.roll()`);
             // The throw lands and any moment it raises (an ability, its banner) has come and gone,
             // then a little longer for fades: shots of the same throw then match whatever the

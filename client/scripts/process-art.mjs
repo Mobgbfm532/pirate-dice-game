@@ -492,8 +492,10 @@ function eraseSmoke(img, mask, bg, { clear, paint }) {
 // A painting that crops the character at its own edge (Jaguar's cloak running off the right side, 27 Oct)
 // shows a hard straight line; this fades the picture out over that many px (original) towards each
 // edge named: { left, right, top, bottom }.
+// Each side: a length (the fade starts at the edge) or [start, length] (14 Nov: fully clear up to start, as Klarg's
+// soft-painted shoulder).
 function fadeEdges({ data, width, height }, { left = 0, right = 0, top = 0, bottom = 0 }) {
-    const ramp = (d, n) => { if (!n) return 1; const t = Math.min(1, d / n); return t * t * (3 - 2 * t); };
+    const ramp = (d, n) => { const [a, len] = Array.isArray(n) ? n : [0, n]; if (!len) return 1; const t = Math.min(1, Math.max(0, (d - a) / len)); return t * t * (3 - 2 * t); };
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         const k = Math.min(ramp(x, left), ramp(width - 1 - x, right), ramp(y, top), ramp(height - 1 - y, bottom));
         if (k < 1) data[(y * width + x) * 4 + 3] = Math.round(data[(y * width + x) * 4 + 3] * k);
@@ -567,7 +569,8 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     smoke?.forEach((a, p) => { img.data[p * 4 + 3] = Math.round(img.data[p * 4 + 3] * a); });
     if (fade) fadeEdges(img, fade);
     await writePreview(name, img);
-    const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());
+    const { data: trimmed, info: cut } = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer({ resolveWithObject: true }));
+    console.log(`${name}: trimmed to ${cut.width}x${cut.height} at ${-(cut.trimOffsetLeft ?? 0)},${-(cut.trimOffsetTop ?? 0)} of ${img.width}x${img.height}`);
     let sized = icon ? await squareIcon(trimmed, icon) : sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true });
     if (sharpen) sized = sharp(await sized.png().toBuffer()).sharpen({ sigma: sharpen });
     mkdirSync(path.dirname(path.join(OUT, name)), { recursive: true });
@@ -751,7 +754,9 @@ const LIFT_FOR = { stason: { power: 0.7, vivid: 1 }, ridgeler: { power: 0.7, viv
 // the plain sets they came out flat blocks of colour. These keep the painting's fine texture (grain: how much)
 // and their painted pips; only the painting's broad lighting is still taken out.
 const TEXTURED = { klarg: { grain: 1 }, rokr: { grain: 1 }, aed: { grain: 1 }, hangman: { grain: 1 }, jaguar: { grain: 0.6 } }; // (Jaguar's rosettes at full strength crowded his pearl pips)
-const CLEAN = { detail: 0.35, radius: 40 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
+const CLEAN = { detail: 0.35, radius: 40 };
+// The 1's red and the 6's green on every set (14 Nov; textures.ts's clearPips uses the same for the ivory dice).
+const VIVID = { red: [222, 14, 26], green: [10, 170, 82], amount: 0.85 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
 const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186] }; // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
 async function diceSheets() {
@@ -904,6 +909,25 @@ async function diceSheets() {
                 const v = lift(even);
                 for (let c = 0; c < 3; c++) face[i * 3 + c] = Math.round(face[i * 3 + c] * (1 - k) + v[c] * k);
             }
+            // (14 Nov, the user: "the greens greener and the reds redder") The 1's pip and the 6's pips pushed to
+            // the game's own red and green (VIVID, as textures.ts's clearPips paints the ivory dice). Redrawn pips
+            // take it as their colour; a textured set's painted pips keep their shading: each pixel inside a pip
+            // that leans red (the 1) or green (the 6) takes the colour at its own brightness.
+            const vivid = n === 0 && !RING_ONE[id] ? VIVID.red : n === 5 ? VIVID.green : null;
+            if (vivid && !textured) pipColours.forEach((colour, p) => { pipColours[p] = colour.map((v, c) => Math.round(v * (1 - VIVID.amount) + vivid[c] * VIVID.amount)); });
+            if (vivid && textured) {
+                const luma = rgb => 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+                const want = luma(vivid);
+                for (const b of centres) for (let y = Math.max(0, Math.floor(b.y - r * 1.05)); y <= Math.min(F - 1, b.y + r * 1.05); y++) for (let x = Math.max(0, Math.floor(b.x - r * 1.05)); x <= Math.min(F - 1, b.x + r * 1.05); x++) {
+                    if (Math.hypot(x - b.x, y - b.y) > r * 1.05) continue;
+                    const i = (y * F + x) * 3, px = [face[i], face[i + 1], face[i + 2]];
+                    const lean = n === 0 ? px[0] - Math.max(px[1], px[2]) : px[1] - Math.max(px[0], px[2]);
+                    const k = Math.min(1, Math.max(0, (lean - 3) / 22)) * VIVID.amount; // (the Hangman's dark green pips lean only a little)
+                    if (k <= 0) continue;
+                    const scale = Math.min(1.3, Math.max(0.75, luma(px) / want)); // (a dark painted pip lifted, so it reads on a dark face)
+                    for (let c = 0; c < 3; c++) face[i + c] = Math.round(px[c] * (1 - k) + Math.min(255, vivid[c] * scale) * k);
+                }
+            }
             // (13 Nov) A pip close to its face's colour (Brodor's gold studs on gold) gets a dark rim, like a stud's.
             const surface = lift(mid);
             pipColours.forEach((colour, p) => {
@@ -928,7 +952,7 @@ async function diceSheets() {
                 if (d > R + 1) continue;
                 const edge = Math.min(1, Math.max(0, R + 0.5 - d));
                 const shade = 1 - 0.25 * Math.max(0, (x + y - F) / (2 * R)); // lit from the top left
-                const to = (d < R * 0.72 ? [222, 32, 40] : ringColour).map(c => c * shade);
+                const to = (d < R * 0.72 ? VIVID.red : ringColour).map(c => c * shade);
                 const i = (y * F + x) * 3;
                 for (let c = 0; c < 3; c++) face[i + c] = Math.round(face[i + c] * (1 - edge) + to[c] * edge);
             }
@@ -1005,7 +1029,7 @@ if (!ONLY) {
     await slotPlates();
 }
 await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches: [[684, 300, 760, 700, 85, 110, 190], [668, 555, 760, 705, 255]] });
-await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[1000, 310]], fade: { left: 70 }, choke: 2, sharpen: 0.8 }); // (background between the die and his fingers) // his second painting (13 Nov), on magenta; his cloak runs off the painting's left edge (the first: bust-klarg-v1.jpg, cut with cutOut)
+await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[1000, 310]], maxHeight: 896, fade: { left: [110, 160] }, choke: 2, sharpen: 0.8 } /* (14 Nov: full size; his soft-painted shoulder clear for 110 px, then fading in) */); // (background between the die and his fingers) // his second painting (13 Nov), on magenta; his cloak runs off the painting's left edge (the first: bust-klarg-v1.jpg, cut with cutOut)
 await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
 await cutOutFlat('bust-jaguar.jpg', 'jaguar', { holes: [[634, 46], [478, 329]], fade: { right: 140 } }); // his second painting (27 Oct), on a flat background (the first: bust-jaguar-v1.jpg, a checkerboard); his cloak runs off the painting's right edge, so it fades out there
