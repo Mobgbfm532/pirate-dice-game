@@ -1029,7 +1029,7 @@ if (!ONLY) {
     await slotPlates();
 }
 await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches: [[684, 300, 760, 700, 85, 110, 190], [668, 555, 760, 705, 255]] });
-await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[1000, 310]], maxHeight: 896, fade: { left: [110, 160] }, choke: 2, sharpen: 0.8 } /* (14 Nov: full size; his soft-painted shoulder clear for 110 px, then fading in) */); // (background between the die and his fingers) // his second painting (13 Nov), on magenta; his cloak runs off the painting's left edge (the first: bust-klarg-v1.jpg, cut with cutOut)
+await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[975, 335]], maxHeight: 896, fade: { left: 60 }, choke: 1, sharpen: 0.5 }); // his third painting (14 Nov, the user's: a crisp cloak), on magenta, the cloak running off its left edge (the second, soft-shouldered: bust-klarg-v2.jpg; the first: bust-klarg-v1.jpg)
 await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
 await cutOutFlat('bust-jaguar.jpg', 'jaguar', { holes: [[634, 46], [478, 329]], fade: { right: 140 } }); // his second painting (27 Oct), on a flat background (the first: bust-jaguar-v1.jpg, a checkerboard); his cloak runs off the painting's right edge, so it fades out there
