@@ -230,6 +230,8 @@ export interface Snapshot {
     celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
     devil: { at: number; who: string | null } | null; // three 6s landed (who: when it isn't you)
     klargCaughtAt: number; // Klarg's paw got back to his side with your die (his nameplate shows it)
+    // A hidden hand (a fog bank, Jaguar's Cloak) shown on his nameplate with the round's result (14 Nov, the user's).
+    revealed: { score: number; busted: boolean; at: number } | null;
     filmPause: boolean; // the intro film covers the table: it isn't drawn meanwhile
 }
 
@@ -303,6 +305,7 @@ let snapshot: Snapshot = {
     celebration: null,
     devil: null,
     klargCaughtAt: 0,
+    revealed: null,
     filmPause: false
 };
 
@@ -942,7 +945,7 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
 
 // After the round's last roll has played out. Not when the round ended a Tavern Crawl fight or
 // the run (ends): the fight summary (or the run-over screen) comes up instead.
-socket.on('roundResult', (data: { message: string; ends?: boolean; results?: RoundResultRow[] }) => {
+socket.on('roundResult', (data: { message: string; ends?: boolean; results?: RoundResultRow[]; reveal?: { score: number; busted: boolean } }) => {
     if (data.ends) return;
     // A multiplayer table: a card with everyone's score (the user's call, 4 Nov).
     if (data.results) {
@@ -955,7 +958,19 @@ socket.on('roundResult', (data: { message: string; ends?: boolean; results?: Rou
         return;
     }
     // (At a multiplayer table the cards' hearts tell it: no words, but the same pause.)
-    enqueueMoment(() => { if (!multiplayerTable()) showToast('Round result', data.message, 'result', RESULT_SHOW_MS); }, RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
+    enqueueMoment(() => {
+        if (!multiplayerTable()) showToast('Round result', data.message, 'result', RESULT_SHOW_MS);
+        // A hand that was hidden (a fog bank, Jaguar's Cloak): its score on his nameplate while the result shows.
+        if (data.reveal) {
+            const at = performance.now();
+            update({ revealed: { ...data.reveal, at } });
+            setTimeout(() => { if (snapshot.revealed?.at === at) update({ revealed: null }); }, RESULT_SHOW_MS + 400);
+        }
+    }, RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
+});
+
+socket.on('fightSaved', (data: { save: string; name: string; next: string; place: string; purse: number }) => {
+    actions.saveAndLeave(data.save, { name: data.name, next: data.next, place: data.place, purse: data.purse });
 });
 
 socket.on('displayMessage', (data: { text: string }) => {
@@ -1149,6 +1164,12 @@ export const actions = {
     saveAndLeave(save: string, info: Omit<SavedRun, 'save' | 'at'>) {
         writeSavedRun({ save, ...info, at: Date.now() });
         actions.leave();
+    },
+    // The menu's Save (14 Nov, the user's): the server seals the run as the current fight began (between
+    // fights, as the next one will begin); it's kept on this device and the table is left ('fightSaved').
+    saveFight() {
+        playSound('click');
+        socket.emit('saveFight');
     },
     // Martha's mask: before you roll, wear Danhausen's Curse or the Duke's Devil for the round.
     wearMask(kind: 'curse' | 'devil') {

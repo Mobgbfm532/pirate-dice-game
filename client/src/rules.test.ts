@@ -35,6 +35,23 @@ describe('assignSlots', () => {
         const slots = assignSlots([{ id: 0, value: 0, status: 'lockedThisTurn', hidden: true }], new Map([[0, 1]]));
         expect(slots.get(0)).toBe(2);
     });
+
+    it('spreads six hidden dice over all six slots, the fifth and sixth into the 2 and 4 slots', () => {
+        const hidden = (id: number): Die => ({ id, value: 0, status: 'permanentlyLocked', hidden: true });
+        const order = new Map([0, 1, 2, 3, 4, 5].map(id => [id, id + 1] as [number, number]));
+        const five = assignSlots([0, 1, 2, 3, 4].map(hidden), order);
+        const six = assignSlots([0, 1, 2, 3, 4, 5].map(hidden), order);
+        expect([0, 1, 2, 3, 4].map(id => five.get(id))).toEqual([2, 3, 4, 5, 0]);
+        expect([0, 1, 2, 3, 4, 5].map(id => six.get(id))).toEqual([2, 3, 4, 5, 0, 1]);
+    });
+
+    it('uses the 4 slot for a fifth die of a hand with a 2 and no 4 (dust)', () => {
+        const order = new Map([0, 1, 2, 3, 4, 5].map(id => [id, id + 1] as [number, number]));
+        const slots = assignSlots([die(0, 2), die(1, 6), die(2, 6), die(3, 5), die(4, 5), die(5, 1)], order);
+        expect(slots.get(0)).toBe(0);
+        expect(slots.get(5)).toBe(1);
+        expect([1, 2, 3, 4].map(id => slots.get(id))).toEqual([2, 3, 4, 5]);
+    });
 });
 
 describe('perfectHand', () => {

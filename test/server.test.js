@@ -793,59 +793,95 @@ test("the omens and Notaro Red work in a fight", async () => {
     }
 });
 
-test("Jaguar's Smooth Talk drinks a Thonic off your shelf (his Healing heals him); Clear-Eye stops it", async () => {
-    for (const clear of [false, true]) {
-        const hero = await tavernAgainst(fightOf('jaguar'), `JagTalk-${clear}`);
-        const room = roomOf(hero);
-        room.players.BOT_MOLAR.lives = 3; // of his 4
-        room.tavernRun.shelf = clear ? ['clearEye', 'healing', 'fizzy'] : ['healing', 'fizzy'];
-        if (clear) { hero.emit('drinkThonic', 0); await sleep(40); }
-        const talk = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
-        server.beginTavernRound(codeOf(hero), room);
-        const m = await talk;
-        assert.equal(room.tavernRun.jaguarPhase, 'talk');
-        if (clear) {
-            assert.equal(m.cancelled, true);
-            assert.deepEqual(room.tavernRun.shelf, ['healing', 'fizzy']);
-            assert.equal(room.players.BOT_MOLAR.lives, 3);
-        } else {
-            assert.match(m.text, /talks your Healing Thonic off your shelf and drinks it and heals a life/);
-            assert.deepEqual(room.tavernRun.shelf, ['fizzy']);
-            assert.equal(room.players.BOT_MOLAR.lives, 4);
-        }
-    }
-    // An empty shelf: he talks 3 off your finished hand instead.
-    const hero = await tavernAgainst(fightOf('jaguar'), 'JagEmpty');
+// Jaguar's Smooth Talk (14 Nov, the user's): a Thonic as the round after one he lost a heart in begins; 3 less at a round's end with your shelf empty.
+async function jaguarRound(name, { mine, his, mineDust = false, hisDust = false, shelf = [], lives = 4 }) {
+    const hero = await tavernAgainst(fightOf('jaguar'), name);
     const room = roomOf(hero);
-    room.players.BOT_MOLAR.lives = 4; // (a fresh test table still has the first opponent's one)
-    room.tavernRun.shelf = [];
-    server.beginTavernRound(codeOf(hero), room);
-    assert.equal(room.tavernRun.talkThree, true);
-    const scored = nextState(hero, st => st.currentTurnId !== hero.id);
-    await playHand(hero, room, [2, 4, 6, 5, 5, 5]); // 21
-    assert.equal((await scored).players[hero.id].score, 18);
-});
+    room.players.BOT_MOLAR.name = 'Jaguar Cantona';
+    room.players.BOT_MOLAR.lives = lives;
+    room.tavernRun.shelf = [...shelf];
+    if (shelf.includes('clearEye')) { hero.emit('drinkThonic', shelf.indexOf('clearEye')); await sleep(40); }
+    room.tavernRun.jaguarPhase = 'talk';
+    room.roundPlayers = [hero.id, 'BOT_MOLAR'];
+    Object.assign(room.players[hero.id], { score: mineDust ? 0 : mine, busted: mineDust });
+    Object.assign(room.players.BOT_MOLAR, { score: hisDust ? 0 : his, busted: hisDust });
+    return { hero, room };
+}
 
-test("Jaguar's Smooth Talk at full hearts leaves your Healing: another Thonic if there is one, else 3 off your hand", async () => {
-    // Healing and Fizzy, his hearts full: he takes the Fizzy.
-    let hero = await tavernAgainst(fightOf('jaguar'), 'JagFullMixed');
-    let room = roomOf(hero);
+test("Jaguar's Smooth Talk: nothing as a round begins unless he lost a heart in the last", async () => {
+    const hero = await tavernAgainst(fightOf('jaguar'), 'JagQuiet');
+    const room = roomOf(hero);
     room.players.BOT_MOLAR.lives = 4;
     room.tavernRun.shelf = ['healing', 'fizzy'];
-    let talk = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
     server.beginTavernRound(codeOf(hero), room);
-    assert.match((await talk).text, /Fizzy/);
+    assert.equal(room.tavernRun.jaguarPhase, 'talk');
+    assert.deepEqual(room.tavernRun.shelf, ['healing', 'fizzy']);
+    assert.ok(!room.tavernRun.abilityUsed.jaguarPhases, 'not telegraphed');
+});
+
+test("Jaguar's Smooth Talk: after a round he loses a heart, he demands a Thonic as the next begins", async () => {
+    // Losing 18 to your 20, Fizzy and Healing on your shelf: nothing at the round's end; he loses a heart,
+    // and as the next round begins he takes your Healing and heals it.
+    let { hero, room } = await jaguarRound('JagHeal', { mine: 20, his: 18, shelf: ['fizzy', 'healing'] });
+    let atEnd = false;
+    hero.on('signatureMove', m => { if (m.ability === 'Smooth Talk' && /scoring/.test(m.text)) atEnd = true; });
+    let move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    assert.equal(room.players.BOT_MOLAR.lives, 3, 'he loses the heart');
+    assert.equal(room.tavernRun.talkNext, room.tavernRun.encounterIndex);
+    assert.match((await move).text, /demands your Healing Thonic and drinks it and heals a heart/);
+    assert.equal(atEnd, false);
+    assert.deepEqual(room.tavernRun.shelf, ['fizzy']);
+    assert.equal(room.players.BOT_MOLAR.lives, 4, 'healed');
+    // No Healing: a Steady, and his dust that round scores as it lies.
+    ({ hero, room } = await jaguarRound('JagSteady', { mine: 20, his: 18, shelf: ['fizzy', 'steady'] }));
+    room.tavernRun.talkNext = room.tavernRun.encounterIndex;
+    move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    server.beginTavernRound(codeOf(hero), room);
+    assert.match((await move).text, /Steady.*dust this round scores as it lies/);
+    assert.equal(room.tavernRun.jaguarSteady, true);
+    assert.deepEqual(room.tavernRun.shelf, ['fizzy']);
+    // A round he didn't lose a heart in: nothing as the next begins.
+    ({ hero, room } = await jaguarRound('JagAhead', { mine: 17, his: 20, shelf: ['healing'] }));
+    server.evaluateTavernRound(codeOf(hero));
+    await sleep(120);
+    assert.ok(!room.tavernRun.abilityUsed.jaguarPhases);
     assert.deepEqual(room.tavernRun.shelf, ['healing']);
-    // Only Healing, his hearts full: he leaves them and talks 3 off your hand.
-    hero = await tavernAgainst(fightOf('jaguar'), 'JagFullHealing');
-    room = roomOf(hero);
-    room.players.BOT_MOLAR.lives = 4;
-    room.tavernRun.shelf = ['healing', 'healing'];
-    talk = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    // A Clear-Eye stops it.
+    ({ hero, room } = await jaguarRound('JagClear', { mine: 20, his: 18, shelf: ['clearEye', 'healing'] }));
+    room.tavernRun.talkNext = room.tavernRun.encounterIndex;
+    move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
     server.beginTavernRound(codeOf(hero), room);
-    assert.match((await talk).text, /no need of your Healing/);
-    assert.deepEqual(room.tavernRun.shelf, ['healing', 'healing']);
-    assert.equal(room.tavernRun.talkThree, true);
+    assert.equal((await move).cancelled, true);
+    assert.deepEqual(room.tavernRun.shelf, ['healing']);
+});
+
+test("Jaguar's Smooth Talk with your shelf empty: 3 less at the round's end, only when it saves him", async () => {
+    let { hero, room } = await jaguarRound('JagThree', { mine: 20, his: 18 });
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    assert.equal((await move).extra, '20 → 17');
+    assert.equal(room.players[hero.id].lives, 2);
+    assert.equal(room.players.BOT_MOLAR.lives, 4);
+    // Not when 3 less wouldn't save him, nor with a Thonic on your shelf (an Elf Bar doesn't count).
+    for (const [name, opts] of [['JagShort', { mine: 24, his: 18 }], ['JagShelf', { mine: 20, his: 18, shelf: ['fizzy'] }], ['JagElf', { mine: 24, his: 18, shelf: ['purpleHaze'] }]]) {
+        ({ hero, room } = await jaguarRound(name, opts));
+        let seen = null;
+        hero.on('signatureMove', m => { if (m.ability === 'Smooth Talk' && /scoring/.test(m.text)) seen = m; });
+        server.evaluateTavernRound(codeOf(hero));
+        await sleep(80);
+        assert.equal(seen, null, name);
+    }
+});
+
+test("a hidden hand (Jaguar's Cloak, a fog bank) is shown with the round's result", async () => {
+    const { hero, room } = await jaguarRound('JagReveal', { mine: 20, his: 21, lives: 2 });
+    room.tavernRun.jaguarPhase = 'cloak';
+    const result = waitFor(hero, 'roundResult', () => true, 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    const r = await result;
+    assert.deepEqual(r.reveal, { score: 21, busted: false });
+    assert.match(r.message, /^Jaguar Cantona: 21\./);
 });
 
 test('the nameplate counts every ability use: the Hangman two, Jaguar four', async () => {
@@ -2411,6 +2447,41 @@ test('a saved run carries on at the invitation to the Yawning Portal', async () 
     // The same save again: refused, and that table starts a fresh crawl.
     const again = await join('Again', 'TVRN-SV2', { resume: save });
     await waitFor(again, 'resumeFailed');
+});
+
+test("the menu's Save: back to the start of the fight against that opponent (14 Nov)", async () => {
+    // A fight under way: the save is the run as the fight began, whatever has happened since.
+    const hero = await tavernAgainst(fightOf('klarg'), 'FightSaver');
+    const room = roomOf(hero);
+    room.tavernRun.purse = 40;
+    room.tavernRun.shelf = ['healing', 'steady'];
+    room.tavernRun.nextOmen = 'blackSpot';
+    server.resetTavernEncounter(codeOf(hero)); // (the fight starts with these)
+    room.tavernRun.purse = 3;
+    room.tavernRun.shelf = [];
+    room.players.BOT_MOLAR.lives = 1;
+    hero.emit('saveFight');
+    const saved = await waitFor(hero, 'fightSaved');
+    assert.equal(saved.next, 'Klarg');
+    assert.equal(saved.purse, 40);
+    const back = await join('Someone', 'TVRN-SV4', { resume: saved.save });
+    const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).enemy && runOf(s).enemy.name === 'Klarg');
+    const run = runOf(state);
+    assert.ok(!run.interlude, 'straight into the fight');
+    assert.equal(run.purse, 40);
+    assert.deepEqual(run.shelf.map(t => t.id), ['healing', 'steady']);
+    const backRoom = roomOf(back);
+    assert.equal(backRoom.players.BOT_MOLAR.lives, server.TAVERN_ENCOUNTERS[fightOf('klarg')].lives, 'his hearts full again');
+    assert.equal(backRoom.tavernRun.omen, 'blackSpot', "what the fight was due to start with, it starts with again");
+    assert.ok(backRoom.roundPlayers.includes(back.id));
+    // Between fights: a save at the start of the next fight, as things stand now.
+    room.tavernRun.interlude = { stage: 'spots', spots: ['thom', 'shrine'] };
+    room.tavernRun.encounterIndex = fightOf('rokr');
+    room.tavernRun.purse = 25;
+    hero.emit('saveFight');
+    const between = await waitFor(hero, 'fightSaved');
+    assert.equal(between.next, 'Rokr');
+    assert.equal(between.purse, 25);
 });
 
 test('Thonics wait while dice are still tumbling', async () => {

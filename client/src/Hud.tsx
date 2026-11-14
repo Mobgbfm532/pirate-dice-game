@@ -596,6 +596,7 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
     if (!bot || (state.tavernRun && !name)) return null; // nobody at the table between fights
     const seated = state.tavernRun ? state.tavernRun.seated ?? state.tavernRun.enemy : null;
     const starting = seated ? seated.lives : state.startingLives;
+    const revealed = store.get().revealed; // (a hidden hand, shown with the round's result)
     return (
         <div className={`opponent-plate ${state.currentTurnId === BOT_ID ? 'current' : ''}`}>
             {seated && <button className="plate-info" onClick={onInfo} aria-label={`About ${seated.name}`} title={`About ${seated.name}`}>i</button>}
@@ -608,7 +609,7 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
                     <Die value={state.tavernRun.klargHand} />
                 </span>
             )}
-            <span className={`score ${scoreClass(state, BOT_ID)}`}>{scoreText(bot)}</span>
+            <span className={`score ${scoreClass(state, BOT_ID)}${revealed ? ' final revealed' : ''}`}>{revealed ? (revealed.busted ? 'Dust' : String(revealed.score)) : scoreText(bot)}</span>
         </div>
     );
 }
@@ -981,9 +982,72 @@ const PAINTED_THONICS = new Set(['healing', 'lastGasp', 'fizzy', 'secondThoughts
 
 // A Thonic's bottle: its painting, or a small bottle drawn in CSS (the colour says which).
 // The header's buttons (12 Nov): simple drawn icons in the button's ink, clearer than emoji on brass.
-function HeaderIcon({ kind }: { kind: 'back' | 'music' | 'sound' }) {
+// A Tavern Crawl that can be saved now: under way, not over, you still standing.
+function saveable(state: GameState | null, myId: string | null): boolean {
+    const run = state?.tavernRun;
+    if (!state || state.mode !== 'tavern-crawl' || !run || run.runComplete) return false;
+    const me = myId ? state.players[myId] : null;
+    return !!me && me.lives > 0;
+}
+
+// The header's menu (14 Nov, the user's): music, game sounds and Save. Save asks first: the table is left,
+// and the start screen's Continue starts the fight against this opponent (between fights: the next) afresh.
+function GameMenu({ state, myId, start, onClose, musicOff, onMusic, soundsOff, onSounds, onTune }: {
+    state: GameState | null; myId: string | null; start: 'menu' | 'save'; onClose: () => void;
+    musicOff: boolean; onMusic: () => void; soundsOff: boolean; onSounds: () => void; onTune: (() => void) | null;
+}) {
+    const [asking, setAsking] = useState(start === 'save');
+    const [saving, setSaving] = useState(false);
+    const run = state?.tavernRun;
+    const between = !!(run && (run.interlude || run.shop));
+    const who = run ? (between ? run.enemy.name : (run.seated ?? run.enemy).name) : '';
+    const canSave = saveable(state, myId);
+    useEffect(() => {
+        const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', key);
+        return () => window.removeEventListener('keydown', key);
+    }, [onClose]);
+    return (
+        <>
+            <div className="game-menu-veil" onClick={onClose} aria-hidden="true" />
+            <div className="game-menu" role="dialog" aria-label="Menu">
+                {!asking ? (
+                    <>
+                        <button className={`menu-row ${musicOff ? 'off' : ''}`} onClick={onMusic} aria-pressed={!musicOff}>
+                            <span className="menu-icon"><HeaderIcon kind="music" /></span><span className="menu-label">Music</span><span className="menu-state">{musicOff ? 'Off' : 'On'}</span>
+                        </button>
+                        <button className={`menu-row ${soundsOff ? 'off' : ''}`} onClick={onSounds} aria-pressed={!soundsOff}>
+                            <span className="menu-icon"><HeaderIcon kind="sound" /></span><span className="menu-label">Game sounds</span><span className="menu-state">{soundsOff ? 'Off' : 'On'}</span>
+                        </button>
+                        {canSave && (
+                            <button className="menu-row" onClick={() => { setAsking(true); playSound('click'); }}>
+                                <span className="menu-icon"><HeaderIcon kind="save" /></span><span className="menu-label">Save your crawl</span><span className="menu-state">›</span>
+                            </button>
+                        )}
+                        {onTune && <button className="menu-row" onClick={onTune}><span className="menu-icon">⚙</span><span className="menu-label">Tuning</span><span className="menu-state" /></button>}
+                    </>
+                ) : (
+                    <div className="menu-save">
+                        <strong>Save your crawl?</strong>
+                        <p>You'll leave the table. Next time, <em>Continue</em> on the start screen begins the fight against <b>{who}</b> from the start, with what you had {between ? 'now' : 'when it began'}.</p>
+                        <div className="menu-save-buttons">
+                            <button className="primary" disabled={saving || !canSave} onClick={() => { setSaving(true); actions.saveFight(); }}>{saving ? 'Saving…' : 'Save and leave'}</button>
+                            <button className="secondary" onClick={() => (start === 'save' ? onClose() : setAsking(false))}>Cancel</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+function HeaderIcon({ kind }: { kind: 'back' | 'music' | 'sound' | 'menu' | 'close' | 'save' }) {
     const common = { width: '1.15em', height: '1.15em', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
     if (kind === 'back') return <svg {...common}><path d="M19 12H5" /><path d="M11 6l-6 6 6 6" /></svg>;
+    if (kind === 'menu') return <svg {...common}><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>;
+    if (kind === 'close') return <svg {...common}><path d="M6 6l12 12" /><path d="M18 6L6 18" /></svg>;
+    // A scroll sealed with wax: the crawl kept for later.
+    if (kind === 'save') return <svg {...common}><path d="M6 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6z" /><path d="M6 4a2 2 0 0 0 0 4h2" /><path d="M10 9h5" /><path d="M10 12.5h5" /><circle cx="12.5" cy="17" r="2" fill="currentColor" /></svg>;
     if (kind === 'music') return <svg {...common}><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" fill="currentColor" /><circle cx="17" cy="16" r="3" fill="currentColor" /></svg>;
     return <svg {...common}><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19 6a8.5 8.5 0 0 1 0 12" /></svg>;
 }
@@ -1580,7 +1644,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {(!takeover && !moment.thonic && moment.name !== 'Shrine to the Lady' || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
-                {moment.ability === 'Smooth Talk' && fx && /talks you into taking/.test(moment.text ?? '') && <span className="minus">−3</span>}
+                {moment.ability === 'Smooth Talk' && fx && /talks you into (taking|scoring)/.test(moment.text ?? '') && <span className="minus">−3</span>}
                 {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
@@ -3096,6 +3160,9 @@ export function Hud() {
     const [infoOpen, setInfoOpen] = useState(false);
     const [tuneOpen, setTuneOpen] = useState(false);
     const [leagueOpen, setLeagueOpen] = useState(false);
+    // The header's menu (14 Nov, the user's): on a phone the music and sound switches and Save sit behind a
+    // burger; on a computer the switches stay as coins and Save has its own. 'save' opens it at Save's question.
+    const [menu, setMenu] = useState<null | 'menu' | 'save'>(null);
     const footerRef = useFooterInset();
     // Phones on their side keep every player in the column at the top left (no room for a bar).
     const sideways = useMedia('(orientation: landscape) and (max-height: 500px)');
@@ -3132,7 +3199,18 @@ export function Hud() {
                         aria-label={musicOff ? 'Music on' : 'Music off'} aria-pressed={!musicOff} title={musicOff ? 'Music is off' : 'Music is on'}><HeaderIcon kind="music" /></button>
                     <button className={`mute ${soundsOff ? 'off' : ''}`} onClick={() => { setSoundsOff(!soundsOff); setSoundsOffState(!soundsOff); }}
                         aria-label={soundsOff ? 'Game sounds on' : 'Game sounds off'} aria-pressed={!soundsOff} title={soundsOff ? 'Game sounds are off' : 'Game sounds are on'}><HeaderIcon kind="sound" /></button>
+                    {saveable(state, snap.myId) && <button className="mute" onClick={() => setMenu('save')} aria-label="Save your crawl" title="Save your crawl"><HeaderIcon kind="save" /></button>}
                 </div>
+                <div className="header-menu">
+                    <button className={`mute menu-burger ${menu ? 'open' : ''}`} onClick={() => { setMenu(menu ? null : 'menu'); playSound('click'); }}
+                        aria-label="Menu" aria-expanded={!!menu} title="Menu"><HeaderIcon kind={menu ? 'close' : 'menu'} /></button>
+                </div>
+                {menu && (
+                    <GameMenu state={state} myId={snap.myId} start={menu} onClose={() => setMenu(null)}
+                        musicOff={musicOff} onMusic={() => { setMusicOff(!musicOff); setMusicOffState(!musicOff); }}
+                        soundsOff={soundsOff} onSounds={() => { setSoundsOff(!soundsOff); setSoundsOffState(!soundsOff); }}
+                        onTune={tunePanel ? () => { setTuneOpen(!tuneOpen); setMenu(null); } : null} />
+                )}
             </header>
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}

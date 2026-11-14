@@ -328,7 +328,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.jaguar,
         ability: 'jaguarPhases',
         blurb: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm.", // (the user's, 13 Nov)
-        powers: [{ name: "Smooth Talk", text: "He talks your Thonics off your shelf and drinks them. If your shelf is empty, he talks you into taking 3 off your finished hand." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
+        powers: [{ name: "Smooth Talk", text: "Twice a fight: after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
     }
 ];
 
@@ -1358,7 +1358,7 @@ function performEndTurn(roomCode) {
     let currentId = room.roundPlayers[room.currentTurnIndex];
     let { score, busted } = room.turn.outcome;
     if (room.turn.steady && busted) { busted = false; score = Rules.scoreDice(room.turn.dice).score; } // Steady Thonic: the dice score as they lie
-    // Jaguar drank the Steady he talked off your shelf: his dust scores as it lies.
+    // Jaguar drank the Steady he demanded as the round began: his dust scores as it lies.
     if (room.mode === 'tavern-crawl' && currentId === BOT_ID && busted && room.tavernRun.jaguarSteady) {
         room.tavernRun.jaguarSteady = false;
         busted = false;
@@ -1423,15 +1423,6 @@ function performEndTurn(roomCode) {
             room.players[currentId].score = score;
             sendMoment(roomCode, 'keepsakeActivated', { id: 'notaroRed', name: 'Notaro Red', text: `Your ${was} becomes ${score}.`, who: 'Jorvash' });
         }
-        // Jaguar, when your shelf was empty: he talks 3 off your finished hand instead.
-        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.talkThree) {
-            room.tavernRun.talkThree = false;
-            let off = FINAL_SHIP.talkThreeWhenEmpty ?? 3;
-            score = Math.max(0, score - off);
-            room.players[currentId].score = score;
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Jaguar smiles. He talks you into taking ${off} off your finished hand.` });
-        }
-
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
             room.players[currentId].score = Math.max(0, score - 3);
             sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.' });
@@ -1905,7 +1896,7 @@ function scoringDice(turn) {
 // ends: this round ended a Tavern Crawl fight (or the run); the browser skips the pop-up then,
 // since the fight summary (or the run-over screen) takes its place.
 // results (a multiplayer round, 4 Nov): a line per player, best first; the 3D client draws them as a card.
-function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false, results = null) {
+function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false, results = null, reveal = null) {
     let message;
     let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
     // A player can lose two lives in one round (the Ridgeler's Divine Smite): named once.
@@ -1941,7 +1932,8 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
         message = results.map(r => `${r.name}: ${r.busted ? 'dust' : r.score}${r.lost ? ' (loses a life)' : ''}`).join('\n')
             + (tied ? `\n${tied} tied: sudden death.` : lifeLosers.length ? '' : '\nNo lives lost.');
     }
-    sendMoment(roomCode, 'roundResult', results ? { message, ends, results } : { message, ends });
+    if (reveal) message = `${reveal.name}: ${reveal.busted ? 'dust' : reveal.score}.\n${message}`;
+    sendMoment(roomCode, 'roundResult', results ? { message, ends, results } : { message, ends, ...(reveal ? { reveal: { score: reveal.score, busted: reveal.busted } } : {}) });
 }
 
 function getHumanPlayerId(room) {
@@ -2105,6 +2097,8 @@ function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
     };
 
     if (humanId && room.players[humanId]) {
+        // The run as this fight starts, for the menu's Save (14 Nov, the user's): it brings you back here.
+        room.tavernRun.fightSave = sealFightSave(room, room.players[humanId].name);
         // The Hooded Stranger's price: this one fight starts on fewer hearts.
         room.players[humanId].lives = room.tavernRun.nextFightHearts || room.startingLives;
         room.tavernRun.nextFightHearts = null;
@@ -2201,7 +2195,6 @@ function beginTavernRound(roomCode, room) {
     run.pendingDevil = null;
     run.pendingMind = null;
     run.jaguarSteady = false;
-    run.talkThree = false;
     run.cloud = false;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     setSea(roomCode, room, encounter);
@@ -2255,6 +2248,7 @@ function beginJaguarRound(roomCode, room, encounter) {
     let run = room.tavernRun;
     let bot = room.players[BOT_ID];
     if (!bot) return;
+    jaguarDemandsThonic(roomCode, room, encounter, bot); // (first: a Healing can keep him in his first phase)
     let phase = jaguarPhaseOf(bot.lives);
     let was = run.jaguarPhase;
     run.jaguarPhase = phase;
@@ -2262,28 +2256,43 @@ function beginJaguarRound(roomCode, room, encounter) {
         let humanId = room.roundPlayers.find(id => id !== BOT_ID);
         if (humanId) room.roundPlayers = [humanId, BOT_ID];
     }
-    if (phase !== 'talk') {
-        if (phase !== was) sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES[phase], text: JAGUAR_PHASE_TEXT[phase] });
-        return;
-    }
-    if (!fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
+    if (phase !== 'talk' && phase !== was) sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES[phase], text: JAGUAR_PHASE_TEXT[phase] });
+}
+
+// Smooth Talk (14 Nov, the user's): as the round after one he lost a heart in begins (a heart lost in his
+// first phase), he demands one of your Thonics and drinks it: a Healing first (it heals the heart he lost),
+// else a Steady (his dust this round scores as it lies), else any other. Never an Elf Bar. Nothing on your
+// shelf: nothing then (an empty shelf costs you 3 at a round's end instead, smoothTalkAtEnd).
+function jaguarDemandsThonic(roomCode, room, encounter, bot) {
+    let run = room.tavernRun;
+    if (run.talkNext !== run.encounterIndex) return;
+    run.talkNext = null;
     let shelf = run.shelf;
-    // (9 Nov, the user's) Down on hearts, he takes a Healing first; with none, or at full hearts,
-    // whatever else is there (a Steady first). Healing alone on your shelf and his hearts full: he
-    // leaves it, and talks 3 off your hand instead. Never an Elf Bar.
-    let hurt = bot.lives < encounter.lives;
-    let id = (hurt && shelf.includes('healing') && 'healing') || (shelf.includes('steady') && 'steady') || shelf.find(t => !THONICS[t].elf && t !== 'healing');
-    if (!id) {
-        run.talkThree = true;
-        let why = shelf.some(t => !THONICS[t].elf) ? 'He has no need of your Healing' : 'Your shelf is empty';
-        sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `${why}, so he'll talk you into taking ${FINAL_SHIP.talkThreeWhenEmpty ?? 3} off your finished hand this round.` });
-        return;
-    }
+    let id = ['healing', 'steady'].find(t => shelf.includes(t)) || shelf.find(t => THONICS[t] && !THONICS[t].elf);
+    if (!id || !fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
     shelf.splice(shelf.indexOf(id), 1);
     if (id === 'healing' && bot.lives < encounter.lives) bot.lives++;
     if (id === 'steady') run.jaguarSteady = true;
-    let what = id === 'healing' ? ' and heals a life' : id === 'steady' ? ': his dust this round counts as it lies' : '';
-    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He talks your ${THONICS[id].name} off your shelf and drinks it${what}.`, thonic: id });
+    let what = id === 'healing' ? ' and heals a heart' : id === 'steady' ? ': his dust this round scores as it lies' : '';
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He demands your ${THONICS[id].name} and drinks it${what}.`, thonic: id });
+}
+
+// Jaguar's Smooth Talk with your shelf empty (14 Nov, the user's): at the round's end, never telegraphed, like
+// the Hangman's Penitent Stare. With both hands done, in his first phase, when he'd lose the round and you have
+// no Thonic (an Elf Bar doesn't count), he talks you into scoring talkThreeWhenEmpty less, only when that wins or
+// ties him the round (never in a cursed round). (With Thonics on your shelf he takes one instead, as the next
+// round begins: beginJaguarRound.) Up to abilityUses.jaguarPhases a fight, both kinds together.
+function smoothTalkAtEnd(roomCode, room, human, enemy, cursed) {
+    let run = room.tavernRun;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    if (!encounter || encounter.ability !== 'jaguarPhases' || run.jaguarPhase !== 'talk' || cursed) return;
+    if (run.shelf.some(t => THONICS[t] && !THONICS[t].elf)) return;
+    let off = FINAL_SHIP.talkThreeWhenEmpty ?? 3;
+    if (human.busted || enemy.busted || !(human.score > enemy.score) || human.score - off > enemy.score) return;
+    if (!canUseTavernAbility(room, encounter, 'jaguarPhases') || !fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
+    let was = human.score;
+    human.score = Math.max(0, was - off);
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he talks you into scoring ${off} less. Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}` });
 }
 
 // Martha's disguise shows first, then the trick she copies (the user's call, 21 Oct).
@@ -2304,17 +2313,36 @@ const SAVE_VERSION = 2; // 2: gold a tenth of before, rising prices (23 Oct)
 const openedSaves = new Set();
 const keepsakeById = id => BOSS_DROPS[id] || TAVERN_KEEPSAKES.find(k => k.id === id);
 
-function sealSave(room, name) {
+function sealSave(room, name, extra = {}) {
     let run = room.tavernRun;
     let data = {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
         shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
-        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), puffs: run.puffs || {}, refusedDrops: run.refusedDrops || []
+        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), puffs: run.puffs || {}, refusedDrops: run.refusedDrops || [],
+        ...extra
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
     let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
     return `${body}.${sig}`;
+}
+
+// A save at the start of the fight against the opponent at encounterIndex (the menu's Save, 14 Nov, the
+// user's): sealed as that fight starts (resetTavernEncounter) or, between fights, at once for the next one.
+// It carries what the fight is due to start with (the Stranger's price, the Lady's Favour, the hot tub's
+// surge, the Bard's song, Yvesil's omen, Jorvash's Notaro Red); resumed, the fight starts afresh.
+function sealFightSave(room, name) {
+    let run = room.tavernRun;
+    return sealSave(room, name, {
+        fight: true, kramFights: run.kramFights || 0,
+        nextFightHearts: run.nextFightHearts || null, nextFightSurge: run.nextFightSurge || null, nextFightSong: run.nextFightSong || null,
+        nextOmen: run.nextOmen || null, nextNotaro: !!run.nextNotaro
+    });
+}
+
+// What a save says, for the start screen's line (already sealed: no check needed to read it).
+function saveInfo(save) {
+    try { return JSON.parse(Buffer.from(save.split('.')[0], 'base64url').toString()); } catch { return {}; }
 }
 
 // The save's contents, or null if it isn't one of ours, was changed or was opened already.
@@ -2348,6 +2376,14 @@ function restoreRun(room, data) {
     Object.entries(data.puffs || {}).forEach(([id, n]) => { if (THONICS[id] && THONICS[id].elf && Number.isInteger(n) && n > 0 && n <= ELF_BAR_PUFFS) run.puffs[id] = n; });
     run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
     run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
+    if (data.fight) {
+        run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
+        run.nextFightHearts = Number.isInteger(data.nextFightHearts) && data.nextFightHearts > 0 ? data.nextFightHearts : null;
+        run.nextFightSurge = data.nextFightSurge || null;
+        run.nextFightSong = BARD_SONGS.some(b => b.id === data.nextFightSong) ? data.nextFightSong : null;
+        run.nextOmen = OMENS[data.nextOmen] ? data.nextOmen : null;
+        run.nextNotaro = !!data.nextNotaro;
+    }
 }
 
 // After a boss, the invitation on to the next place: their keepsake is yours (Martha's Mystery
@@ -2623,8 +2659,12 @@ function evaluateTavernRound(roomCode) {
         if (!capped.busted) capped.score = Math.min(capped.score, BALANCE.devilCap);
     }
     let cursed = !!effect && effect.kind === 'curse';
+    // Was his hand hidden this round (a fog bank, Jaguar's Cloak)? The result then says what he got (14 Nov, the user's).
+    let hidden = seaFog(room) || room.tavernRun.jaguarPhase === 'cloak';
     sendFogHeld(roomCode, room);
     if (!cursed) stareTurnsRound(roomCode, room, human, enemy);
+    smoothTalkAtEnd(roomCode, room, human, enemy, cursed);
+    let reveal = hidden ? { score: enemy.busted ? 0 : enemy.score, busted: !!enemy.busted } : null;
     let valid = roundPlayers.filter(id => !room.players[id].busted);
     if (valid.length > 1) {
         let scores = valid.map(id => room.players[id].score);
@@ -2692,7 +2732,8 @@ function evaluateTavernRound(roomCode) {
         if (loser.id === humanId && room.tavernRun.stats) room.tavernRun.stats.livesLost++;
     });
 
-    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers, human.lives <= 0 || enemy.lives <= 0);
+    if (room.tavernRun.jaguarPhase === 'talk' && lifeLosersThisRound.includes(enemyId)) room.tavernRun.talkNext = room.tavernRun.encounterIndex;
+    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers, human.lives <= 0 || enemy.lives <= 0, null, reveal && { ...reveal, name: enemy.name });
 
     roundPlayers.forEach(id => {
         if (!room.players[id]) return;
@@ -2907,7 +2948,7 @@ io.on('connection', (socket) => {
             resetTavernEncounter(roomCode, false, !!devStart);
             if (devStart) devHooks.newRun(roomCode, room);
         }
-        if (resumed) {
+        if (resumed && !resumed.fight) {
             room.tavernRun.interlude = invitation(room, room.players[socket.id].name);
             room.roundPlayers = [];
         }
@@ -3266,6 +3307,20 @@ io.on('connection', (socket) => {
 
     // A boss's keepsake, at the invitation: take it (with full pockets, naming one to leave behind)
     // or leave it. Either way the invitation (and its save) is sealed afresh.
+    // The menu's Save (14 Nov, the user's): in a fight, the run as that fight started; between fights, the run
+    // now, at the start of the next fight. The browser keeps it and leaves; Continue starts that fight afresh.
+    socket.on('saveFight', () => {
+        let room = rooms[socket.roomCode];
+        if (!room || room.mode !== 'tavern-crawl' || socket.id === BOT_ID) return;
+        let run = room.tavernRun;
+        let me = room.players[socket.id];
+        if (!me || run.runComplete || me.lives <= 0 || run.encounterIndex >= TAVERN_ENCOUNTERS.length) return;
+        let between = !!(run.interlude || run.shop);
+        let save = !between && run.fightSave ? run.fightSave : sealFightSave(room, me.name);
+        let info = saveInfo(save);
+        socket.emit('fightSaved', { save, name: me.name, next: TAVERN_ENCOUNTERS[run.encounterIndex].name, place: placeOf(room).name, purse: Number(info.purse) || 0 });
+    });
+
     socket.on('claimDrop', (take, giveUp) => {
         let room = interludeAt('invitation');
         if (!room) return;

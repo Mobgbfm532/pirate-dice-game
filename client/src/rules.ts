@@ -78,6 +78,13 @@ export function assignSlots(dice: Die[], lockOrder: Map<number, number>): Map<nu
         else if (!d.hidden && d.value === 4 && !has4) { has4 = true; slots.set(d.id, 1); }
         else slots.set(d.id, nextScoring++);
     });
+    // More than four in the scoring slots (hidden dice, whose faces aren't known, or a dust hand with no
+    // 2 or 4): squeezed into four they overlapped (14 Nov, the user's). The last kept move to the 2's and
+    // the 4's slots while those are empty, the rest close up behind.
+    const scoring = [...slots.entries()].filter(([, s]) => s >= 2).sort((a, b) => a[1] - b[1]);
+    const free = [0, 1].filter(s => ![...slots.values()].includes(s));
+    scoring.splice(4, free.length).forEach(([id]) => slots.set(id, free.shift()!));
+    scoring.forEach(([id], i) => slots.set(id, 2 + i));
     return slots;
 }
 

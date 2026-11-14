@@ -145,6 +145,19 @@ function keepMainShape(img, mask, minPiece = 0.02) {
     for (let p = 0; p < mask.length; p++) if (!mask[p] && sizes[label[p]] < biggest * minPiece) mask[p] = 1;
 }
 
+// Trims `px` pixels off the kept shape's outline (14 Nov, Klarg: a soft painting's outline is a ring of
+// pixels half the character and half the background, which despill turned a muddy rim that read as blur).
+function chokeMask(mask, width, px) {
+    for (let i = 0; i < px; i++) {
+        const edge = [];
+        for (let p = 0; p < mask.length; p++) if (!mask[p]) {
+            const x = p % width;
+            if ((x > 0 && mask[p - 1]) || (x < width - 1 && mask[p + 1]) || mask[p - width] || mask[p + width]) edge.push(p);
+        }
+        edge.forEach(p => { mask[p] = 1; });
+    }
+}
+
 // Alpha from the mask, with a 1px soft edge so cut-outs don't look jagged.
 function applyMask(img, mask) {
     const { data, width, height } = img;
@@ -536,12 +549,13 @@ async function squareIcon(trimmed, size, pad = Math.round(size / 40)) {
     return sharp(fitted).extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } });
 }
 
-async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null, icon = null, redOverBlue = -Infinity, green = false } = {}) {
+async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed = 45, minBlue = 15, pocket = 14, despillRadius = 6, smokeBox = null, smokeColour = 'grey', holes = [], noSmoke = null, minPiece = 0.02, smokeMinBlue = -25, trails = null, soften = null, fade = null, glow = null, icon = null, redOverBlue = -Infinity, green = false, choke = 0, sharpen = 0 } = {}) {
     if (!wanted(name)) return;
     const img = await readRgba(file);
     const { mask, bg } = floodFlat(img, { tolerance, minRed, minBlue, pocket, holes, redOverBlue, green });
     if (noSmoke) eraseSmoke(img, mask, bg, noSmoke);
     keepMainShape(img, mask, minPiece);
+    if (choke) chokeMask(mask, img.width, choke);
     const boxes = !smokeBox ? null : Array.isArray(smokeBox[0]) ? smokeBox : [smokeBox];
     let smoke = !boxes ? null : smokeColour === 'own' ? tintVeil(img, mask, bg, boxes, tolerance) : veil(img, mask, bg, boxes, smokeMinBlue);
     if (glow) smoke = glowToAlpha(img, mask, bg, glow, smoke ?? undefined);
@@ -554,7 +568,8 @@ async function cutOutFlat(file, name, { maxHeight = 720, tolerance = 80, minRed 
     if (fade) fadeEdges(img, fade);
     await writePreview(name, img);
     const trimmed = await toSharp(img).png().toBuffer().then(b => sharp(b).trim({ threshold: 1 }).toBuffer());
-    const sized = icon ? await squareIcon(trimmed, icon) : sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true });
+    let sized = icon ? await squareIcon(trimmed, icon) : sharp(trimmed).resize({ height: maxHeight, withoutEnlargement: true });
+    if (sharpen) sized = sharp(await sized.png().toBuffer()).sharpen({ sigma: sharpen });
     mkdirSync(path.dirname(path.join(OUT, name)), { recursive: true });
     const info = await sized.webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, `${name}.webp`));
     const removed = Math.round((100 * mask.reduce((s, v) => s + v, 0)) / mask.length);
@@ -731,6 +746,11 @@ const LAYOUT_SETS = new Set(['stason', 'ridgeler', 'brodor', 'klarg', 'jaguar'])
 const PIP_LAYOUT = [[[0, 0]], [[1, -1], [-1, 1]], [[1, -1], [0, 0], [-1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
 // (13 Nov, the user's) The silver sets stay darker, like steel: lifted, they came out nearly white on the table.
 const LIFT_FOR = { stason: { power: 0.7, vivid: 1 }, ridgeler: { power: 0.7, vivid: 1 } };
+// (14 Nov, the user: "all the dice look awful on the Salty Swallow") The ship's sets are their texture (Klarg's
+// wood grain, Áéd's scales, Jaguar's rosettes, Rokr's swirling pips, the Hangman's black wood): evened out like
+// the plain sets they came out flat blocks of colour. These keep the painting's fine texture (grain: how much)
+// and their painted pips; only the painting's broad lighting is still taken out.
+const TEXTURED = { klarg: { grain: 1 }, rokr: { grain: 1 }, aed: { grain: 1 }, hangman: { grain: 1 }, jaguar: { grain: 0.6 } }; // (Jaguar's rosettes at full strength crowded his pearl pips)
 const CLEAN = { detail: 0.35, radius: 40 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
 const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186] }; // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
@@ -867,7 +887,8 @@ async function diceSheets() {
             });
             const mid = [0, 1, 2].map(c => median(Array.from({ length: F * F }, (_, i) => i).filter(i => weight[i] > 0.99 && i % 7 === 0).map(i => face[i * 3 + c])));
             // Each pip's own colour, from its middle (read before the surface is redrawn).
-            const pipColours = n === 0 && RING_ONE[id] ? [] : centres.map(b => {
+            const textured = TEXTURED[id];
+            const pipColours = (n === 0 && RING_ONE[id]) || textured ? [] : centres.map(b => {
                 const inside = [[], [], []];
                 for (let y = Math.round(b.y - r * 0.6); y <= b.y + r * 0.6; y++) for (let x = Math.round(b.x - r * 0.6); x <= b.x + r * 0.6; x++) {
                     if (Math.hypot(x - b.x, y - b.y) > r * 0.6) continue;
@@ -879,7 +900,7 @@ async function diceSheets() {
             for (let i = 0; i < F * F; i++) {
                 const k = weight[i];
                 if (k <= 0) continue;
-                const even = [0, 1, 2].map(c => mid[c] + ((w[i] > 0.05 ? broad[c][i] / w[i] : mid[c]) - mid[c]) * CLEAN.detail);
+                const even = [0, 1, 2].map(c => { const b = w[i] > 0.05 ? broad[c][i] / w[i] : mid[c]; return mid[c] + (b - mid[c]) * CLEAN.detail + (textured ? (face[i * 3 + c] - b) * textured.grain : 0); });
                 const v = lift(even);
                 for (let c = 0; c < 3; c++) face[i * 3 + c] = Math.round(face[i * 3 + c] * (1 - k) + v[c] * k);
             }
@@ -984,7 +1005,7 @@ if (!ONLY) {
     await slotPlates();
 }
 await cutOut('bust-molar.jpg', 'molar', { fireBox: [704, 60, 864, 790], patches: [[684, 300, 760, 700, 85, 110, 190], [668, 555, 760, 705, 255]] });
-await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[1000, 310]], fade: { left: 140 } }); // (background between the die and his fingers) // his second painting (13 Nov), on magenta; his cloak runs off the painting's left edge (the first: bust-klarg-v1.jpg, cut with cutOut)
+await cutOutFlat('bust-klarg.jpg', 'klarg', { holes: [[1000, 310]], fade: { left: 70 }, choke: 2, sharpen: 0.8 }); // (background between the die and his fingers) // his second painting (13 Nov), on magenta; his cloak runs off the painting's left edge (the first: bust-klarg-v1.jpg, cut with cutOut)
 await cutOut('bust-rokr.jpg', 'rokr');
 await cutOut('bust-hangman.jpg', 'hangman', { strict: true, tolerance: 9, maxChroma: 12, patches: [[655, 320, 745, 445, 22, 0, 50]] });
 await cutOutFlat('bust-jaguar.jpg', 'jaguar', { holes: [[634, 46], [478, 329]], fade: { right: 140 } }); // his second painting (27 Oct), on a flat background (the first: bust-jaguar-v1.jpg, a checkerboard); his cloak runs off the painting's right edge, so it fades out there
@@ -1039,7 +1060,7 @@ await cutOutFlat('ability-back-of-the-head.jpg', 'ability-back-of-the-head', { m
 await cutOutFlat('ability-inkfire.jpg', 'ability-inkfire', { maxHeight: 900, smokeBox: [500, 60, 800, 700], smokeMinBlue: 5 });
 await cutOutFlat('ability-flourish.jpg', 'ability-flourish', { maxHeight: 900, tolerance: 50, minPiece: 0.001, trails: { colour: [212, 178, 132], reach: 22, boxes: [[0, 0, 340, 1200], [600, 0, 896, 250], [720, 250, 896, 1200], [600, 680, 720, 1200]] }, holes: [[808, 874], [787, 444], [702, 807], [809, 394], [762, 831], [123, 905], [165, 318], [107, 896], [72, 852], [141, 372], [106, 876], [696, 276], [702, 753]] });
 await cutOutFlat('ability-written-in-the-stars.jpg', 'ability-written-in-the-stars', { maxHeight: 900 });
-await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight: 900, fade: { left: 90, right: 40, bottom: 60 } }); // his second painting (13 Nov; the first: ability-reach-around-v1.jpg, which klarg-paw.cjs cut the paw from)
+await cutOutFlat('ability-reach-around.jpg', 'ability-reach-around', { maxHeight: 900, fade: { left: 50, right: 24, bottom: 24 }, choke: 2, sharpen: 0.8 }); // his second painting (13 Nov; the first: ability-reach-around-v1.jpg, which klarg-paw.cjs cut the paw from)
 await cutOutFlat('ability-astral-flood.jpg', 'ability-astral-flood', { maxHeight: 900, soften: { boxes: [[180, 0, 850, 420]], radius: 12 }, holes: [[839, 728], [221, 751], [951, 800], [122, 857], [247, 863], [749, 890], [135, 832], [903, 819], [312, 845], [762, 832], [32, 723], [996, 741], [739, 865], [136, 792], [886, 798]] });
 await cutOutFlat('ability-smooth-talk.jpg', 'ability-smooth-talk', { maxHeight: 900, tolerance: 30, holes: [[414, 180], [294, 424]], minPiece: 0.00002, trails: [{ colour: [245, 200, 120], reach: 35, boxes: [[90, 320, 325, 660], [520, 420, 660, 525]] }, { colour: [255, 70, 60], reach: 30, boxes: [[565, 120, 640, 330]] }], fade: { bottom: 60 } }); // his golden sparkle swirls and the potion's red glow stay, see-through
 await cutOutFlat('ability-the-cloak.jpg', 'ability-the-cloak', { maxHeight: 900, holes: [[777, 496], [751, 419], [822, 326], [712, 489], [833, 808], [293, 421], [415, 180]], trails: [{ colour: [60, 78, 92], reach: 20, boxes: [[0, 540, 330, 820], [640, 380, 848, 900]] }, { colour: [20, 28, 38], reach: 20, boxes: [[0, 700, 220, 800]] }], fade: { left: 90, right: 40, bottom: 60 } }); // his smoky wisps and the thin cloak's edge stay see-through; background between the folds and the arm

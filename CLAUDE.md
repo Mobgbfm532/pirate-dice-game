@@ -129,7 +129,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   Klarg's steal motion, Rokr's constellations, the Loaded Die's old-gold die (`materials.loaded`).
 - **Opponents' own dice** (3 Nov, the user's paintings; off on 4 Nov, **on again since 5 Nov**, the user's calls, `OPPONENT_DICE_ON` in
   textures.ts, `PAINTED_DICE` lists them; on 5 Nov each pip was redrawn as a clean disc of its own colour, `LIFT` eased to 1.25 and 1.05 and `OPPONENT_DICE_GLOW` to 0.16: Frak still leans olive and Danhausen pink in the fire's light): a Tavern Crawl opponent throws their own
-  set on their turns (yours stay ivory). Since 13 Nov every opponent has one (the user's sheets for the Yawning Portal and the ship: Sylvester granite, Vaelin ink-stained ivory, Stason filigreed steel, the Ridgeler silver, Brodor gold studs with sunglasses on the 6, Klarg carved wood, Rokr ivory with swirling pips, Áéd violet scales, the Hangman black wood, its dark 1 ringed in bone, Jaguar gold with rosettes; pips whose painting runs into engraving, shine or knots are placed by the standard layout fitted to the set, `LAYOUT_SETS` and `PIP_LAYOUT` in process-art.mjs, and a pip close to its face's colour gets a dark rim; Stason's and the Ridgeler's silver is lifted less, `LIFT_FOR`, as it came out nearly white, the user's call). The Ghoul and Gourd's: McGrath's yellowed bone (made, but since 3 Nov he
+  set on their turns (yours stay ivory). Since 13 Nov every opponent has one (the user's sheets for the Yawning Portal and the ship: Sylvester granite, Vaelin ink-stained ivory, Stason filigreed steel, the Ridgeler silver, Brodor gold studs with sunglasses on the 6, Klarg carved wood, Rokr ivory with swirling pips, Áéd violet scales, the Hangman black wood, its dark 1 ringed in bone, Jaguar gold with rosettes; pips whose painting runs into engraving, shine or knots are placed by the standard layout fitted to the set, `LAYOUT_SETS` and `PIP_LAYOUT` in process-art.mjs, and a pip close to its face's colour gets a dark rim; Stason's and the Ridgeler's silver is lifted less, `LIFT_FOR`, as it came out nearly white, the user's call; since 14 Nov the ship's five keep their painting's fine texture and painted pips, `TEXTURED`, as evened out they were flat blocks of colour, "awful", the user; only the painting's broad lighting is still taken out). The Ghoul and Gourd's: McGrath's yellowed bone (made, but since 3 Nov he
   throws your ivory dice, the user's call: not in `OPPONENT_DICE`),
   Frak green with violet pips, Danhausen purple, the Duke red with gold pips, Martha mother-of-pearl
   with purple pips. The user paints `art/dice-<name>.jpg` (six faces 3 by 2, 1-2-3 then 4-5-6, on a
@@ -586,10 +586,13 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     (`encounterAbilityLeft`).
   - **Yvesil and Jorvash (6 Nov, the user's; spots on the ship; prices and chances first guesses in `interlude`; the user's busts since 9 Nov, `bust-yvesil.jpg` and `bust-jorvash.jpg`, `SPOT_PORTRAITS`; the omens' and refreshments' icons too, `art/keepsake-<id>.jpg`, with `holes` for their trapped magenta):** Yvesil the oracle (`yvesilPick`, `yvesilPrice` 8, rising, `omenGoodChance` 67%): an omen for the next fight, `OMENS`: Fair Winds and The Albatross (your 1s, or 6s, roll again on your first throw of each round, in `rollFaceFor`), Following Sea (your first dust scores as it lies), The Black Spot (hands score 1 less). Jorvash the manservant (`jorvashPick`, `jorvashPrice` 8, rising), one of two for the next fight, `REFRESHMENTS`: Notaro Red (your first hand that counts scores 2 more, at most 24) or Water of the Ebon Shield (one extra heart). Both show on your strip. **Thom has stowed away:** aboard, his line is one of three, drawn per fight (`THOM_SHIP_LINES`). So the ship's spots are Thom, the Shrine, Jorvash and Yvesil (Johnny stays ashore, 9 Nov). No random events aboard either: no thief, no Hooded Stranger, straight to the spots (`noEvents` on `PLACES.saltySwallow`, 9 Nov, the user's); where a scene's button says where you are, aboard it's "Look around the ship". Yvesil's staff glow is cut soft and see-through (`glow` with `colour: 'cyan'` in process-art.mjs: only a glow with plenty of blue, so her green hand stays as painted), and on an upright phone she stands bigger, her far arm running off the left, her speech bubble just above her head (9 Nov).
   - **Jaguar** (`jaguarPhases`, `beginJaguarRound`, `run.jaguarPhase` in the state): **Smooth Talk** (3+
-    lives; twice a fight, once a round; ready from his first round since 13 Nov, as `getRandomAbilityRound` could hold it to round 3 and a quick fight to 2 hearts never saw it) talks a Thonic off your shelf and drinks it (Healing heals him,
-    Steady counts his dust as it lies, `jaguarSteady`); an empty shelf: 3 off your finished hand
-    (`talkThree`). Since 9 Nov (the user's) he takes a Healing only when he's down on hearts, else any other Thonic
-    (Steady first); with only Healing on your shelf and his hearts full he leaves it and talks 3 off your hand. **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn). (13 Nov: throwing first with his hand hidden until yours was done, as in a fog bank, was built and taken back out the same day, the user's call; the simulator had a sensible player at about 15% against him either way.)
+    lives; twice a fight; 14 Nov, the user's): after a round he loses a heart in his first phase (`run.talkNext`), as
+    the next round begins he demands one of your Thonics and drinks it (`jaguarDemandsThonic`, before his phase is
+    worked out, so a Healing can keep him out of the Cloak): a Healing first (heals him), else a Steady (his dust that
+    round scores as it lies, `jaguarSteady`), else any other; never an Elf Bar. With no Thonic on your shelf, at a
+    round's end, never telegraphed, like the Hangman's Stare (`smoothTalkAtEnd`): 3 off your finished hand
+    (`talkThreeWhenEmpty`), only when that wins or ties him the round, never in a cursed round. (Until 14 Nov he drank
+    one as each round began, whatever had happened.) **The Cloak** (2 lives): he throws after you, his dice hidden (`turn.cloaked`, viewTurn). (13 Nov: throwing first with his hand hidden until yours was done, as in a fog bank, was built and taken back out the same day, the user's call; the simulator had a sensible player at about 15% against him either way.)
     **All In** (his last): the round's loser loses two hearts. Each phase has its banner and badge.
   - Tests pin the dice with `pinFaces` (server.test.js). Starry Form is the old Constellation Blur code brought back (6 Nov); Written in the Stars' and Dead Eye's code is dormant.
 - **The sea (9 Nov, the user's; step 1 of the voyage, brainstormed the same day):** aboard the Salty
@@ -761,6 +764,16 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `localStorage.tavernSave` and the start screen offers "Continue your crawl" (`actions.resume`,
   `joinTavern` with `resume`). A save opens once (`openedSaves`, in memory) and comes back at the
   invitation with a fresh save; an edited or used one sends `resumeFailed` and a fresh crawl.
+- **The header's menu and saving at any opponent (14 Nov, the user's):** on a phone (up to 600 px wide, or on its
+  side) the music and sound coins give way to a burger (`.header-menu`, `GameMenu` in Hud): Music, Game sounds,
+  "Save your crawl" (and Tuning with `?tune=1`); a computer keeps the coins with a third, Save. Save asks first, then
+  `actions.saveFight` → the server's `saveFight` → `fightSaved` → kept like the invitation's save and the table left.
+  In a fight the save is the run as that fight began (`run.fightSave`, sealed by `sealFightSave` at the top of
+  `resetTavernEncounter`, before the fight spends what it was due: the Stranger's price, the Lady's Favour, the hot
+  tub's surge, the Bard's song, Yvesil's omen, Notaro Red); between fights it's sealed then, for the next opponent.
+  Continue starts that fight afresh (`fight: true` in the save: `restoreRun` puts those back, `joinTavern` skips the
+  invitation). A save still opens once, and Continue clears it from the device, so a fight lost after it can't be
+  replayed. A test in server.test.js.
 - **Between fights, the flow** (the user asked for no stutter, 20 Oct): the server's `seated` is who
   sits at the table (the beaten opponent until the next fight starts; `enemy` is already the next
   one). The client waits for the fight's last roll plus `BETWEEN_PAUSE_MS` before raising the
@@ -921,6 +934,12 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
+0. **The user's notes of 13 Nov evening (`docs/todo-14-nov.md`) were all done on 14 Nov** (not yet committed or pushed):
+   Klarg's two paintings re-cut crisper (`choke`, `sharpen` in `cutOutFlat`, shorter fades); the ship's five dice sets
+   keep their painted texture and pips (`TEXTURED` in process-art.mjs; Jaguar's at 0.6); Smooth Talk at the round's end;
+   a hidden hand's score in the round's result and on the nameplate (`reveal` on `roundResult`, `revealed` in the
+   store); a fifth and sixth die kept with no 2 or 4 known (hidden, or dust) take the 2's and 4's slots (`assignSlots`).
+   The user to look at all of it on a phone.
 1. **Play on the phone after the 12-13 Nov changes:** the new start screen and interface, and whether the
    ability moments now come in without a stutter (the headless checks say no shader is built in play).
    Then **play the Salty Swallow on a phone** (everything up to 11 Nov is pushed and on the test site; the ship test server
