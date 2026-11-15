@@ -342,6 +342,10 @@ export function Dice() {
                     mesh.scale.setScalar(1 - 0.25 * Math.max(0, (t - GRIP) / (1 - GRIP)));
                     mesh.visible = t < 0.97;
                     targetQuat.copy(mesh.quaternion);
+                    // (15 Nov: the target was left as the last die's, so each frame the stolen die was drawn
+                    // part of the way towards another die, further on a slow frame: the "glitch" before the
+                    // paw took it, and on a slow page it sat right inside the other die.)
+                    targetPos.copy(mesh.position);
                 } else if (isLocked(die)) {
                     const slot = slots.get(die.id) ?? 2;
                     targetPos.copy(slotPosition(slot, scoringCount));

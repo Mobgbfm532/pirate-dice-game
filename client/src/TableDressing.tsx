@@ -107,6 +107,43 @@ function coinFace() {
     return texture;
 }
 
+// A pool of light on a computer's tabletop (15 Nov, the look check's item 2): a wide window showed the
+// small tray in a field of bright orange planks, which pulled the eye off the dice. The wood now
+// darkens and greys a little away from the tray and the slot rail, as if lit from over the table.
+// The plane is the tabletop's own (40 wide, from its far edge to z = 24), so nothing reaches past the table.
+const POOL_W = 40, POOL_Z0 = TRAY.minZ - 1.0, POOL_D = 24 - POOL_Z0;
+function poolTexture() {
+    const n = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = n;
+    const ctx = canvas.getContext('2d')!;
+    // Drawn in table units about the middle of the tray and the slot rail: clear to about 6 units out
+    // (the tray's rails are 4 out), then falling away to the sides and the near end.
+    const R = 20, midZ = (TRAY.minZ + SLOT_ROW_Z + 0.7) / 2;
+    ctx.translate(n / 2, ((midZ - POOL_Z0) / POOL_D) * n);
+    ctx.scale(n / POOL_W, n / POOL_D);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+    g.addColorStop(0, 'rgba(14,8,6,0)');
+    g.addColorStop(0.24, 'rgba(14,8,6,0)');
+    g.addColorStop(0.42, 'rgba(14,8,6,0.46)');
+    g.addColorStop(0.7, 'rgba(14,8,6,0.72)');
+    g.addColorStop(1, 'rgba(14,8,6,0.82)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-POOL_W, -POOL_D, POOL_W * 2, POOL_D * 2);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+}
+function Pool() {
+    const map = useMemo(poolTexture, []);
+    return (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, POOL_Z0 + POOL_D / 2]} renderOrder={0} raycast={() => null}>
+            <planeGeometry args={[POOL_W, POOL_D]} />
+            <meshBasicMaterial map={map} transparent depthWrite={false} toneMapped={false} />
+        </mesh>
+    );
+}
+
 function Shadow({ x, z, y, w, h, edge, strength, inner = false, order = 1 }: { x: number; z: number; y: number; w: number; h: number; edge: number; strength: number; inner?: boolean; order?: number }) {
     const map = useMemo(() => shadowTexture(w, h, edge, strength, inner), [w, h, edge, strength, inner]);
     return (
@@ -144,6 +181,7 @@ export function TableDressing({ railMap }: { railMap: THREE.Texture }) {
 
     return (
         <group>
+            {desktop && <Pool />}
             {/* Soft shadows: the tray and the slot rail on the tabletop, the felt by the rails. */}
             <Shadow x={cx} z={cz} y={-0.006} w={width + (RAIL + CAP_OUT) * 2 + 1.4} h={depth + (RAIL + CAP_OUT) * 2 + 1.4} edge={0.7} strength={0.55} />
             <Shadow x={0} z={SLOT_ROW_Z} y={-0.006} w={width + 0.9 + 0.8} h={1.25 + 0.7} edge={0.35} strength={0.35} />

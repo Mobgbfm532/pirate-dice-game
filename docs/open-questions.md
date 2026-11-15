@@ -9,6 +9,62 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
+### Going live (the end-to-end check of 15 Nov)
+Checked: 181 server tests and 19 client tests pass, the client builds with no type errors and no dev hooks
+in it, the merge into `main` is clean, the test site serves this exact build, 17,200 junk messages didn't
+crash a test server. What's left to decide or fix before the merge:
+- **A crawl is lost when the phone is away for 2 minutes.** A table with nobody connected is deleted after
+  120 s (`EMPTY_TABLE_GRACE_MS`); coming back starts a fresh crawl at Sperm McGrath, with no word of why
+  (checked). Fix: keep a Tavern Crawl table far longer (an hour?), and/or keep each fight's save on the
+  phone by itself. Which?
+- **The live server restarting loses every game in play** (a deploy, a crash, or the free tier's sleep).
+  Which Render plan is the live service on? A save kept by itself at each fight would cover crawls.
+- **Nothing catches an unexpected error on the server:** one would stop the server and end every table.
+  Add a safety net (log it, keep running)?
+- **Two people can land at one crawl table:** the code is `TVRN-` plus four random digits, and a second
+  person who gets (or types) the same one is seated in the first one's run (checked). Refuse them, and
+  make the code longer?
+- **`/` stays the classic page after the merge**, with no link to `/next`. Is going live "the new game at
+  `/`" (next step 12) or "the new game at `/next`, with a link from the old page"?
+- **`npm audit` lists 8 known weaknesses in the server's packages** (express's and socket.io's parts,
+  mostly ways to overload a server); `npm audit fix` updates them without breaking changes. Run it and
+  re-test?
+- **iPhones have never been tried** (sound starting, screen height, WebGL), nor a save replayed after a
+  server restart (a save "opens once" only while the server stays up: `openedSaves` is in memory).
+- The live service's settings (step 11): build command, its own `SAVE_SECRET`, `DATABASE_URL` (the same
+  Neon database as the test site, with its test scores, or a clean one?).
+
+### Claude's recommendations for what to do next (15 Nov; none chosen yet)
+In the order I'd do them:
+1. **Never lose a crawl:** keep each fight's save on the phone by itself (the server already seals one as every
+   fight starts, `run.fightSave`), and keep a Tavern Crawl table for an hour instead of 2 minutes. Covers the phone
+   being away, a deploy and the server's sleep. About half a day.
+2. **A safety net on the server and one person per crawl table** (log an unexpected error and keep running;
+   refuse a second person at a `TVRN-` table). Small.
+3. **`npm audit fix`**, then the tests again. Small.
+4. **Try it on an iPhone** before friends do (sound starting, screen height, the 3D table).
+5. **Light and living backdrops per place** (the Portal's cool well light, swinging lanterns aboard, the fire
+   flickering): the biggest lift left for the look.
+6. **The sounds still missing:** Jaguar's three phases, Becalmed, the five silent scenes, music for the Yawning
+   Portal and the ship (the list is in `docs/art-direction.md`).
+7. **A faster first load:** the 9.5 MB ambience track compressed, three.js loaded after the start screen.
+8. **Teach the balance simulator the newer things** (Áéd, the sea, the Elf Bars, the Bard, the new keepsakes),
+   then set the first-guess numbers.
+9. **A first-crawl hint or two** against Sperm McGrath for someone who has never played (tap a die to keep it,
+   why Roll waits): the entrance card explains the rules, nothing shows them on the table.
+10. Small polish: the pale rim round Áéd's right-hand dice; your chip joining the footer's tray; a computer's
+    multiplayer cards up in the header.
+
+### The look: the five fixes of 15 Nov (to judge on a phone and a computer)
+Built 15 Nov from the look check (before/after in `previews/look5/`), not yet seen by the user on a real phone:
+- The phone's footer: the purse, shelf and keepsakes on one dark tray; the turn score in the middle when there's nothing to beat yet; the scores' numbers in Alegreya (Almendra's bold 0 drew as a blob). Good, or should the chip join the tray too?
+- A computer's tabletop darkens away from the tray (a pool of light). Strong enough, too strong?
+- The choice between fights on upright phones: the place's painting shows up top, bigger cards below.
+- Áéd's painting: its smoke unmixed from the green (it was khaki). A pale rim is still left round his right-hand dice.
+- The dice not yet thrown: a darker blue with a gold line and a shaded "?", under the dice's lacquer.
+- Found on the way, a real bug (what looked like smeared pips): the die Klarg takes was drawn part of the way inside another die while it waited for his paw, worse on slow frames. Fixed (Dice.tsx). Is this what looked weird on 10 Nov?
+- Still the biggest lift, not built: light and living backdrops per place.
+
 ### The game's interface (`docs/ui-brainstorm.md`, 12 Nov)
 - All eight ideas are built (12 Nov; the ability marks as gems were reverted, the "Your turn" tab taken out). Should the turn score move into your chip after all (it would shift the table a little on phones)?
 - The hearts: drawn in CSS/SVG first, or a painted heart (full, empty) from the user?

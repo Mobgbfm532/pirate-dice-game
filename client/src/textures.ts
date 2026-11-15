@@ -49,21 +49,38 @@ function faceTexture(value: number) {
     });
 }
 
+// A die not yet thrown (and Jaguar's cloaked dice): midnight blue with a gold "?". (15 Nov, the look
+// check: it was a flat blue block beside the lacquered dice. Now a darker rim, a fine gold line round
+// the face and a "?" with a shadow under it and a light along its top, under the same lacquer.)
 function hiddenTexture() {
     return canvasTexture(ctx => {
-        const g = ctx.createRadialGradient(SIZE / 2, SIZE / 2, 10, SIZE / 2, SIZE / 2, SIZE * 0.7);
-        g.addColorStop(0, '#2b4a7a');
-        g.addColorStop(1, '#0e1a33');
+        const g = ctx.createRadialGradient(SIZE * 0.5, SIZE * 0.46, 8, SIZE / 2, SIZE / 2, SIZE * 0.72);
+        g.addColorStop(0, '#34588f');
+        g.addColorStop(0.6, '#1b2f57');
+        g.addColorStop(1, '#0a1226');
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, SIZE, SIZE);
-        for (let i = 0; i < 26; i++) {
-            ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.6})`;
+        for (let i = 0; i < 22; i++) {
+            ctx.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.5})`;
             ctx.fillRect(Math.random() * SIZE, Math.random() * SIZE, 2, 2);
         }
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = `bold ${SIZE * 0.55}px Georgia, serif`;
+        // The gold line, a little way in from the edge.
+        const m = SIZE * 0.13, r = SIZE * 0.07;
+        ctx.strokeStyle = 'rgba(232,190,96,0.7)';
+        ctx.lineWidth = SIZE * 0.012;
+        ctx.beginPath();
+        ctx.roundRect(m, m, SIZE - m * 2, SIZE - m * 2, r);
+        ctx.stroke();
+        ctx.font = `bold ${SIZE * 0.5}px Almendra, Georgia, serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(4,8,20,0.75)';
+        ctx.fillText('?', SIZE / 2 + 3, SIZE / 2 + 10);
+        const gold = ctx.createLinearGradient(0, SIZE * 0.28, 0, SIZE * 0.74);
+        gold.addColorStop(0, '#fff0b8');
+        gold.addColorStop(0.45, '#ffd257');
+        gold.addColorStop(1, '#c98f1e');
+        ctx.fillStyle = gold;
         ctx.fillText('?', SIZE / 2, SIZE / 2 + 6);
     });
 }
@@ -220,7 +237,8 @@ export const STARRY_GLOW = 0.55;
 export function createDiceMaterials() {
     const faces = FACE_VALUES.map(v => finish(new DiceMaterial({ map: faceTexture(v), ...diceMaterialProps, ...lacquer, ...ivory })));
     const hiddenMap = hiddenTexture();
-    const hidden = FACE_VALUES.map(() => new THREE.MeshStandardMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: 0.6, ...diceMaterialProps }));
+    // (the new look: under the dice's lacquer, lit by the room more than by itself)
+    const hidden = FACE_VALUES.map(() => new DiceMaterial({ map: hiddenMap, emissive: new THREE.Color('#1c3d6e'), emissiveIntensity: lookNext ? 0.52 : 0.6, ...diceMaterialProps, ...(lookNext ? { roughness: 0.4, clearcoat: 0.6, clearcoatRoughness: 0.22 } : {}) }));
     // The Loaded Die keepsake's die: the same faces, warmed to old gold so it stands out.
     const loaded = FACE_VALUES.map((_, i) => finish(new DiceMaterial({ map: faces[i].map, color: new THREE.Color('#e9b864'), ...diceMaterialProps, ...lacquer, ...(lookNext ? { metalness: 0.35 } : {}) })));
     // Frak's Mind Whip: the die he made you keep glows his sickly green and violet.

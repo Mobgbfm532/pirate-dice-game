@@ -563,8 +563,12 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
         // stole earlier in the turn stays out of play; one he takes now was thrown first.)
         const before = snapshot.turn && snapshot.turn.key === turn.key ? snapshot.turn : null;
         // (A Fizzy Thomic throws only the dice it names.)
-        const thrownIds = data.rerolled ? new Set(data.rerolled) : new Set((before ? before.dice : turn.dice.filter(d => d.status !== 'stolen'))
-            .filter(d => d.status === 'active' && !turn.dice.some(n => n.id === d.id && n.washed)).map(d => d.id));
+        // (15 Nov: with no turn known from before this throw, a hand's first throw, the die Klarg takes from
+        // it was left out: it stayed in its waiting place while the others landed on and through it.)
+        const pool = before ? before.dice.filter(d => d.status === 'active')
+            : turn.dice.filter(d => d.status === 'active' || (d.status === 'stolen' && turn.rollCount === 1));
+        const thrownIds = data.rerolled ? new Set(data.rerolled) : new Set(pool
+            .filter(d => !turn.dice.some(n => n.id === d.id && n.washed)).map(d => d.id));
         const rolled = turn.dice.filter(d => thrownIds.has(d.id));
         // (Aboard a listing ship the dice drift to the low side: data.sea.)
         const track = simulateRoll(rolled.map(d => d.id), rolled.map(d => (d.hidden ? 0 : d.value)), data.throwSeed, data.sea ?? 0);

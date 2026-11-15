@@ -3962,3 +3962,47 @@ button.film-skip:active, button.sail-skip:active, div.tr-after button:active, bu
 .game-menu .menu-save-buttons { display: flex; gap: 8px; }
 .game-menu .menu-save-buttons button { flex: 1; min-height: 42px; }
 .look-next header .menu-burger.open { filter: brightness(1.08); }
+
+/* ==== A tidier footer on upright phones (15 Nov, the look check's item 1; new look) ==== */
+/* The purse, the Thonic shelf and the keepsakes sat loose on the bare wood, and with nothing to beat
+   yet the turn score hung off to the right of an empty space. Now the strip is one dark tray in a
+   brass rim, and the turn score sits in the middle when it's alone. (The tray's margins give back its
+   padding and rim, so the footer keeps its height and the table doesn't move.) */
+@media (orientation: portrait) and (max-width: 600px) {
+    .look-next footer .tavern-strip {
+        padding: 4px 8px; margin: -5px 0; border-radius: 16px;
+        background: linear-gradient(rgba(34, 20, 10, 0.72), rgba(20, 11, 5, 0.8)); border: 1px solid rgba(224, 180, 76, 0.45);
+        box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.14), 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+    .look-next footer .controls:has(.goal.placeholder) { column-gap: 0; }
+    .look-next footer .goal.placeholder { width: 0; padding-left: 0; padding-right: 0; border-left: 0; border-right: 0; overflow: hidden; white-space: nowrap; flex-wrap: nowrap; }
+}
+/* The turn score's and the score to beat's numbers in the reading face: Almendra's bold 0 drew as a blob. */
+.look-next .turn-score .value, .look-next .goal .target { font-family: var(--read); font-variant-numeric: lining-nums; }
+
+/* ==== The choice between fights on upright phones (15 Nov, the look check's item 3) ==== */
+/* The two cards floated mid-screen over a backdrop dimmed nearly to black, the bottom of the screen
+   empty. Now the place's painting shows through the top of the screen, and the purse, the heading and
+   two bigger cards sit together in the lower part, in the dark that rises from the bottom. */
+@media (orientation: portrait) and (max-width: 600px) {
+    .interlude-scene.choosing::before {
+        background: linear-gradient(rgba(10, 5, 2, 0.18), rgba(10, 5, 2, 0.3) 26%, rgba(8, 4, 2, 0.86) 50%, rgba(8, 4, 2, 0.95));
+    }
+    .interlude-scene.choosing .interlude-body { margin: auto 0 max(18px, 5vh); gap: 12px; }
+    .interlude-scene.choosing .spot-card { padding: 18px 10px 16px; gap: 8px; }
+    .interlude-scene.choosing .spot-pic { width: clamp(96px, 33vw, 150px); height: clamp(96px, 33vw, 150px); }
+    .interlude-scene.choosing .spot-card strong { font-size: clamp(1.1rem, 5vw, 1.4rem); }
+    .interlude-scene.choosing .spot-card .line { font-size: clamp(0.85rem, 3.8vw, 1rem); }
+    .interlude-scene.choosing .spot-card .offer { font-size: clamp(0.8rem, 3.5vw, 0.95rem); padding-top: 8px; }
+    .interlude-scene.choosing .link-button { font-size: 1rem; padding: 10px; }
+}
+/* (A short phone keeps the smaller pictures, so nothing scrolls.) */
+@media (orientation: portrait) and (max-width: 600px) and (max-height: 700px) {
+    .interlude-scene.choosing .spot-pic { width: clamp(80px, 26vw, 110px); height: clamp(80px, 26vw, 110px); }
+    .interlude-scene.choosing .spot-card { padding: 12px 8px; gap: 5px; }
+}
+/* (The reading face stands taller than Almendra: the same line height as before, so the footer, and with it the table, stays where it was.) */
+.look-next .turn-score .value, .look-next .goal .target { line-height: 1.28; }
+@media (orientation: portrait) and (max-width: 600px) {
+    .interlude-scene.choosing .spot-card strong { font-size: clamp(1.05rem, 4.5vw, 1.3rem); }
+}

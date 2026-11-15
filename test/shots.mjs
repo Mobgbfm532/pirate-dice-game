@@ -123,6 +123,8 @@ try {
         await wait(1500);
         await fetch(`${CONTROLS}/seed?n=${seed}`);
         if (!args.table) await fetch(`${CONTROLS}/fight?n=${fight}`);
+        // pre=purse?n=37|shelf?ids=healing,fizzy: dev controls called once the fight is set (a fuller strip).
+        for (const c of (args.pre ? args.pre.split('|') : [])) await fetch(`${CONTROLS}/${c}`);
         await wait(6000); // the entrance and the intro card settle
         if (roll) {
             // faces=1,6,1,6,5,3: the throw lands on these (the dev controls' /faces).

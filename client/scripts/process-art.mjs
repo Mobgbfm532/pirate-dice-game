@@ -260,6 +260,19 @@ function despillGreen(img, mask, bg, radius) {
     const alpha = new Map();
     const span = Math.max(1, bg[1] - bg[2]);
     const { data, width, height } = img;
+    // Which kept pixels lie within KHAKI_REACH px of the background (only looked for when radius is Infinity).
+    const KHAKI_REACH = 14;
+    let near = null;
+    if (radius === Infinity) {
+        near = new Uint8Array(mask.length);
+        let front = [];
+        for (let p = 0; p < mask.length; p++) if (mask[p]) front.push(p);
+        for (let step = 0; step < KHAKI_REACH && front.length; step++) {
+            const next = [];
+            for (const p of front) { const x = p % width; for (const q of [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, p - width, p + width]) if (q >= 0 && q < mask.length && !mask[q] && !near[q]) { near[q] = 1; next.push(q); } }
+            front = next;
+        }
+    }
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         const p = y * width + x;
         if (mask[p]) continue;
@@ -272,8 +285,12 @@ function despillGreen(img, mask, bg, radius) {
         }
         if (!edge) continue;
         const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
-        if (g <= r + 2) continue;
-        const t = Math.min(1, Math.max(0, (g - b) / span));
+        // (15 Nov, the look check: Áéd's pale violet smoke over the green mixes to khaki, its red level with
+        // its green, so it was skipped and stayed a solid khaki fringe. Within KHAKI_REACH px of the background,
+        // a pixel with red and green level, blue well below and not bright (the cream dice) is unmixed too.)
+        const khaki = radius === Infinity && near && near[p] && g > r + 2 - 20 && g <= r + 2 && g - b > 0.28 * span && 0.299 * r + 0.587 * g + 0.114 * b < 215;
+        if (g <= r + 2 && !khaki) continue;
+        const t = Math.min(khaki ? 0.92 : 1, Math.max(0, (g - b) / span));
         if (t <= 0) continue;
         const a = 1 - t;
         alpha.set(p, a < 0.15 ? 0 : a);

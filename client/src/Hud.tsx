@@ -1820,7 +1820,7 @@ function Interlude({ state }: { state: GameState }) {
         return <SpotScene key={spot} spot={spot} state={state} next={next} leaving={leaving} onMoveOn={moveOn} onLookAround={lookAround} />;
     }
     return (
-        <div className={`interlude-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
+        <div className={`interlude-scene choosing ${leaving ? 'leaving' : ''}`} role="dialog" aria-label="Between fights"
             style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/${placeBackdrop(state.tavernRun?.place)}")` }}>
             <div className="interlude-body">
                 <PurseLine state={state} />
