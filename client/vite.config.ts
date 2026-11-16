@@ -24,9 +24,10 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    if (!id.includes('node_modules')) return;
-                    if (/[\\/]node_modules[\\/](three|@react-three|postprocessing|maath|n8ao|three-stdlib|troika|its-fine|suspend-react|zustand|react-reconciler|scheduler|cannon-es)/.test(id)) return 'three';
-                    return 'vendor';
+                    // (One file for all of them: split in two, three's half and React's half each needed the
+                    // other first, and the page stopped at the loading screen; 16 Nov, caught on the test site.
+                    // Check a change here against the built game, http://localhost:3002/next/, not the dev client.)
+                    if (id.includes('node_modules')) return 'vendor';
                 }
             }
         }

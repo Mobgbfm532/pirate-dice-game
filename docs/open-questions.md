@@ -42,7 +42,7 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
 - Three sound beds re-encoded smaller, the originals kept in `art/audio/`: `Ambience.mp3` 9.5 → 3.6 MB (96 kbps),
   `IntroRain.mp3` 683 → 214 KB, `IntroTavernAmbience.mp3` 751 → 301 KB. **To hear by ear: do they still sound
   right?** (The music, the scene loops and Jaguar's track are untouched.)
-- The libraries are in files of their own (`three`, `vendor`; vite.config.ts) and `/next/assets` may be kept by
+- The libraries are in a file of their own (`vendor`; vite.config.ts) and `/next/assets` may be kept by
   the browser for good (server.js), so a returning player fetches only what changed.
 - Loading three.js after the start screen was not done: it is 0.26 MB of the 8.5, and the start screen's own
   die needs it.
