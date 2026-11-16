@@ -1545,7 +1545,23 @@ const ABILITY_ART: Record<string, string> = {
     'Empowered Dice': 'ability-unlimited-power.webp',
     'Twinned Dice': 'ability-unlimited-power.webp'
 };
-Object.values(ABILITY_ART).forEach(file => { new Image().src = `${import.meta.env.BASE_URL}art/${file}`; });
+// Every ability's painting fetched ahead, so none is waited for mid-fight. (16 Nov, a faster first load:
+// they came down with the page, 1.5 MB behind the start screen; now once a Tavern Crawl is under way, one
+// after another. The opponent at the table's and the next one's are fetched and decoded at once: warmAbilityArt.)
+let allArtFetched = false;
+function fetchAllAbilityArt() {
+    if (allArtFetched) return;
+    allArtFetched = true;
+    const files = [...new Set(Object.values(ABILITY_ART))];
+    const next = () => {
+        const file = files.shift();
+        if (!file) return;
+        const img = new Image();
+        img.onload = img.onerror = () => setTimeout(next, 150);
+        img.src = `${import.meta.env.BASE_URL}art/${file}`;
+    };
+    setTimeout(next, 5000);
+}
 // (12 Nov, the user: a few moments stuttered before they appeared fully.) Fetched isn't enough: a painting was
 // decoded only as its moment began, a phone's frames stalling meanwhile. The opponent at the table's (and the
 // next one's) are decoded ahead and held, so they're ready; Martha's Disguise Self brings the tricks she copies.
@@ -3169,7 +3185,7 @@ export function Hud() {
     // The paintings of the abilities that can come up next, decoded ahead (see warmAbilityArt).
     const run = snap.state?.tavernRun;
     const artKey = run ? [...(run.seated?.powers ?? []), ...(run.enemy?.powers ?? [])].map(p => p.name).join('|') : '';
-    useEffect(() => { if (artKey) warmAbilityArt(artKey.split('|')); }, [artKey]);
+    useEffect(() => { if (artKey) { warmAbilityArt(artKey.split('|')); fetchAllAbilityArt(); } }, [artKey]);
 
     // The trailer (?trailer in the address): the game's own Perfect 24 and three 6s play over the table under it.
     if (trailerWanted) return <><Trailer /><Celebration snap={snap} /><DevilSixes snap={snap} /></>;

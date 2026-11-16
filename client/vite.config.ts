@@ -18,6 +18,17 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        chunkSizeWarningLimit: 1200
+        chunkSizeWarningLimit: 1200,
+        // (16 Nov) The libraries in files of their own: they change only when a library is updated, so a
+        // returning player's browser keeps them across the game's own updates (two thirds of the code).
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return;
+                    if (/[\\/]node_modules[\\/](three|@react-three|postprocessing|maath|n8ao|three-stdlib|troika|its-fine|suspend-react|zustand|react-reconciler|scheduler|cannon-es)/.test(id)) return 'three';
+                    return 'vendor';
+                }
+            }
+        }
     }
 });

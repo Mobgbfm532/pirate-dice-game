@@ -34,7 +34,25 @@ crash a test server. What's left to decide or fix before the merge:
 - The live service's settings (step 11): build command, its own `SAVE_SECRET`, `DATABASE_URL` (the same
   Neon database as the test site, with its test scores, or a clean one?).
 
-### Claude's recommendations for what to do next (15 Nov; none chosen yet)
+### A faster first load, and the hosting plans (16 Nov)
+Built 16 Nov (recommendation 7), measured on the test site before: the start screen fetched 8.5 MB (sound 5.6 MB:
+all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
+- Effects are no longer fetched with the page (`preload = 'none'`); once sound starts, eleven come first, the
+  rest two at a time (`decodeClips`). Ability paintings come once a crawl is under way (`fetchAllAbilityArt`).
+- Three sound beds re-encoded smaller, the originals kept in `art/audio/`: `Ambience.mp3` 9.5 → 3.6 MB (96 kbps),
+  `IntroRain.mp3` 683 → 214 KB, `IntroTavernAmbience.mp3` 751 → 301 KB. **To hear by ear: do they still sound
+  right?** (The music, the scene loops and Jaguar's track are untouched.)
+- The libraries are in files of their own (`three`, `vendor`; vite.config.ts) and `/next/assets` may be kept by
+  the browser for good (server.js), so a returning player fetches only what changed.
+- Loading three.js after the start screen was not done: it is 0.26 MB of the 8.5, and the start screen's own
+  die needs it.
+- **Hosting, as measured:** the server idles at 77 MB and ran 60 crawls at once in 101 MB, using about 5% of
+  one processor; a player costs about 58 KB a minute. Neon was awake 15.6 hours in the first half of November,
+  about 4 of the free plan's 100 CU-hours. Open: which Render plan is the live service on? A game tab left open
+  keeps a free service awake (its connection keeps talking), and two free services awake all month would pass
+  the 750 free hours they share.
+
+### Claude's recommendations for what to do next (15 Nov; 7 built 16 Nov)
 In the order I'd do them:
 1. **Never lose a crawl:** keep each fight's save on the phone by itself (the server already seals one as every
    fight starts, `run.fightSave`), and keep a Tavern Crawl table for an hour instead of 2 minutes. Covers the phone
@@ -125,6 +143,7 @@ Built 15 Nov from the look check (before/after in `previews/look5/`), not yet se
 - The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
 
 ## Settled
+- 16 Nov: the live Render service is on the free plan, and the game is for at most 6 players playing now and then (the user's). The free Render and Neon plans are enough for that; the free plan's sleep and deploys are why "never lose a crawl" (recommendation 1) matters.
 - 13 Nov: the sea die's needle has the user's own clips: a tick past each sector line, and a clunk as it lands on its face.
 - 13 Nov: the other ten opponents' dice: the user painted all ten at once; in the game the same day.
 - 13 Nov: Jaguar's Cloak stays as it was: he throws after you, his dice hidden (the user's). Throwing first with his hand hidden until yours was done was built and taken back out the same day.

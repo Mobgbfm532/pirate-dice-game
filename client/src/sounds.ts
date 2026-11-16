@@ -4,7 +4,10 @@ function load(file: string, volume: number, loop = false) {
     const audio = new Audio(`/${encodeURI(file)}`);
     audio.volume = volume;
     audio.loop = loop;
-    audio.preload = 'auto';
+    // (16 Nov, a faster first load: nothing is downloaded with the page. All fifty effects, 3.2 MB, used
+    // to come down behind the start screen; now they're fetched once sound starts, the ones a first
+    // throw needs first: decodeClips. Music and scene loops stream as they start playing.)
+    audio.preload = 'none';
     return audio;
 }
 
@@ -89,9 +92,14 @@ let decoding = false;
 function decodeClips(ctx: AudioContext) {
     if (decoding) return;
     decoding = true;
-    (Object.entries(sfx) as [keyof typeof sfx, HTMLAudioElement][]).forEach(([name, el]) => {
-        fetch(el.src).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { buffers.set(name, buf); }).catch(() => {});
-    });
+    // The sounds any table's first throws can need, at once and together; then the rest two at a time,
+    // so they don't crowd out the game's own first messages and pictures on a slow connection. (A clip
+    // asked for before it's decoded plays from its <audio> element, as it always could.)
+    const decode = (name: keyof typeof sfx) => fetch(sfx[name].src).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { buffers.set(name, buf); }).catch(() => {});
+    const first: (keyof typeof sfx)[] = ['click', 'bust', 'aww', 'yay', 'ohwell', 'swoosh', 'gasp', 'devil', 'loseHeart', 'healthPickup', 'winner'];
+    const rest = (Object.keys(sfx) as (keyof typeof sfx)[]).filter(n => !first.includes(n));
+    const worker = async () => { for (let n = rest.shift(); n; n = rest.shift()) await decode(n); };
+    void Promise.all(first.map(decode)).then(() => { void worker(); void worker(); });
 }
 
 const MUSIC_VOLUME = 0.4, AMBIENCE_VOLUME = 0.5;

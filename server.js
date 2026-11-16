@@ -42,6 +42,9 @@ const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ro
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/shared', express.static(path.join(__dirname, 'shared')));
 // The 3D client prototype (client/), once built with `npm run build:client`.
+// (16 Nov: its code and styles carry a fingerprint of their contents in their names, so a browser may
+// keep them for good and never ask again; everything else is checked on each visit, as before.)
+app.use('/next/assets', express.static(path.join(__dirname, 'client', 'dist', 'assets'), { immutable: true, maxAge: '365d' }));
 app.use('/next', express.static(path.join(__dirname, 'client', 'dist')));
 
 app.get('/', (req, res) => {
