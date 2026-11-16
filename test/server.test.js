@@ -2484,6 +2484,64 @@ test("the menu's Save: back to the start of the fight against that opponent (14 
     assert.equal(between.purse, 25);
 });
 
+test('a crawl saves itself: a lost table comes back at the start of its fight, and only the newest save opens (16 Nov)', async () => {
+    const code = 'TVRN-AS1';
+    const hero = await join('Auto', code);
+    const first = await waitFor(hero, 'autoSave');
+    assert.equal(first.next, 'Sperm McGrath');
+    await sleep(30);
+    const room = server.rooms[code];
+    room.tavernRun.encounterIndex = fightOf('frak');
+    room.tavernRun.purse = 33;
+    room.tavernRun.shelf = ['healing'];
+    server.resetTavernEncounter(code); // (the next fight starts with these)
+    const coming = waitFor(hero, 'autoSave');
+    server.emitState(code);
+    const second = await coming;
+    assert.equal(second.next, 'Frak');
+    assert.equal(second.purse, 33);
+    assert.notEqual(second.save, first.save);
+    // The same state again sends nothing more.
+    let again = 0;
+    hero.on('autoSave', () => { again++; });
+    server.emitState(code);
+    await sleep(40);
+    assert.equal(again, 0);
+    // Mid-fight the table is lost (the server restarted, or an hour away): the seat brings the save with it.
+    room.tavernRun.purse = 1;
+    room.players.BOT_MOLAR.lives = 1;
+    hero.disconnect();
+    delete server.rooms[code];
+    const back = await join('Auto', code, { resume: second.save });
+    const told = waitFor(back, 'crawlResumed');
+    const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).enemy && runOf(s).enemy.name === 'Frak');
+    assert.equal((await told).fight, true);
+    assert.equal(runOf(state).purse, 33);
+    assert.deepEqual(runOf(state).shelf.map(t => t.id), ['healing']);
+    assert.equal(server.rooms[code].players.BOT_MOLAR.lives, server.TAVERN_ENCOUNTERS[fightOf('frak')].lives, 'the fight starts again');
+    // The save before it was used up as the newer one was sent.
+    const stale = await join('Cheat', 'TVRN-AS2', { resume: first.save });
+    await waitFor(stale, 'resumeFailed');
+});
+
+test('a crawl that is over tells the browser to forget its save; its table is kept while you are away', async () => {
+    const code = 'TVRN-AS3';
+    const hero = await join('Leaver', code);
+    await waitFor(hero, 'autoSave');
+    await sleep(30);
+    // Away for longer than an ordinary table is kept (120 s; a crawl's is kept an hour).
+    hero.disconnect();
+    await sleep(1600);
+    assert.ok(server.rooms[code], 'the crawl is still there');
+    const back = await join('Leaver2', 'TVRN-AS4');
+    await waitFor(back, 'autoSave');
+    await sleep(30);
+    const gone = waitFor(back, 'autoSave', d => d === null);
+    server.rooms['TVRN-AS4'].tavernRun.runComplete = true;
+    server.emitState('TVRN-AS4');
+    await gone;
+});
+
 test('Thonics wait while dice are still tumbling', async () => {
     const { hero, room } = await tavernTable('Patient');
     room.tavernRun.shelf = ['steady'];

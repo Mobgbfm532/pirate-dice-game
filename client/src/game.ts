@@ -906,8 +906,32 @@ function shakeScreen(delay: number) {
     }, delay);
 }
 
+// A Tavern Crawl saves itself (16 Nov, the user's "so a crawl is never lost"): the server sends the run's
+// save whenever it changes. It's kept on this device (the start screen's Continue) and in this tab's seat,
+// so coming back to a table that's gone (the server restarted or slept, or an hour away) brings the run
+// with it: in a fight, from that fight's start. null: the run is over, nothing to keep.
+socket.on('autoSave', (data: { save: string; name: string; next: string; place: string; purse: number } | null) => {
+    const seat = readSeat();
+    if (!data) {
+        writeSavedRun(null);
+        if (seat?.resume) writeSeat({ ...seat, resume: undefined });
+        return;
+    }
+    writeSavedRun({ save: data.save, name: data.name, next: data.next, place: data.place, purse: data.purse, at: Date.now() });
+    if (seat && seat.roomCode.startsWith('TVRN')) writeSeat({ ...seat, resume: data.save });
+});
+
+// The run was opened from a save. When you tapped Continue that's no news; when this tab came back to a
+// table that was gone, say what happened.
+let continuing = false;
+socket.on('crawlResumed', (data: { fight: boolean; next: string }) => {
+    if (!continuing) showToast('Your crawl was brought back', data.fight ? `The table was lost while you were away. The fight against ${data.next} starts again.` : 'The table was lost while you were away. You are back where you left off.', 'info', 6000);
+    continuing = false;
+});
+
 // A saved run the server wouldn't open (changed, or opened already): this is a fresh crawl.
 socket.on('resumeFailed', () => {
+    continuing = false;
     showToast('That save could not be opened', 'It was used already, or the server has been reset. A new crawl begins.', 'info', 5000);
 });
 
@@ -1148,6 +1172,7 @@ export const actions = {
     // A saved Tavern Crawl carries on at a fresh table (the save is used up).
     resume(saved: SavedRun, avatar: string) {
         writeSavedRun(null);
+        continuing = true;
         const roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
         startMusic();
         const seat = { roomCode, name: saved.name, avatar, lives: 3, resume: saved.save };

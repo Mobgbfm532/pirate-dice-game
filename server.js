@@ -31,6 +31,9 @@ const rollFace = () => crypto.randomInt(1, 7);
 // nobody connected is kept this long so players can come back to it, and the player whose
 // turn it is gets this long to reconnect before their turn counts as dust.
 const EMPTY_TABLE_GRACE_MS = 120000;
+// A Tavern Crawl's table is kept far longer (16 Nov, the user's "so a crawl is never lost"): a phone call
+// or a long message used to end a run of fifteen fights. Its opponent waits while nobody is there.
+const CRAWL_TABLE_GRACE_MS = 3600000;
 const TURN_RECONNECT_GRACE_MS = 30000;
 
 // The avatars a player may pick: the 3D client's seven item icons (30 Oct), then the classic
@@ -922,6 +925,43 @@ function emitState(roomCode) {
     syncTurn(roomCode);
     io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
     emitTurn(roomCode);
+    sendAutoSave(roomCode);
+}
+
+// A Tavern Crawl saves itself (16 Nov, the user's "so a crawl is never lost"): the player's browser is
+// sent the run's save whenever it changes, and keeps it. If this table is gone when they come back (the
+// server restarted or slept, or they were away over an hour), their seat brings the save with it and the
+// run carries on (joinTavern's resume): in a fight, from that fight's start; between fights, as things
+// stand; at an invitation, there. Only the newest save opens (while the server runs): the one before is
+// used up as the next is sent, and the last one when the run ends ('autoSave' with null: forget it).
+function sendAutoSave(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || room.mode !== 'tavern-crawl') return;
+    let run = room.tavernRun;
+    let humanId = getHumanPlayerId(room);
+    let me = humanId && room.players[humanId];
+    if (!me || !run.started) return;
+    let over = run.runComplete || me.lives <= 0 || run.encounterIndex >= TAVERN_ENCOUNTERS.length;
+    let save = null;
+    if (!over) {
+        let interlude = run.interlude;
+        if (interlude && interlude.stage === 'invitation') save = interlude.save;
+        else if (interlude || run.shop) {
+            // (Unchanged since the last one sent: the same save. A thief not yet faced has had his share.)
+            let thief = interlude && interlude.stage === 'pickpocket' && !interlude.roll ? interlude.steal : 0;
+            let key = JSON.stringify([run.encounterIndex, run.purse - thief, run.shelf, run.keepsakes.map(k => k.id), run.puffs, run.bought, run.ladysGrace, run.kramFights,
+                run.nextFightHearts, run.nextFightSurge, run.nextFightSong, run.nextOmen, run.nextNotaro]);
+            if (run.autoSaveKey !== key) { run.autoSaveKey = key; run.autoSaveBetween = sealFightSave(room, me.name, thief ? { purse: Math.max(0, run.purse - thief) } : {}); }
+            save = run.autoSaveBetween;
+        } else save = run.fightSave || null;
+        if (!save) return;
+    }
+    if (save === (run.autoSave || null)) return;
+    if (run.autoSave) openedSaves.add(saveInfo(run.autoSave).id);
+    run.autoSave = save;
+    if (!save) { io.to(humanId).emit('autoSave', null); return; }
+    let info = saveInfo(save);
+    io.to(humanId).emit('autoSave', { save, name: me.name, next: TAVERN_ENCOUNTERS[run.encounterIndex].name, place: placeOf(room).name, purse: Number(info.purse) || 0 });
 }
 
 function sendBotReaction(roomCode, emoji, times = 3) {
@@ -1526,7 +1566,7 @@ function scheduleEmptyTableCleanup(roomCode) {
     room.cleanupTimer = setTimeout(() => {
         room.cleanupTimer = null;
         if (rooms[roomCode] === room && !anyHumanConnected(room)) delete rooms[roomCode];
-    }, delay(EMPTY_TABLE_GRACE_MS));
+    }, delay(room.mode === 'tavern-crawl' ? CRAWL_TABLE_GRACE_MS : EMPTY_TABLE_GRACE_MS));
 }
 
 function runBotRoll(roomCode) {
@@ -2334,9 +2374,10 @@ function sealSave(room, name, extra = {}) {
 // user's): sealed as that fight starts (resetTavernEncounter) or, between fights, at once for the next one.
 // It carries what the fight is due to start with (the Stranger's price, the Lady's Favour, the hot tub's
 // surge, the Bard's song, Yvesil's omen, Jorvash's Notaro Red); resumed, the fight starts afresh.
-function sealFightSave(room, name) {
+function sealFightSave(room, name, more = {}) {
     let run = room.tavernRun;
     return sealSave(room, name, {
+        ...more,
         fight: true, kramFights: run.kramFights || 0,
         nextFightHearts: run.nextFightHearts || null, nextFightSurge: run.nextFightSurge || null, nextFightSong: run.nextFightSong || null,
         nextOmen: run.nextOmen || null, nextNotaro: !!run.nextNotaro
@@ -2955,6 +2996,8 @@ io.on('connection', (socket) => {
             room.tavernRun.interlude = invitation(room, room.players[socket.id].name);
             room.roundPlayers = [];
         }
+        // (The browser says so when it came back by itself, its table gone: see sendAutoSave.)
+        if (resumed) socket.emit('crawlResumed', { fight: !!resumed.fight, next: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name });
 
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
         // Who this name has met before (the "?" portraits); the state goes out again once it's in.

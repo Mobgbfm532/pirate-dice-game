@@ -13,12 +13,12 @@ day they happen, with what's been built marked as it lands.
 Checked: 181 server tests and 19 client tests pass, the client builds with no type errors and no dev hooks
 in it, the merge into `main` is clean, the test site serves this exact build, 17,200 junk messages didn't
 crash a test server. What's left to decide or fix before the merge:
-- **A crawl is lost when the phone is away for 2 minutes.** A table with nobody connected is deleted after
-  120 s (`EMPTY_TABLE_GRACE_MS`); coming back starts a fresh crawl at Sperm McGrath, with no word of why
-  (checked). Fix: keep a Tavern Crawl table far longer (an hour?), and/or keep each fight's save on the
-  phone by itself. Which?
-- **The live server restarting loses every game in play** (a deploy, a crash, or the free tier's sleep).
-  Which Render plan is the live service on? A save kept by itself at each fight would cover crawls.
+- **A crawl lost when the phone is away, or the server restarts: built 16 Nov** (not yet seen on a phone). A
+  Tavern Crawl saves itself: the server sends the run's save to the browser whenever it changes, and a crawl's
+  table is kept an hour, not 2 minutes. Coming back to a table that's gone brings the run back: in a fight, from
+  that fight's start (a toast says so). Leaving a crawl now leaves "Continue" on the start screen. Open: is
+  restarting the fight the right price for a lost table, and is an hour right? The live service needs a
+  `SAVE_SECRET`, or a restart still loses the run. Multiplayer tables are as before (2 minutes, nothing saved).
 - **Nothing catches an unexpected error on the server:** one would stop the server and end every table.
   Add a safety net (log it, keep running)?
 - **Two people can land at one crawl table:** the code is `TVRN-` plus four random digits, and a second
@@ -52,9 +52,9 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   keeps a free service awake (its connection keeps talking), and two free services awake all month would pass
   the 750 free hours they share.
 
-### Claude's recommendations for what to do next (15 Nov; 7 built 16 Nov)
+### Claude's recommendations for what to do next (15 Nov; 1 and 7 built 16 Nov)
 In the order I'd do them:
-1. **Never lose a crawl:** keep each fight's save on the phone by itself (the server already seals one as every
+1. **Built 16 Nov.** Never lose a crawl: keep each fight's save on the phone by itself (the server already seals one as every
    fight starts, `run.fightSave`), and keep a Tavern Crawl table for an hour instead of 2 minutes. Covers the phone
    being away, a deploy and the server's sleep. About half a day.
 2. **A safety net on the server and one person per crawl table** (log an unexpected error and keep running;
