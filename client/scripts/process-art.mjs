@@ -762,10 +762,10 @@ function blobsOver(map, size, cutoff) {
 // (McGrath keeps the Molar's id; his painting is dice-mcgrath.jpg.)
 const DICE_SETS = ['molar', 'frak', 'danhausen', 'duke', 'martha', 'sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor', 'klarg', 'rokr', 'aed', 'hangman', 'jaguar']; // (the Yawning Portal's and the ship's, the user's, 13 Nov)
 const LIFT = { power: 1.25, vivid: 1.05 }; // how much lighter (1: as painted) and more vivid (1.5 and 1.2 until 5 Nov: neon on the table)
-const LAYOUT_SETS = new Set(['stason', 'ridgeler', 'brodor', 'klarg', 'jaguar']);
+const LAYOUT_SETS = new Set(['stason', 'ridgeler', 'klarg', 'jaguar']); // (Brodor's out since 17 Nov: his repainted sheet has plain black pips, found as they are)
 const PIP_LAYOUT = [[[0, 0]], [[1, -1], [-1, 1]], [[1, -1], [0, 0], [-1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
 // (13 Nov, the user's) The silver sets stay darker, like steel: lifted, they came out nearly white on the table.
-const LIFT_FOR = { stason: { power: 0.7, vivid: 1 }, ridgeler: { power: 0.7, vivid: 1 } };
+const LIFT_FOR = { stason: { power: 0.7, vivid: 1 }, ridgeler: { power: 0.7, vivid: 1 }, sylvester: { power: 1.7, vivid: 1 }, brodor: { power: 0.85, vivid: 1.15 } }; // (Brodor's repainted gold came out cream at the usual lift, 17 Nov) // (Sylvester's grey stone sank into the dim table: lifted paler, 17 Nov)
 // (14 Nov, the user: "all the dice look awful on the Salty Swallow") The ship's sets are their texture (Klarg's
 // wood grain, Áéd's scales, Jaguar's rosettes, Rokr's swirling pips, the Hangman's black wood): evened out like
 // the plain sets they came out flat blocks of colour. These keep the painting's fine texture (grain: how much)
@@ -779,7 +779,7 @@ const TEXTURED = { klarg: { grain: 0.45, cleanPips: true }, rokr: { grain: 0.5, 
 const SIX_COLOUR = { frak: [255, 206, 32] };
 // (17 Nov) Jaguar's pearl pips were small and pale among his gold rosettes: bigger, and dark like a jaguar's spots.
 const PIP_MIN_R = { jaguar: 52 };
-const PIP_COLOUR = { jaguar: [58, 30, 10] };
+const PIP_COLOUR = { jaguar: [58, 30, 10], sylvester: [24, 20, 20] }; // (Sylvester's brown pips near-black on his paler stone, 17 Nov)
 const CLEAN = { detail: 0.35, radius: 40 };
 // The 1's red and the 6's green on every set (14 Nov; textures.ts's clearPips uses the same for the ivory dice).
 const VIVID = { red: [222, 14, 26], green: [10, 170, 82], amount: 0.85 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
