@@ -90,6 +90,10 @@ function JoinScreen() {
     const compact = useMedia('(orientation: portrait) and (max-width: 600px)');
     const roomForDie = !useMedia(compact ? '(max-height: 600px)' : '(orientation: landscape) and (max-height: 500px), (orientation: portrait) and (max-height: 740px)');
     const [friendsOpen, setFriendsOpen] = useState(!!invite);
+    // An upright phone's Options sheet (16 Nov): the intro's switch, Watch the intro and Forget the saved
+    // crawl were four 22 px text links; forgetting takes a second tap.
+    const [optionsOpen, setOptionsOpen] = useState(false);
+    const [forgetArmed, setForgetArmed] = useState(false);
     // The name: a box the first time, then a line ("Playing as Ada ✎") tapped to change it.
     const [editingName, setEditingName] = useState<'first' | 'tap' | null>(prefs.name.trim() ? null : 'first');
 
@@ -149,7 +153,8 @@ function JoinScreen() {
                                 {/* Lives at a new table: a tap goes 2, 3, 4. */}
                                 <button className="lives-cycle" aria-label={`Lives at a new table: ${lives}. Tap to change.`} title="Lives at a new table"
                                     onClick={() => { setLives(n => (n >= 4 ? 2 : n + 1)); playSound('click'); }}>
-                                    {'♥'.repeat(lives)}
+                                    <span>{'♥'.repeat(lives)}</span>
+                                    <small>hearts each</small>
                                 </button>
                             </div>
                         )}
@@ -190,14 +195,23 @@ function JoinScreen() {
                                             : 'Fifteen rivals. Two taverns. One ship.'}</span>
                                     </button>
                                     {/* (Solo vs The Molar was taken out, 4 Nov, the user's call: the Tavern Crawl is the solo game.) */}
-                                    {continuing && (
+                                    {/* An upright phone (16 Nov): two buttons a thumb can hit; the rest is in the Options sheet. */}
+                                    {compact && !invite && (
+                                        <div className="home-actions">
+                                            {continuing
+                                                ? <button className="quiet-button" onClick={beginCrawl}>Start a new crawl</button>
+                                                : <button className="quiet-button" onClick={() => setFilm('watch')}>Watch the intro</button>}
+                                            <button className="quiet-button" onClick={() => { setForgetArmed(false); setOptionsOpen(true); playSound('click'); }}>Options</button>
+                                        </div>
+                                    )}
+                                    {continuing && !compact && (
                                         <div className="saved-links">
                                             <button className="link-button" onClick={beginCrawl}>Start a new crawl</button>
                                             <button className="link-button" onClick={() => { actions.forgetSavedRun(); setSaved(null); }}>Forget this save</button>
                                         </div>
                                     )}
                                     {/* The intro, quietly (12 Nov): a setting chosen once, as one line of two links. */}
-                                    {!invite && (
+                                    {!invite && !compact && (
                                         <div className="intro-line">
                                             <button className="link-button" onClick={() => setFilm('watch')}>Watch the intro</button>
                                             <span aria-hidden="true">·</span>
@@ -209,7 +223,7 @@ function JoinScreen() {
                                     )}
                                 </section>
                                 {compact
-                                    ? <button className="secondary friends-open" onClick={() => { setFriendsOpen(true); playSound('click'); }}>{invite ? `Join table ${invite}` : 'Play with friends'}</button>
+                                    ? <button className="primary alt friends-open" onClick={() => { setFriendsOpen(true); playSound('click'); }}>{invite ? `Join table ${invite}` : 'Play with friends'}</button>
                                     : <section className="door friends" aria-label="Play with friends">{friendsBody}</section>}
                             </div>
                         </div>
@@ -218,6 +232,29 @@ function JoinScreen() {
                                 <section className="panel join friends-sheet" role="dialog" aria-label="Play with friends" onClick={e => e.stopPropagation()}>
                                     <button className="legends-close" onClick={() => setFriendsOpen(false)} aria-label="Close">✕</button>
                                     <div className="door friends in-sheet">{friendsBody}</div>
+                                </section>
+                            </div>
+                        )}
+                        {compact && optionsOpen && (
+                            <div className="sheet-backdrop" onClick={() => setOptionsOpen(false)}>
+                                <section className="panel join friends-sheet options-sheet" role="dialog" aria-label="Options" onClick={e => e.stopPropagation()}>
+                                    <button className="legends-close" onClick={() => setOptionsOpen(false)} aria-label="Close">✕</button>
+                                    <h2 className="options-title">Options</h2>
+                                    <button className="switch-row" role="switch" aria-checked={playIntro}
+                                        onClick={() => { saveIntroChoice(!playIntro); setChoice(!playIntro); playSound('click'); }}>
+                                        <span>Play the intro before a crawl</span>
+                                        <i className={`switch${playIntro ? ' on' : ''}`} aria-hidden="true" />
+                                    </button>
+                                    {continuing && <button className="secondary" onClick={() => { setOptionsOpen(false); setFilm('watch'); }}>Watch the intro</button>}
+                                    {continuing && (
+                                        <button className={`forget-save${forgetArmed ? ' armed' : ''}`}
+                                            onClick={() => {
+                                                if (!forgetArmed) { setForgetArmed(true); playSound('click'); return; }
+                                                actions.forgetSavedRun(); setSaved(null); setForgetArmed(false); setOptionsOpen(false);
+                                            }}>
+                                            {forgetArmed ? 'Tap again to forget it for good' : 'Forget the saved crawl'}
+                                        </button>
+                                    )}
                                 </section>
                             </div>
                         )}

@@ -4006,3 +4006,48 @@ button.film-skip:active, button.sail-skip:active, div.tr-after button:active, bu
 @media (orientation: portrait) and (max-width: 600px) {
     .interlude-scene.choosing .spot-card strong { font-size: clamp(1.05rem, 4.5vw, 1.3rem); }
 }
+
+/* ==== The start screen on an upright phone, against today's guidelines (16 Nov) ==== */
+/* The way in is one clear button: a red Play (or Continue) bar across the painting's foot, where the
+   small seal in its corner read as a badge. "Play with friends" steps back to dark leather, so the
+   brightest thing on the screen is the main thing to do. */
+.panel.join.compact .door.crawl .crawl-play { display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 0; }
+.panel.join.compact .play-cue {
+    position: relative; top: auto; right: auto; order: 3; align-self: stretch; margin: 8px 10px 10px; padding: 10px 12px;
+    border-radius: 12px; font-size: 1.3rem; letter-spacing: 0.02em; text-align: center;
+    background: linear-gradient(#d23a2c, #9a1a14); border: 1px solid #5a0f0f;
+    box-shadow: inset 0 1px 0 rgba(255, 225, 205, 0.45), inset 0 -3px 0 rgba(70, 8, 6, 0.45), 0 3px 8px rgba(0, 0, 0, 0.55);
+}
+.panel.join.compact .crawl-play:active .play-cue { filter: brightness(0.92); }
+.panel.join.compact .friends-open { font-size: 1.1rem; }
+/* Things to tap are at least 44 px tall: the name line, and two quiet buttons under the painting
+   (they were four 22 px text links; the rest of them is in the Options sheet). */
+.panel.join.compact .name-line { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; }
+.home-actions { display: flex; justify-content: center; gap: 10px; }
+.quiet-button {
+    flex: 1 1 0; min-height: 44px; padding: 6px 12px; border-radius: 12px; cursor: pointer;
+    font-family: 'Almendra', Georgia, serif; font-size: 1rem; color: #f0e2c2; text-shadow: 0 1px 3px #000;
+    background: linear-gradient(rgba(44, 28, 14, 0.78), rgba(24, 14, 6, 0.84)); border: 1px solid rgba(224, 180, 76, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.14), 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.08s, filter 0.15s;
+}
+.quiet-button:active { transform: scale(0.97); filter: brightness(1.15); }
+/* The Options sheet: a real switch for the intro, and forgetting a saved crawl takes a second tap. */
+.options-sheet { display: flex; flex-direction: column; gap: 12px; }
+.options-title { margin: 0 0 2px; text-align: center; font-size: 1.5rem; color: #b71c1c; }
+.switch-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 12px;
+    border: 1px solid #b39461; border-radius: 12px; background: rgba(255, 250, 240, 0.7); color: #3b2a1a; cursor: pointer;
+    font-family: var(--read, inherit); font-size: 1.05rem; text-align: left;
+}
+.switch { position: relative; flex: none; width: 50px; height: 28px; border-radius: 999px; background: #a89880; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35); transition: background 0.18s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fffaf0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); transition: transform 0.18s; }
+.switch.on { background: #2e7d32; }
+.switch.on::after { transform: translateX(22px); }
+.forget-save { min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(141, 21, 21, 0.45); background: none; color: #8e1515; cursor: pointer; font-family: var(--read, inherit); font-size: 1rem; }
+.forget-save.armed { background: #8e1515; color: #fff3d6; border-color: #5a0f0f; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+/* The friends' tokens: the ones not chosen were greyed so far they looked switched off. And the hearts
+   button says what it is. */
+.door.friends .avatar:not(.selected) { filter: grayscale(0.3) opacity(0.88); }
+.lives-cycle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.1; }
+.lives-cycle small { font-family: var(--read, inherit); font-size: 0.68rem; letter-spacing: 0; color: #6d4c2a; white-space: nowrap; }

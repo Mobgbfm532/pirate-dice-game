@@ -34,6 +34,30 @@ crash a test server. What's left to decide or fix before the merge:
 - The live service's settings (step 11): build command, its own `SAVE_SECRET`, `DATABASE_URL` (the same
   Neon database as the test site, with its test scores, or a clean one?).
 
+### The phone's start screen: built 16 Nov, not committed (before/after in `previews/home2/pair-*.jpg`)
+Built: a full-width red Play / Continue bar on the painting, "Play with friends" in dark leather, two 44 px
+buttons under the painting (Start a new crawl or Watch the intro, and Options), an Options sheet (a real switch
+for the intro, Watch the intro, Forget the saved crawl on a second tap), a 44 px name line, clearer friends'
+tokens and "hearts each" on the hearts button. Computers and phones on their side keep their links. Not built:
+the "How to play" card (item 4) and the header's 36 px coins (the opponent's "i" already had a 44 px tap area).
+To judge on a phone. The list as it was:
+
+### The phone's start screen against today's guidelines (16 Nov)
+Looked at 384x780, 360x640 and 412x915 (`previews/home/`), first visit, returning with a save, and the friends
+sheet. It fits every size without scrolling and looks the part. What falls short, in the order I'd fix it:
+1. **The main action reads as the lesser one.** The Tavern Crawl painting is the button, but its only button-like
+   part is a small red "Play" seal in a corner; "Play with friends" below is the biggest, brightest button on
+   the screen. A full-width red Play / Continue bar along the painting's foot, and a quieter friends button.
+2. **Four text links too small to tap surely:** "Start a new crawl", "Forget this save", "Watch the intro",
+   "Intro before a crawl: on" are 22 px tall in 14 px type (guidelines ask 44 to 48 px); "Playing as Ada ✎" is
+   29 px. And "Forget this save" sits a thumb's width from "Start a new crawl".
+3. **"Intro before a crawl: on" is a switch written as a link.** A real switch, or move it and "Watch the intro"
+   behind one small "More" button.
+4. **Nothing tells a newcomer the rules** beyond the tagline: a "How to play" card (three lines and a picture).
+5. **The friends sheet:** the tokens not chosen are greyed so far they look switched off, and the "♥♥♥" button
+   has no label (it sets a new table's hearts).
+6. In play, also small: the header's back and menu coins are 36 px and the opponent's "i" 20 px.
+
 ### A faster first load, and the hosting plans (16 Nov)
 Built 16 Nov (recommendation 7), measured on the test site before: the start screen fetched 8.5 MB (sound 5.6 MB:
 all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
