@@ -9,84 +9,94 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
-### Multiplayer's look (`docs/multiplayer-look-brainstorm.md`, built 17 Nov; to judge on a phone and a computer)
-- Built: bigger cards on a computer with the reactions in the dock, a dark-wood tally board for the round's result
-  (with the game's own cracking heart; a chalk board was tried first), and both bugs fixed.
-- A player away two minutes now leaves the table (my choice). Coming back later, they join as a new seat with
-  full hearts mid-game. Fine among friends, or should a late return sit out until the next game?
+(Tidied 17 Nov: what was done moved to "Settled" below; what's left is here, most pressing first.)
 
-### Going live: re-checked 17 Nov
-The merge into `main` is still clean (main hasn't moved). Since 15 Nov a crawl saves itself, a player away two
-minutes leaves a friends' table, and the first load is smaller. Still standing, most glaring first:
-1. **The live Render service's settings, before the merge** (or the live game breaks): build command
-   `npm install && npm run build` (without it `/next` doesn't exist: `client/dist` isn't in git), a `SAVE_SECRET`,
-   and a `DATABASE_URL` (without it the leaderboard lives in a file the free plan wipes at every sleep). The same
-   Neon database as the test site (with its test scores), or a clean one?
-2. **`/` is still the old game.** Players at the live address get the classic page, with no way to the new one.
-   **Decided 17 Nov (the user):** the new game will be at `/`, but not yet; built when the user says so.
-   Item 1 (the live service's settings) stays open, the user's to do.
-3. **Done 17 Nov:** a safety net for an unexpected server error (logged, the server keeps running; tried by forcing
-   one); one person per Tavern Crawl table (anyone else is moved to a fresh table) with five-character codes;
-   `npm audit fix` (0 known weaknesses now). 185 server tests pass.
-6. Not yet tried: an iPhone, and the 15-17 Nov changes on your phone.
+### Going live
+1. **The live Render service's settings (the user's to do, before the merge, or the live game breaks):** the build
+   command `npm install && npm run build` (without it `/next` doesn't exist: `client/dist` isn't in git), a
+   `SAVE_SECRET` (without it a restart loses every saved crawl), and a `DATABASE_URL` (without it the leaderboard
+   lives in a file the free plan wipes at every sleep). The same Neon database as the test site (with its test
+   scores), or a clean one?
+2. **The new game at `/`:** decided (17 Nov), but not yet: built when the user says so (Next steps 12).
+3. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
+   server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
 
-### Going live (the end-to-end check of 15 Nov) (kept for the record)
-Checked: 181 server tests and 19 client tests pass, the client builds with no type errors and no dev hooks
-in it, the merge into `main` is clean, the test site serves this exact build, 17,200 junk messages didn't
-crash a test server. What's left to decide or fix before the merge:
-- **A crawl lost when the phone is away, or the server restarts: built 16 Nov, on the test site** (not yet seen on a phone). A
-  Tavern Crawl saves itself: the server sends the run's save to the browser whenever it changes, and a crawl's
-  table is kept an hour, not 2 minutes. Coming back to a table that's gone brings the run back: in a fight, from
-  that fight's start (a toast says so). Leaving a crawl now leaves "Continue" on the start screen. Open: is
-  restarting the fight the right price for a lost table, and is an hour right? The live service needs a
-  `SAVE_SECRET`, or a restart still loses the run. Multiplayer tables are as before (2 minutes, nothing saved).
-- **Nothing catches an unexpected error on the server:** one would stop the server and end every table.
-  Add a safety net (log it, keep running)?
-- **Two people can land at one crawl table:** the code is `TVRN-` plus four random digits, and a second
-  person who gets (or types) the same one is seated in the first one's run (checked). Refuse them, and
-  make the code longer?
-- **`/` stays the classic page after the merge**, with no link to `/next`. Is going live "the new game at
-  `/`" (next step 12) or "the new game at `/next`, with a link from the old page"?
-- **`npm audit` lists 8 known weaknesses in the server's packages** (express's and socket.io's parts,
-  mostly ways to overload a server); `npm audit fix` updates them without breaking changes. Run it and
-  re-test?
-- **iPhones have never been tried** (sound starting, screen height, WebGL), nor a save replayed after a
-  server restart (a save "opens once" only while the server stays up: `openedSaves` is in memory).
-- The live service's settings (step 11): build command, its own `SAVE_SECRET`, `DATABASE_URL` (the same
-  Neon database as the test site, with its test scores, or a clean one?).
+### To judge on a phone (built, never seen there)
+- **17 Nov:** Divine Smite's quake (strong enough, or too much?); the Elf Bars' vapour clouds; Astral Flood no
+  longer stalling (does it still look right?); the ship's dice with clean pips, Jaguar's dark pips, Frak's yellow
+  6s (`previews/dice-eval/`); swapping a keepsake on Thom's back shelf; the Ebon Shield's line as a fight begins
+  and on the sea die; the turn score the size of the score to beat, both in Almendra; music per place, Martha's
+  theme and Jaguar's clips (the clips not yet heard in a real fight).
+- **15-17 Nov:** a crawl that saves itself (is restarting the fight the right price for a lost table, and is an
+  hour right?); the phone's start screen (the red Play bar, 44 px buttons, the Options sheet); the look check's
+  fixes (the footer tray: should your chip join it too? a computer's pool of light: strong enough? the choice
+  between fights; Áéd's painting, a pale rim still round his right-hand dice; the dice not yet thrown); the
+  multiplayer tally board and bigger cards; Klarg's stolen die (the bug fixed 15 Nov: was it what looked weird on
+  10 Nov?).
+- **12-13 Nov:** the start screen and interface; ability moments without a stutter; the ship's weather, Bren and
+  the sailing scene, Áéd.
+- **By ear:** the three sound beds re-encoded smaller on 16 Nov (`Ambience.mp3`, `IntroRain.mp3`,
+  `IntroTavernAmbience.mp3`); the Squall's wind (0.22), Jaguar's music (0.15) and the rogue wave (full); the
+  trailer's join where its second section repeats (about 27.8 s in).
 
-### The phone's start screen: built 16 Nov, on the test site 17 Nov (before/after in `previews/home2/pair-*.jpg`)
-Built: a full-width red Play / Continue bar on the painting, "Play with friends" in dark leather, two 44 px
-buttons under the painting (Start a new crawl or Watch the intro, and Options), an Options sheet (a real switch
-for the intro, Watch the intro, Forget the saved crawl on a second tap), a 44 px name line, clearer friends'
-tokens and "hearts each" on the hearts button. Computers and phones on their side keep their links. Not built:
-the "How to play" card (item 4) and the header's 36 px coins (the opponent's "i" already had a 44 px tap area).
-To judge on a phone. The list as it was:
+### Questions waiting on the user's word
+- **Multiplayer:** a player away two minutes leaves the table (Claude's choice); coming back later they join as a
+  new seat with full hearts mid-game. Fine among friends, or should a late return sit out until the next game?
+- **The Ebon Shield in fog:** you see his hand (Claude's call, 17 Nov: "unaffected"), though he still can't see
+  yours. Keep, or should fog still hide his hand from you?
+- **Áéd:** too hard for the ship's third fight (the simple player won 23% against his six uses, 33% against
+  three)? His four tricks' texts are Claude's: anything he says? His Squall on face 3: another face, or another
+  storm? A painting per trick? His scales (an extra heart) left out?
+- **The voyage:** the dials are first guesses, never simulated. Is All In with a rogue wave two rounds in three
+  too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Becalmed's look and sound
+  (only a still plaque now). Teach the opponents (and the simulator) that a wave is coming? The ship's ability
+  names (Smooth Talk, the Cloak, All In) are still working names.
+- **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
+- **The start screen:** clear enough on a phone? The computer's title on the left: good? The tavern tune on the
+  first tap (idea 9)? The Hall of Legends' place and name, and its text on points? The hearts button for a new
+  table's lives clear enough? The die left out on phones under 740 px tall: OK? The "Classic game" link: keep?
+  Not built: a "How to play" card.
+- **Small things:**
+  - Tavern Crawl's round result says "Dust: [name]" for whoever lost a heart, even with a valid lower score.
+  - The Potion Belt left behind with 3 Thonics carried: the third is kept in an extra slot. Or lost?
+  - Cotton Candy Cloud in a fog bank does nothing more but still uses the puff. Leave, or don't offer it?
+  - `Whoa.mp3` is off until reworked (`WHOA_ON`). Dirty 20!'s colour (`#c5d04a`) not seen by eye; a sound for it,
+    and for Astral Flood's wave, if wanted.
 
-### The phone's start screen against today's guidelines (16 Nov)
-Looked at 384x780, 360x640 and 412x915 (`previews/home/`), first visit, returning with a save, and the friends
-sheet. It fits every size without scrolling and looks the part. What falls short, in the order I'd fix it:
-1. **The main action reads as the lesser one.** The Tavern Crawl painting is the button, but its only button-like
-   part is a small red "Play" seal in a corner; "Play with friends" below is the biggest, brightest button on
-   the screen. A full-width red Play / Continue bar along the painting's foot, and a quieter friends button.
-2. **Four text links too small to tap surely:** "Start a new crawl", "Forget this save", "Watch the intro",
-   "Intro before a crawl: on" are 22 px tall in 14 px type (guidelines ask 44 to 48 px); "Playing as Ada ✎" is
-   29 px. And "Forget this save" sits a thumb's width from "Start a new crawl".
-3. **"Intro before a crawl: on" is a switch written as a link.** A real switch, or move it and "Watch the intro"
-   behind one small "More" button.
-4. **Nothing tells a newcomer the rules** beyond the tagline: a "How to play" card (three lines and a picture).
-5. **The friends sheet:** the tokens not chosen are greyed so far they look switched off, and the "♥♥♥" button
-   has no label (it sets a new table's hearts).
-6. In play, also small: the header's back and menu coins are 36 px and the opponent's "i" 20 px.
+### What a player would notice (found in the 17 Nov review; none built yet)
+- **Nothing teaches a newcomer on the table:** the entrance card explains the rules, but nothing shows how to keep
+  a die or why Roll waits. A first-crawl hint or two against Sperm McGrath?
+- **The tavern's crowd plays aboard the ship** (`Ambience.mp3` under every place's music).
+- **Silences** (the list is in `docs/art-direction.md`): Becalmed; five scenes between fights with no loop of
+  their own (Johnny, Jorvash, Darren, the Stranger, the thief); the synthesized sounds (the sea's swell, the
+  ship's bell, the shared keepsake chime, the coins) could become real clips.
+- **Light and living backdrops per place** (the Portal's well light, swinging lanterns aboard, the fire
+  flickering): the biggest lift left for the look.
 
-### A faster first load, and the hosting plans (16 Nov)
+### Numbers to set (after play-testing; simulate first with `balance/`)
+- The Ghoul and Gourd's lives; the Duke's `devilWhenBelow` (0.7); keepsake prices (Miser's Purse 12, Gambler's
+  Charm 14, Bottomless Flask 12, Loaded Die 12), and whether the Miser's Purse needs a cap; the Elf Bars (8-14); the
+  Bard (8); the Cult (15% of walks, 2 fights); uses per fight for the Yawning Portal's five; Yvesil's and
+  Jorvash's prices and chances; the sea dials; Áéd's numbers.
+- Overall difficulty: the simulator says hard (0.3% finish), the user finds it easier. The simulator doesn't know
+  anything added since late October (Áéd, the sea, the Elf Bars, the Bard, the Cult, the new keepsakes): teach it
+  first.
+
+### Ideas not chosen yet
+- More keepsakes (workshopped 30 Oct): Lodestone, Spyglass, Hangman's Spare Bullet, Devil's Bargain, Brawler's
+  Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror, Sailor's Compass, Gold Tooth. A keepsake pool per
+  place was offered and not taken.
+- A warning on the opponent's nameplate before an ability fires.
+- Housekeeping: delete unused code (the Dice Den, the old keepsake cards, Martha's mask, Dead Eye, Written in the
+  Stars, the synthesized cork pop); find why a few server tests fail now and then in a full run.
+
+### For the record: the first load and the hosting measurements (16 Nov)
 Built 16 Nov (recommendation 7), measured on the test site before: the start screen fetched 8.5 MB (sound 5.6 MB:
 all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
 - Effects are no longer fetched with the page (`preload = 'none'`); once sound starts, eleven come first, the
   rest two at a time (`decodeClips`). Ability paintings come once a crawl is under way (`fetchAllAbilityArt`).
 - Three sound beds re-encoded smaller, the originals kept in `art/audio/`: `Ambience.mp3` 9.5 → 3.6 MB (96 kbps),
-  `IntroRain.mp3` 683 → 214 KB, `IntroTavernAmbience.mp3` 751 → 301 KB. **To hear by ear: do they still sound
-  right?** (The music, the scene loops and Jaguar's track are untouched.)
+  `IntroRain.mp3` 683 → 214 KB, `IntroTavernAmbience.mp3` 751 → 301 KB. (The music, the scene loops and Jaguar's track are untouched.)
 - The libraries are in a file of their own (`vendor`; vite.config.ts) and `/next/assets` may be kept by
   the browser for good (server.js), so a returning player fetches only what changed.
 - Loading three.js after the start screen was not done: it is 0.26 MB of the 8.5, and the start screen's own
@@ -97,105 +107,25 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   now and then (settled 16 Nov): enough. A game tab left open keeps a free service awake (its connection keeps
   talking), and two free services awake all month would pass the 750 free hours they share.
 
-### Claude's recommendations for what to do next (15 Nov; 1 and 7 built 16 Nov)
-In the order I'd do them:
-1. **Built 16 Nov.** Never lose a crawl: keep each fight's save on the phone by itself (the server already seals one as every
-   fight starts, `run.fightSave`), and keep a Tavern Crawl table for an hour instead of 2 minutes. Covers the phone
-   being away, a deploy and the server's sleep. About half a day.
-2. **A safety net on the server and one person per crawl table** (log an unexpected error and keep running;
-   refuse a second person at a `TVRN-` table). Small.
-3. **`npm audit fix`**, then the tests again. Small.
-4. **Try it on an iPhone** before friends do (sound starting, screen height, the 3D table).
-5. **Light and living backdrops per place** (the Portal's cool well light, swinging lanterns aboard, the fire
-   flickering): the biggest lift left for the look.
-6. **The sounds still missing:** Jaguar's three phases, Becalmed, the five silent scenes, music for the Yawning
-   Portal and the ship (the list is in `docs/art-direction.md`).
-7. **A faster first load:** the 9.5 MB ambience track compressed, three.js loaded after the start screen.
-8. **Teach the balance simulator the newer things** (Áéd, the sea, the Elf Bars, the Bard, the new keepsakes),
-   then set the first-guess numbers.
-9. **A first-crawl hint or two** against Sperm McGrath for someone who has never played (tap a die to keep it,
-   why Roll waits): the entrance card explains the rules, nothing shows them on the table.
-10. Small polish: the pale rim round Áéd's right-hand dice; your chip joining the footer's tray; a computer's
-    multiplayer cards up in the header.
-
-### The look: the five fixes of 15 Nov (to judge on a phone and a computer)
-Built 15 Nov from the look check (before/after in `previews/look5/`), not yet seen by the user on a real phone:
-- The phone's footer: the purse, shelf and keepsakes on one dark tray; the turn score in the middle when there's nothing to beat yet; the scores' numbers in Alegreya (Almendra's bold 0 drew as a blob). Good, or should the chip join the tray too?
-- A computer's tabletop darkens away from the tray (a pool of light). Strong enough, too strong?
-- The choice between fights on upright phones: the place's painting shows up top, bigger cards below.
-- Áéd's painting: its smoke unmixed from the green (it was khaki). A pale rim is still left round his right-hand dice.
-- The dice not yet thrown: a darker blue with a gold line and a shaded "?", under the dice's lacquer.
-- Found on the way, a real bug (what looked like smeared pips): the die Klarg takes was drawn part of the way inside another die while it waited for his paw, worse on slow frames. Fixed (Dice.tsx). Is this what looked weird on 10 Nov?
-- Still the biggest lift, not built: light and living backdrops per place.
-
-### The game's interface (`docs/ui-brainstorm.md`, 12 Nov)
-- All eight ideas are built (12 Nov; the ability marks as gems were reverted, the "Your turn" tab taken out). Should the turn score move into your chip after all (it would shift the table a little on phones)?
-- The hearts: drawn in CSS/SVG first, or a painted heart (full, empty) from the user?
-
-### The voyage (`docs/voyage-brainstorm.md`)
-- **The dials' numbers** (`BALANCE.voyage`, built as proposed in `docs/voyage-brainstorm.md`, "The final dials", 10 Nov): first guesses, not simulated. Klarg 2-5 calm; Rokr 2-3 Becalmed; the Hangman 2 Squall, 3 Heavy seas, 4 Fog; Jaguar by phase: talking 4-5 Fog, the Cloak 2-3 Squall and 4-5 Heavy seas, All In 2-5 Heavy seas. Is All In with a rogue wave two rounds in three too cruel?
-- **Becalmed and Starry Form:** on Rokr's leg his Starry Form can come in a becalmed round: you keep blind with only three throws. Too harsh, or a fair storm-free danger? (Option: no Starry Form while becalmed.)
-- **Becalmed's look and sound:** so far only a still, warm plaque and the hint counting throws. A sound (slack sails, a creak, gulls?) or something on the table, if wanted.
-- **The opponents and the Rogue wave:** their solver doesn't know a wave is coming, so they keep as on a calm sea. Teach it (and the balance simulator) before setting the dial's numbers?
-- **Sound levels to hear by ear (10 Nov):** the Squall's wind at 0.22 and Jaguar's music at 0.15 were set by measuring (both are loud recordings), the rogue wave at full volume (a quiet one).
-- The ship's ability names are still working names: Smooth Talk, the Cloak, All In.
-
-### Water of the Ebon Shield (`docs/ebon-shield-brainstorm.md`, 10 Nov)
-- **Settled 17 Nov (the user):** "allow the player be unaffected by the sea die in their next fight". Built: for the next fight your throws never list, a Squall or Becalmed doesn't limit your hands, a rogue wave never takes your dice, and you see through a fog bank (he still can't see your hand in it). No extra heart any more. It says so (the user's, 17 Nov): "Your Ebon Shield holds: you are unaffected in this fight" as the fight begins and under the sea die's news.
-- **Open:** in a fog bank you see his hand under the Ebon Shield (Claude's call, 17 Nov: "unaffected"), though he still can't see yours. Keep it so, or should fog still hide his hand from you?
-
-### Built 17 Nov, to judge on a phone
-- Divine Smite's quake as it lands (the page quakes for 1.65 s, cracks of gold light, stone chips): strong enough, or too much?
-- The Elf Bars' vapour clouds in each flavour's colour (Martha's vape too).
-- Astral Flood: no longer stalls a phone (measured headless at a phone's speed); does it still look right?
-- The ship's dice with clean round pips and softer texture; Jaguar's dark pips; Frak's yellow 6s (`previews/dice-eval/`).
-- Swapping a keepsake on Thom's back shelf with full pockets.
-
-### Áéd, the dragon sorcerer (`docs/aed-brainstorm.md`, built 11 Nov)
-- His numbers, first guesses: 6 uses a fight, each trick at least once (the user's, 13 Nov), how keen he is to spend the spare two (`minGain` 0.12 and 0.06), 3 hearts, Heightened at most once a round. Played headless against the simple player (13 Nov, 40 fights each): the player won 33% against 3 uses and 23% against 6. Is he now too hard for the ship's third fight?
-- His words: the four tricks' texts are Claude's. Anything he says?
-- His Squall is on face 3 (a first guess): another face, or another storm?
-- Art and sound: an ability painting (one, or one per trick) and a sound for his spells, if wanted; his dragon's colour (the card and banners use his robe's violet and gold).
-- His scales (an extra heart, or his first lost heart stays) were in the brainstorm but not asked for: leave out?
-- The balance simulator doesn't know him.
-
-### Moments without a stutter (12-13 Nov, pushed 13 Nov)
-- To feel on the phone: do the ability moments (Starry Form's hidden throw, Mind Whip's die, Inkfire's flame, any painting rising) now come in smoothly? Headless checks show no shader built during play; the phone hasn't been tried.
-
-### The trailer, take two (`docs/trailer-brainstorm.md`, built 11 Nov)
-- The user's trailer track (11 Nov) is fitted by its sections, its boom's section played twice: to hear by ear, the join at the repeat (about 27.8 s into the trailer) and whether the shots land well on its beats.
-
-### Small things
-
-- Sounds and music: which of the missing ones to make (the list is in `docs/art-direction.md`, "Sounds and music still missing", 11 Nov): Áéd's spells play in silence (Jaguar's three phases have the user's clips since 17 Nov, and the Portal, Brodor and the ship their music); five scenes between fights have no loop; Becalmed has no sound; no music for the Yawning Portal or the ship.
-- Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
-- `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
-- The Dirty 20! colour (`#c5d04a`) hasn't been seen by eye; a sound for it, and for Astral Flood's wave, if wanted.
-- The Potion Belt left behind with 3 Thonics carried: the third is kept in an extra slot (10 Nov).
-  Or should it be lost?
-- Cotton Candy Cloud in a fog bank (found 10 Nov, checking the code): the fog already hides your score from him, so a puff there does nothing more, but it still uses up the puff. Leave it, or don't offer it in fog?
-
-### Numbers to set (after play-testing; simulate first with `balance/`)
-- The Ghoul and Gourd's lives; the Duke's `devilWhenBelow` (0.7); keepsake prices (Miser's Purse 12,
-  Gambler's Charm 14, Bottomless Flask 12, Loaded Die 12), whether the Miser's Purse needs a cap; the Elf
-  Bars (8-14); the Bard (8); the Cult (15% of walks, 2 fights); uses per fight for the Yawning Portal's
-  five; Yvesil's and Jorvash's prices and chances.
-- Overall difficulty: the simulator says hard (0.3% finish), the user finds it easier.
-
-### Ideas not chosen yet
-- More keepsakes (workshopped 30 Oct): Lodestone, Spyglass, Hangman's Spare Bullet, Devil's Bargain,
-  Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror, Sailor's Compass, Gold Tooth. A
-  keepsake pool per place was offered and not taken.
-- A warning on the opponent's nameplate before an ability fires.
-
-### The start screen (`docs/landing-page-brainstorm.md`, 12 Nov)
-- Decluttering the phone screen (ideas 1-4 built 12 Nov): does the phone now feel clear enough, or should the painting grow more? A computer now has the title on the left and the panel on the right (12 Nov): good?
-- Everything there is built (12 Nov; the living tavern built and taken out) but idea 9, the tavern tune on the first tap: wanted?
-- The Hall of Legends (built 12 Nov): the plaque's place (top right) and name ("Legends"); the text on how points are earned.
-- Two doors (built 12 Nov): "Start a table" now makes a four-letter code for you. Is a hearts button you tap (2, 3, 4) clear enough for a new table's lives? The die is left out on upright phones under 740 px tall to make room: OK?
-- The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
-
 ## Settled
+- 17 Nov: the old service worker (the classic page's, covering the whole site) stored everything the new game
+  fetched; now it keeps only the classic page's few files and leaves the rest alone (found in the 17 Nov review).
+- 17 Nov: the Water of the Ebon Shield keeps the sea die off you for a fight (no list, Squall, Becalmed, rogue wave
+  or fog for you; it was an extra heart), and says so: "Your Ebon Shield holds: you are unaffected in this fight".
+- 17 Nov: keepsakes swap on Thom's back shelf when your pockets are full. Mystery Flavour's line: "...and each fight
+  is a different flavour at random." Elf Bars puff vapour in their flavour's colour. Divine Smite lands as a quake.
+  Astral Flood made cheap to draw (it stalled a phone). The ship's dice with clean pips; Frak's 6s yellow.
+- 17 Nov: the turn score the size of the score to beat; both numbers in Almendra, like the rest of the table (they
+  were Alegreya from 15 Nov).
+- 17 Nov: before going live: a safety net for server errors, one person per crawl table (five-character codes),
+  `npm audit fix` (0 known weaknesses). The new game will be at `/`, but not yet. The live service's settings stay
+  the user's to do.
+- 17 Nov: the user's audio: music per place (the Portal, the ship, Martha's, Brodor's and Jaguar's fights) and
+  Jaguar's three clips. Áéd has had his `UnlimitedPower.mp3` since 13 Nov.
+- 16 Nov: a crawl saves itself, and its table is kept an hour; a faster first load (8.5 MB to about 2.9 MB); the
+  phone's start screen to today's guidelines (a red Play bar, 44 px buttons, an Options sheet).
+- 15 Nov: the end-to-end check found no bug in the rules or the build; its four go-live items were built by 17 Nov.
+  The look check's five fixes built.
 - 17 Nov: multiplayer's look: ideas 5 (bigger cards on a computer) and 6 (a chalk-board round result) and the two bugs; ideas 1-4 and 7 not wanted.
 - 16 Nov: the live Render service is on the free plan, and the game is for at most 6 players playing now and then (the user's). The free Render and Neon plans are enough for that; the free plan's sleep and deploys are why "never lose a crawl" (recommendation 1) matters.
 - 13 Nov: the sea die's needle has the user's own clips: a tick past each sector line, and a clunk as it lands on its face.

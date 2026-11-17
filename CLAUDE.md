@@ -1014,7 +1014,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     live leaderboard's old gold entries count as points.
 12. **Switch over** (the user's, 17 Nov: the new game at `/`, but not yet; on their word): serve it at `/` (keep the
     classic page reachable for a while; until then it skips Thom and the events, which the user
-    accepted), update the PWA manifest/service worker, retire the old client code in
+    accepted), update the PWA manifest/service worker (since 17 Nov `public/sw.js` keeps only the classic page's six
+    files and leaves every other request alone: before, registered at `/`, it stored everything the new game fetched,
+    tracks of up to 10 MB, and the live connection's requests; tested by serving the old worker, then the new: the old
+    store goes, `/next` and its sounds pass through, the classic page still opens offline), retire the old client code in
     `public/index.html`.
 13. **Later / nice to have:** Jaguar's keepsake drop (once there is a place after the ship); new
     places with tougher opponents (the roguelite); delete unused code (the Dice Den if it stays
