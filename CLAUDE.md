@@ -24,8 +24,7 @@ qualifier (Sperm McGrath, Frak, Danhausen, Duke Morrigan, Martha/Mystery), the Y
 (Sylvester Stonefist, Vaelin Inkhand, Stason Jatham, The Ridgeler, Brodor), then the final aboard
 the Salty Swallow, a docked ship (Klarg, Rokr, Áéd, The Hangman, Jaguar Cantona); each from Frak on has
 an ability; between fights a random event now and then, then a choice of two spots; gold to spend
-(Thonics, keepsakes, the Shrine, the hot tub; prices rise as you buy) and a leaderboard by points; the run can be saved after
-each place). See "Tavern Crawl now" below.
+(Thonics, keepsakes, the Shrine, the hot tub; prices rise as you buy) and a leaderboard by points; the run saves itself as it goes (16 Nov) and can be left and continued). See "Tavern Crawl now" below.
 
 ## The person
 
@@ -338,7 +337,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 - **Fonts:** every speech bubble is Alegreya bold italic; it must be loaded (`1,700` in index.html's font link, 10 Nov), or the browser fakes the bold and some letters (the "Y") draw as outlines.
 - Commit messages end with the `Co-Authored-By` line from the session's instructions.
 
-## Status (13 November 2026)
+## Status (17 November 2026)
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
@@ -346,7 +345,16 @@ one too, or saves only last until the server restarts, which on the free tier is
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 15-fight tournament across three places, Thonics, events between fights,
-  keepsakes, gold, saves after each place. 178 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 17 client tests.
+  keepsakes, gold, a run that saves itself. 183 server/rules/strategy/database tests (the solo-table tests now use Tavern Crawl tables) + 19 client tests.
+- **15-17 Nov (the user's calls; details in "Next steps" 0 and `docs/open-questions.md`):**
+  - an end-to-end check for going live: no bug in the rules or the build; its open items kept as known (the user's);
+  - the look check's five fixes (the phone's footer tray, a pool of light on a computer's tabletop, the choice
+    between fights, Áéd's painting, the dice not yet thrown) and a fix for Klarg's stolen die drawn inside another;
+  - a faster first load (8.5 MB at the start screen down to about 2.9 MB, 1 MB for a returning player);
+  - a crawl saves itself, and its table is kept for an hour;
+  - the phone's start screen: a red Play bar, 44 px buttons, an Options sheet;
+  - hosting: the live service is on Render's free plan for at most six players, enough with Neon's free plan;
+  - all pushed and on the test site (17 Nov).
 - **12-13 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the start screen rebuilt (`docs/landing-page-brainstorm.md`): a gold title and tagline over the tavern, a real
     die, two doors (the Tavern Crawl's painting as its button, Play with friends), the Hall of Legends, the phone screen
@@ -982,6 +990,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 7. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
    Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
+7b. **Multiplayer's look** (`docs/multiplayer-look-brainstorm.md`, 17 Nov): seven ideas waiting on the user, and two bugs to fix whatever is chosen (players who leave stay as "Away" cards, "Away" drawn over their hearts; on a phone on its side five or six cards cover the slot rail). Shooting a multiplayer table: seat players with a socket.io script, then `test/shots.mjs table=<code>`; at computer sizes the software renderer times out, so run a copy with `--use-angle=d3d11` in place of the swiftshader flags, and give every shot its own table code (each run leaves its Tester behind).
 8. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
 9. **The look, more** (listed in the visuals plan's "What's left for the look"): living
    backdrops (the fireplace, candles and the Portal's well flicker, by a mask like the devil
@@ -1005,6 +1014,5 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
     places with tougher opponents (the roguelite); delete unused code (the Dice Den if it stays
     out, the old keepsake cards `offerKeepsakes`/`KeepsakeCards`, `Rules.getAbilityMaxUses`,
     `shareFlame`, the unused `--flame` CSS variable, the old Constellation Blur, the synthesized
-    cork pop, Martha's mask if it stays out); a smaller first download (lazy-load three.js, compress the 9.5 MB
-    ambience track); spectator mode; find why a few server tests fail now and then in a full run (Inspiring
+    cork pop, Martha's mask if it stays out); a smaller first download (done 16 Nov, but for three.js loaded after the start screen, judged not worth it); spectator mode; find why a few server tests fail now and then in a full run (Inspiring
     Song, Rokr's stars, Clear-Eye: each passes alone, and they did before these changes too).

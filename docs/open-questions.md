@@ -9,11 +9,18 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
+### Multiplayer's look (`docs/multiplayer-look-brainstorm.md`, 17 Nov; none built yet)
+- Which of its seven ideas, in what order? (Recommended first: whoever is rolling shown big in the empty tavern; then each player picking a painted dice set.)
+- Dice sets: free for everyone, or unlocked by beating their owner in a crawl?
+- Player tokens: would you paint a dozen tavern regulars as faces?
+- Two bugs found: a player who leaves stays as an "Away" card for good, its "Away" drawn over the hearts; and on a phone on its side five or six cards run over the slot rail. When a player has been away a while, drop their card, or keep it so they can rejoin?
+
+
 ### Going live (the end-to-end check of 15 Nov)
 Checked: 181 server tests and 19 client tests pass, the client builds with no type errors and no dev hooks
 in it, the merge into `main` is clean, the test site serves this exact build, 17,200 junk messages didn't
 crash a test server. What's left to decide or fix before the merge:
-- **A crawl lost when the phone is away, or the server restarts: built 16 Nov** (not yet seen on a phone). A
+- **A crawl lost when the phone is away, or the server restarts: built 16 Nov, on the test site** (not yet seen on a phone). A
   Tavern Crawl saves itself: the server sends the run's save to the browser whenever it changes, and a crawl's
   table is kept an hour, not 2 minutes. Coming back to a table that's gone brings the run back: in a fight, from
   that fight's start (a toast says so). Leaving a crawl now leaves "Continue" on the start screen. Open: is
@@ -34,7 +41,7 @@ crash a test server. What's left to decide or fix before the merge:
 - The live service's settings (step 11): build command, its own `SAVE_SECRET`, `DATABASE_URL` (the same
   Neon database as the test site, with its test scores, or a clean one?).
 
-### The phone's start screen: built 16 Nov, not committed (before/after in `previews/home2/pair-*.jpg`)
+### The phone's start screen: built 16 Nov, on the test site 17 Nov (before/after in `previews/home2/pair-*.jpg`)
 Built: a full-width red Play / Continue bar on the painting, "Play with friends" in dark leather, two 44 px
 buttons under the painting (Start a new crawl or Watch the intro, and Options), an Options sheet (a real switch
 for the intro, Watch the intro, Forget the saved crawl on a second tap), a 44 px name line, clearer friends'
@@ -72,9 +79,9 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   die needs it.
 - **Hosting, as measured:** the server idles at 77 MB and ran 60 crawls at once in 101 MB, using about 5% of
   one processor; a player costs about 58 KB a minute. Neon was awake 15.6 hours in the first half of November,
-  about 4 of the free plan's 100 CU-hours. Open: which Render plan is the live service on? A game tab left open
-  keeps a free service awake (its connection keeps talking), and two free services awake all month would pass
-  the 750 free hours they share.
+  about 4 of the free plan's 100 CU-hours. The live service is on Render's free plan, for at most six players
+  now and then (settled 16 Nov): enough. A game tab left open keeps a free service awake (its connection keeps
+  talking), and two free services awake all month would pass the 750 free hours they share.
 
 ### Claude's recommendations for what to do next (15 Nov; 1 and 7 built 16 Nov)
 In the order I'd do them:

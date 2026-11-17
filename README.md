@@ -47,7 +47,7 @@ Art: originals are in `art/`; `npm --prefix client run art` regenerates the game
 |---|---|
 | blank or any code | Classic multiplayer. Share the code with friends. |
 | `JUGS` | Classic multiplayer with a league table: every finished game is counted by player name, games won and played. |
-| `TAVERN` | Tavern Crawl: fifteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold to spend (prices rise as you buy) and a leaderboard by points. A run can be saved after each place. |
+| `TAVERN` | Tavern Crawl: fifteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold to spend (prices rise as you buy) and a leaderboard by points. The run saves itself as it goes: leave and Continue later, or come back after a dropped connection or a server restart. |
 
 ## Project layout
 
@@ -88,4 +88,4 @@ npm test
 | `LEADERBOARD_READONLY` | Set to anything to stop writing those files and reading `.env.local` (local testing) |
 | `TAVERN_START_ENCOUNTER` | Start Tavern Crawl runs at a later opponent, for testing (1 = Frak … 5 = Sylvester … 10 = Klarg … 12 = Áéd … 14 = Jaguar) |
 | `GAME_SERVER` | Game server the client's dev server proxies to (default `http://localhost:3000`) |
-| `SAVE_SECRET` | Seals saved Tavern Crawl runs. Set it in production, or saves only last until the server restarts |
+| `SAVE_SECRET` | Seals saved Tavern Crawl runs (each crawl saves itself). Set it in production, or a server restart loses every run in play |
