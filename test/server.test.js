@@ -2307,8 +2307,10 @@ test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at 
     const order = [];
     hero.on('signatureMove', () => order.push('move'));
     hero.on('diceRolled', () => order.push('roll'));
+    const unpin = pinFaces([1, 1, 3, 3, 5, 6]); // (since 17 Nov it waits for a throw of 1s and 3s)
     hero.emit('rollDice');
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    unpin();
     assert.deepEqual(order, ['move', 'roll'], 'his banner plays before the dice are thrown');
     const forced = rolled.turn.dice.filter(d => d.mind);
     assert.equal(forced.length, 1, 'one die is his pick');
@@ -2764,6 +2766,10 @@ test("Sylvester's Back of the Head knocks your best kept die loose from a finish
     const done = await waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === hero.id && d.turn.finalized, 3000);
     assert.equal(done.turn.finalized, true);
     assert.equal(room.tavernRun.abilityUsed.suckerPunch, 1);
+    // And End Turn then ends it: the round goes on to him (the user's freeze, 17 Nov, was the button).
+    const his = waitFor(hero, 'turnState', d => d.turn && d.turn.playerId === 'BOT_MOLAR', 5000);
+    hero.emit('endTurn');
+    await his;
 });
 
 test('Back of the Head waits for a hand that counts (not dust)', async () => {
@@ -2975,8 +2981,10 @@ test("Mind Whip in Martha's face: her disguise shows first, then Frak's trick", 
     room.tavernRun.pendingMind = { as: 'Frak' };
     const moves = [];
     hero.on('signatureMove', m => moves.push(m.ability));
+    const unpin = pinFaces([1, 1, 3, 3, 5, 6]); // (since 17 Nov it waits for a throw of 1s and 3s)
     hero.emit('rollDice');
     await waitFor(hero, 'signatureMove', m => m.ability === 'Mind Whip');
+    unpin();
     assert.deepEqual(moves, ['Disguise Self', 'Mind Whip']);
     assert.equal(room.tavernRun.abilityUsed.disguises, 1);
 });

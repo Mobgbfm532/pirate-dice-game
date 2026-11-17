@@ -555,7 +555,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   id is still `suckerPunch`, as in the simulator; renamed 21 Oct: as you keep your last die on a
   hand that counts, your best kept die, `Rules.bestKeptDie`, goes back in play and you roll it
   again; `suckerPunch` via `emitKept`, `Rules.putBackDie`; its turnState event `punched` makes the
-  client drop taps it is still showing, which had left the Roll button dead); Vaelin's **Inkfire Brand** (a round effect
+  client drop taps it is still showing, which had left the Roll button dead; and since 17 Nov a hand reopened under an End Turn already pressed clears `endingTurn` in game.ts's `applyTurn`: the button had stayed on "Ending…", disabled, and the game froze, the user's bug, twice); Vaelin's **Inkfire Brand** (a round effect
   `ink`: your dice that land on 6 roll again, in `rollFaceFor`; the Loaded Die lands 4-5; the hot
   tub's Scalding Die still lands 6); Stason's **Flourish** (`startFlourish` on his turn's first
   throw: `turn.flourish`, each die rolls twice, a needed 2 or 4 else the higher, `flourishFace`;

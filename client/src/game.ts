@@ -475,7 +475,9 @@ function applyTurn(serverView: TurnView | null) {
     update({
         turn,
         isMyTurn,
-        endingTurn: isNewTurn ? false : snapshot.endingTurn
+        // (A hand reopened under an End Turn already pressed, as Sylvester's Back of the Head does, is
+        // no longer ending: the button comes back to roll the knocked-loose die. The user's freeze, 17 Nov.)
+        endingTurn: isNewTurn || !turn || !(turn.finalized || handComplete(turn)) ? false : snapshot.endingTurn
     });
     if (isNewTurn && isMyTurn) announceYourTurn();
     if (turn) setCallout(turn, turn.callout, turn.outcome);
