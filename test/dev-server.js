@@ -58,8 +58,10 @@ const START_KEEPSAKES = (process.env.START_KEEPSAKES || '').split(',').filter(Bo
 // START_AFTER=brodor (or martha, or any opponent such as duke, env): every new run, once kitted, is placed just after beating that
 // boss: the fight's summary, then the invitation on to the next place (as /invitation?boss=...).
 const START_AFTER = process.env.START_AFTER || '';
+// START_PURSE=60 (env, 17 Nov): the purse a new run has once it is set up (after START_AFTER's win).
+const START_PURSE = process.env.START_PURSE ? Number(process.env.START_PURSE) : null;
 // (Applied as the run is made, before it's first shown: server.devHooks.newRun.)
-if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER) server.devHooks.newRun = (code, r) => {
+if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER || START_PURSE != null) server.devHooks.newRun = (code, r) => {
     if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
     if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
     const after = START_AFTER && server.TAVERN_ENCOUNTERS.findIndex(e => e.id === START_AFTER);
@@ -74,11 +76,14 @@ if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER) server.devHooks
     else if (START_AFTER) {
         const G = require('../shared/balance').gold;
         for (let i = 0; i < after; i++) r.tavernRun.purse += G.winFirst + G.winStep * i + 2 * G.perHeartLeft;
+        // (START_PURSE: what the purse holds once this win is paid, so its summary adds up)
+        if (START_PURSE != null) r.tavernRun.purse = START_PURSE - (G.winFirst + G.winStep * after + 2 * G.perHeartLeft);
         r.tavernRun.encounterIndex = after;
         COMMANDS['/won'](r, new URLSearchParams({ hearts: '2' }));
     }
     // (Otherwise the fight starts as usual: its entrance, its first round.)
     else { server.resetTavernEncounter(code, false); }
+    if (START_PURSE != null && !(START_AFTER && !server.TAVERN_ENCOUNTERS[after].drops)) r.tavernRun.purse = START_PURSE;
 };
 
 const COMMANDS = {

@@ -3161,6 +3161,41 @@ test('the Cult of Kram: swear fealty and your dice never land on 1 for two fight
     assert.ok(Array.from({ length: 300 }, () => bot({ id: 0 })).includes(1), "the opponent's dice still can");
 });
 
+test("Kram's emblem: every spot 10% dearer while it's worn, told as you swear", async () => {
+    const { hero, room } = await betweenFights('Emblem', { stage: 'kram', fights: BALANCE.interlude.kramFights }, 200);
+    const run = room.tavernRun;
+    run.encounterIndex = fightOf('vaelin');
+    const shrine = () => server.getRoomState(codeOf(hero)).tavernRun.prices.shrine;
+    const before = shrine();
+    hero.emit('kram', 'swear');
+    const done = await nextState(hero, s => runOf(s).interlude.stage === 'done');
+    assert.equal(runOf(done).interlude.markup, 10, 'the markup is told');
+    assert.equal(shrine(), Math.ceil(BALANCE.interlude.shrinePrice * 1.5 * 1.1), 'dearer at once');
+    assert.ok(shrine() > before);
+    run.shop = { stock: ['healing'], keepsakes: [server.TAVERN_KEEPSAKES.find(k => k.id === 'velvetCushion')] };
+    const shop = server.getRoomState(codeOf(hero)).tavernRun.shop;
+    assert.equal(shop.stock[0].price, Math.ceil(BALANCE.thonicPrices.healing * 1.5 * 1.1));
+    assert.equal(shop.keepsakes[0].price, Math.ceil(BALANCE.keepsakePrices.velvetCushion * 1.5 * 1.1));
+    run.kramFights = 0; // the emblem's fights are behind you
+    assert.equal(shrine(), before);
+});
+
+test('a run that swore fealty to Kram meets a Klarg with an extra Reach Around, told only on his card', async () => {
+    const hero = await tavernAgainst(fightOf('klarg'), 'Heretic');
+    const room = roomOf(hero);
+    server.resetTavernEncounter(codeOf(hero), false, true); // (Klarg seated)
+    const card = () => server.getRoomState(codeOf(hero)).tavernRun.seated;
+    const marks = () => server.getRoomState(codeOf(hero)).tavernRun;
+    assert.equal(marks().abilityMax, BALANCE.abilityUses.reachAround);
+    assert.match(card().powers[0].text, /^Twice a fight/);
+    room.tavernRun.krammed = true;
+    assert.equal(marks().abilityMax, BALANCE.abilityUses.reachAround + 1);
+    assert.match(card().powers[0].text, /^Three times a fight.*Kram/);
+    assert.match(card().blurb, /swore fealty to Kram/);
+    room.tavernRun.abilityUsed = { reachAround: BALANCE.abilityUses.reachAround };
+    assert.ok(server.getRoomState(codeOf(hero)).tavernRun.abilityMax > room.tavernRun.abilityUsed.reachAround, 'a use left');
+});
+
 // ---- Elf Bars, from Johnny Elf Bar (28 Oct) ----
 
 test('Johnny Elf Bar is a spot ashore (not aboard the ship); an Elf Bar comes with 3 puffs, one of each kind', async () => {

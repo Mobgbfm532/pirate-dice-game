@@ -878,7 +878,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
                     {run.omen && <KeepsakeIcon icon={keepsakeIcon(run.omen.id)} name={run.omen.name} text={run.omen.text.replace(' next fight', ' this fight')} kind={run.omen.good ? 'A good omen' : 'A bad omen'} blessing />}
                     {run.notaro && <KeepsakeIcon icon={keepsakeIcon('notaroRed')} name="Notaro Red" text="Your first hand that counts this fight scores 2 more." kind="A refreshment" blessing />}
                     {run.seaWard && <KeepsakeIcon icon={keepsakeIcon('ebonShield')} name="Water of the Ebon Shield" text="The sea die can't touch you this fight: your dice never list, and no squall, wave, fog or calm holds you back." kind="A refreshment" blessing />}
-                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} kind="Fealty" blessing />}
+                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={(run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.') + (run.kram.markup ? ` While you wear his emblem, every spot charges you ${run.kram.markup}% more.` : '')} kind="Fealty" blessing />}
                 </span>
             )}
         </div>
@@ -2117,7 +2117,7 @@ const SCENES: Record<SceneSpot, { name: string; tag: string }> = {
     hotTub: { name: 'Wild Magic Hot Tub', tag: 'Soak at your own risk' },
     darren: { name: 'Darren Snakehands', tag: 'The barman, and his snakes' },
     bard: { name: 'The Bard', tag: 'Songs to win by' },
-    kram: { name: 'The Cult of Kram', tag: 'Kram abhors an ugly 1' },
+    kram: { name: 'The Cult of Kram', tag: 'Kram abhors all ugly things' },
     elfKid: { name: 'Johnny Elf Bar', tag: "One of Frak's street urchins" },
     jorvash: { name: 'Jorvash', tag: 'Manservant of the Salty Swallow' },
     yvesil: { name: 'Yvesil', tag: 'Oracle of the Salty Swallow' }
@@ -2376,7 +2376,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
     if (interlude.stage === 'kram') {
         return (
             <>
-                <p className="scene-text">Swear fealty to Kram, and your dice never land on an ugly 1 for your next <strong>{interlude.fights} fights</strong>.</p>
+                <p className="scene-text">Swear fealty to Kram, and your dice never land on an ugly 1 for your next <strong>{interlude.fights} fights</strong>. While you wear his emblem, every spot charges you <strong>{interlude.markup ?? 10}% more</strong>.</p>
                 <div className="event-choices">
                     <button className="primary" onClick={() => actions.kram('swear')}>Swear fealty to Kram</button>
                     <button className="secondary" onClick={() => actions.kram('refuse')}>Refuse</button>
@@ -2431,7 +2431,7 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
                     : interlude.spot === 'jorvash'
                         ? (interlude.drink ? <><span className="blessing-name">{interlude.drink.name}</span>{interlude.drink.text}</> : 'You wave Jorvash away.')
                     : interlude.spot === 'kram'
-                        ? (interlude.sworn ? <><span className="blessing-name">Sworn to Kram</span>Your dice never land on 1 for your next {interlude.fights} fights.</> : 'You refuse. The cultists melt back into the crowd.')
+                        ? (interlude.sworn ? <><span className="blessing-name">Sworn to Kram</span>Your dice never land on 1 for your next {interlude.fights} fights. Every spot charges you {interlude.markup ?? 10}% more meanwhile.</> : 'You refuse. The cultists melt back into the crowd.')
                         : 'You leave the dice to others.'}
             </p>
             <div className="event-choices">{interlude.spot === 'stranger' || interlude.spot === 'kram' ? afterEvent : challenge}</div>

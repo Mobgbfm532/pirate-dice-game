@@ -783,7 +783,7 @@ const PIP_COLOUR = { jaguar: [58, 30, 10], sylvester: [24, 20, 20] }; // (Sylves
 const CLEAN = { detail: 0.35, radius: 40 };
 // The 1's red and the 6's green on every set (14 Nov; textures.ts's clearPips uses the same for the ivory dice).
 const VIVID = { red: [222, 14, 26], green: [10, 170, 82], amount: 0.85 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
-const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186] }; // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
+const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186], vaelin: [236, 230, 218] }; // (Vaelin's repaint, 17 Nov: his painted white ring blurred into a halo; drawn crisp in his bone white) // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
 async function diceSheets() {
     const dir = path.resolve(here, '../public/textures/dice');

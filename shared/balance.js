@@ -182,7 +182,9 @@ module.exports = {
         stareEachHeart: 2,      // the Hangman's Penitent Stare: points off your hand per heart you've taken
         cuttingWords: 3,
         kramChance: 15,
-        kramFights: 2
+        kramFights: 2,
+        kramPriceRise: 0.1,     // while sworn to Kram (his emblem worn), every spot's prices this much higher (17 Nov, the user's)
+        kramKlargExtra: 1       // ...and a run that swore has Klarg reach around this many times more a fight
     },
 
     // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on

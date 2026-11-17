@@ -523,9 +523,12 @@ function placePrice(run) {
     let encounter = TAVERN_ENCOUNTERS[Math.min(run.encounterIndex || 0, TAVERN_ENCOUNTERS.length - 1)];
     return (BALANCE.placePrice && BALANCE.placePrice[encounter.place]) || 1;
 }
+// Sworn to Kram (17 Nov, the user's): while you wear his emblem (fights still to come without 1s), every spot's
+// prices are kramPriceRise (10%) higher. Told as you swear.
+const kramMarkup = run => ((run.kramFights || 0) > 0 ? 1 + (INTERLUDE.kramPriceRise ?? 0.1) : 1);
 function risingPrice(run, id, base) {
     let times = (run.bought && run.bought[id]) || 0;
-    return Math.ceil(base * placePrice(run) * (1 + (BALANCE.priceRise || 0) * times));
+    return Math.ceil(base * placePrice(run) * kramMarkup(run) * (1 + (BALANCE.priceRise || 0) * times));
 }
 function noteBought(run, id) {
     run.bought = run.bought || {};
@@ -843,13 +846,13 @@ function getTavernRunState(room) {
     // (enemy is already the next one then). Browsers draw the table from this.
     let bot = room.players[BOT_ID];
     let seatedIndex = bot ? TAVERN_ENCOUNTERS.findIndex(e => e.name === bot.name) : -1;
-    let seated = seatedIndex >= 0 ? { ...TAVERN_ENCOUNTERS[seatedIndex], number: seatedIndex + 1 } : { ...encounter, number: room.tavernRun.encounterIndex + 1 };
+    let seated = seatedIndex >= 0 ? { ...encounterView(room, TAVERN_ENCOUNTERS[seatedIndex]), number: seatedIndex + 1 } : { ...encounterView(room, encounter), number: room.tavernRun.encounterIndex + 1 };
     return {
         encounterNumber: room.tavernRun.encounterIndex + 1,
         seated,
         totalEncounters: TAVERN_ENCOUNTERS.length,
         place: placeOf(room).name,
-        enemy: encounter,
+        enemy: encounterView(room, encounter),
         roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Mind Whip (see beginTavernRound)
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
@@ -873,7 +876,7 @@ function getTavernRunState(room) {
             nextSong: room.tavernRun.nextFightSong || null
         },
         // Sworn to Kram: this fight (now) and how many more after it (more).
-        kram: { now: !!room.tavernRun.kram, more: room.tavernRun.kramFights || 0 },
+        kram: { now: !!room.tavernRun.kram, more: room.tavernRun.kramFights || 0, markup: (room.tavernRun.kramFights || 0) > 0 ? Math.round((INTERLUDE.kramPriceRise ?? 0.1) * 100) : 0 },
         // Yvesil's omen and Jorvash's Notaro Red: this fight's, and bought for the next.
         omen: omenView(room.tavernRun.omen),
         nextOmen: omenView(room.tavernRun.nextOmen),
@@ -1978,7 +1981,7 @@ function abilityMarks(room, seated) {
     }
     // [uses, spent] for each power, in the order of `powers` (the entrance card marks each power's own, 10 Nov).
     let marks = abilitiesOf(seated).map(a => {
-        let uses = BALANCE.abilityUses[a] || 0;
+        let uses = abilityUsesFor(room, a);
         return [uses, Math.min(uses, getAbilityUseCount(room, a))];
     });
     // Jaguar's Cloak and All In: one each, spent as his phase reaches them.
@@ -1988,6 +1991,19 @@ function abilityMarks(room, seated) {
     }
     let max = marks.reduce((n, m) => n + m[0], 0), spent = marks.reduce((n, m) => n + m[1], 0);
     return { abilityMax: max, abilitySpent: spent, powerMarks: marks };
+}
+
+// Uses a fight of an ability. Klarg, sworn enemy of Kram, has kramKlargExtra more for a run that swore fealty to
+// Kram (17 Nov, the user's; run.krammed), told only on his card as he sits down (encounterView).
+function abilityUsesFor(room, abilityId) {
+    let extra = abilityId === 'reachAround' && room.tavernRun && room.tavernRun.krammed ? (INTERLUDE.kramKlargExtra ?? 1) : 0;
+    return (BALANCE.abilityUses[abilityId] || 0) + extra;
+}
+const KLARG_KRAMMED = "Three times a fight he snatches a 2 or 4 you need, and keeps it for his own hand: once more than he would, as you swore fealty to Kram, his sworn enemy.";
+// An opponent as the browsers see them: Klarg's card says what your fealty to Kram has cost you.
+function encounterView(room, encounter) {
+    if (!encounter || encounter.id !== 'klarg' || !room.tavernRun.krammed) return encounter;
+    return { ...encounter, blurb: `${encounter.blurb} He knows you swore fealty to Kram.`, powers: [{ ...encounter.powers[0], text: KLARG_KRAMMED }] };
 }
 
 function getAbilityUseCount(room, abilityId) {
@@ -2006,7 +2022,7 @@ function encounterAbilityLeft(room) {
     // (Áéd: while he has the points for a trick)
     if (encounter && encounter.sorcery) return (room.tavernRun.sorcery || 0) >= Math.min(...Object.values(METAMAGIC.costs));
     // (any of them: the Hangman's Ace is still to come once his Dead Eye is spent)
-    return encounter && abilitiesOf(encounter).some(a => getAbilityUseCount(room, a) < BALANCE.abilityUses[a]);
+    return encounter && abilitiesOf(encounter).some(a => getAbilityUseCount(room, a) < abilityUsesFor(room, a));
 }
 
 // The opponent uses their ability: one use is spent, and it happens unless a Clear-Eye Thonic
@@ -2067,7 +2083,7 @@ const momentsLeft = room => Math.max(0, (room.momentEnd || 0) - Date.now());
 const JUDGED_ABILITIES = ['suckerPunch', 'flourish', 'mindWhip'];
 function canUseTavernAbility(room, encounter, abilityId) {
     let abilityReady = JUDGED_ABILITIES.includes(abilityId) || (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-    return encounter && abilitiesOf(encounter).includes(abilityId) && abilityReady && getAbilityUseCount(room, abilityId) < BALANCE.abilityUses[abilityId];
+    return encounter && abilitiesOf(encounter).includes(abilityId) && abilityReady && getAbilityUseCount(room, abilityId) < abilityUsesFor(room, abilityId);
 }
 // An opponent's abilities: one, or (the Hangman) two.
 const abilitiesOf = encounter => encounter.abilities || (encounter.ability ? [encounter.ability] : []);
@@ -2162,7 +2178,8 @@ function createTavernRun() {
         puffs: {},             // Elf Bars on the shelf: puffs left, by id
         puffed: {},            // ...and those puffed this fight
         cloud: false,          // Cotton Candy Cloud this round
-        kramFights: 0,         // sworn to Kram: fights still to come without 1s
+        kramFights: 0,         // sworn to Kram: fights still to come without 1s (and spots dearer meanwhile)
+        krammed: false,        // swore fealty to Kram this run: Klarg has an extra Reach Around
         kram: false,           // ...and this one
         abilityUsed: {},
         abilityRound: 1,
@@ -2519,7 +2536,7 @@ function sealSave(room, name, extra = {}) {
         v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
         shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
-        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), puffs: run.puffs || {}, refusedDrops: run.refusedDrops || [],
+        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), krammed: !!run.krammed, puffs: run.puffs || {}, refusedDrops: run.refusedDrops || [],
         ...extra
     };
     let body = Buffer.from(JSON.stringify(data)).toString('base64url');
@@ -2573,6 +2590,7 @@ function restoreRun(room, data) {
     Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
     run.ladysGrace = !!data.ladysGrace;
     run.refusedDrops = (data.refusedDrops || []).map(id => OLD_DROPS[id] || id).filter(id => BOSS_DROPS[id]);
+    run.krammed = !!data.krammed;
     run.puffs = {};
     Object.entries(data.puffs || {}).forEach(([id, n]) => { if (THONICS[id] && THONICS[id].elf && Number.isInteger(n) && n > 0 && n <= ELF_BAR_PUFFS) run.puffs[id] = n; });
     run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
@@ -2651,7 +2669,7 @@ function pickSpots(room) {
 
 // Thom's back shelf (since 21 Oct): keepsakes for gold, two at random from those you don't have.
 const KEEPSAKE_PRICES = BALANCE.keepsakePrices || {};
-const keepsakePrice = (run, id) => (KEEPSAKE_PRICES[id] ? Math.ceil(KEEPSAKE_PRICES[id] * placePrice(run)) : 0);
+const keepsakePrice = (run, id) => (KEEPSAKE_PRICES[id] ? Math.ceil(KEEPSAKE_PRICES[id] * placePrice(run) * kramMarkup(run)) : 0);
 const keepsakeForSale = run => k => ({ ...k, price: keepsakePrice(run, k.id) });
 function pickThomKeepsakes(room) {
     return shuffled(unownedKeepsakes(room).filter(k => KEEPSAKE_PRICES[k.id])).slice(0, BALANCE.thomKeepsakes || 0);
@@ -2683,7 +2701,7 @@ function startInterlude(room, won) {
     } else if ((placeOf(room).events || []).includes('darren') && crypto.randomInt(0, 100) < INTERLUDE.darrenChance) {
         run.interlude = { stage: 'darren', smashOn: INTERLUDE.darrenSmash, giftOn: INTERLUDE.darrenGift };
     } else if ((placeOf(room).events || []).includes('kram') && !run.kram && !run.kramFights && crypto.randomInt(0, 100) < INTERLUDE.kramChance) {
-        run.interlude = { stage: 'kram', fights: INTERLUDE.kramFights };
+        run.interlude = { stage: 'kram', fights: INTERLUDE.kramFights, markup: Math.round((INTERLUDE.kramPriceRise ?? 0.1) * 100) };
     } else {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
     }
@@ -3648,8 +3666,8 @@ io.on('connection', (socket) => {
         if (!room || (action !== 'swear' && action !== 'refuse')) return;
         let run = room.tavernRun;
         let sworn = action === 'swear';
-        if (sworn) run.kramFights = INTERLUDE.kramFights;
-        run.interlude = { stage: 'done', spot: 'kram', sworn, fights: INTERLUDE.kramFights };
+        if (sworn) { run.kramFights = INTERLUDE.kramFights; run.krammed = true; }
+        run.interlude = { stage: 'done', spot: 'kram', sworn, fights: INTERLUDE.kramFights, markup: Math.round((INTERLUDE.kramPriceRise ?? 0.1) * 100) };
         emitState(socket.roomCode);
     });
 

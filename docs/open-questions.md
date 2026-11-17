@@ -40,6 +40,12 @@ day they happen, with what's been built marked as it lands.
   trailer's join where its second section repeats (about 27.8 s in).
 
 ### Questions waiting on the user's word
+- **The Cult of Kram** (built 17 Nov, the user's): "Kram abhors all ugly things"; spots 10% dearer while sworn; Klarg one
+  more Reach Around for a run that swore, told on his card. Claude's readings, to confirm: "known only when they face
+  Kram" taken as when they face **Klarg** (Kram himself never sits at the table); the 10% covers everything bought at
+  a spot (Thom's Thonics and keepsakes, the Shrine, the hot tub, the Bard, Johnny's Elf Bars), from the moment you swear
+  until the walk after your last sworn fight; Klarg's extra use holds for the rest of the run, however long ago you
+  swore.
 - **Abilities at their best moment** (built 17 Nov, the user's): Sylvester, Stason, Frak's Mind Whip, Divine Smite, Astral
   Flood and Áéd's Heightened Dice now wait for a moment that pays (details in CLAUDE.md, "Abilities"). To see in play:
   whether they now come too rarely. Open: You are Cursed!, Inkfire Brand and Starry Form still fire as soon as they're

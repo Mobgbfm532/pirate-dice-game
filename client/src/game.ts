@@ -79,7 +79,7 @@ export interface TavernRun {
     // The Bard's song this fight: Inspiring Song ('ready' until your first throw, 'now' while it can
     // be thrown again), Cutting Words (words, until it lands); nextSong: bought for the next fight.
     bard?: { song: 'ready' | 'now' | null; words: boolean; nextSong: 'cuttingWords' | 'inspiringSong' | null };
-    kram?: { now: boolean; more: number }; // sworn to Kram: no 1s this fight (now), and for `more` after it
+    kram?: { now: boolean; more: number; markup?: number }; // sworn to Kram: no 1s this fight (now), and for `more` after it
     interlude: Interlude | null; // between fights (see server.js startInterlude)
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
@@ -122,13 +122,13 @@ export type Interlude =
     | { stage: 'hotTub' }
     | { stage: 'elfKid'; stock: Thonic[]; puffs: number; bought: string[] } // Johnny Elf Bar: Elf Bars for the shelf
     | { stage: 'bard'; songs: BardSong[]; price: number } // the Bard (Yawning Portal): a song for the next fight
-    | { stage: 'kram'; fights: number } // the Cult of Kram (a Yawning Portal event): swear fealty, no 1s for `fights` fights
+    | { stage: 'kram'; fights: number; markup?: number } // the Cult of Kram (a Yawning Portal event): swear fealty, no 1s for `fights` fights
     | { stage: 'done'; spot: 'bard'; song: BardSong | null }
     | { stage: 'yvesil'; price: number } // Yvesil (the Salty Swallow): an omen for the next fight
     | { stage: 'done'; spot: 'yvesil'; omen: Omen | null }
     | { stage: 'jorvash'; drinks: Refreshment[]; price: number } // Jorvash (the Salty Swallow): a refreshment for the next fight
     | { stage: 'done'; spot: 'jorvash'; drink: Refreshment | null }
-    | { stage: 'done'; spot: 'kram'; sworn: boolean; fights: number }
+    | { stage: 'done'; spot: 'kram'; sworn: boolean; fights: number; markup?: number }
     // Darren Snakehands: one die (up to smashOn a Thonic smashes, up to giftOn a free one, else a Thonic and gold).
     | { stage: 'darren'; smashOn: number; giftOn: number; roll?: number; outcome?: 'smash' | 'gift' | 'catch'; smashed?: Thonic; paid?: number; thonic?: Thonic; gold?: number }
     | { stage: 'done'; spot: 'hotTub'; surge: TubSurge; hearts?: number }

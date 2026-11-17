@@ -111,6 +111,17 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > fifth of the face's width, with no rims, studs, rings or highlights. No emblems or decorations on any face.
 > Flat even lighting, no glare." And a background unlike the dice, e.g. light grey behind gold.)
 
+**Vaelin Inkhand's dice, repainted** (17 Nov, the user's: "inky black but with pips that are legible"; `art/dice-vaelin.jpg`, the old ink-stained ivory one kept as `dice-vaelin-v1.jpg`; **painted by the user 17 Nov and in the game**: the 1's ring redrawn crisp, `RING_ONE`)
+> A 3 by 2 sprite sheet of six square die faces, evenly spaced on a plain flat light grey background, each face
+> filling its square, row one showing 1, 2, 3 and row two showing 4, 5, 6 pips in standard die layouts. The faces are
+> deep inky black, like a pool of wet ink, with a soft glossy sheen and the faintest hint of deep violet in the black,
+> smooth and even, slightly rounded corners. The pips are large solid filled discs of bright bone white, each about a
+> fifth of the face's width, crisp edged, with no rims, studs, rings or highlights, except the single pip of the 1,
+> which is bright scarlet red with a thin bone-white ring around it, and the six pips of the 6, which are bright
+> vivid green. No emblems, splatters or decorations on any face. Every face the same material, viewed straight on,
+> flat even lighting, no glare, no shadows, no perspective, no text, no border around the sheet. About 1264 x 848.
+> *+ style line*
+
 **The Yawning Portal's doors** (17 Nov, for the arrival scene; `art/portal-doors.jpg`; **painted by the user 17 Nov**, in the walk to the Portal)
 > The great double doors of a grand fantasy tavern seen straight on from the street at night, filling the whole
 > picture edge to edge: two tall arched oak doors meeting in the middle, banded with black iron, a heavy brass ring
