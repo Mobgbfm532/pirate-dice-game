@@ -1624,6 +1624,18 @@ function warmAbilityArt(names: string[]) {
         warmArt.set(file, img);
     }
 }
+// The walk to the Yawning Portal's paintings, decoded ahead and held (see PortalArrival).
+const WALK_ART = ['ghoul-gourd-outside.webp', 'intro/town.webp', 'intro/foreground.webp', 'portal/front.webp', 'portal/left.webp', 'portal/right.webp', 'yawning-portal.webp'];
+const walkArt: HTMLImageElement[] = [];
+function warmWalkArt() {
+    if (walkArt.length) return;
+    for (const file of WALK_ART) {
+        const img = new Image();
+        img.src = `${import.meta.env.BASE_URL}art/${file}`;
+        img.decode().catch(() => {});
+        walkArt.push(img);
+    }
+}
 // Divine Smite's cracks: jagged lines from the middle to the screen's edges (in a 100 x 100 box
 // stretched over the screen), each step bending a little, fixed so every showing looks the same.
 const QUAKE_CRACKS = Array.from({ length: 9 }, (_, i) => {
@@ -1981,6 +1993,8 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
     const story = INVITATIONS[interlude.boss ?? ''] ?? INVITATIONS['Martha/Mystery'];
     const drop = interlude.drop ?? { id: 'mysteryFlavour', name: 'Mystery Flavour', text: '' };
     const save = () => actions.saveAndLeave(interlude.save, { name: me?.name ?? 'Traveller', place: interlude.place, next, purse: run.purse });
+    // On to the Yawning Portal: the walk's paintings decoded while the letter is read, so none comes in late.
+    useEffect(() => { if (interlude.place === 'The Yawning Portal') warmWalkArt(); }, [interlude.place]);
     // The end of a place (visuals plan step 5, 25 Oct): a sealed letter flutters down, its wax seal
     // cracks and the invitation unfolds out of it (in the new look; a tap skips to it).
     const [skip, setSkip] = useState(!lookNext);
@@ -2776,54 +2790,73 @@ function BrenSilhouette() {
     );
 }
 
-// Arriving at the Yawning Portal (17 Nov, the user's pick: "Board, then doors"; docs/portal-transition-brainstorm.md).
-// First the tournament board, built from the game's own materials (dark wood in a brass rim, like the tally board):
-// a row per place, the Ghoul and Gourd's five struck through in red ink one by one, the Portal's five lighting up as
-// silhouettes, the ship's still dark. Then the Portal's doors swing open on its well's light and the hall behind,
-// and its name rises. A tap or Esc skips. (The doors are drawn by the game until the user's painting comes.)
-const PORTAL_MS = 7600;
-const BOARD_ROWS: { place: string; who: { art: string; name: string }[]; state: 'beaten' | 'next' | 'later' }[] = [
-    { place: 'The Ghoul and Gourd', state: 'beaten', who: [{ art: 'mcgrath', name: 'Sperm McGrath' }, { art: 'frak', name: 'Frak' }, { art: 'danhausen', name: 'Danhausen' }, { art: 'duke', name: 'Duke Morrigan' }, { art: 'martha', name: 'Martha/Mystery' }] },
-    { place: 'The Yawning Portal', state: 'next', who: [{ art: 'sylvester', name: '?' }, { art: 'vaelin-inkhand', name: '?' }, { art: 'stason', name: '?' }, { art: 'ridgeler', name: '?' }, { art: 'brodor', name: '?' }] },
-    { place: 'The Salty Swallow', state: 'later', who: [{ art: 'klarg', name: '?' }, { art: 'rokr', name: '?' }, { art: 'aed', name: '?' }, { art: 'hangman', name: '?' }, { art: 'jaguar', name: '?' }] }
-];
+// Arriving at the Yawning Portal (17 Nov, the user's: "a travel through the city to the Yawning Portal instead of a
+// tournament screen"; docs/portal-transition-brainstorm.md, idea 1, "The walk"). Three paintings, dusk to night to the
+// well's glow: outside the Ghoul and Gourd, the camera drawing back from its door; up the town's street at night (the
+// intro film's), the walls passing; then the user's painting of the Portal's doors: its name lettered in gold on the
+// blank sign, the light in the seam brightening, the doors swinging open (each cut to the arch by the art script,
+// `portal/left.webp`, `right.webp`, the front with its doorway cut out) and the camera pushing through into the
+// hall as the name and the user's line rise. A tap or Esc skips. No sound yet.
+const PORTAL_MS = 9400;
+const PORTAL_LINE = 'The CAWKs resurface to quench the challenger';
+// The doors painting's doorway (its pixels, 1376 x 768), as cut in process-art.mjs (PORTAL_ARCH).
+const DOORS = { w: 1376, h: 768, left: 380, right: 996, seam: 688, top: 175, sill: 606, sign: [688, 97] as const };
+// A painting covering the screen, placed so its focus (shares of its width and height) sits as near the screen's
+// middle as its edges allow.
+function coverBox(W: number, H: number, aspect: number, fx: number, fy: number): React.CSSProperties {
+    const h = Math.max(H, W / aspect), w = h * aspect;
+    const left = Math.min(0, Math.max(W - w, W / 2 - fx * w)), top = Math.min(0, Math.max(H - h, H / 2 - fy * h));
+    return { left, top, width: w, height: h, transformOrigin: `${(((W / 2 - left) / w) * 100).toFixed(2)}% ${(((H / 2 - top) / h) * 100).toFixed(2)}%` };
+}
 function PortalArrival({ at }: { at: number }) {
+    const [screen, setScreen] = useState({ W: window.innerWidth, H: window.innerHeight });
     useEffect(() => {
         const timers = [setTimeout(() => actions.endSail(), Math.max(0, PORTAL_MS - (performance.now() - at)))];
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.endSail(); };
+        const onResize = () => setScreen({ W: window.innerWidth, H: window.innerHeight });
         window.addEventListener('keydown', onKey);
-        return () => { timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey); };
+        window.addEventListener('resize', onResize);
+        return () => { timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
     }, [at]);
-    const art = (a: string) => `${import.meta.env.BASE_URL}art/${a}.webp`;
+    const art = (a: string) => `${import.meta.env.BASE_URL}art/${a}`;
+    const { W, H } = screen;
+    const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
+    const doorsBox = coverBox(W, H, DOORS.w / DOORS.h, 0.5, 0.48);
+    // The push goes through the doorway's middle, wherever the painting sits on this screen.
+    const archMid = { x: (DOORS.left + DOORS.right) / 2 / DOORS.w, y: (DOORS.top + DOORS.sill) / 2 / DOORS.h };
+    const signSize = (Number(doorsBox.width) * 0.019).toFixed(1);
+    const leaf = (side: 'left' | 'right') => ({
+        left: pct(side === 'left' ? DOORS.left : DOORS.seam, DOORS.w), top: pct(DOORS.top, DOORS.h),
+        width: pct(DOORS.seam - DOORS.left, DOORS.w), height: pct(DOORS.sill - DOORS.top, DOORS.h),
+        backgroundImage: `url("${art(`portal/${side}.webp`)}")`
+    });
     return createPortal(
         <div className="portal-arrival" role="dialog" aria-label="On to the Yawning Portal" onClick={() => actions.endSail()}>
-            <div className="pa-board-stage">
-                <div className="pa-board">
-                    <h2>The Tournament</h2>
-                    {BOARD_ROWS.map((row, r) => (
-                        <div key={row.place} className={`pa-row ${row.state}`}>
-                            <span className="pa-place">{row.place}</span>
-                            <div className="pa-faces">
-                                {row.who.map((w, i) => (
-                                    <span key={w.art} className="pa-face" style={{ '--i': i, '--r': r } as React.CSSProperties}>
-                                        <img src={art(w.art)} alt="" draggable={false} />
-                                        {row.state === 'beaten' && <i className="pa-strike" aria-hidden="true" />}
-                                    </span>
-                                ))}
-                            </div>
-                            {row.state === 'next' && <span className="pa-note">Five rivals who play their best</span>}
-                        </div>
-                    ))}
+            <div className="pw-shot pw-leave">
+                <div className="pw-plate" style={{ ...coverBox(W, H, 1376 / 768, 0.69, 0.6), backgroundImage: `url("${art('ghoul-gourd-outside.webp')}")` }} />
+            </div>
+            <div className="pw-shot pw-street">
+                <div className="pw-walk">
+                    <div className="pw-plate" style={{ ...coverBox(W, H, 1376 / 768, 0.52, 0.62), backgroundImage: `url("${art('intro/town.webp')}")` }} />
+                    <div className="pw-plate pw-near" style={{ ...coverBox(W, H, 1376 / 768, 0.5, 0.5), backgroundImage: `url("${art('intro/foreground.webp')}")` }} />
                 </div>
             </div>
-            <div className="pa-doors-stage" aria-hidden="true">
-                <div className="pa-hall" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/yawning-portal.webp")` }} />
-                <span className="pa-well-light" />
-                <div className="pa-doors"><span className="pa-door left"><i className="ring" /></span><span className="pa-door right"><i className="ring" /></span></div>
+            <div className="pw-shot pw-doors" aria-hidden="true">
+                <div className="pw-hall" style={{ backgroundImage: `url("${art('yawning-portal.webp')}")` }} />
+                <div className="pw-plate pw-front" style={{ ...doorsBox, transformOrigin: `${archMid.x * 100}% ${archMid.y * 100}%` }}>
+                    <span className="pw-leaf left" style={leaf('left')} />
+                    <span className="pw-leaf right" style={leaf('right')} />
+                    <span className="pw-seam" style={{ left: pct(DOORS.seam, DOORS.w), top: pct(DOORS.top + 8, DOORS.h), height: pct(DOORS.sill - DOORS.top - 8, DOORS.h) }} />
+                    <img src={art('portal/front.webp')} alt="" draggable={false} />
+                    <span className="pw-sign" style={{ left: pct(DOORS.sign[0], DOORS.w), top: pct(DOORS.sign[1], DOORS.h), fontSize: `${signSize}px` }}>The Yawning Portal</span>
+                </div>
+                <span className="pw-flood" />
             </div>
+            <p className="pw-line one">The Ghoul and Gourd behind you…</p>
+            <p className="pw-line two">Across the city…</p>
             <div className="pa-title">
                 <strong>The Yawning Portal</strong>
-                <span>Here they play their best.</span>
+                <span>{PORTAL_LINE}</span>
             </div>
             <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endSail(); }}>Skip ›</button>
         </div>,

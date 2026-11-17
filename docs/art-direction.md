@@ -111,7 +111,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > fifth of the face's width, with no rims, studs, rings or highlights. No emblems or decorations on any face.
 > Flat even lighting, no glare." And a background unlike the dice, e.g. light grey behind gold.)
 
-**The Yawning Portal's doors** (17 Nov, for the arrival scene; `art/portal-doors.jpg`; until it comes the game draws them)
+**The Yawning Portal's doors** (17 Nov, for the arrival scene; `art/portal-doors.jpg`; **painted by the user 17 Nov**, in the walk to the Portal)
 > The great double doors of a grand fantasy tavern seen straight on from the street at night, filling the whole
 > picture edge to edge: two tall arched oak doors meeting in the middle, banded with black iron, a heavy brass ring
 > on each, a carved stone arch above with a sign reading nothing, a faint cold blue-green light leaking through the

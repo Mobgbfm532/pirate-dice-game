@@ -1020,6 +1020,41 @@ async function introFilm() {
     console.log(`intro/foreground.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB  background rgb(${bg.join(',')})`);
 }
 
+// The Yawning Portal's doors (the user's painting, 17 Nov), for the walk there: the front with its doorway cut out
+// (the hall shows through once the doors open), and each door on its own, cut to the arch, to swing on its hinge.
+// The arch: straight sides at x 380 and 996, a half-ellipse over them topping out at y 175, the sill at 606;
+// the seam between the doors at x 688.
+export const PORTAL_ARCH = { left: 380, right: 996, seam: 688, top: 175, spring: 300, sill: 606 };
+async function portalDoors() {
+    if (!wanted('portal')) return;
+    mkdirSync(path.join(OUT, 'portal'), { recursive: true });
+    const A = PORTAL_ARCH, a = (A.right - A.left) / 2, cx = A.left + a, b = A.spring - A.top;
+    const inside = (x, y) => {
+        if (x < A.left || x > A.right || y > A.sill) return 0;
+        const t = (x - cx) / a, top = A.spring - b * Math.sqrt(Math.max(0, 1 - t * t));
+        // (A pixel's soft edge, so the cut isn't jagged.)
+        return Math.min(1, Math.max(0, y - top + 0.5), Math.max(0, x - A.left + 0.5), Math.max(0, A.right - x + 0.5));
+    };
+    const front = await readRgba('portal-doors.jpg');
+    const leaf = (x0, x1) => ({ width: x1 - x0, height: A.sill - A.top + 1, data: Buffer.alloc((x1 - x0) * (A.sill - A.top + 1) * 4) });
+    const left = leaf(A.left, A.seam), right = leaf(A.seam, A.right);
+    for (let y = 0; y < front.height; y++) for (let x = 0; x < front.width; x++) {
+        const i = (y * front.width + x) * 4, k = inside(x + 0.5, y + 0.5);
+        if (!k) continue;
+        const door = x < A.seam ? left : right, dx = x - (x < A.seam ? A.left : A.seam), dy = y - A.top;
+        if (dx >= 0 && dx < door.width && dy >= 0 && dy < door.height) {
+            const j = (dy * door.width + dx) * 4;
+            front.data.copy(door.data, j, i, i + 3);
+            door.data[j + 3] = Math.round(255 * k);
+        }
+        front.data[i + 3] = Math.round(front.data[i + 3] * (1 - k));
+    }
+    for (const [name, img] of [['front', front], ['left', left], ['right', right]]) {
+        const info = await toSharp(img).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(OUT, 'portal', `${name}.webp`));
+        console.log(`portal/${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    }
+}
+
 // The sea die (the user's painting, 9 Nov: sea-green glass, pearl pips, a pink pearl 1, barnacles):
 // its six faces cut from their magenta, side by side in one strip, 1 to 6 (`sea-die.webp`, 256 px each).
 async function seaDie() {
@@ -1051,6 +1086,7 @@ if (wanted('starry')) {
     console.log(`dice/starry.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
 }
 await introFilm();
+await portalDoors();
 if (!ONLY) {
     await surfaces();
     await backdrop();

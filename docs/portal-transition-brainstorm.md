@@ -70,3 +70,49 @@ through, the ship's lit) before Bren on the quay, so every place change shows th
 - Which idea, or which mix?
 - After Brodor too (before Bren on the quay), so each place change shows the board?
 - Shown every run, or only the first time a player reaches the Portal (later runs skip it)?
+
+## Re-workshop, 17 Nov evening: through the city instead of the board (**idea 1 built 17 Nov**, the user's yes, with their line "The CAWKs resurface to quench the challenger" in place of "Here they play their best."; the sign lettered; the board taken out)
+
+The user, 17 Nov, having painted the doors (`art/portal-doors.jpg`: the Portal's oak doors in a stone arch, a
+lantern each side, a blank sign over them, the well's blue-green light leaking through the seam and pooling on
+wet cobbles): "Maybe a travel through the city to the Yawning Portal instead of a tournament screen." Nothing
+below is built yet; the user chooses.
+
+Three paintings already make a walk, dusk to night to the glow: outside the Ghoul and Gourd
+(`art/ghoul-gourd-outside.jpg`, McGrath's backdrop, at dusk), the town street from the intro film
+(`art/intro-town.jpg`, night, a lantern-bearer and a lit doorway at the street's end, with the film's
+`intro-foreground.jpg` walls to slide past), and the new doors.
+
+### Ideas
+
+1. **The walk (recommended).** About 8 s, a tap skips, in place of the board:
+   - *Leaving* (1.5 s): outside the Ghoul and Gourd at dusk, empty of McGrath; the camera drifts back from its
+     door and away. "The Ghoul and Gourd behind you..."
+   - *Across the city* (3 s): the town street, night now; a slow push up the cobbles toward the lit doorway, the
+     foreground walls sliding out past the camera as in the film, lanterns flickering. "Across the city..."
+     Footsteps on stone. No rain (the film has the rain; dry, it's a different night).
+   - *The doors* (3.5 s): the user's painting. The game letters "The Yawning Portal" onto its blank sign in gold,
+     the light in the seam brightens and pulses, then the two doors swing open (the painting cut down its seam,
+     each half turning on its hinge in perspective), the well's light floods out, the camera pushes through into
+     the hall (`yawning-portal.webp`), and "Here they play their best." rises. The Portal's own theme (music per
+     place) swells in as the doors open.
+   Then Sylvester's card. No new art needed.
+2. **The walk, with the rivals on the way.** As 1, but along the street the Portal's five rivals show as
+   silhouettes in lit windows or on tournament posters nailed to the walls, so the walk still says who's next
+   (the board's job). More to read in a 3 s shot; crowded on an upright phone.
+3. **Shorter: the street, then the doors** (about 6 s): drop the leaving shot.
+4. **The board as a notice by the doors.** Keep the strikes and silhouettes, but as a small tournament notice
+   pinned beside the doors, read in passing before they open. The stone beside the doors is cropped off an
+   upright phone, so it would have to float over the painting.
+
+### Notes
+
+- On an upright phone the doors are wider than the screen: the shot sits on the seam and the sign, and the
+  doors swing out past the edges as they open, which still reads.
+- Sounds wanted (the user's, or synthesized for now): footsteps on cobbles, a heavy door's groan, the well's hum.
+- The board's code (`PortalArrival` in Hud, `.pa-board`) would go; its round portraits could serve idea 2.
+
+### Questions for the user
+
+- Which idea (1 recommended), or a mix?
+- Keep the lettering on the sign, or leave it blank as painted?
