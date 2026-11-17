@@ -420,7 +420,7 @@ const BRODORS_SUNGLASSES = {
 const MYSTERY_FLAVOUR = {
     id: 'mysteryFlavour',
     name: 'Mystery Flavour',
-    text: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random."
+    text: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random."
 };
 // The classic page shows it all as one line.
 TAVERN_ENCOUNTERS.forEach(e => { e.intro = [e.blurb, ...e.powers.map(p => `${p.name}: ${p.text}`)].join(' '); });
@@ -556,7 +556,7 @@ function rollFaceFor(room, turn) {
     if (room.mode !== 'tavern-crawl') return rollFace;
     // The rolls that lost, this throw (Double Bubble, Flourish): sent with diceRolled as ghosts.
     turn.ghosts = [];
-    let roll = seaRoll(seaShift(room));
+    let roll = seaRoll(seaWarded(room, turn) ? 0 : seaShift(room));
     if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn, roll) : roll;
     let plainFace = playerFace(room, turn, roll);
     // Yvesil's Fair Winds and the Albatross: on your first throw of each round, your 1s (or 6s) roll again.
@@ -613,7 +613,7 @@ function playerFace(room, turn, roll = rollFace) {
         let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
         let needed = [2, 4].filter(n => !kept.includes(n));
         // (Listing to port no die lands on 6, the Loaded Die neither: the user, 10 Nov.)
-        return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, seaShift(room) < 0 ? 6 : 7);
+        return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, !seaWarded(room, turn) && seaShift(room) < 0 ? 6 : 7);
     };
     let plain = d => (loaded && d && d.id === LOADED_DIE ? loadedFace() : kram ? Math.max(2, roll()) : roll());
     let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
@@ -683,6 +683,12 @@ function seaShift(room) {
     let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
     return sea && SEAS[sea] ? SEAS[sea].shift : 0;
 }
+// Jorvash's Water of the Ebon Shield (17 Nov, the user's; it was an extra heart): for the next fight
+// the sea die doesn't touch you. Your throws don't lean, no Squall or Becalmed limit on your hands, no
+// rogue wave takes your dice, and you see through a fog bank (he still can't see your hand in it).
+const seaWarded = (room, turn) => room.mode === 'tavern-crawl' && !!room.tavernRun.seaWard && !!turn && turn.playerId !== BOT_ID;
+// What the fog hides from you: nothing under the Water of the Ebon Shield.
+const fogForYou = room => seaFog(room) && !room.tavernRun.seaWard;
 // A plain throw of one die, leaning with the sea.
 function seaRoll(shift) {
     return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
@@ -726,7 +732,7 @@ const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
 // throw, which waits for it. Returns the die, or null.
 const WAVE_SHOW_MS = 2400; // (the client's too)
 function rogueWave(roomCode, room, turn) {
-    if (room.mode !== 'tavern-crawl' || !SEAS[room.tavernRun.sea] || !SEAS[room.tavernRun.sea].wave) return null;
+    if (room.mode !== 'tavern-crawl' || !SEAS[room.tavernRun.sea] || !SEAS[room.tavernRun.sea].wave || seaWarded(room, turn)) return null;
     if (!turn.hasRolled || turn.waveDone || !Rules.canRoll(turn)) return null;
     turn.waveDone = true;
     let loose = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
@@ -777,7 +783,7 @@ function getRoomState(roomCode) {
 // Bard's Cutting Words) waits for the round's end (the user's, 10 Nov), and shows just before its result.
 function fogHeld(roomCode, room, event, data) {
     let human = room.players[getHumanPlayerId(room)];
-    if (seaFog(room) && human && human.score === null) (room.tavernRun.fogHeld = room.tavernRun.fogHeld || []).push([event, data]);
+    if (fogForYou(room) && human && human.score === null) (room.tavernRun.fogHeld = room.tavernRun.fogHeld || []).push([event, data]);
     else sendMoment(roomCode, event, data);
 }
 function sendFogHeld(roomCode, room) {
@@ -790,7 +796,7 @@ function sendFogHeld(roomCode, room) {
 function fogMask(room) {
     let bot = room.players[BOT_ID];
     let human = room.mode === 'tavern-crawl' && room.players[getHumanPlayerId(room)];
-    if (!bot || !human || !seaFog(room) || bot.score === null || human.score !== null) return room.players;
+    if (!bot || !human || !fogForYou(room) || bot.score === null || human.score !== null) return room.players;
     return { ...room.players, [BOT_ID]: { ...bot, score: null, busted: false, scoreHidden: true } };
 }
 
@@ -836,6 +842,9 @@ function getTavernRunState(room) {
         nextOmen: omenView(room.tavernRun.nextOmen),
         notaro: !!room.tavernRun.notaro,
         nextNotaro: !!room.tavernRun.nextNotaro,
+        // Jorvash's Water of the Ebon Shield: this fight's, and bought for the next.
+        seaWard: !!room.tavernRun.seaWard,
+        nextSeaWard: !!room.tavernRun.nextSeaWard,
         thomMet: !!room.tavernRun.thomMet, // you've been to Thom's cart this run
         // The opponents the player has met, in any run (ids): the rest show as "?" when the run ends.
         met: [...metOf((Object.values(room.players).find(p => p.id !== BOT_ID) || {}).name)],
@@ -911,7 +920,7 @@ function syncTurn(roomCode) {
             run.klargHand = null;
         }
         if (run.jaguarPhase === 'cloak') room.turn.cloaked = true;
-        if (seaFog(room)) room.turn.fogged = true;
+        if (fogForYou(room)) room.turn.fogged = true;
     }
     if (room.turn.playerId === BOT_ID && isTurnPlayable(roomCode)) {
         botLater(roomCode, key, Math.max(1000, Math.round(momentsLeft(room) / TIME_SCALE) + 300), () => runBotRoll(roomCode));
@@ -953,7 +962,7 @@ function sendAutoSave(roomCode) {
             // (Unchanged since the last one sent: the same save. A thief not yet faced has had his share.)
             let thief = interlude && interlude.stage === 'pickpocket' && !interlude.roll ? interlude.steal : 0;
             let key = JSON.stringify([run.encounterIndex, run.purse - thief, run.shelf, run.keepsakes.map(k => k.id), run.puffs, run.bought, run.ladysGrace, run.kramFights,
-                run.nextFightHearts, run.nextFightSurge, run.nextFightSong, run.nextOmen, run.nextNotaro]);
+                run.nextFightHearts, run.nextFightSurge, run.nextFightSong, run.nextOmen, run.nextNotaro, run.nextSeaWard]);
             if (run.autoSaveKey !== key) { run.autoSaveKey = key; run.autoSaveBetween = sealFightSave(room, me.name, thief ? { purse: Math.max(0, run.purse - thief) } : {}); }
             save = run.autoSaveBetween;
         } else save = run.fightSave || null;
@@ -1271,7 +1280,7 @@ const omenView = id => (id && OMENS[id] ? { id, ...OMENS[id] } : null);
 // Jorvash the manservant (a spot on the Salty Swallow, 6 Nov): one of two, for the next fight.
 const REFRESHMENTS = [
     { id: 'notaroRed', name: 'Notaro Red', text: `Your first hand that counts next fight scores ${INTERLUDE.notaroRed ?? 2} more.` },
-    { id: 'ebonShield', name: 'Water of the Ebon Shield', text: 'You start the next fight with one extra heart.' }
+    { id: 'ebonShield', name: 'Water of the Ebon Shield', text: "The sea die can't touch you next fight: your dice never list, and no squall, wave, fog or calm holds you back." }
 ];
 
 // The Bard's songs (a spot at the Yawning Portal), each for the next fight.
@@ -1289,7 +1298,7 @@ function performRoll(roomCode) {
     let signatureMoves = [];
     let preRollCallout = null;
     room.rollMoments = []; // moments raised while the dice are thrown wait until they land
-    if (!turn.hasRolled) { turn.mustKeep = seaKeeps(room); turn.maxThrows = seaThrows(room); } // (the Squall, Becalmed: set as the hand begins)
+    if (!turn.hasRolled) { let ward = seaWarded(room, turn); turn.mustKeep = ward ? 1 : seaKeeps(room); turn.maxThrows = ward ? 0 : seaThrows(room); } // (the Squall, Becalmed: set as the hand begins)
     rogueWave(roomCode, room, turn);
     let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
     let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
@@ -1336,7 +1345,7 @@ function performRoll(roomCode) {
     let abilitySixes = !!turn.abilitySixes;
     // (No three 6s moment on hidden dice, Starry Form or the Cloak: it would show what they are. 10 Nov.)
     turn.abilitySixes = false;
-    let thrown = { sea: seaShift(room) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let thrown = { sea: (!seaWarded(room, turn) && seaShift(room)) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1431,7 +1440,7 @@ function performEndTurn(roomCode) {
         if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
             room.players[currentId].score = 24;
             fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
-            if (!seaFog(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
+            if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
         // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
         // points (not in a cursed round, where a lower score would help them).
@@ -2039,6 +2048,7 @@ function createTavernRun() {
         nextOmen: null,        // Yvesil's omen for the next fight, then omen during it
         omen: null,
         nextNotaro: false,     // Jorvash's Notaro Red for the next fight, then notaro during it, until it lands
+        nextSeaWard: false,    // Jorvash's Water of the Ebon Shield for the next fight, then seaWard during it
         notaro: false,
         song: null,            // Inspiring Song this fight: 'ready', then your first throw's turn key
         cuttingWords: false,   // Cutting Words this fight, until it lands
@@ -2194,6 +2204,8 @@ function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
         room.tavernRun.nextOmen = null;
         room.tavernRun.notaro = !!room.tavernRun.nextNotaro;
         room.tavernRun.nextNotaro = false;
+        room.tavernRun.seaWard = !!room.tavernRun.nextSeaWard;
+        room.tavernRun.nextSeaWard = false;
         // Each Elf Bar may be puffed once a fight; Mystery Flavour tastes of a new one each fight.
         room.tavernRun.puffed = {};
         room.tavernRun.mysteryFlavour = ELF_BARS[crypto.randomInt(0, ELF_BARS.length)];
@@ -2413,7 +2425,7 @@ function sealFightSave(room, name, more = {}) {
         ...more,
         fight: true, kramFights: run.kramFights || 0,
         nextFightHearts: run.nextFightHearts || null, nextFightSurge: run.nextFightSurge || null, nextFightSong: run.nextFightSong || null,
-        nextOmen: run.nextOmen || null, nextNotaro: !!run.nextNotaro
+        nextOmen: run.nextOmen || null, nextNotaro: !!run.nextNotaro, nextSeaWard: !!run.nextSeaWard
     });
 }
 
@@ -2460,6 +2472,7 @@ function restoreRun(room, data) {
         run.nextFightSong = BARD_SONGS.some(b => b.id === data.nextFightSong) ? data.nextFightSong : null;
         run.nextOmen = OMENS[data.nextOmen] ? data.nextOmen : null;
         run.nextNotaro = !!data.nextNotaro;
+        run.nextSeaWard = !!data.nextSeaWard;
     }
 }
 
@@ -2737,7 +2750,7 @@ function evaluateTavernRound(roomCode) {
     }
     let cursed = !!effect && effect.kind === 'curse';
     // Was his hand hidden this round (a fog bank, Jaguar's Cloak)? The result then says what he got (14 Nov, the user's).
-    let hidden = seaFog(room) || room.tavernRun.jaguarPhase === 'cloak';
+    let hidden = fogForYou(room) || room.tavernRun.jaguarPhase === 'cloak';
     sendFogHeld(roomCode, room);
     if (!cursed) stareTurnsRound(roomCode, room, human, enemy);
     smoothTalkAtEnd(roomCode, room, human, enemy, cursed);
@@ -3197,14 +3210,20 @@ io.on('connection', (socket) => {
     });
 
     // A keepsake from Thom's back shelf. Spent gold counts with the Thonics (stats.spent).
-    socket.on('buyKeepsake', (keepsakeId) => {
+    socket.on('buyKeepsake', (keepsakeId, giveUp) => {
         let room = tavernPlayer();
         if (!room || !room.tavernRun.shop) return;
         let run = room.tavernRun;
         let shelf = run.shop.keepsakes || [];
         let keepsake = shelf.find(k => k.id === keepsakeId);
         let price = keepsake && KEEPSAKE_PRICES[keepsake.id];
-        if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id) || pocketsFull(room)) return;
+        if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id)) return;
+        // Pockets full (17 Nov, the user's): buying it means leaving one of yours behind, as with a boss's drop.
+        if (pocketsFull(room)) {
+            let index = run.keepsakes.findIndex(k => k.id === giveUp);
+            if (index < 0) return;
+            run.keepsakes.splice(index, 1);
+        }
         run.purse -= price;
         run.stats.spent += price;
         run.keepsakes.push(keepsake);
@@ -3504,7 +3523,7 @@ io.on('connection', (socket) => {
             run.purse -= price;
             run.stats.spent += price;
             if (drink.id === 'notaroRed') run.nextNotaro = true;
-            else run.nextFightHearts = (run.nextFightHearts || nextHearts(run)) + (INTERLUDE.ebonShieldHearts ?? 1);
+            else run.nextSeaWard = true;
             run.interlude = { stage: 'done', spot: 'jorvash', drink };
         }
         emitState(socket.roomCode);

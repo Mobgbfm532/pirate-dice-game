@@ -13,7 +13,7 @@ against something the ship does to you.
 
 ## Ideas
 
-1. **Black water: the sea can't move your dice (recommended).** For the next fight the sea leaves your
+1. **Black water: the sea can't move your dice (recommended). Built 17 Nov, the user's, counting every sea: the list, the rogue wave, the Squall, Becalmed and the fog bank.** For the next fight the sea leaves your
    dice alone: no list to port or starboard on your throws, and a rogue wave never takes one of yours.
    The opponent still feels it all. It is the only thing in the game that answers the sea, it belongs
    aboard, and it is useless ashore, which is right for a drink only sold at sea. (Squall, Fog and

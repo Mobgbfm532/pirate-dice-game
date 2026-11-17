@@ -167,7 +167,7 @@ module.exports = {
         omenGoodChance: 67,     // percent of her omens that are good
         jorvashPrice: 8,        // a refreshment from Jorvash the manservant (rising)
         notaroRed: 2,           // Notaro Red: your first hand that counts next fight scores this much more
-        ebonShieldHearts: 1,    // Water of the Ebon Shield: this many extra hearts next fight
+        ebonShieldHearts: 1,    // (unused since 17 Nov: the Water of the Ebon Shield now keeps the sea off you next fight)
         blackSpot: 1,           // The Black Spot: all your hands next fight score this much less
         stareEachHeart: 2,      // the Hangman's Penitent Stare: points off your hand per heart you've taken
         cuttingWords: 3,

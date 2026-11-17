@@ -636,6 +636,29 @@ test('a Squall: two dice must be kept from every throw (never more than were thr
     assert.equal(Rules.keepsNeeded(one), 1);
 });
 
+test('the Water of the Ebon Shield: your throws ignore the list and the Squall', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'Warded');
+    const room = roomOf(hero);
+    room.tavernRun.sea = 'starboard';
+    room.tavernRun.seaWard = true;
+    let unpin = pinFaces([1, 2, 3, 4, 5, 6]);
+    hero.emit('rollDice');
+    const first = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    unpin();
+    assert.deepEqual(first.turn.dice.map(d => d.value), [1, 2, 3, 4, 5, 6], 'no list on your dice');
+    assert.equal(first.sea, undefined);
+    assert.equal(runOf(server.getRoomState(codeOf(hero))).seaWard, true);
+    // A Squall doesn't hold you to two keeps.
+    const hero2 = await tavernAgainst(fightOf('hangman'), 'Warded2');
+    const room2 = roomOf(hero2);
+    room2.tavernRun.sea = 'squall';
+    room2.tavernRun.seaWard = true;
+    hero2.emit('rollDice');
+    const thrown = await waitFor(hero2, 'diceRolled', d => d.turn.playerId === hero2.id, 4000);
+    assert.ok(thrown);
+    assert.equal(room2.turn.mustKeep, 1, 'one keep is enough');
+});
+
 test('a Squall: the opponents keep two every throw and still finish their hand', async () => {
     const hero = await tavernAgainst(fightOf('hangman'), 'SquallBot');
     const room = roomOf(hero);
@@ -740,13 +763,14 @@ test('Yvesil reads an omen for the next fight, Jorvash pours a refreshment; both
     assert.equal(runOf(said).purse, 32);
     assert.ok(server.OMENS[run.nextOmen]);
     assert.equal(runOf(said).interlude.omen.id, run.nextOmen);
-    // Water of the Ebon Shield: an extra heart.
+    // Water of the Ebon Shield (17 Nov): the sea keeps off you next fight; no extra heart.
     run.interlude = { stage: 'jorvash', drinks: server.REFRESHMENTS, price: 8 };
     const before = run.nextFightHearts;
     hero.emit('jorvashPick', 'ebonShield');
     const poured = await nextState(hero, s => runOf(s).interlude.stage === 'done' && runOf(s).interlude.spot === 'jorvash');
     assert.equal(runOf(poured).interlude.drink.name, 'Water of the Ebon Shield');
-    assert.equal(run.nextFightHearts, (before || BALANCE.playerHearts) + 1);
+    assert.equal(run.nextSeaWard, true);
+    assert.equal(run.nextFightHearts, before);
     run.interlude = { stage: 'jorvash', drinks: server.REFRESHMENTS, price: 8 };
     hero.emit('jorvashPick', 'notaroRed');
     await nextState(hero, s => runOf(s).interlude.stage === 'done' && runOf(s).interlude.drink?.id === 'notaroRed');
@@ -3224,7 +3248,7 @@ test("Cotton Candy Cloud: the opponent can't see your score this round; the last
 
 // ---- Keepsakes, 30 Oct: five at most, a boss's to take or leave, three new ones ----
 
-test("with five keepsakes, a boss's means leaving one behind; Thom won't sell a sixth", async () => {
+test("with five keepsakes, a boss's means leaving one behind; Thom's back shelf swaps one too", async () => {
     const hero = await tavernAgainst(4, 'Pockets');
     const room = roomOf(hero);
     const run = room.tavernRun;
@@ -3243,14 +3267,18 @@ test("with five keepsakes, a boss's means leaving one behind; Thom won't sell a 
     hero.emit('claimDrop', true, 'velvetCushion');
     await nextState(hero, s => runOf(s).interlude && runOf(s).interlude.claim === 'took');
     assert.deepEqual(run.keepsakes.map(k => k.id), ['luckySeat', 'loyaltyCard', 'potionBelt', 'misersPurse', 'mysteryFlavour']);
-    // Thom's back shelf: full pockets, nothing sold.
+    // Thom's back shelf with full pockets (17 Nov): a swap, one of yours named to leave behind.
     run.interlude = null;
     run.purse = 200;
     run.shop = { stock: ['healing'], keepsakes: [{ id: 'gamblersCharm', name: "Gambler's Charm", text: '' }] };
-    hero.emit('buyKeepsake', 'gamblersCharm');
+    hero.emit('buyKeepsake', 'gamblersCharm'); // none named: nothing sold
     await sleep(40);
     assert.equal(run.keepsakes.length, 5);
     assert.equal(run.purse, 200);
+    hero.emit('buyKeepsake', 'gamblersCharm', 'loyaltyCard');
+    await nextState(hero, s => runOf(s).keepsakes.some(k => k.id === 'gamblersCharm'));
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['luckySeat', 'potionBelt', 'misersPurse', 'mysteryFlavour', 'gamblersCharm']);
+    assert.equal(run.purse, 200 - BALANCE.keepsakePrices.gamblersCharm);
 });
 
 test('the Shield and the Loaded Die are only offered from the Yawning Portal on', async () => {

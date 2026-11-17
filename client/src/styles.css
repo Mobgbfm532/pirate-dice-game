@@ -2585,7 +2585,7 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
         radial-gradient(ellipse 40% 60% at 30% 40%, rgba(64, 224, 208, 0.55), transparent 70%),
         radial-gradient(ellipse 45% 55% at 70% 35%, rgba(170, 110, 255, 0.55), transparent 70%),
         radial-gradient(ellipse 50% 40% at 50% 65%, rgba(255, 210, 110, 0.35), transparent 70%);
-    filter: blur(24px); mix-blend-mode: screen; animation: aurora-drift 1.85s ease-in-out both;
+    will-change: transform, opacity; animation: aurora-drift 1.85s ease-in-out both; /* (no blur or blend: 17 Nov, as the flood's) */
 }
 @keyframes aurora-drift {
     0% { opacity: 0; transform: translateY(8%) rotate(-4deg) scale(0.9); }
@@ -2610,10 +2610,11 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .flood-sheet {
     left: -10%; right: -10%; top: -20%; height: 140%;
     background: linear-gradient(transparent,
-        rgba(170, 110, 255, 0.55) 12%, rgba(64, 224, 208, 0.75) 34%, rgba(255, 244, 214, 0.9) 50%,
-        rgba(64, 224, 208, 0.75) 66%, rgba(170, 110, 255, 0.55) 88%, transparent);
-    filter: blur(14px);
-    mix-blend-mode: screen;
+        rgba(170, 110, 255, 0.4) 12%, rgba(64, 224, 208, 0.55) 34%, rgba(255, 244, 214, 0.7) 50%,
+        rgba(64, 224, 208, 0.55) 66%, rgba(170, 110, 255, 0.4) 88%, transparent);
+    /* (17 Nov: no blur filter or blend mode: on full-screen moving layers they cost a phone ~80 ms a frame,
+       the glitch the user saw. The gradients are soft already; a little less opaque stands in for screen.) */
+    will-change: transform, opacity;
     animation: flood-pour 2.2s cubic-bezier(0.3, 0.1, 0.4, 1) both;
 }
 @keyframes flood-pour {
@@ -2628,8 +2629,7 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
         radial-gradient(ellipse 18% 70% at 20% 50%, rgba(64, 224, 208, 0.65), transparent 70%),
         radial-gradient(ellipse 14% 80% at 48% 45%, rgba(190, 140, 255, 0.7), transparent 70%),
         radial-gradient(ellipse 20% 70% at 78% 55%, rgba(255, 215, 130, 0.5), transparent 70%);
-    filter: blur(18px);
-    mix-blend-mode: screen;
+    will-change: transform, opacity;
     animation: flood-ribbons 2.2s ease-in-out both;
 }
 @keyframes flood-ribbons {
@@ -2647,13 +2647,16 @@ body.screen-shake #root { animation: screen-shake 0.85s cubic-bezier(.36,.07,.19
 .flood-ring {
     left: var(--table-x, 50%); top: var(--felt-y, 45%);
     /* (Drawn full size and scaled up from small, so the ring is still thin as it reaches the edges.) */
-    width: 180vmax; height: 180vmax; margin: -90vmax 0 0 -90vmax; border-radius: 50%;
-    border: 5px solid rgba(225, 250, 255, 0.95);
-    box-shadow: 0 0 22px 5px rgba(120, 225, 255, 0.75), inset 0 0 14px rgba(190, 150, 255, 0.7);
+    /* (17 Nov: was 180vmax, three layers each bigger than the screen; now a third of that, scaled up 3x,
+       the ring a little thicker as it reaches the edges.) */
+    width: 60vmax; height: 60vmax; margin: -30vmax 0 0 -30vmax; border-radius: 50%;
+    border: 2px solid rgba(225, 250, 255, 0.95);
+    box-shadow: 0 0 8px 2px rgba(120, 225, 255, 0.75), inset 0 0 5px rgba(190, 150, 255, 0.7);
+    will-change: transform, opacity;
     opacity: 0;
     animation: flood-ring 1.1s ease-out both;
 }
-@keyframes flood-ring { 0% { opacity: 0.95; transform: scale(0.02); } 100% { opacity: 0; transform: scale(1); } }
+@keyframes flood-ring { 0% { opacity: 0.95; transform: scale(0.06); } 100% { opacity: 0; transform: scale(3); } }
 .flood-star {
     top: -4%; width: var(--s); height: var(--s); border-radius: 50%; background: #fff;
     box-shadow: 0 0 8px 3px rgba(200, 235, 255, 0.95);
@@ -4128,3 +4131,75 @@ button.film-skip:active, button.sail-skip:active, div.tr-after button:active, bu
 .round-card.tally .round-card-note { font-family: var(--read, inherit); font-style: italic; animation: tally-in 0.3s calc(0.25s + var(--rows, 6) * 0.22s) ease-out both; }
 @keyframes tally-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .round-card.tally li, .round-card.tally .round-card-note { animation: none; } }
+
+/* ==== Thom's back shelf with full pockets (17 Nov, the user's): a keepsake is swapped for one of yours ==== */
+.keepsake-ware .swap-pick { grid-column: 1 / -1; text-align: center; }
+.keepsake-ware .swap-pick .fine { margin: 4px 0; font-size: 0.85rem; color: var(--parchment); opacity: 0.9; }
+.keepsake-ware .swap-pick .drop-swap { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; margin: 4px 0; }
+.keepsake-ware .swap-pick .keepsake-ware.swap { display: flex; align-items: center; gap: 6px; padding: 5px 8px; cursor: pointer; text-align: left; font: inherit; color: inherit; animation: none; }
+.keepsake-ware .swap-pick .keepsake-ware.swap .icon { font-size: 1.3rem; }
+
+/* ==== An Elf Bar puffed (17 Nov, the user's): its vapour billows out of the vape and drifts up ==== */
+/* Each puff is a soft disc (a radial gradient: no blur filter, which is dear on a phone) that swells
+   as it leaves the vape's burst, drifts out and up and thins away. Its colour is the flavour's. */
+.vape-cloud { position: fixed; left: 50%; top: calc(11% + 42px); width: 0; height: 0; pointer-events: none; z-index: 1; --c: 200, 200, 255; --c2: var(--c); }
+.vape-cloud span {
+    position: absolute; left: -45px; top: -45px; width: 90px; height: 90px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--c), 0.62), rgba(var(--c), 0.34) 38%, rgba(var(--c), 0.1) 60%, transparent 72%);
+    opacity: 0; transform: translate(0, 0) scale(0.25);
+    animation: vape-puff 1.7s var(--d, 0s) cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.vape-cloud span.alt { background: radial-gradient(circle, rgba(var(--c2), 0.55), rgba(var(--c2), 0.28) 40%, rgba(var(--c2), 0.08) 62%, transparent 72%); }
+@keyframes vape-puff {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.25); }
+    18% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(calc(var(--s) * 3.2)); }
+}
+.vape-cloud.vapour-purpleHaze { --c: 161, 92, 255; --c2: 205, 150, 255; }
+.vape-cloud.vapour-cottonCandyCloud { --c: 255, 159, 214; --c2: 170, 215, 255; }
+.vape-cloud.vapour-lemonLevitation { --c: 255, 226, 74; --c2: 255, 245, 170; }
+.vape-cloud.vapour-watermelonHindsight { --c: 255, 90, 110; --c2: 95, 211, 106; }
+@media (prefers-reduced-motion: reduce) { .vape-cloud { display: none; } }
+
+/* ==== Divine Smite lands: earth-shattering (17 Nov, the user's) ==== */
+/* The whole page quakes much harder and longer than the other shakes: a heavy slam, the ground
+   heaving, then aftershocks dying away (game.ts shakeScreen(…, true)). */
+body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19,.97); }
+@keyframes screen-quake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    3% { transform: translate(0, 30px) scale(1.02); }
+    7% { transform: translate(-28px, -18px) rotate(-1.4deg) scale(1.02); }
+    12% { transform: translate(26px, 20px) rotate(1.2deg); }
+    17% { transform: translate(-24px, 14px) rotate(-1deg); }
+    23% { transform: translate(22px, -16px) rotate(0.9deg); }
+    30% { transform: translate(-18px, 12px) rotate(-0.7deg); }
+    38% { transform: translate(14px, -10px) rotate(0.5deg); }
+    47% { transform: translate(-10px, 8px) rotate(-0.3deg); }
+    56% { transform: translate(6px, -4px); }
+    64% { transform: translate(-12px, 6px) rotate(-0.4deg); } /* an aftershock */
+    72% { transform: translate(9px, -6px) rotate(0.3deg); }
+    82% { transform: translate(-4px, 3px); }
+    91% { transform: translate(2px, -1px); }
+}
+/* Cracks of gold light run out across the screen from the strike and linger; stone chips fly. */
+.smite-quake { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+.smite-quake svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 52%; animation: quake-open 0.32s 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) both; }
+@keyframes quake-open { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+.smite-quake path {
+    fill: none; stroke: #fff6d0; stroke-width: 3.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 3px rgba(255, 213, 79, 0.95)) drop-shadow(0 0 9px rgba(255, 170, 40, 0.7));
+    animation: quake-crack 1.6s ease-out both;
+}
+@keyframes quake-crack { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+.smite-quake .chip {
+    position: absolute; top: 52%; width: var(--s); height: var(--s); border-radius: 2px;
+    background: #6b5a44; box-shadow: 0 0 4px rgba(255, 213, 79, 0.6);
+    opacity: 0; animation: quake-chip 1.1s ease-out both;
+}
+@keyframes quake-chip {
+    0% { opacity: 0; transform: translate(0, 0) rotate(0); }
+    10% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) * -1 + 40vh)) rotate(320deg); }
+}
+@media (prefers-reduced-motion: reduce) { body.screen-quake #root { animation: none; } .smite-quake .chip { display: none; } }
+

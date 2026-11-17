@@ -71,6 +71,7 @@ export interface TavernRun {
     omen?: Omen | null; // Yvesil's omen this fight
     nextOmen?: Omen | null;
     notaro?: boolean; // Jorvash's Notaro Red, this fight until it lands
+    seaWard?: boolean; // Jorvash's Water of the Ebon Shield: the sea die doesn't touch you this fight (17 Nov)
     nextNotaro?: boolean;
     cloud?: boolean; // Cotton Candy Cloud: the opponent can't see your score this round
     maxKeepsakes?: number; // keepsakes you can carry at once // what a candle at the Shrine, a soak in the hot tub and a song from the Bard cost
@@ -159,7 +160,7 @@ export interface TavernSummary {
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
 // cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
-export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; blessing?: string; cancelled?: boolean; hit?: boolean }
+export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; blessing?: string; cancelled?: boolean; hit?: boolean; vapour?: string }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -801,7 +802,7 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
             if (sound) setTimeout(() => playSound(sound), SWITCH_LEAD_MS);
         } else if (sound) playSound(sound);
         // The screen shakes as these land (5 Nov, the user's), and as the Ridgeler's hammer comes down.
-        if (!data.cancelled && (data.hit || SHAKING_ABILITIES.has(data.ability))) shakeScreen(250);
+        if (!data.cancelled && (data.hit || SHAKING_ABILITIES.has(data.ability))) shakeScreen(250, !!data.hit);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
         // His hand comes for the die as the banner leaves (its last 0.15 s are it rising away).
@@ -914,12 +915,14 @@ function showFloodWave() {
 }
 
 // The whole page shakes (CSS `.screen-shake`, off for reduced motion), `delay` ms from now.
-function shakeScreen(delay: number) {
+// quake: the Ridgeler's Divine Smite landing (17 Nov, the user's: earth-shattering): longer and much harder.
+function shakeScreen(delay: number, quake = false) {
+    const kind = quake ? 'screen-quake' : 'screen-shake';
     setTimeout(() => {
-        document.body.classList.remove('screen-shake');
+        document.body.classList.remove('screen-shake', 'screen-quake');
         void document.body.offsetWidth; // (restart the animation)
-        document.body.classList.add('screen-shake');
-        setTimeout(() => document.body.classList.remove('screen-shake'), 1100);
+        document.body.classList.add(kind);
+        setTimeout(() => document.body.classList.remove(kind), quake ? 1900 : 1100);
     }, delay);
 }
 
@@ -976,7 +979,7 @@ socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => 
 
 // A keepsake works: its own moment with a fanfare (the user's call, 21 Oct; it was a toast).
 // (Also the Bard's songs as they work, with who: 'The Bard'.)
-socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string }) => {
+socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string; flavour?: string }) => {
     enqueueMoment(() => {
         if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
         else if (data.who === 'The Bard') playSound('bardTune'); // either song as it works (the user's tune, 3 Nov)
@@ -984,7 +987,8 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
         else playChime();
         // The Bard's songs play like a Thonic drunk (the user's call, 3 Nov): their icon, big, in a glow.
         if (data.who === 'The Bard') update({ ability: { name: 'The Bard', ability: data.name, text: data.text, blessing: data.id, at: performance.now() } });
-        else update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, at: performance.now() } });
+        // A puff (17 Nov, the user's): a cloud of vapour in the flavour's colour (Martha's: this fight's flavour).
+        else update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, vapour: data.who?.endsWith('Elf Bar') ? (data.flavour ?? data.id) : undefined, at: performance.now() } });
     });
 });
 
@@ -1229,9 +1233,9 @@ export const actions = {
         update({ shopArrival: null });
     },
     // A keepsake from Thom's back shelf.
-    buyKeepsake(id: string) {
+    buyKeepsake(id: string, giveUp?: string) {
         playSound('itemPickup');
-        socket.emit('buyKeepsake', id);
+        socket.emit('buyKeepsake', id, giveUp);
     },
     chooseSpot(spot: Spot) {
         playSound('click');
@@ -1426,7 +1430,7 @@ export const film = {
 export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     // (hold: keep it up that much longer, to look at a still of it)
-    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit || SHAKING_ABILITIES.has(ability)) shakeScreen(250); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
+    ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit || SHAKING_ABILITIES.has(ability)) shakeScreen(250, !!more.hit); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
     intro() { update({ introAt: performance.now(), introShowing: true }); },
     floodWave() { showFloodWave(); },
     // The Salty Swallow sets sail (its scene alone; hold: freeze it that many ms in, for stills).

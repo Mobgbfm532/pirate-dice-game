@@ -67,6 +67,13 @@ export function cameraMoves(now: number, focal: number) {
             pitch += jolt(t - 200, 420, 0.015);
             const [a, b] = rumble(t - 200, 380, 0.003, 23);
             pitch += a; yaw += b;
+        } else if (m.ability === 'Divine Smite' && m.hit) {
+            // The hammer lands (17 Nov, the user's: earth-shattering): a heavy slam down, then the ground
+            // keeps heaving under a long rumble with aftershocks.
+            pitch += jolt(t - 250, 900, -0.03);
+            const [a, b] = rumble(t - 250, 1700, 0.016, 7);
+            const [c2, d] = rumble(t - 1150, 700, 0.006, 11);
+            pitch += a + c2; yaw += b + d;
         } else if (m.ability === 'All In') {
             pitch += jolt(t - 200, 650, -0.012);
             const [a, b] = rumble(t - 200, 600, 0.0035, 11);

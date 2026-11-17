@@ -860,7 +860,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
                 (the user, 21 Oct). Tap one for its info panel; it dims once spent this fight. */}
-            {(run.keepsakes.length > 0 || run.ladysGrace || run.bard?.words || run.bard?.song || run.kram?.now || run.omen || run.notaro) && (
+            {(run.keepsakes.length > 0 || run.ladysGrace || run.bard?.words || run.bard?.song || run.kram?.now || run.omen || run.notaro || run.seaWard) && (
                 <span className="keepsake-row">
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
@@ -871,6 +871,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
                     {run.bard?.song && <SongKeepsake snap={snap} state={state} />}
                     {run.omen && <KeepsakeIcon icon={keepsakeIcon(run.omen.id)} name={run.omen.name} text={run.omen.text.replace(' next fight', ' this fight')} kind={run.omen.good ? 'A good omen' : 'A bad omen'} blessing />}
                     {run.notaro && <KeepsakeIcon icon={keepsakeIcon('notaroRed')} name="Notaro Red" text="Your first hand that counts this fight scores 2 more." kind="A refreshment" blessing />}
+                    {run.seaWard && <KeepsakeIcon icon={keepsakeIcon('ebonShield')} name="Water of the Ebon Shield" text="The sea die can't touch you this fight: your dice never list, and no squall, wave, fog or calm holds you back." kind="A refreshment" blessing />}
                     {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.'} kind="Fealty" blessing />}
                 </span>
             )}
@@ -979,7 +980,7 @@ function MysteryKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) 
             {open && (
                 <ItemInfo icon={mysteryIcon(flavour)} kind="A keepsake" name="Mystery Flavour" status={mystery?.ready ? undefined : 'Puffed this fight'} onClose={close}
                     text={<>
-                        <p>Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random.</p>
+                        <p>Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random.</p>
                         <p><b>This fight: {ELF_BAR_NAMES[flavour]}.</b> {taste[0].toUpperCase() + taste.slice(1)}.</p>
                     </>}
                     actions={usable ? [{ label: 'Puff', note: ELF_BAR_NAMES[flavour], run: actions.puffMystery }] : []} />
@@ -1620,6 +1621,31 @@ function warmAbilityArt(names: string[]) {
         warmArt.set(file, img);
     }
 }
+// Divine Smite's cracks: jagged lines from the middle to the screen's edges (in a 100 x 100 box
+// stretched over the screen), each step bending a little, fixed so every showing looks the same.
+const QUAKE_CRACKS = Array.from({ length: 9 }, (_, i) => {
+    const a = (i / 9) * Math.PI * 2 + 0.35 * Math.sin(i * 2.7);
+    let x = 50, y = 52, d = 'M50 52';
+    for (let s = 1; s <= 7; s++) {
+        const bend = Math.sin(i * 5.1 + s * 2.3) * 0.5;
+        x += Math.cos(a + bend) * 10; y += Math.sin(a + bend) * 10;
+        d += ` L${x.toFixed(1)} ${y.toFixed(1)}`;
+    }
+    return d;
+});
+const QUAKE_CHIPS = Array.from({ length: 22 }, (_, i) => ({ x: ((i * 41) % 100), dx: ((i * 29) % 40) - 20, dy: 18 + ((i * 17) % 30), s: 3 + ((i * 7) % 6), d: ((i * 3) % 10) / 40 }));
+function SmiteQuake() {
+    return (
+        <div className="smite-quake">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                {QUAKE_CRACKS.map((d, i) => <path key={i} d={d} style={{ animationDelay: `${0.25 + (i % 3) * 0.04}s` }} />)}
+            </svg>
+            {QUAKE_CHIPS.map((c, i) => <span key={i} className="chip" style={{ left: `${c.x}%`, '--dx': `${c.dx}vw`, '--dy': `${c.dy}vh`, '--s': `${c.s}px`, animationDelay: `${0.25 + c.d}s` } as React.CSSProperties} />)}
+        </div>
+    );
+}
+// An Elf Bar's cloud: where each puff of vapour drifts to (from the vape), how big, and when it starts.
+const VAPOUR_PUFFS = Array.from({ length: 16 }, (_, i) => ({ x: ((i * 37) % 60) - 30, y: -6 - ((i * 23) % 26), s: 0.7 + ((i * 13) % 9) / 10, d: 0.12 + ((i * 7) % 10) / 22 }));
 // While the painting's stage covers the screen (opaque from 7% to 88% of its 1.85 s), the table isn't drawn.
 const COVER_FROM_MS = 160, COVER_UNTIL_MS = 1580;
 
@@ -1714,11 +1740,20 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
             {moment.ability === 'Disguise Self' && <div className="mask-flare" aria-hidden="true">🎭</div>}
             {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) || PAINTED_KEEPSAKES.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : keepsakeIcon(keepsake)}</div>}
             {keepsake === 'bentCopper' && <div className="forcefield" aria-hidden="true" />}
+            {/* An Elf Bar puffed (17 Nov, the user's): its vapour billows out of the vape and drifts up, in the flavour's colour. */}
+            {moment.vapour && (
+                <div className={`vape-cloud vapour-${moment.vapour}`} aria-hidden="true">
+                    {VAPOUR_PUFFS.map((p, i) => <span key={i} style={{ '--x': `${p.x}vw`, '--y': `${p.y}vh`, '--s': p.s, '--d': `${p.d}s` } as React.CSSProperties} className={i % 3 === 2 ? 'alt' : ''} />)}
+                </div>
+            )}
             {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
             {fx && moment.ability === 'Vexing Rapier' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
             {fx && moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
             {/* The hammer lands (a won Smite round): a white-gold flash and cracks of light from the middle. */}
             {fx && moment.hit && <div className="smite-crash" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <span key={i} style={{ '--a': `${i * 45 + 12}deg` } as React.CSSProperties} />)}</div>}
+            {/* The ground breaks (17 Nov, the user's: earth-shattering): jagged cracks of gold light run out across
+                the whole screen from where the hammer struck and linger, dust and stone chips fly. */}
+            {fx && moment.hit && <SmiteQuake />}
             {fx && moment.ability === 'Astral Flood' && <div className="flood-light" aria-hidden="true" />}
             {fx && moment.ability === 'The Ace of Spades' && (
                 <>
@@ -1743,6 +1778,8 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     const shelfFull = run.shelf.length >= run.shelfSize;
     const pocketsFull = run.keepsakes.length >= (run.maxKeepsakes ?? 5); // five keepsakes at most
     const [leaving, setLeaving] = useState(false);
+    // Pockets full: buying a keepsake means choosing one of yours to leave behind (17 Nov, the user's).
+    const [swapFor, setSwapFor] = useState<string | null>(null);
     const leave = () => {
         if (leaving) return;
         setLeaving(true);
@@ -1794,9 +1831,23 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                     <div key={k.id} className="keepsake-ware" style={{ animationDelay: `${1.3 + i * 0.15}s` }}>
                                         <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
                                         <span className="about"><strong>{k.name}</strong><span className="text">{k.text}</span></span>
-                                        <button className="buy" disabled={short || pocketsFull} onClick={() => actions.buyKeepsake(k.id)}>
-                                            {pocketsFull ? 'Pockets full' : short ? coins(k.price) : `Buy · ${coins(k.price)}`}
+                                        <button className="buy" disabled={short} onClick={() => (pocketsFull ? setSwapFor(swapFor === k.id ? null : k.id) : actions.buyKeepsake(k.id))}>
+                                            {short ? coins(k.price) : pocketsFull ? `Swap · ${coins(k.price)}` : `Buy · ${coins(k.price)}`}
                                         </button>
+                                        {swapFor === k.id && (
+                                            <div className="swap-pick">
+                                                <p className="fine">Pockets full. Leave which behind for <strong>{k.name}</strong>?</p>
+                                                <div className="drop-swap">
+                                                    {run.keepsakes.map(own => (
+                                                        <button key={own.id} className="keepsake-ware swap" onClick={() => { setSwapFor(null); actions.buyKeepsake(k.id, own.id); }}>
+                                                            <span className="icon" aria-hidden="true">{keepsakeIcon(own.id)}</span>
+                                                            <span className="about"><strong>{own.name}</strong></span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button className="link-button" onClick={() => setSwapFor(null)}>Back</button>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -1908,7 +1959,7 @@ const INVITATIONS: Record<string, { title: string; line: (place: string) => stri
     'Martha/Mystery': {
         title: 'You qualify for the Yawning Portal',
         line: place => `Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at ${inSentence(place)}."`,
-        gift: "is yours: it never runs out. One puff a fight, and each fight it tastes of one of Johnny's four, at random."
+        gift: "is yours: it never runs out. One puff a fight, and each fight is a different flavour at random."
     },
     Brodor: {
         title: 'Word from the docks',

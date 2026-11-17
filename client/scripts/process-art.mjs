@@ -770,7 +770,16 @@ const LIFT_FOR = { stason: { power: 0.7, vivid: 1 }, ridgeler: { power: 0.7, viv
 // wood grain, Áéd's scales, Jaguar's rosettes, Rokr's swirling pips, the Hangman's black wood): evened out like
 // the plain sets they came out flat blocks of colour. These keep the painting's fine texture (grain: how much)
 // and their painted pips; only the painting's broad lighting is still taken out.
-const TEXTURED = { klarg: { grain: 1 }, rokr: { grain: 1 }, aed: { grain: 1 }, hangman: { grain: 1 }, jaguar: { grain: 0.6 } }; // (Jaguar's rosettes at full strength crowded his pearl pips)
+// (17 Nov, the user: make the ship's dice "as good as the Yawning Portal dice") Their painted texture stays, softer
+// (grain), and their pips are redrawn clean and round like the Portal's (cleanPips): painted, they were small and
+// lost in the wood grain, the rosettes and the scales. (14 Nov: grain 1, pips as painted; evened out entirely, 13 Nov,
+// they were flat blocks of colour, "awful".)
+const TEXTURED = { klarg: { grain: 0.45, cleanPips: true }, rokr: { grain: 0.5, cleanPips: true }, aed: { grain: 0.35, cleanPips: true }, hangman: { grain: 0.5, cleanPips: true }, jaguar: { grain: 0.3, cleanPips: true } };
+// A set's 6 in a colour of its own (17 Nov, the user: Frak's green 6s yellow; green on his green faces sank).
+const SIX_COLOUR = { frak: [255, 206, 32] };
+// (17 Nov) Jaguar's pearl pips were small and pale among his gold rosettes: bigger, and dark like a jaguar's spots.
+const PIP_MIN_R = { jaguar: 52 };
+const PIP_COLOUR = { jaguar: [58, 30, 10] };
 const CLEAN = { detail: 0.35, radius: 40 };
 // The 1's red and the 6's green on every set (14 Nov; textures.ts's clearPips uses the same for the ivory dice).
 const VIVID = { red: [222, 14, 26], green: [10, 170, 82], amount: 0.85 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
@@ -862,7 +871,7 @@ async function diceSheets() {
                     return { x: bx, y: by, size: 0 };
                 });
             });
-            fitR = pr / 1.04;
+            fitR = Math.max(pr / 1.04, PIP_MIN_R[id] ?? 0);
             console.log(`dice ${id}: laid out (offset ${g} px, pip radius ${fitR} px)`);
         }
         const r = fitR ?? median(found.flat().filter(Boolean).map(b => b.size)) / 2 * 1.04;
@@ -910,7 +919,8 @@ async function diceSheets() {
             const mid = [0, 1, 2].map(c => median(Array.from({ length: F * F }, (_, i) => i).filter(i => weight[i] > 0.99 && i % 7 === 0).map(i => face[i * 3 + c])));
             // Each pip's own colour, from its middle (read before the surface is redrawn).
             const textured = TEXTURED[id];
-            const pipColours = (n === 0 && RING_ONE[id]) || textured ? [] : centres.map(b => {
+            const paintedPips = textured && !textured.cleanPips;
+            const pipColours = (n === 0 && RING_ONE[id]) || paintedPips ? [] : centres.map(b => {
                 const inside = [[], [], []];
                 for (let y = Math.round(b.y - r * 0.6); y <= b.y + r * 0.6; y++) for (let x = Math.round(b.x - r * 0.6); x <= b.x + r * 0.6; x++) {
                     if (Math.hypot(x - b.x, y - b.y) > r * 0.6) continue;
@@ -930,9 +940,10 @@ async function diceSheets() {
             // the game's own red and green (VIVID, as textures.ts's clearPips paints the ivory dice). Redrawn pips
             // take it as their colour; a textured set's painted pips keep their shading: each pixel inside a pip
             // that leans red (the 1) or green (the 6) takes the colour at its own brightness.
-            const vivid = n === 0 && !RING_ONE[id] ? VIVID.red : n === 5 ? VIVID.green : null;
-            if (vivid && !textured) pipColours.forEach((colour, p) => { pipColours[p] = colour.map((v, c) => Math.round(v * (1 - VIVID.amount) + vivid[c] * VIVID.amount)); });
-            if (vivid && textured) {
+            const vivid = n === 0 && !RING_ONE[id] ? VIVID.red : n === 5 ? SIX_COLOUR[id] ?? VIVID.green : null;
+            if (PIP_COLOUR[id] && !vivid) pipColours.forEach((_, p) => { pipColours[p] = [...PIP_COLOUR[id]]; });
+            if (vivid && !paintedPips) pipColours.forEach((colour, p) => { pipColours[p] = n === 5 && SIX_COLOUR[id] ? [...vivid] : colour.map((v, c) => Math.round(v * (1 - VIVID.amount) + vivid[c] * VIVID.amount)); });
+            if (vivid && paintedPips) {
                 const luma = rgb => 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
                 const want = luma(vivid);
                 for (const b of centres) for (let y = Math.max(0, Math.floor(b.y - r * 1.05)); y <= Math.min(F - 1, b.y + r * 1.05); y++) for (let x = Math.max(0, Math.floor(b.x - r * 1.05)); x <= Math.min(F - 1, b.x + r * 1.05); x++) {

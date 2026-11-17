@@ -59,7 +59,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 **Martha/Mystery**: Disguise Self (boss)
 - Entrance card: "Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
 - Ability screens: "Disguise Self", then the trick she copies ("Mind Whip", "You are Cursed!" or "Sympathy for the Devil").
-- Invitation after beating her: title "You qualify for the Yawning Portal"; "Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at the Yawning Portal."" Her keepsake, Mystery Flavour: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random." (Until 4 Nov she gave her mask.)
+- Invitation after beating her: title "You qualify for the Yawning Portal"; "Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at the Yawning Portal."" Her keepsake, Mystery Flavour: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random." (Until 4 Nov she gave her mask.)
 - Since 30 Oct a boss's keepsake is yours to take or leave: "Take it" / "Leave it". With five keepsakes already: "Your pockets are full: taking it means leaving one of yours behind." then "Leave which behind for [keepsake]?" Left: "You leave [keepsake] behind." The same for Brodor's Sunglasses.
 
 ### The Yawning Portal
@@ -168,7 +168,7 @@ Where: `server.js` (`TAVERN_KEEPSAKES`, `MYSTERY_FLAVOUR`, `BRODORS_SUNGLASSES`)
 - **Miser's Purse:** "Each win pays 1 more gold for every 10 in your purse." On the fight summary: "Miser's Purse · 1 for every 10 in your purse".
 - **Gambler's Charm:** "When only one die is left to throw, it is thrown twice and you keep the better."
 - **Bottomless Flask:** "The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf." When it works: "Your [Thonic] fills up again."
-- **Mystery Flavour** (Martha's drop): "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight it tastes of one of Johnny's four, at random." Tapped: "Martha's Elf Bar. One puff a fight; this fight it tastes of [flavour]: [what it does]." When it works: "Martha's Elf Bar", "Mystery Flavour", "Tastes of [flavour]: [what happened]".
+- **Mystery Flavour** (Martha's drop): "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random." Tapped: "Martha's Elf Bar. One puff a fight; this fight it tastes of [flavour]: [what it does]." When it works: "Martha's Elf Bar", "Mystery Flavour", "Tastes of [flavour]: [what happened]".
 - **Martha's Mask:** not in the game since 4 Nov (nothing gives it, though it's still one of the start screen's icons).
 - **Brodor's Sunglasses:** "A finished 23 restores a heart, like a 24."
 - On Thom's back shelf with five keepsakes, the buttons read "Pockets full".

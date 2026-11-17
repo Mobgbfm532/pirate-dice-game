@@ -63,7 +63,12 @@ if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER) server.devHooks
     if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
     if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
     const after = START_AFTER && server.TAVERN_ENCOUNTERS.findIndex(e => e.id === START_AFTER);
-    if (START_AFTER && server.TAVERN_ENCOUNTERS[after].drops) COMMANDS['/invitation'](r, new URLSearchParams({ boss: START_AFTER }), code);
+    // A boss: the gold of every fight up to and including theirs, 2 hearts left at each, then the invitation.
+    if (START_AFTER && server.TAVERN_ENCOUNTERS[after].drops) {
+        const G = require('../shared/balance').gold;
+        for (let i = 0; i <= after; i++) r.tavernRun.purse += G.winFirst + G.winStep * i + 2 * G.perHeartLeft;
+        COMMANDS['/invitation'](r, new URLSearchParams({ boss: START_AFTER }), code);
+    }
     // Any other opponent (START_AFTER=duke): that fight just won, 2 hearts left, with the gold of the
     // fights before it in the purse; its summary, then the event between fights.
     else if (START_AFTER) {
