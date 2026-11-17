@@ -35,6 +35,9 @@ const EMPTY_TABLE_GRACE_MS = 120000;
 // or a long message used to end a run of fifteen fights. Its opponent waits while nobody is there.
 const CRAWL_TABLE_GRACE_MS = 3600000;
 const TURN_RECONNECT_GRACE_MS = 30000;
+// At a friends' table, someone away this long leaves it (17 Nov, the user's "fix bugs": a player who
+// closed the tab stayed as an "Away" card until the table ended). Back sooner, they keep their seat.
+const AWAY_LEAVE_MS = 120000;
 
 // The avatars a player may pick: the 3D client's seven item icons (30 Oct), then the classic
 // page's six characters.
@@ -1521,6 +1524,36 @@ function forfeitIfStillAway(roomCode, room, token) {
     player.score = 0;
     if (room.turn) room.turn.ended = true;
     advanceTurn(roomCode);
+}
+
+// A friends' table: a player still away after AWAY_LEAVE_MS gives up their seat. Not on their own turn
+// (forfeitIfStillAway moves that on first; this tries again shortly). If everyone left in the round has
+// now played, the round is scored.
+function leaveIfStillAway(roomCode, room, token) {
+    if (rooms[roomCode] !== room || room.mode === 'tavern-crawl') return;
+    let id = Object.keys(room.players).find(k => room.players[k].token === token);
+    let player = id && room.players[id];
+    if (!player || player.connected || id === BOT_ID) return;
+    if (room.roundPlayers[room.currentTurnIndex] === id) {
+        setTimeout(() => leaveIfStillAway(roomCode, room, token), delay(5000));
+        return;
+    }
+    let inRound = room.roundPlayers.indexOf(id);
+    if (inRound >= 0) {
+        room.roundPlayers.splice(inRound, 1);
+        if (inRound < room.currentTurnIndex) room.currentTurnIndex--;
+    }
+    let seat = room.playerOrder.indexOf(id);
+    if (seat >= 0) {
+        room.playerOrder.splice(seat, 1);
+        if (seat < room.dealerIndex) room.dealerIndex--;
+        if (room.playerOrder.length) room.dealerIndex %= room.playerOrder.length;
+        else room.dealerIndex = 0;
+    }
+    delete room.players[id];
+    let playing = room.roundPlayers.length > 0;
+    if (playing && room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
+    else emitState(roomCode);
 }
 
 function skipDisconnectedPlayers(room) {
@@ -3598,6 +3631,10 @@ io.on('connection', (socket) => {
                 // Their turn: give them a chance to come back before it counts as dust.
                 let token = player.token;
                 setTimeout(() => forfeitIfStillAway(roomCode, room, token), delay(TURN_RECONNECT_GRACE_MS));
+            }
+            if (room.mode !== 'tavern-crawl') {
+                let token = player.token;
+                setTimeout(() => leaveIfStillAway(roomCode, room, token), delay(AWAY_LEAVE_MS));
             }
             emitState(roomCode);
         }

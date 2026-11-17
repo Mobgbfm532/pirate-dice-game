@@ -9,12 +9,11 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
-### Multiplayer's look (`docs/multiplayer-look-brainstorm.md`, 17 Nov; none built yet)
-- Which of its seven ideas, in what order? (Recommended first: whoever is rolling shown big in the empty tavern; then each player picking a painted dice set.)
-- Dice sets: free for everyone, or unlocked by beating their owner in a crawl?
-- Player tokens: would you paint a dozen tavern regulars as faces?
-- Two bugs found: a player who leaves stays as an "Away" card for good, its "Away" drawn over the hearts; and on a phone on its side five or six cards run over the slot rail. When a player has been away a while, drop their card, or keep it so they can rejoin?
-
+### Multiplayer's look (`docs/multiplayer-look-brainstorm.md`, built 17 Nov; to judge on a phone and a computer)
+- Built: bigger cards on a computer with the reactions in the dock, a dark-wood tally board for the round's result
+  (with the game's own cracking heart; a chalk board was tried first), and both bugs fixed.
+- A player away two minutes now leaves the table (my choice). Coming back later, they join as a new seat with
+  full hearts mid-game. Fine among friends, or should a late return sit out until the next game?
 
 ### Going live (the end-to-end check of 15 Nov)
 Checked: 181 server tests and 19 client tests pass, the client builds with no type errors and no dev hooks
@@ -145,7 +144,7 @@ Built 15 Nov from the look check (before/after in `previews/look5/`), not yet se
 
 ### Small things
 
-- Sounds and music: which of the missing ones to make (the list is in `docs/art-direction.md`, "Sounds and music still missing", 11 Nov): Jaguar's three phases and Áéd's spells play in silence; five scenes between fights have no loop; Becalmed has no sound; no music for the Yawning Portal or the ship.
+- Sounds and music: which of the missing ones to make (the list is in `docs/art-direction.md`, "Sounds and music still missing", 11 Nov): Áéd's spells play in silence (Jaguar's three phases have the user's clips since 17 Nov, and the Portal, Brodor and the ship their music); five scenes between fights have no loop; Becalmed has no sound; no music for the Yawning Portal or the ship.
 - Tavern Crawl's round result says "Dust: [name]" for whoever lost a life, even with a valid lower score.
 - `Whoa.mp3` is off until the user reworks it (`WHOA_ON`).
 - The Dirty 20! colour (`#c5d04a`) hasn't been seen by eye; a sound for it, and for Astral Flood's wave, if wanted.
@@ -174,6 +173,7 @@ Built 15 Nov from the look check (before/after in `previews/look5/`), not yet se
 - The classic game is now a small "Classic game" link in the corner (hidden on short upright phones). Keep it, or drop it?
 
 ## Settled
+- 17 Nov: multiplayer's look: ideas 5 (bigger cards on a computer) and 6 (a chalk-board round result) and the two bugs; ideas 1-4 and 7 not wanted.
 - 16 Nov: the live Render service is on the free plan, and the game is for at most 6 players playing now and then (the user's). The free Render and Neon plans are enough for that; the free plan's sleep and deploys are why "never lose a crawl" (recommendation 1) matters.
 - 13 Nov: the sea die's needle has the user's own clips: a tick past each sector line, and a clunk as it lands on its face.
 - 13 Nov: the other ten opponents' dice: the user painted all ten at once; in the game the same day.

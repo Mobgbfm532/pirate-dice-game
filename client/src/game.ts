@@ -773,11 +773,12 @@ const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Brand', 'Divine 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits for the dice to
 // settle, and the die it takes goes once its banner has.
-socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean }) => {
+socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean; thonic?: string }) => {
     const steal = data.ability === 'Reach Around';
     const flood = data.ability === 'Astral Flood' && !data.cancelled;
     enqueueMoment(() => {
-        const sound = ABILITY_SOUNDS[data.ability];
+        // (Jaguar's Smooth Talk has two clips: drinking your Thonic, or talking points off your hand.)
+        const sound = data.ability === 'Smooth Talk' && data.thonic ? 'smoothTalkThonic' : ABILITY_SOUNDS[data.ability];
         if (data.cancelled) { /* a Clear-Eye stopped it: silent */ }
         else if (data.disguise && data.ability !== 'Disguise Self') {
             playSound('marthaSwitch');

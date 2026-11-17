@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { tableCover, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
-import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell, setBossMusic } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, spotPortrait, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
@@ -434,7 +434,7 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
         row.current?.querySelector('.player.current')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
     }, [state.currentTurnId]);
     return (
-        <div ref={row} className={`players ${className}`}>
+        <div ref={row} className={`players ${className} ${ids.length > 3 ? 'crowd' : ''}`}>
             {ids.map(id => {
                 const p = state.players[id];
                 if (!p) return null;
@@ -448,7 +448,9 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                             <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} fight={fightKey(state)} player={id} />
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
-                        <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
+                        {p.connected
+                            ? <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
+                            : <div className="score away">Away</div>}
                         {multiplayer && <SeatCallout snap={snap} id={id} />}
                     </div>
                 );
@@ -603,7 +605,10 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
                 </div>
                 {/* Their score this round, big once they've finished: what you have to beat (keyed, so
                     it lands with a pop each time it changes). */}
-                <div key={`${p.score}:${p.busted}`} className={`score ${scoreClass(state, id)} ${finished ? 'final' : ''}`}>{p.connected ? scoreText(p) : 'Away'}</div>
+                {/* (Away: a small word under the name, not in the score's place, where it ran over the hearts.) */}
+                {p.connected
+                    ? <div key={`${p.score}:${p.busted}`} className={`score ${scoreClass(state, id)} ${finished ? 'final' : ''}`}>{scoreText(p)}</div>
+                    : <div className="score away">Away</div>}
                 <SeatCallout snap={snap} id={id} />
             </div>
         );
@@ -2909,12 +2914,22 @@ function SquallRain({ snap }: { snap: Snapshot }) {
     return createPortal(<div className="squall-rain" aria-hidden="true"><Rain className="squall-drops" slant={22} heavy={1.6} /></div>, document.body);
 }
 
-// Jaguar's own music while his fight lasts (the user's, 10 Nov), until the run-over screen.
-function BossMusic({ snap }: { snap: Snapshot }) {
+// The music for where you are (17 Nov, the user's tracks): the Yawning Portal's and the Salty Swallow's own
+// themes in a crawl there, Brodor's and Jaguar's during their fights (Jaguar's since 10 Nov), the tavern
+// tune at the Ghoul and Gourd, at a friends' table and on the start screen. Between fights the place's
+// theme plays on (a scene with its own loop fades it down), and the run-over screen goes back to the tavern.
+function PlaceMusic({ snap }: { snap: Snapshot }) {
     const run = snap.state?.mode === 'tavern-crawl' ? snap.state.tavernRun : undefined;
-    const on = !!run && (run.seated ?? run.enemy)?.id === 'jaguar' && !snap.betweenShown && snap.modal?.type !== 'tavernOver' && snap.modal?.type !== 'gameOver';
-    useEffect(() => setBossMusic(on), [on]);
-    useEffect(() => () => setBossMusic(false), []);
+    const over = snap.modal?.type === 'tavernOver' || snap.modal?.type === 'gameOver';
+    const who = run ? (run.seated ?? run.enemy)?.id : undefined;
+    const tune: Tune = !run || over ? 'tavern'
+        : who === 'jaguar' && !snap.betweenShown ? 'jaguar'
+        : who === 'brodor' && !snap.betweenShown ? 'brodor'
+        : /Swallow/.test(run.place) ? 'ship'
+        : /Portal/.test(run.place) ? 'portal'
+        : 'tavern';
+    useEffect(() => setMusicFor(tune), [tune]);
+    useEffect(() => () => setMusicFor('tavern'), []);
     return null;
 }
 
@@ -2937,15 +2952,24 @@ function FloodWave() {
 function RoundResultCard({ rows, myId }: { rows: RoundResultRow[]; myId: string | null }) {
     const tied = rows.filter(r => r.tied).map(r => r.name);
     const nobodyLost = !rows.some(r => r.lost) && tied.length === 0;
+    // (17 Nov, the user's pick, idea 6 of docs/multiplayer-look-brainstorm.md: a tally board on the felt,
+    // dark wood in the brass rim of the game's other boxes, everyone ranked, each line coming in after the
+    // one before, and the game's own heart cracking on the line of whoever loses one. A chalk board was
+    // tried first the same day: a new material, green on the green felt, with a heart of its own.)
+    let place = 0;
     return (
-        <div className="round-card" role="status">
+        <div className="round-card tally" role="status" style={{ '--rows': rows.length } as React.CSSProperties}>
             <strong className="round-card-title">Round result</strong>
             <ol>
-                {rows.map(r => (
-                    <li key={r.id} className={`${r.lost ? 'lost' : ''} ${r.id === myId ? 'me' : ''}`}>
+                {rows.map((r, i) => (
+                    <li key={r.id} className={`${r.lost ? 'lost' : ''} ${r.id === myId ? 'me' : ''}`} style={{ '--i': i } as React.CSSProperties}>
+                        <span className="place">{r.busted ? '✗' : ++place}</span>
                         <span className="who">{r.name}</span>
                         <span className={`score ${r.busted ? 'dust' : ''}`}>{r.busted ? 'Dust' : r.score}</span>
-                        <span className="heart-lost" aria-label={r.lost ? 'loses a life' : undefined}>{r.lost ? '−1 ♥' : r.tied ? 'tied' : ''}</span>
+                        <span className="heart-lost" aria-label={r.lost ? 'loses a life' : undefined}>
+                            {/* (The same heart as everywhere, cracking as one does when it's lost, once its line is in.) */}
+                            {r.lost ? <span className="hearts" aria-hidden="true"><span className="heart breaking" style={{ animationDelay: `${0.75 + i * 0.22}s` }}>♥</span></span> : r.tied ? 'tied' : ''}
+                        </span>
                     </li>
                 ))}
             </ol>
@@ -3280,7 +3304,7 @@ export function Hud() {
             <WaveMoment snap={snap} />
             <SquallRain snap={snap} />
             <FogBank snap={snap} />
-            <BossMusic snap={snap} />
+            <PlaceMusic snap={snap} />
             <Celebration snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}

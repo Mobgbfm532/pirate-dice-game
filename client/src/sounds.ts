@@ -80,7 +80,13 @@ const sfx = {
     fogHorn: load('FogHorn.mp3', 0.6),
     // The sea die's dial (the user's, 13 Nov): the needle ticks past each sector line, and clunks as it lands on its face.
     dialNeedle: load('DialNeedle.mp3', 0.45),
-    dialClunk: load('DialClunk.mp3', 0.8)
+    dialClunk: load('DialClunk.mp3', 0.8),
+    // Jaguar's (the user's, 17 Nov): Smooth Talk's two (he drinks your Thonic; he talks points off your
+    // hand), the Cloak (brought up 8 dB to the others' level: a quiet recording) and All In.
+    smoothTalkThonic: load('SmoothTalkThonic.mp3', ABILITY_VOLUME),
+    smoothTalkMinus: load('SmoothTalkMinus.mp3', ABILITY_VOLUME),
+    theCloak: load('TheCloak.mp3', ABILITY_VOLUME),
+    allIn: load('AllIn.mp3', ABILITY_VOLUME)
 };
 // Where each clip's sound really starts (s): these open with silence, which came in late against
 // the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
@@ -115,10 +121,20 @@ const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: loa
 const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall: 0.7 };
 // Jaguar's fight has its own music (the user's, 10 Nov): it takes over from the tavern tune as he sits
 // down and gives way again when the run ends. 9.9 MB, so fetched only then; streamed, not decoded.
-const BOSS_VOLUME = 0.15; // (a loud recording, about three times the tavern tune: so as loud as it at 0.4)
-const bossMusic = load('JaguarBossBattle.mp3', 0, true);
-bossMusic.preload = 'none';
-let bossOn = false; // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
+// Since 17 Nov each place has its own music (the user's), and Brodor and Jaguar a theme of their own.
+// Volumes set from each recording's measured loudness, so each plays about as loud as the tavern tune
+// at 0.4 (-16.7 LUFS): Jaguar's -8.0, the Salty Swallow's -10.8, Brodor's -13.5, the Portal's -14.1.
+export type Tune = 'tavern' | 'portal' | 'brodor' | 'ship' | 'jaguar';
+const placeTune = (file: string): HTMLAudioElement => { const el = load(file, 0, true); el.preload = 'none'; return el; };
+const TUNES: Record<Tune, [HTMLAudioElement, number]> = {
+    tavern: [music, MUSIC_VOLUME],
+    portal: [placeTune('YawningPortalTheme.mp3'), 0.3],
+    brodor: [placeTune('BrodorTheme.mp3'), 0.28],
+    ship: [placeTune('SaltySwallowTheme.mp3'), 0.2],
+    jaguar: [placeTune('JaguarBossBattle.mp3'), 0.15] // (9.8 MB, fetched only then)
+};
+let tuneNow: Tune = 'tavern';
+const allTunes = () => Object.values(TUNES).map(([el]) => el); // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
 Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
 export type SceneAmbience = keyof typeof sceneAmbience;
 
@@ -490,7 +506,7 @@ let muted = readSetting('tavernSoundsOff'); // game sounds
 music.muted = musicOff;
 ambience.muted = musicOff;
 Object.values(sceneAmbience).forEach(el => { el.muted = musicOff; });
-bossMusic.muted = musicOff;
+allTunes().forEach(el => { el.muted = musicOff; });
 
 export function playSound(name: SoundName, playbackRate = 1) {
     if (muted) return;
@@ -527,6 +543,9 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Mind Whip': 'mindWhip',
     'You are Cursed!': 'cursed',
     'Sympathy for the Devil': 'sympathy',
+    'Smooth Talk': 'smoothTalkMinus', // (his Thonic demand plays smoothTalkThonic: game.ts)
+    'The Cloak': 'theCloak',
+    'All In': 'allIn',
     'Disguise Self': 'marthaAbility' // the user's clip (4 Nov); her switch of faces comes with the trick she copies
 };
 // A face put on (Martha's copied trick, or your mask): her switch sound, then the trick's own
@@ -537,27 +556,27 @@ export const SWITCH_LEAD_MS = 750;
 export function startMusic() {
     audio(); // the impact sounds need the audio context unlocked by a tap, like the music
     if (musicOff) return;
-    const tune = bossOn ? bossMusic : music;
-    if (!tune.paused) return;
-    if (bossOn) bossMusic.volume = BOSS_VOLUME;
-    tune.play().catch(() => {});
+    const [now, volume] = TUNES[tuneNow];
+    if (!now.paused) return;
+    now.volume = volume;
+    now.play().catch(() => {});
     ambience.play().catch(() => {});
 }
 
-// The music playing now (the tavern's tune, or Jaguar's) and its full volume.
+// The music playing now (the tavern's tune, a place's, Brodor's or Jaguar's) and its full volume.
 function tune(): [HTMLAudioElement, number] {
-    return bossOn ? [bossMusic, BOSS_VOLUME] : [music, MUSIC_VOLUME];
+    return TUNES[tuneNow];
 }
 
-// Jaguar's music on or off, crossfading with the tavern's tune.
-export function setBossMusic(on: boolean) {
-    if (on === bossOn) return;
-    bossOn = on;
+// The music for where you are, crossfading from what was playing (each new one from its start).
+export function setMusicFor(next: Tune) {
+    if (next === tuneNow) return;
+    const [from] = TUNES[tuneNow];
+    const [to, volume] = TUNES[next];
+    tuneNow = next;
     if (musicOff) return;
-    const [from, to] = on ? [music, bossMusic] : [bossMusic, music];
-    const volume = on ? BOSS_VOLUME : MUSIC_VOLUME;
-    if (on) to.currentTime = 0;
-    if (!music.paused || !bossMusic.paused) { // (the music has started: after the first tap)
+    if (allTunes().some(el => !el.paused)) { // (the music has started: after the first tap)
+        to.currentTime = 0;
         to.volume = 0;
         to.play().catch(() => {});
         fade(to, volume, 1800);
@@ -674,8 +693,8 @@ export function setMusicOff(value: boolean) {
     Object.values(sceneAmbience).forEach(el => { el.muted = value; if (value) el.pause(); });
     if (value && audioContext) playingScenes.forEach(level => level.gain.setTargetAtTime(0, audioContext!.currentTime, 0.1));
     saveSettings();
-    bossMusic.muted = value;
-    if (value) { music.pause(); bossMusic.pause(); ambience.pause(); } else startMusic();
+    allTunes().forEach(el => { el.muted = value; });
+    if (value) { allTunes().forEach(el => el.pause()); ambience.pause(); } else startMusic();
 }
 
 export function isMusicOff() {

@@ -49,6 +49,8 @@ const MOMENTS = {
     seaport: `preview.sea('port', 'port', 60000)`, // (a held list to port: its wave breaking to the left)
     seastarboard: `preview.sea('starboard', 'calm', 60000)`, // (a change to starboard: its wave breaking to the right)
     seacalm: `preview.sea('calm', 'calm', 60000)`, // (calm seas holding: a swell in place)
+    // (a friends' table's round result: everyone at the table, one losing a heart, one dust)
+    roundcard: `(() => { const s = store.get().state; preview.roundResult(s.playerOrder.map((id, i) => ({ id, name: s.players[id].name, score: [21, 18, 14, 0, 12, 9][i % 6], busted: i === 3, lost: i === 2 || i === 3, tied: false }))); })()`,
     seainfo: `setTimeout(() => document.querySelector('.plaque-button')?.click(), 1500)`, // (the sea's explainer, with the leg's dial)
     card: `document.querySelector('.plate-info').click()` // (the opponent's card, from the i on the nameplate)
 };

@@ -307,17 +307,13 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | The trailer's old-game stills | Done (11 Nov) | `client/public/art/trailer/old-start.webp`, `old-table`, `old-rolled`, `old-kept`: the real old page (`main`) at 384×780, captured headless; not from `art/` |
 | The sea die and its dial | Done (9 Nov) | `art/dice-sea.jpg` → `sea-die.webp` (six faces in a strip, `seaDie()`); `art/sea-dial.jpg` and `art/sea-dial-needle.jpg` → `sea-dial.webp`, `sea-dial-needle.webp` (`SeaDial`: `DIAL`, `NEEDLE` hold the hub and pivot) |
 
-## Sounds and music still missing (checked against the code, 11 Nov)
+## Sounds and music still missing (checked against the code, 11 Nov; Jaguar's and the music per place came 17 Nov)
 
 Every clip the user makes goes in `public/` and is wired in `client/src/sounds.ts`. What has none yet:
 
-**Abilities that play in silence** (`ABILITY_SOUNDS` in sounds.ts has no entry, so their moment has no sound):
-
-| Moment | Who | Notes |
-|---|---|---|
-| Smooth Talk | Jaguar | his first phase: talks a Thonic off your shelf, or 3 off your hand |
-| The Cloak | Jaguar | his second phase: his dice hidden |
-| All In | Jaguar | his last life: the loser loses two hearts |
+**Abilities:** every one has a sound since 17 Nov. Jaguar's came then (the user's, uploaded to `art/audio/`): Smooth
+Talk has two, `SmoothTalkThonic.mp3` as he drinks your Thonic and `SmoothTalkMinus.mp3` as he talks points off your
+hand; `TheCloak.mp3` (brought up 8 dB, a quiet recording) and `AllIn.mp3`.
 
 **Made up by the game for now** (synthesized in sounds.ts; a real clip could replace each):
 
@@ -332,7 +328,11 @@ Every clip the user makes goes in `public/` and is wired in `client/src/sounds.t
 
 **Weather:** Becalmed has no sound (the Squall has the wind, the Fog bank the foghorn, the Rogue wave its own clip).
 
-**Music:** one tavern tune and its ambience everywhere, and Jaguar's own music for his fight. No tune of its own for the Yawning Portal or the Salty Swallow (step 9 of CLAUDE.md's next steps, "music per place"), none for the other bosses (Martha, Brodor).
+**Music (since 17 Nov, the user's tracks):** the tavern tune at the Ghoul and Gourd, `YawningPortalTheme.mp3` at the
+Yawning Portal, `SaltySwallowTheme.mp3` aboard, `BrodorTheme.mp3` during Brodor's fight and Jaguar's during his
+(`PlaceMusic` in Hud, `setMusicFor` in sounds.ts; the originals stay in `art/audio/`). Still none: a theme for
+Martha, the Ghoul and Gourd's boss. The tavern's crowd ambience (`Ambience.mp3`) still plays under every place,
+the ship's too.
 
 **Waiting on the user's word:** `Whoa.mp3` is off until reworked (`WHOA_ON`); Dirty 20! and Astral Flood's wave have none, if wanted; a narrator for the intro film, if wanted (`IntroLine1.mp3` to 5).
 

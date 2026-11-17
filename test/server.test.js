@@ -1062,6 +1062,36 @@ test('if they do not come back while others wait, their turn is dust', async () 
     waiting.disconnect();
 });
 
+test("someone away from a friends' table for two minutes leaves it; back sooner, they keep their seat (17 Nov)", async () => {
+    const a = await join('Ada', 'AWAY1', { token: 'ada-away' });
+    const b = await join('Bo', 'AWAY1', { token: 'bo-away' });
+    const c = await join('Cy', 'AWAY1', { token: 'cy-away' });
+    await waitFor(c, 'gameStateUpdate', s => s.playerOrder.length === 3);
+    const room = server.rooms.AWAY1;
+    // The one away is never the one whose turn it is (that's forfeited first, at 0.3 s here).
+    const awayId = room.roundPlayers.find(id => id !== room.roundPlayers[room.currentTurnIndex]);
+    const away = [a, b, c].find(s => s.id === awayId);
+    const stays = [a, b, c].find(s => s.id !== awayId);
+    away.disconnect();
+    const gone = await waitFor(stays, 'gameStateUpdate', s => !s.players[awayId], 3000); // (2 minutes at 0.01 is 1.2 s)
+    assert.equal(gone.playerOrder.length, 2);
+    assert.ok(!room.roundPlayers.includes(awayId));
+    assert.ok(room.currentTurnIndex < room.roundPlayers.length, 'the turn still points at someone at the table');
+    // Back inside the two minutes: the same seat.
+    const d = await join('Di', 'AWAY2', { token: 'di-away' });
+    const e = await join('Ed', 'AWAY2', { token: 'ed-away' });
+    await waitFor(e, 'gameStateUpdate', s => s.playerOrder.length === 2);
+    const dId = d.id;
+    d.disconnect();
+    await sleep(300);
+    const back = await join('Di', 'AWAY2', { token: 'di-away' });
+    await waitFor(back, 'gameStateUpdate', s => s.players[back.id] && s.players[back.id].connected);
+    await sleep(1400);
+    assert.equal(server.rooms.AWAY2.playerOrder.length, 2, 'still seated after the two minutes');
+    assert.ok(!server.rooms.AWAY2.players[dId]);
+    [a, b, c, e, back].forEach(s => s.disconnect());
+});
+
 test('a bot waits for you instead of playing to an empty room', async () => {
     const g = await join('Gil', 'TVRN-GRACE', { token: 'gil-token' });
     await waitFor(g, 'gameStateUpdate');
