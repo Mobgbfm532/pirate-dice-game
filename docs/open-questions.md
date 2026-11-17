@@ -141,7 +141,15 @@ Built 15 Nov from the look check (before/after in `previews/look5/`), not yet se
 - The ship's ability names are still working names: Smooth Talk, the Cloak, All In.
 
 ### Water of the Ebon Shield (`docs/ebon-shield-brainstorm.md`, 10 Nov)
-- **Settled 17 Nov (the user):** "allow the player be unaffected by the sea die in their next fight". Built: for the next fight your throws never list, a Squall or Becalmed doesn't limit your hands, a rogue wave never takes your dice, and you see through a fog bank (he still can't see your hand in it). No extra heart any more.
+- **Settled 17 Nov (the user):** "allow the player be unaffected by the sea die in their next fight". Built: for the next fight your throws never list, a Squall or Becalmed doesn't limit your hands, a rogue wave never takes your dice, and you see through a fog bank (he still can't see your hand in it). No extra heart any more. It says so (the user's, 17 Nov): "Your Ebon Shield holds: you are unaffected in this fight" as the fight begins and under the sea die's news.
+- **Open:** in a fog bank you see his hand under the Ebon Shield (Claude's call, 17 Nov: "unaffected"), though he still can't see yours. Keep it so, or should fog still hide his hand from you?
+
+### Built 17 Nov, to judge on a phone
+- Divine Smite's quake as it lands (the page quakes for 1.65 s, cracks of gold light, stone chips): strong enough, or too much?
+- The Elf Bars' vapour clouds in each flavour's colour (Martha's vape too).
+- Astral Flood: no longer stalls a phone (measured headless at a phone's speed); does it still look right?
+- The ship's dice with clean round pips and softer texture; Jaguar's dark pips; Frak's yellow 6s (`previews/dice-eval/`).
+- Swapping a keepsake on Thom's back shelf with full pockets.
 
 ### Áéd, the dragon sorcerer (`docs/aed-brainstorm.md`, built 11 Nov)
 - His numbers, first guesses: 6 uses a fight, each trick at least once (the user's, 13 Nov), how keen he is to spend the spare two (`minGain` 0.12 and 0.06), 3 hearts, Heightened at most once a round. Played headless against the simple player (13 Nov, 40 fights each): the player won 33% against 3 uses and 23% against 6. Is he now too hard for the ship's third fight?

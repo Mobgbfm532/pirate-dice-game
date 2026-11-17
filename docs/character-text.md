@@ -18,7 +18,7 @@ Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a h
 
 **Yvesil**, "Oracle of the Salty Swallow". Card: "Shall I read your next fight?" / "A good omen, or a bad one". Scene: "Cross her palm, and she reads your fight with [next]. It may not be what you want to hear." Good: "The sea smiles on you." Bad: "Ah. I am sorry." Walking away: "The sea will tell you itself, then." Omens: Fair Winds, Following Sea, The Albatross, The Black Spot (the user's picks).
 
-**Jorvash**, "Manservant of the Salty Swallow". Card: "Something to fortify you?" / "A refreshment for the next fight". Scene: "One of these before you face [next]?" After: "Very good." / "As you wish." Refreshments (the user's names): Notaro Red, Water of the Ebon Shield.
+**Jorvash**, "Manservant of the Salty Swallow". Card: "Something to fortify you?" / "A refreshment for the next fight". Scene: "One of these before you face [next]?" After: "Very good." / "As you wish." Refreshments (the user's names): Notaro Red, "Your first hand that counts next fight scores 2 more."; Water of the Ebon Shield, "The sea die can't touch you next fight: your dice never list, and no squall, wave, fog or calm holds you back." (since 17 Nov; it was an extra heart). As that fight begins, and under the sea die's news on every roll: "Your Ebon Shield holds: you are unaffected in this fight" (the user's words); on the plaque under Roll, "· 💧 not you".
 
 **Thom, aboard** (the user's words, one at random each fight): "Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest." / "There's number one customer!" / "You're putting my kid through Dwemercore!"
 
@@ -171,7 +171,7 @@ Where: `server.js` (`TAVERN_KEEPSAKES`, `MYSTERY_FLAVOUR`, `BRODORS_SUNGLASSES`)
 - **Mystery Flavour** (Martha's drop): "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random." Tapped: "Martha's Elf Bar. One puff a fight; this fight it tastes of [flavour]: [what it does]." When it works: "Martha's Elf Bar", "Mystery Flavour", "Tastes of [flavour]: [what happened]".
 - **Martha's Mask:** not in the game since 4 Nov (nothing gives it, though it's still one of the start screen's icons).
 - **Brodor's Sunglasses:** "A finished 23 restores a heart, like a 24."
-- On Thom's back shelf with five keepsakes, the buttons read "Pockets full".
+- On Thom's back shelf with five keepsakes (since 17 Nov), the buttons read "Swap · [price]", then "Pockets full. Leave which behind for [keepsake]?", your five, and "Back". (Until 17 Nov they read "Pockets full" and nothing could be bought.)
 
 ## Multiplayer tables
 
