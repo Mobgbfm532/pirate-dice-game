@@ -4202,4 +4202,9 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
     100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) * -1 + 40vh)) rotate(320deg); }
 }
 @media (prefers-reduced-motion: reduce) { body.screen-quake #root { animation: none; } .smite-quake .chip { display: none; } }
-
+
+/* ==== Jorvash's Water of the Ebon Shield (17 Nov, the user's) ==== */
+/* On the sea die's moment, under its news, and on the plaque under Roll: the sea doesn't touch you. */
+.sea-news .sea-ward { margin-top: 6px; padding: 3px 12px; border-radius: 12px; border: 1px solid rgba(190, 220, 255, 0.55); background: rgba(6, 10, 22, 0.82);
+    font-family: 'Alegreya', Georgia, serif; font-style: italic; font-weight: 700; font-size: clamp(13px, min(3.8vw, 3.6vh), 18px); color: #d8ecff; text-shadow: 0 1px 3px #000; }
+.round-sea .sea-ward { color: #bcdcff; font-weight: 700; }

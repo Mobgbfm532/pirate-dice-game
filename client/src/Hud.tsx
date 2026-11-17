@@ -661,17 +661,19 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
 // the header sat over the opponent's bust: the user's call, it moved here.)
 const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw', squall: 'keep two dice from every throw', fog: "neither sees the other's hand", becalmed: 'three throws, then dice stay' };
 const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas', squall: 'squall', fog: 'fog', becalmed: 'becalmed' };
-function SeaPlaque({ sea, next }: { sea: SeaState; next: SeaState | null }) {
+// Jorvash's Water of the Ebon Shield: the sea die can't touch you this fight (the user's words, 17 Nov).
+const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight';
+function SeaPlaque({ sea, next, ward }: { sea: SeaState; next: SeaState | null; ward?: boolean }) {
     return (
         <div className={`round-plaque round-sea sea-${sea.id}`} title={`${sea.name}. ${sea.text}${next ? ` Next round: ${next.name}.` : ''}`}>
-            <span className="sea-ship" aria-hidden="true">⛵</span> <b>{sea.name}:</b> {SEA_EFFECT[sea.id]}{next && <span className="sea-next"> · Next: {SEA_NEXT[next.id]}</span>}
+            <span className="sea-ship" aria-hidden="true">⛵</span> <b>{sea.name}:</b> {SEA_EFFECT[sea.id]}{ward && sea.id !== 'calm' && <span className="sea-ward"> · 💧 not you</span>}{next && <span className="sea-next"> · Next: {SEA_NEXT[next.id]}</span>}
         </div>
     );
 }
 // What the line under Roll says: a round's plaque, or the tip. Aboard the Salty Swallow the sea is
 // always there (over the tip), taking turns with an opponent's ability when there is one.
 // A tap on either opens its explainer (9 Nov, the user's), the same card as the items on your strip.
-function HintLine({ badge, plaque, tip, sea, next, powers, face, faces, phase }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[]; face: number | null; faces: SeaState['id'][] | null; phase?: string | null }) {
+function HintLine({ badge, plaque, tip, sea, next, powers, face, faces, phase, ward }: { badge: RoundBadge; plaque: boolean; tip: string; sea: SeaState | null; next: SeaState | null; powers: { name: string; text: string }[]; face: number | null; faces: SeaState['id'][] | null; phase?: string | null; ward?: boolean }) {
     const turnAbout = useTakingTurns(!!sea && !!badge.kind);
     const [open, setOpen] = useState<'sea' | 'ability' | null>(null);
     const close = useCallback(() => setOpen(null), []);
@@ -680,13 +682,13 @@ function HintLine({ badge, plaque, tip, sea, next, powers, face, faces, phase }:
     const tap = (which: 'sea' | 'ability') => () => { playSound('click'); setOpen(which); };
     return (
         <>
-            {showSea ? <button key="sea" className="plaque-button" onClick={tap('sea')} aria-label={`About the sea: ${sea!.name}`}><SeaPlaque sea={sea!} next={next} /></button>
+            {showSea ? <button key="sea" className="plaque-button" onClick={tap('sea')} aria-label={`About the sea: ${sea!.name}`}><SeaPlaque sea={sea!} next={next} ward={ward} /></button>
                 : showAbility ? (
                     <button key="ability" className="plaque-button" onClick={tap('ability')} aria-label={`About ${badge.title}`}>
                         <div className={`round-plaque round-${badge.kind}`}><b>{badge.title}:</b> {badge.text}</div>
                     </button>
                 ) : tip}
-            {open === 'sea' && sea && <SeaInfo sea={sea} face={face} faces={faces} phase={phase} onClose={close} />}
+            {open === 'sea' && sea && <SeaInfo sea={sea} face={face} faces={faces} phase={phase} ward={ward} onClose={close} />}
             {open === 'ability' && badge.kind && <AbilityInfo badge={badge} powers={powers} onClose={close} />}
         </>
     );
@@ -708,7 +710,7 @@ const JAGUAR_SEA: Record<string, string> = {
     cloak: "The storm wall, since Jaguar drew his Cloak: squalls and rogue waves. On his last heart it's rogue waves all round.",
     allIn: "All In: the storm at its worst, a rogue wave on every face between the lists."
 };
-function SeaInfo({ sea, face, faces, phase, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; phase?: string | null; onClose: () => void }) {
+function SeaInfo({ sea, face, faces, phase, ward, onClose }: { sea: SeaState; face: number | null; faces: SeaState['id'][] | null; phase?: string | null; ward?: boolean; onClose: () => void }) {
     // This leg's dial in words: e.g. "1 port · 2-5 calm · 6 starboard".
     const ranges: string[] = [];
     (faces ?? []).forEach((id, i) => {
@@ -719,6 +721,7 @@ function SeaInfo({ sea, face, faces, phase, onClose }: { sea: SeaState; face: nu
         <ItemInfo icon={faces ? <span className="sea-info-dial" style={{ '--to': `${face ? faceAngle(face) : 0}deg` } as React.CSSProperties}><SeaDial faces={faces} face={face} /></span> : <span className={`sea-info-ship sea-${sea.id}`}><span className="sea-ship">⛵</span></span>} kind="The sea, this round" name={sea.name} onClose={onClose}
             text={<>
                 <p>{SEA_EXPLAIN[sea.id]}</p>
+                {ward && <p><b>{EBON_SHIELD_HOLDS}.</b> Jorvash's Water of the Ebon Shield: your dice never list, and no squall, wave, fog or calm holds you back. The opponent still feels it all.</p>}
                 {face && <p><b>The sea die showed {face}.</b></p>}
                 {ranges.length > 0 && <p><b>Out here:</b> {ranges.join(' · ')}.</p>}
                 {phase && JAGUAR_SEA[phase] && <p>{JAGUAR_SEA[phase]}</p>}
@@ -844,7 +847,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
             <div className={`hint ${state?.tavernRun ? 'crawl' : ''} ${state?.tavernRun?.tubSurge && state.tavernRun.tubSurge.id !== 'pruney' ? 'tub-fight' : ''}`}>
                 <HintLine badge={badge} plaque={plaque} tip={tip} sea={state?.tavernRun?.sea ?? null} next={state?.tavernRun?.nextSea ?? null}
                     powers={(state?.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).powers : null) ?? []}
-                    face={state?.tavernRun?.seaFace ?? null} faces={state?.tavernRun?.seaFaces ?? null} phase={state?.tavernRun?.jaguarPhase ?? null} />
+                    face={state?.tavernRun?.seaFace ?? null} faces={state?.tavernRun?.seaFaces ?? null} phase={state?.tavernRun?.jaguarPhase ?? null} ward={!!state?.tavernRun?.seaWard} />
             </div>
         </div>
     );
@@ -2810,10 +2813,10 @@ function SeaMoment({ snap }: { snap: Snapshot }) {
     const m = snap.seaMoment;
     const [visible] = useMoment(m?.at ?? 0, m?.changed ? SEA_SHOW_MS : SEA_HOLD_MS);
     if (!visible || !m) return null;
-    return createPortal(<SeaRollView key={m.at} m={m} />, document.body);
+    return createPortal(<SeaRollView key={m.at} m={m} ward={!!snap.state?.tavernRun?.seaWard} />, document.body);
 }
 // (Its own piece, so its clock starts as it appears: the die tumbles, then lands on its face.)
-function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
+function SeaRollView({ m, ward }: { m: SeaRoll & { at: number }; ward?: boolean }) {
     const [rolling, setRolling] = useState(true);
     useEffect(() => {
         clatter([m.face]);
@@ -2842,6 +2845,7 @@ function SeaRollView({ m }: { m: SeaRoll & { at: number } }) {
                     <strong className="sea-title">{m.changed ? words.title : `The sea holds`}</strong>
                     <span className="sea-rule">{m.changed ? words.rule : `${m.name}: ${SEA_EFFECT[m.id]}`}</span>
                     {m.changed && <span className="sea-sub">{words.sub}</span>}
+                    {ward && m.id !== 'calm' && <span className="sea-ward">{EBON_SHIELD_HOLDS}</span>}
                 </div>
             </div>
         </div>

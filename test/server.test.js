@@ -657,6 +657,12 @@ test('the Water of the Ebon Shield: your throws ignore the list and the Squall',
     const thrown = await waitFor(hero2, 'diceRolled', d => d.turn.playerId === hero2.id, 4000);
     assert.ok(thrown);
     assert.equal(room2.turn.mustKeep, 1, 'one keep is enough');
+    // As the next fight begins it says so (17 Nov, the user's words).
+    room2.tavernRun.nextSeaWard = true;
+    const said = waitFor(hero2, 'keepsakeActivated', k => k.id === 'ebonShield', 4000);
+    server.resetTavernEncounter(codeOf(hero2));
+    assert.equal((await said).text, 'Your Ebon Shield holds: you are unaffected in this fight');
+    assert.equal(room2.tavernRun.seaWard, true);
 });
 
 test('a Squall: the opponents keep two every throw and still finish their hand', async () => {

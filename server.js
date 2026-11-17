@@ -689,6 +689,7 @@ function seaShift(room) {
 const seaWarded = (room, turn) => room.mode === 'tavern-crawl' && !!room.tavernRun.seaWard && !!turn && turn.playerId !== BOT_ID;
 // What the fog hides from you: nothing under the Water of the Ebon Shield.
 const fogForYou = room => seaFog(room) && !room.tavernRun.seaWard;
+const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight'; // (the user's words, 17 Nov)
 // A plain throw of one die, leaning with the sea.
 function seaRoll(shift) {
     return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
@@ -2243,6 +2244,8 @@ function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
     room.momentEnd = Math.max(room.momentEnd || 0, now + delay(INTRO_SHOW_MS));
     room.introEnd = now + delay(INTRO_SHOW_MS); // (the card stays until tapped: introDone sets the clock right)
     emitState(roomCode);
+    // Jorvash's Water of the Ebon Shield, after the entrance (17 Nov, the user's): it says so as the fight begins.
+    if (room.tavernRun.seaWard) sendMoment(roomCode, 'keepsakeActivated', { id: 'ebonShield', name: 'Water of the Ebon Shield', text: EBON_SHIELD_HOLDS, who: 'Jorvash' });
     beginTavernRound(roomCode, room);
 }
 
