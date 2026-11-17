@@ -338,6 +338,10 @@ hand; `TheCloak.mp3` (brought up 8 dB, a quiet recording) and `AllIn.mp3`.
 
 **Scenes between fights with no loop of their own** (`startSceneAmbience`; they have the tavern's music only): Johnny Elf Bar, Jorvash, Darren Snakehands, the Hooded Stranger, the thief. (Thom, the hot tub, the Shrine, the Bard, the Cult of Kram and Yvesil have the user's loops.)
 
+**The arrival at the Yawning Portal** (17 Nov): silent so far. If wanted: a heavy door opening, the well's hum, ink or chalk as the Ghoul and Gourd's names are struck.
+
+**The ship's crowd:** the tavern's crowd ambience (`Ambience.mp3`) plays aboard too; a ship's own (creaking timbers, rigging, waves on the hull) if wanted.
+
 **Weather:** Becalmed has no sound (the Squall has the wind, the Fog bank the foghorn, the Rogue wave its own clip).
 
 **Music (since 17 Nov, the user's tracks):** the tavern tune at the Ghoul and Gourd, `YawningPortalTheme.mp3` at the
@@ -345,7 +349,7 @@ Yawning Portal, `SaltySwallowTheme.mp3` aboard, `MarthaTheme.mp3`, `BrodorTheme.
 (`PlaceMusic` in Hud, `setMusicFor` in sounds.ts; the originals stay in `art/audio/`). Every boss has a theme. The tavern's crowd ambience (`Ambience.mp3`) still plays under every place,
 the ship's too.
 
-**Waiting on the user's word:** `Whoa.mp3` is off until reworked (`WHOA_ON`); Dirty 20! and Astral Flood's wave have none, if wanted; a narrator for the intro film, if wanted (`IntroLine1.mp3` to 5).
+**Waiting on the user's word:** `Whoa.mp3` is off until reworked (`WHOA_ON`); Dirty 20! has none, if wanted (Astral Flood's wave has the old `AstralFlood.mp3` since 17 Nov, its banner the user's new `AstralFloodBanner.mp3`); a narrator for the intro film, if wanted (`IntroLine1.mp3` to 5).
 
 ## Processing art
 
