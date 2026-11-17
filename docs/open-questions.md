@@ -23,7 +23,8 @@ minutes leaves a friends' table, and the first load is smaller. Still standing, 
    and a `DATABASE_URL` (without it the leaderboard lives in a file the free plan wipes at every sleep). The same
    Neon database as the test site (with its test scores), or a clean one?
 2. **`/` is still the old game.** Players at the live address get the classic page, with no way to the new one.
-   Decide: the new game at `/` (the old at `/classic`), or a link from the old page.
+   **Decided 17 Nov (the user):** the new game will be at `/`, but not yet; built when the user says so.
+   Item 1 (the live service's settings) stays open, the user's to do.
 3. **Done 17 Nov:** a safety net for an unexpected server error (logged, the server keeps running; tried by forcing
    one); one person per Tavern Crawl table (anyone else is moved to a fresh table) with five-character codes;
    `npm audit fix` (0 known weaknesses now). 185 server tests pass.
