@@ -2954,6 +2954,16 @@ io.on('connection', (socket) => {
 
         let existingPlayerId = token && Object.keys(room.players).find(id => room.players[id].token === token);
 
+        // A Tavern Crawl is one person's (17 Nov): someone else who comes to its table (the same code, by
+        // chance or by typing it) is turned away, and their browser picks a fresh table ('crawlTaken').
+        if (room.mode === 'tavern-crawl' && !existingPlayerId && Object.keys(room.players).some(id => id !== BOT_ID)) {
+            socket.leave(roomCode);
+            socket.roomCode = null;
+            socket.emit('crawlTaken');
+            scheduleEmptyTableCleanup(roomCode); // (the join cleared its timer)
+            return;
+        }
+
         if (existingPlayerId && existingPlayerId !== BOT_ID) {
             let p = room.players[existingPlayerId];
             p.id = socket.id;
@@ -3658,7 +3668,14 @@ function start(port = process.env.PORT || 3000) {
     });
 }
 
-if (require.main === module) start();
+if (require.main === module) {
+    // A safety net (17 Nov, before going live): an unexpected error is logged and the server keeps running,
+    // where before it stopped and every table in play ended. (Only when run for real: the tests keep
+    // Node's own handling, so an error there still fails its test.)
+    process.on('uncaughtException', error => console.error('Unexpected error (the server keeps running):', error));
+    process.on('unhandledRejection', error => console.error('Unexpected rejection (the server keeps running):', error));
+    start();
+}
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};

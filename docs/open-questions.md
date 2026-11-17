@@ -24,9 +24,9 @@ minutes leaves a friends' table, and the first load is smaller. Still standing, 
    Neon database as the test site (with its test scores), or a clean one?
 2. **`/` is still the old game.** Players at the live address get the classic page, with no way to the new one.
    Decide: the new game at `/` (the old at `/classic`), or a link from the old page.
-3. **A safety net for an unexpected server error** (log it and keep running): one would end every table. Small.
-4. **One person per Tavern Crawl table** (a second person with the same `TVRN-` code joins the first one's run). Small.
-5. **`npm audit fix`**: 8 known weaknesses in the server's packages (express's and socket.io's parts). Small.
+3. **Done 17 Nov:** a safety net for an unexpected server error (logged, the server keeps running; tried by forcing
+   one); one person per Tavern Crawl table (anyone else is moved to a fresh table) with five-character codes;
+   `npm audit fix` (0 known weaknesses now). 185 server tests pass.
 6. Not yet tried: an iPhone, and the 15-17 Nov changes on your phone.
 
 ### Going live (the end-to-end check of 15 Nov) (kept for the record)

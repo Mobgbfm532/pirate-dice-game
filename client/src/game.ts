@@ -669,6 +669,22 @@ function roomLabel(code: string) {
     return code.startsWith('TVRN-') ? 'House Table' : `Table ${code}`;
 }
 
+// A Tavern Crawl's own table code (17 Nov: five letters and digits, about 60 million of them; it was four
+// digits, and a second person could land in someone's run).
+function newCrawlCode() {
+    const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return 'TVRN-' + Array.from({ length: 5 }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
+}
+// That table is someone else's crawl: sit down at a fresh one instead.
+socket.on('crawlTaken', () => {
+    const seat = readSeat();
+    if (!seat || !seat.roomCode.startsWith('TVRN')) return;
+    const fresh = { ...seat, roomCode: newCrawlCode() };
+    writeSeat(fresh);
+    takeSeat(fresh);
+    update({ roomLabel: roomLabel(fresh.roomCode), roomCode: fresh.roomCode });
+});
+
 socket.on('connect', () => {
     update({ myId: socket.id ?? null });
     const seat = readSeat();
@@ -1081,7 +1097,7 @@ export function canPutBack(turn: TurnView, status: string) {
 export const actions = {
     join(name: string, avatar: string, tableCode: string, lives = 3) {
         let roomCode = tableCode.trim().toUpperCase();
-        if (roomCode === 'TAVERN') roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
+        if (roomCode === 'TAVERN') roomCode = newCrawlCode();
         if (!roomCode) roomCode = 'PUBLIC';
 
         startMusic();
@@ -1174,7 +1190,7 @@ export const actions = {
     resume(saved: SavedRun, avatar: string) {
         writeSavedRun(null);
         continuing = true;
-        const roomCode = `TVRN-${Math.floor(1000 + Math.random() * 9000)}`;
+        const roomCode = newCrawlCode();
         startMusic();
         const seat = { roomCode, name: saved.name, avatar, lives: 3, resume: saved.save };
         writeSeat(seat);

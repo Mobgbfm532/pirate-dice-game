@@ -1092,6 +1092,22 @@ test("someone away from a friends' table for two minutes leaves it; back sooner,
     [a, b, c, e, back].forEach(s => s.disconnect());
 });
 
+test("a Tavern Crawl is one person's: someone else at its table is turned away; its owner can come back (17 Nov)", async () => {
+    const owner = await join('Owner', 'TVRN-ONE1', { token: 'owner-crawl' });
+    await waitFor(owner, 'gameStateUpdate');
+    const other = await join('Other', 'TVRN-ONE1', { token: 'other-crawl' });
+    await waitFor(other, 'crawlTaken');
+    const room = server.rooms['TVRN-ONE1'];
+    assert.equal(Object.keys(room.players).filter(id => id !== 'BOT_MOLAR').length, 1, 'only the owner is seated');
+    assert.ok(room.players[owner.id]);
+    // The owner, back on another connection with their token, still gets their seat.
+    owner.disconnect();
+    await sleep(50);
+    const back = await join('Owner', 'TVRN-ONE1', { token: 'owner-crawl' });
+    await waitFor(back, 'gameStateUpdate', s => s.players[back.id]);
+    [other, back].forEach(s => s.disconnect());
+});
+
 test('a bot waits for you instead of playing to an empty room', async () => {
     const g = await join('Gil', 'TVRN-GRACE', { token: 'gil-token' });
     await waitFor(g, 'gameStateUpdate');

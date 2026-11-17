@@ -1177,7 +1177,7 @@
             let chosenRoom = roomInput.value.trim().toUpperCase();
             
             if (chosenRoom === "TAVERN") { // (COMP, solo vs The Molar, was taken out on 4 Nov)
-                chosenRoom = "TVRN-" + Math.floor(1000 + Math.random() * 9000);
+                chosenRoom = "TVRN-" + Array.from({ length: 5 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
                 myStartingLives = 3;
             }
             
