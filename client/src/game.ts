@@ -910,6 +910,7 @@ function heave(dir: number) {
 
 function showFloodWave() {
     const at = performance.now();
+    playSound('astralFloodWave'); // (the old Astral Flood clip, with the wave since 17 Nov: the banner has the user's new one)
     update({ floodWaveAt: at });
     setTimeout(() => { if (snapshot.floodWaveAt === at) update({ floodWaveAt: null }); }, FLOOD_WAVE_MS);
 }

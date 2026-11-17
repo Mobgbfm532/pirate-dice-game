@@ -68,7 +68,10 @@ const sfx = {
     inkfire: load('InkfireBrand.mp3', ABILITY_VOLUME),
     flourish: load('Flourish.mp3', ABILITY_VOLUME),
     smite: load('DivineSmite.mp3', ABILITY_VOLUME),
-    astralFlood: load('AstralFlood.mp3', ABILITY_VOLUME),
+    // Astral Flood (17 Nov, the user's): their new clip with its banner (`AstralFloodBanner.mp3`, 1.3 s; the
+    // original is art/audio/Ability Astral Flood.mp3), and the old one with the wave pouring over the screen.
+    astralFlood: load('AstralFloodBanner.mp3', ABILITY_VOLUME),
+    astralFloodWave: load('AstralFlood.mp3', ABILITY_VOLUME),
     // A heart breaking, and one won back by a perfect hand (the user's, 5 Nov; Hearts in Hud, with the picture).
     loseHeart: load('LoseHeart.mp3', 0.8),
     healthPickup: load('Perfect24Health.mp3', 0.8),

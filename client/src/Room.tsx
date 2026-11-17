@@ -255,7 +255,10 @@ export function Room() {
         const L = backdropLayout;
         // Depth behind the table (1 Nov): how far you're leaning moves the tavern most, the
         // opponent less, and the table not at all (parallax.ts).
-        const lean = lookNext ? look(now, delta) : { x: 0, y: 0 };
+        // (17 Nov, the user: "stop the background moving in taverns": on land the tavern holds still; only
+        // aboard the Salty Swallow, at sea, does it still drift.)
+        const atSea = currentScene().file.startsWith('salty-swallow');
+        const lean = lookNext && atSea ? look(now, delta) : { x: 0, y: 0 };
         const roomDx = lean.x * PARALLAX.room, roomDy = lean.y * PARALLAX.room * 0.5;
         const bustDx = lean.x * PARALLAX.bust, bustDy = lean.y * PARALLAX.bust * 0.5;
         // The tavern a little larger than its place, so leaning never shows an edge (enlarged about
