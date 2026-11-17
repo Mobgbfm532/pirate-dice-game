@@ -113,7 +113,7 @@ export const ICON_AVATARS: Record<string, Portrait> = {
     "Martha's Mask": icon('keepsakes/marthasMask'),
     "Loaded Die": icon('keepsakes/loadedDie'),
     "Brodor's Sunglasses": icon('keepsakes/brodorsSunglasses'),
-    "Shield": icon('keepsakes/bentCopper'),
+    "Shield of Fuckery": icon('keepsakes/bentCopper'), // (the user's name, 17 Nov; it was "Shield")
     "Healing Thonic": icon('thonics/healing'),
     "Purple Haze": icon('elfbars/purpleHaze'),
     "Sign of Kram": icon('keepsakes/kram')
@@ -121,6 +121,7 @@ export const ICON_AVATARS: Record<string, Portrait> = {
 export const AVATAR_IDS = Object.keys(ICON_AVATARS);
 
 export function portraitFor(key: string): Portrait {
+    if (key === 'Shield') key = 'Shield of Fuckery'; // (a player seated before the rename)
     return PORTRAITS[key] ?? ICON_AVATARS[key] ?? PORTRAITS['The Molar'];
 }
 

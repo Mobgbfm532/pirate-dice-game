@@ -41,7 +41,8 @@ const AWAY_LEAVE_MS = 120000;
 
 // The avatars a player may pick: the 3D client's seven item icons (30 Oct), then the classic
 // page's six characters.
-const AVATARS = ["Martha's Mask", "Loaded Die", "Brodor's Sunglasses", "Shield", "Healing Thonic", "Purple Haze", "Sign of Kram", 'Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+// "Shield of Fuckery" (the user's name, 17 Nov; it was "Shield", still taken from older pages and given the new name).
+const AVATARS = ["Martha's Mask", "Loaded Die", "Brodor's Sunglasses", "Shield of Fuckery", "Healing Thonic", "Purple Haze", "Sign of Kram", 'Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
 // (The 3D client's five since 3 Nov, the user's: Cheers, Ha!, Ooh, Smug, Woe.)
 const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross', '🍻', '🃏', '😏', '💔'];
 
@@ -1085,7 +1086,7 @@ function applyTavernRollAbilities(roomCode, room, turn) {
 
     // Frak's Mind Whip: he makes the player keep one of their dice, at random (Rules.mindWhip).
     // Spent only now, as it lands, so his mark flashes with it (not as the round began).
-    if (run.pendingMind && !run.roundEffect && active.length > 1) {
+    if (run.pendingMind && !run.roundEffect && active.length > 1 && mindWhipWorthIt(room, active)) {
         let as = run.pendingMind.as;
         run.pendingMind = null;
         if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
@@ -1113,6 +1114,7 @@ function applyTavernRollAbilities(roomCode, room, turn) {
 function startFlourish(roomCode, room, turn) {
     if (room.mode !== 'tavern-crawl' || turn.playerId !== BOT_ID || turn.rollCount !== 0) return null;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!canUseTavernAbility(room, encounter, 'flourish') || !flourishWorthIt(room)) return null;
     if (!fireTavernAbility(roomCode, room, encounter, 'flourish')) return null;
     turn.flourish = true;
     return { name: encounter.name, ability: Rules.ABILITY_NAMES.flourish, text: 'This turn every die he throws rolls twice, and he keeps the better.' };
@@ -1175,8 +1177,8 @@ function startHeightened(roomCode, room, turn) {
     if (!aedMayCast(room, 'heightened') || run.heightenedRound === round) return null;
     let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
     let bot = room.players[BOT_ID];
-    // (not yet tried this fight: from the first round)
-    if (!bot || !(bot.lives < encounter.lives || round >= 2 || (METAMAGIC.eachOnce && !aedTried(room, 'heightened')))) return null;
+    // Never in a fight's first round (17 Nov, the user's), even when not yet tried.
+    if (!bot || !(bot.lives < encounter.lives || round >= 2)) return null;
     run.heightenedRound = round;
     let move = null;
     let show = (event, data) => { if (event === 'signatureMove' && !data.cancelled) move = data; else emitMoment(roomCode, room, event, data); };
@@ -1269,12 +1271,79 @@ function suckerPunch(roomCode, room) {
     let turn = room.turn;
     if (room.mode !== 'tavern-crawl' || !turn || turn.playerId === BOT_ID || !turn.finalized || turn.outcome.busted) return false;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!canUseTavernAbility(room, encounter, 'suckerPunch') || !punchWorthIt(room, turn)) return false;
     if (!fireTavernAbility(roomCode, room, encounter, 'suckerPunch')) return false;
     let die = Rules.bestKeptDie(turn);
     Rules.putBackDie(turn, die.id, { mustRoll: true }); // it has to be rolled, not kept again
     emitTurn(roomCode, { type: 'punched', die: die.id });
     sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch to the back of the head knocks your ${die.value} loose. Roll it again.` });
     return true;
+}
+
+// ---- Abilities at their best moment (17 Nov, the user's: "Sylvester should not use his when the player
+// scores low"; BALANCE.abilityTiming) ----
+// The opponent's round options for the strategy brain (a cursed round, the sea).
+const botRoundOpts = room => {
+    let effect = room.tavernRun.roundEffect;
+    return { low: !!effect && effect.kind === 'curse', shift: seaShift(room), minKeep: seaKeeps(room) };
+};
+const TIMING = BALANCE.abilityTiming || {};
+// A round that decides the fight: either side on its last heart.
+function decisiveRound(room) {
+    let bot = room.players[BOT_ID], human = room.players[getHumanPlayerId(room)];
+    return (!!bot && bot.lives <= 1) || (!!human && human.lives <= 1);
+}
+// A hand's score from its dice values (null: dust).
+function handScore(values) {
+    let rest = values.slice();
+    for (let need of [2, 4]) { let i = rest.indexOf(need); if (i < 0) return null; rest.splice(i, 1); }
+    return rest.reduce((a, b) => a + b, 0);
+}
+// Back of the Head: worth it when knocking your best kept die loose raises his chance of the round by
+// punchMinGain (any gain in a round that decides the fight). If he has played, that's against his own hand
+// (never when he dusted: you win whatever you roll, nor when you're already behind); if not, his chance of
+// beating what you'd be left with. Not in a cursed round (your highest die is your worst there).
+function punchWorthIt(room, turn) {
+    let effect = room.tavernRun.roundEffect;
+    if (effect && effect.kind === 'curse') return false;
+    let die = Rules.bestKeptDie(turn);
+    if (!die) return false;
+    let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN);
+    let others = kept.filter(d => d.id !== die.id).map(d => d.value);
+    let now = handScore(kept.map(d => d.value));
+    if (now === null) return false;
+    let after = [1, 2, 3, 4, 5, 6].map(f => handScore([...others, f]));
+    let bot = room.players[BOT_ID];
+    let his;
+    if (bot && bot.score !== null && bot.score !== undefined) {
+        if (bot.busted) return false;
+        his = sc => (sc === null || sc < bot.score ? 1 : sc === bot.score ? 0.5 : 0);
+    } else {
+        let opts = botRoundOpts(room);
+        his = sc => Strategy.chanceFromStart(sc, opts);
+    }
+    let gain = after.reduce((sum, sc) => sum + his(sc), 0) / 6 - his(now);
+    return gain >= (decisiveRound(room) ? 0.01 : TIMING.punchMinGain ?? 0.1);
+}
+// Vexing Rapier (Stason's Flourish): going first, always; going second, only when without it his chance of
+// beating your hand is under flourishWhenBelow (never when you dusted: he needs only a valid hand). As the
+// Duke saves his Devil.
+function flourishWorthIt(room) {
+    let toBeat = getTavernScoreToBeat(room);
+    if (toBeat === undefined) return true;
+    return Strategy.chanceFromStart(toBeat, botRoundOpts(room)) < (TIMING.flourishWhenBelow ?? BALANCE.devilWhenBelow ?? 0.7);
+}
+// Mind Whip on your first throw: only on a throw where a die kept at random is likely a poor one (1s and 3s,
+// at least mindWhipPoorShare of the dice), or, in a round that decides the fight, on any throw with one.
+function mindWhipWorthIt(room, active) {
+    let poor = active.filter(d => d.value === 1 || d.value === 3).length;
+    return poor / active.length >= (TIMING.mindWhipPoorShare ?? 0.5) || (decisiveRound(room) && poor > 0);
+}
+// A heart taken outright: you'd lose it (not on your last heart, nor while your Shield of Fuckery waits).
+function heartTakeable(room) {
+    let human = room.players[getHumanPlayerId(room)];
+    let shield = hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper;
+    return !!human && human.lives >= 2 && !shield;
 }
 
 // A die kept: the server's answer to everyone, after Sylvester has had his chance.
@@ -1994,8 +2063,10 @@ function sendMoment(roomCode, event, data) {
 // Real ms until the browsers' last moment has gone.
 const momentsLeft = room => Math.max(0, (room.momentEnd || 0) - Date.now());
 
+// (Sylvester's, Stason's and Frak's judge their own moment since 17 Nov: no random round to wait for.)
+const JUDGED_ABILITIES = ['suckerPunch', 'flourish', 'mindWhip'];
 function canUseTavernAbility(room, encounter, abilityId) {
-    let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
+    let abilityReady = JUDGED_ABILITIES.includes(abilityId) || (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
     return encounter && abilitiesOf(encounter).includes(abilityId) && abilityReady && getAbilityUseCount(room, abilityId) < BALANCE.abilityUses[abilityId];
 }
 // An opponent's abilities: one, or (the Hangman) two.
@@ -2333,7 +2404,8 @@ function beginTavernRound(roomCode, room) {
     // (a round has to be lost for a run to end).
     let bot = room.players[BOT_ID];
     if (encounter.ability === 'astralFlood') {
-        if (bot && bot.lives < encounter.lives && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
+        // (17 Nov: only when it can take one of yours as well, or he's on his last life and needs the heal)
+        if (bot && bot.lives < encounter.lives && (heartTakeable(room) || bot.lives <= 1) && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
             bot.lives++;
             sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a life and takes one of yours.' });
             let human = room.players[getHumanPlayerId(room)];
@@ -2354,6 +2426,8 @@ function beginTavernRound(roomCode, room) {
     // (applyTavernRollAbilities); each is spent, and shown, only then.
     if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
     if (ability === 'mindWhip') { run.pendingMind = { as: disguise ? disguise.as : null }; return; }
+    // Divine Smite (17 Nov): only when its second heart counts (you'd lose two: 2+ hearts, your Shield spent).
+    if (ability === 'divineSmite' && !heartTakeable(room)) return;
     if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
     disguiseMoves(room, run.roundEffect).forEach(move => sendMoment(roomCode, 'signatureMove', move));
@@ -3001,7 +3075,7 @@ io.on('connection', (socket) => {
         let finalName = asText(data.name).trim();
         if (finalName === "") finalName = "Mysterious Traveler";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
-        let avatar = AVATARS.includes(data.avatar) ? data.avatar : AVATARS[0];
+        let avatar = data.avatar === 'Shield' ? 'Shield of Fuckery' : AVATARS.includes(data.avatar) ? data.avatar : AVATARS[0];
         let token = asText(data.token).substring(0, 64);
 
         let existingPlayerId = token && Object.keys(room.players).find(id => room.players[id].token === token);
@@ -3760,4 +3834,4 @@ if (require.main === module) {
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

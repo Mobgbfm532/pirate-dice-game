@@ -459,7 +459,7 @@ test('Áéd has six uses a fight and saves enough to try each of his four tricks
     assert.equal(server.aedNeedGain(room, 'empowered'), -Infinity);
 });
 
-test("Áéd's Heightened Dice, not yet tried, comes in the first round", async () => {
+test("Áéd's Heightened Dice never comes in a fight's first round; from the second it does", async () => {
     const hero = await tavernAgainst(fightOf('aed'), 'Aed Round1');
     const room = roomOf(hero);
     room.tavernRun.sorcery = BALANCE.metamagic.points;
@@ -468,6 +468,15 @@ test("Áéd's Heightened Dice, not yet tried, comes in the first round", async (
     room.players.BOT_MOLAR.lives = BALANCE.opponentLives.aed;
     const moves = [];
     hero.on('signatureMove', m => moves.push(m.ability));
+    hero.emit('rollDice');
+    const first = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
+    assert.ok(!moves.includes('Heightened Dice'), 'not in the first round (17 Nov, the user\'s)');
+    // A new hand in round 2: now he casts it.
+    await sleep(first.animationMs * 0.01 + 30);
+    room.tavernRun.encounterRound = 2;
+    room.turn.rollCount = 0;
+    room.turn.hasRolled = false;
+    room.turn.dice.forEach(d => { d.status = 'active'; });
     hero.emit('rollDice');
     await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id, 4000);
     assert.ok(moves.includes('Heightened Dice'));
@@ -2852,19 +2861,28 @@ test("Astral Flood: the Shield catches the life it takes, and it never takes you
     const hero = await tavernAgainst(fightOf('brodor'), 'Floodproof');
     const room = roomOf(hero);
     const code = codeOf(hero);
-    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield', text: '' });
+    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield of Fuckery', text: '' });
     room.players.BOT_MOLAR.lives = 2;
     room.players[hero.id].lives = 3;
+    // (17 Nov) While your Shield waits it would take nothing, so he holds it...
+    server.beginTavernRound(code, room);
+    assert.equal(room.players.BOT_MOLAR.lives, 2, 'held while the Shield waits');
+    // ...unless he's on his last life: then he needs the heal, and the Shield catches the life it takes.
+    room.players.BOT_MOLAR.lives = 1;
     const shield = waitFor(hero, 'keepsakeActivated', k => k.id === 'bentCopper');
     server.beginTavernRound(code, room);
     await shield;
+    assert.equal(room.players.BOT_MOLAR.lives, 2);
     assert.equal(room.players[hero.id].lives, 3);
-    // A fresh use with one heart left: he heals, you stay on 1.
+    // A fresh use with one heart left: held on 2 lives, and on his last he heals while you stay on 1.
     room.tavernRun.abilityUsed = {};
     room.players.BOT_MOLAR.lives = 2;
     room.players[hero.id].lives = 1;
     server.beginTavernRound(code, room);
-    assert.equal(room.players.BOT_MOLAR.lives, 3);
+    assert.equal(room.players.BOT_MOLAR.lives, 2, 'held: it could take nothing');
+    room.players.BOT_MOLAR.lives = 1;
+    server.beginTavernRound(code, room);
+    assert.equal(room.players.BOT_MOLAR.lives, 2);
     assert.equal(room.players[hero.id].lives, 1);
 });
 
@@ -3481,4 +3499,80 @@ test("Bren's Compass is sold only aboard, the Gilded Die from the Yawning Portal
     assert.ok(ids.has('gildedDie') && !ids.has('brensCompass'));
     room.tavernRun.encounterIndex = fightOf('rokr');
     assert.ok(offered().has('brensCompass'));
+});
+
+// ---- Abilities at their best moment (17 Nov, the user's) ----
+
+// A finished hand of these values for the player, as Sylvester sees it.
+function keptHand(room, heroId, values) {
+    room.turn = { playerId: heroId, finalized: true, outcome: { busted: false }, dice: values.map((value, id) => ({ id, value, status: 'locked' })) };
+    return room.turn;
+}
+
+test("Sylvester's Back of the Head: not on a low hand, yes on a high one, never once he's dusted", async () => {
+    const hero = await tavernAgainst(fightOf('sylvester'), 'Punchy');
+    const room = roomOf(hero);
+    room.tavernRun.roundEffect = null;
+    room.players.BOT_MOLAR.lives = 3;
+    room.players[hero.id].lives = 3;
+    room.players.BOT_MOLAR.score = null; // he throws after you
+    assert.equal(server.punchWorthIt(room, keptHand(room, hero.id, [2, 4, 1, 1, 3, 1])), false, 'a 6: he beats it anyway');
+    assert.equal(server.punchWorthIt(room, keptHand(room, hero.id, [2, 4, 6, 6, 6, 6])), true, 'a 24');
+    // He has played: 18. Your 24 can drop below it; your 12 is behind already; his dust can't be saved.
+    room.players.BOT_MOLAR.score = 18;
+    room.players.BOT_MOLAR.busted = false;
+    assert.equal(server.punchWorthIt(room, keptHand(room, hero.id, [2, 4, 6, 6, 6, 1])), true, 'your 19 against his 18');
+    assert.equal(server.punchWorthIt(room, keptHand(room, hero.id, [2, 4, 3, 3, 3, 3])), false, 'your 12: you lose anyway');
+    room.players.BOT_MOLAR.busted = true;
+    assert.equal(server.punchWorthIt(room, keptHand(room, hero.id, [2, 4, 6, 6, 6, 1])), false, 'he dusted');
+});
+
+test("Stason's Vexing Rapier: going first always, going second only against a hand he'd likely lose to", async () => {
+    const hero = await tavernAgainst(fightOf('stason'), 'Rapier');
+    const room = roomOf(hero);
+    room.tavernRun.roundEffect = null;
+    const human = room.players[hero.id];
+    human.score = null;
+    assert.equal(server.flourishWorthIt(room), true, 'going first');
+    human.score = 8; human.busted = false;
+    assert.equal(server.flourishWorthIt(room), false, 'an 8 is easy to beat');
+    human.score = 21;
+    assert.equal(server.flourishWorthIt(room), true, 'a 21 is not');
+    human.score = 0; human.busted = true;
+    assert.equal(server.flourishWorthIt(room), false, 'you dusted');
+});
+
+test("Frak's Mind Whip waits for a throw full of 1s and 3s", async () => {
+    const hero = await tavernAgainst(fightOf('frak'), 'Whipped');
+    const room = roomOf(hero);
+    room.players.BOT_MOLAR.lives = 2;
+    room.players[hero.id].lives = 3;
+    const dice = values => values.map((value, id) => ({ id, value, status: 'active' }));
+    assert.equal(server.mindWhipWorthIt(room, dice([6, 6, 5, 2, 4, 3])), false);
+    assert.equal(server.mindWhipWorthIt(room, dice([1, 3, 3, 6, 5, 1])), true);
+    room.players[hero.id].lives = 1; // a round that decides the fight: any throw with a poor die
+    assert.equal(server.mindWhipWorthIt(room, dice([6, 6, 5, 2, 4, 3])), true);
+});
+
+test("Divine Smite and Astral Flood wait until a heart can really be taken", async () => {
+    const hero = await tavernAgainst(fightOf('ridgeler'), 'Smitten');
+    const room = roomOf(hero);
+    room.players[hero.id].lives = 1;
+    assert.equal(server.heartTakeable(room), false, 'on your last heart');
+    room.players[hero.id].lives = 2;
+    assert.equal(server.heartTakeable(room), true);
+    room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield of Fuckery', text: '' });
+    room.tavernRun.encounterKeepsakeUses = {};
+    assert.equal(server.heartTakeable(room), false, 'your Shield waits');
+    room.tavernRun.encounterKeepsakeUses.bentCopper = true;
+    assert.equal(server.heartTakeable(room), true, 'your Shield is spent');
+    // The Smite itself, with you on your last heart: no round effect.
+    room.players[hero.id].lives = 1;
+    room.tavernRun.abilityRound = 1;
+    room.tavernRun.abilityUsed = {};
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.roundEffect, null);
+    room.players[hero.id].lives = 3;
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind, 'smite');
 });

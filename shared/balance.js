@@ -83,6 +83,12 @@ module.exports = {
     // uses it only if his chance of beating your score without it is below this. (He always goes
     // for it with a 2, a 4 and a 6 kept and three dice to throw: a Perfect 24.)
     devilWhenBelow: 0.7,
+    // When the abilities that judge their moment use it (17 Nov, the user's: "fire at the most opportune moment").
+    abilityTiming: {
+        punchMinGain: 0.1,       // Sylvester's Back of the Head: the gain in his chance of the round it must bring
+        flourishWhenBelow: 0.7,  // Stason's Vexing Rapier going second: only when his chance without it is under this
+        mindWhipPoorShare: 0.5   // Frak's Mind Whip: the share of your throw that must be 1s and 3s
+    },
 
     // MONEY: since 23 Oct (the user's calls) every amount here is in whole gold, nearer D&D's
     // prices: beating Jaguar pays 36 gold (10 for the first win, 2 more each fight), a Healing Thonic costs 11. The old numbers were these

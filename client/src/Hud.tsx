@@ -39,7 +39,8 @@ function readPrefs() {
     try {
         return {
             name: localStorage.getItem('tavernName') ?? '',
-            avatar: localStorage.getItem('tavernAvatar') ?? AVATAR_IDS[0],
+            // (a token remembered as "Shield" from before its rename, 17 Nov, is the Shield of Fuckery)
+            avatar: ((a: string | null) => (a === 'Shield' ? 'Shield of Fuckery' : a))(localStorage.getItem('tavernAvatar')) ?? AVATAR_IDS[0],
             code: localStorage.getItem('tavernRoom') ?? ''
         };
     } catch {

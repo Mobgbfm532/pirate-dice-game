@@ -40,6 +40,12 @@ day they happen, with what's been built marked as it lands.
   trailer's join where its second section repeats (about 27.8 s in).
 
 ### Questions waiting on the user's word
+- **Abilities at their best moment** (built 17 Nov, the user's): Sylvester, Stason, Frak's Mind Whip, Divine Smite, Astral
+  Flood and Áéd's Heightened Dice now wait for a moment that pays (details in CLAUDE.md, "Abilities"). To see in play:
+  whether they now come too rarely. Open: You are Cursed!, Inkfire Brand and Starry Form still fire as soon as they're
+  ready (no information to wait for as a round begins); should they wait for a round that decides the fight? Martha
+  still picks her disguise at random: should she pick the one that helps most? The numbers (`abilityTiming`) are first
+  guesses.
 - **Gold and keepsakes** (`docs/economy-brainstorm.md`, 17 Nov evening): built the same evening, the user's: prices by
   place (×1, ×1.5, ×2), keepsakes dearer, the Gilded Die and Bren's Compass. To try in play. Open: their paintings
   (🎲 and 🧭 until then); the Compass rolls again by itself on rough weather (port, a Squall, Heavy seas, Fog, Becalmed):
