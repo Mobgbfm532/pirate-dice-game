@@ -367,6 +367,10 @@ one too, or saves only last until the server restarts, which on the free tier is
     game's files; Brodor's dice repainted by the user (readable), Sylvester's paler; the tavern backdrops hold still
     (only the ship drifts); Astral Flood's new banner sound; the arrival at the Yawning Portal (the tournament board,
     then the doors); all pushed and on the test site.
+  - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
+    became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
+    `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the
+    Gilded Die and Bren's Compass (emoji until the user paints them).
 - **12-13 Nov (the user's calls; details in the sections above and "Tavern Crawl now"):**
   - the start screen rebuilt (`docs/landing-page-brainstorm.md`): a gold title and tagline over the tavern, a real
     die, two doors (the Tavern Crawl's painting as its button, Play with friends), the Hall of Legends, the phone screen
@@ -819,7 +823,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (since 28 Oct 10 for the first opponent and 2 more for each after: `gold.winFirst`, `winStep`; Jaguar 38), 2 a heart left, Healing 11, the Shrine 10, a soak 5. **Prices rise**: each
   Thonic of a kind, candle or soak bought costs half its first price more than the last
   (`priceRise` 0.5; `risingPrice`, `run.bought`, saved with the run; `SAVE_VERSION` 2, so older
-  saves don't open). Keepsakes are bought once.
+  saves don't open). Keepsakes are bought once. **Since 17 Nov every price follows the place** (the user's; `placePrice` in
+  balance.js, `placePrice(run)` in server.js, in `risingPrice` and `keepsakePrice`): x1 at the Ghoul and Gourd, x1.5 at the
+  Yawning Portal, x2 aboard, as income grows about so (`docs/economy-brainstorm.md`); between fights it's the next fight's place.
 - **Points and the leaderboard (since 23 Oct):** the run's score is points, not the purse
   (`getTavernScoreSummary`, `BALANCE.points`): 100 x the place of each opponent beaten, 25 per
   heart left at each win (`stats.heartsSpared`), 25 x the place a lost run fell at, and the purse
@@ -921,17 +927,21 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (`balance/experiments/keepsake-when.js`; bought later each is worth less, as most runs end in
   the Ghoul and Gourd):
 
+  Prices since 17 Nov (the user's: a little dearer, two affordable by the end of the Ghoul and Gourd; x the place's price):
+
   | Keepsake (id) | Effect | Worth at fight 3 | Price |
   |---|---|---|---|
-  | Shield (`bentCopper`) | once a fight, the first life you'd lose isn't | ~31 | 30 |
-  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~16 | 15 |
-  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~16 | 15 |
-  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~14 | 13 |
-  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~15 (mostly the Healing) | 13 |
-  | Loaded Die | die 0 (`LOADED_DIE`) lands only on a 2 or 4 until you've kept both, then 4-6 (`loadedDieLow`; reworked 30 Oct, `playerFace`); old gold on your turns | not yet measured | 12 |
-  | Miser's Purse (30 Oct) | each win pays 1 more gold for every 10 in the purse (`miserPerTen`; `lastWin.gold.miser`, a row on the fight summary) | not yet measured | 12 |
-  | Gambler's Charm (30 Oct) | the last die left to throw is thrown twice, the better kept (a needed 2/4, else higher; lower in a cursed round), the other a ghost (`rollFaceFor`) | not yet measured | 14 |
-  | Bottomless Flask (30 Oct) | the first Thonic drunk each fight stays on the shelf 1 time in 2 (`flaskChance`; `encounterKeepsakeUses.bottomlessFlask`) | not yet measured | 12 |
+  | Shield of Fuckery (`bentCopper`; the user's name since 17 Nov, it was the Shield; the start screen's token is still "Shield") | once a fight, the first life you'd lose isn't | ~31 | 36 |
+  | Velvet Cushion | once a fight, losing by exactly 1 is a tie | ~16 | 20 |
+  | Trap Card (`luckySeat`) | once a fight, your first tie counts as their loss | ~16 | 20 |
+  | Thom's Loyalty Card | Thom always one of the spots; first Thonic each visit free (`shop.free`) | ~14 | 16 |
+  | Potion Belt | shelf +1 slot (`beltSlots`), comes with a Healing (`beltThonic`) | ~15 (mostly the Healing) | 18 |
+  | Loaded Die | die 0 (`LOADED_DIE`) lands only on a 2 or 4 until you've kept both, then 4-6 (`loadedDieLow`; reworked 30 Oct, `playerFace`); old gold on your turns | not yet measured | 16 |
+  | Miser's Purse (30 Oct) | each win pays 1 more gold for every 10 in the purse (`miserPerTen`; `lastWin.gold.miser`, a row on the fight summary) | not yet measured | 16 |
+  | Gambler's Charm (30 Oct) | the last die left to throw is thrown twice, the better kept (a needed 2/4, else higher; lower in a cursed round), the other a ghost (`rollFaceFor`) | not yet measured | 20 |
+  | Bottomless Flask (30 Oct) | the first Thonic drunk each fight stays on the shelf 1 time in 2 (`flaskChance`; `encounterKeepsakeUses.bottomlessFlask`) | not yet measured | 16 |
+  | Gilded Die (17 Nov; from the Yawning Portal) | after a throw, pay gold to throw one loose die again: 3, 6, 9 gold (x the place) a fight, three at most (`gildDie` handler, `Rules.rerollDie`, `gildedStep`, `gildedMax`; client `GildedKeepsake`, `actions.startGild`, `gildPick`: then a tap on a loose die) | not yet measured | 20 |
+  | Bren's Compass (17 Nov; sold aboard only, `from: 'saltySwallow'`) | once a fight, a sea die landing on anything but calm or starboard is rolled again (in `setSea`; not under the Ebon Shield; a second `seaChange` with `compass`) | not yet measured | 15 |
 
   **Since 30 Oct (the user's calls):** at most `maxKeepsakes` (5) carried (`pocketsFull`: since 17 Nov, the user's, Thom's back shelf still sells, as a swap: "Swap · 12 gold", then which of yours to leave behind, `buyKeepsake(id, giveUp)`, `.swap-pick`; the Stranger stays away); the Shield and the Loaded Die are only
   offered from the Yawning Portal on (`from` on each keepsake, `unownedKeepsakes`); a boss's keepsake
@@ -1018,7 +1028,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
    Yawning Portal's and the ship's opponents if wanted (add each id to `DICE_SETS` and `PAINTED_DICE`).
 7. **Keepsakes, more** (workshopped 30 Oct, not chosen yet): Lodestone, Spyglass, Hangman's Spare
    Bullet, Devil's Bargain, Brawler's Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror,
-   Sailor's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
+   Bren's Compass, Gold Tooth. A keepsake pool per place was offered and not taken.
 7b. **Multiplayer's look (17 Nov; `docs/multiplayer-look-brainstorm.md`; the user picked ideas 5 and 6 and the bugs, not the rest): built 17 Nov, to judge.** A player away two minutes from a friends' table leaves it (`AWAY_LEAVE_MS`, `leaveIfStillAway` in server.js; a test), and "Away" is a small word in the score's place (`.score.away`); a phone on its side keeps the column of players clear of the tray and rail (`.side-players.crowd` from four players); a computer's seat cards are up to 320 px with the reactions as a row in the dock; the round result is a dark-wood tally board in the brass rim (`.round-card.tally`), the loser's line cracking the game's own heart (a chalk board was tried first and dropped: a new material, green on the felt, its own heart). **Lesson: build new pieces from the game's materials (parchment, dark wood, brass) and its own parts (the hearts), not new ones.** Before/after: `previews/mp/shoot.sh before|after` (seats five pretend players with `seat.js` from the scratch folder; at computer sizes it runs `.git/shots-gpu.mjs`, a copy of shots.mjs on the graphics card, as the software renderer times out); `test/shots.mjs moment=roundcard hold=2600` shows a result card with its heart cracked.
 8. **Opponent abilities** (ask first): a warning on the nameplate before an ability fires.
 9. **The look, more** (listed in the visuals plan's "What's left for the look"): living

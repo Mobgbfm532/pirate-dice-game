@@ -2983,7 +2983,7 @@ test('the Shield says it protects a life', async () => {
     room.tavernRun.keepsakes.push({ id: 'bentCopper', name: 'Shield', text: '' });
     const lit = waitFor(hero, 'keepsakeActivated', k => k.id === 'bentCopper', 8000);
     await playHand(hero, room, [1, 1, 3, 3, 5, 5]); // dust
-    assert.equal((await lit).text, 'Shield protects a life.');
+    assert.equal((await lit).text, 'The Shield of Fuckery protects a life.');
 });
 
 test("Martha's mask: the Devil can be worn mid-turn, and the next throw lands three 6s", async () => {
@@ -3047,7 +3047,7 @@ test('the Bard sells a song for the next fight; it starts with it', async () => 
     assert.equal(room.tavernRun.interlude.stage, 'bard');
     hero.emit('bardPick', 'inspiringSong');
     await nextState(hero, s => runOf(s).interlude.stage === 'done');
-    assert.equal(room.tavernRun.purse, 20 - BALANCE.interlude.bardPrice);
+    assert.equal(room.tavernRun.purse, 20 - Math.ceil(BALANCE.interlude.bardPrice * BALANCE.placePrice.yawningPortal)); // (prices follow the place)
     assert.equal(room.tavernRun.nextFightSong, 'inspiringSong');
     hero.emit('moveOn');
     for (let i = 0; i < 100 && room.tavernRun.song !== 'ready'; i++) await sleep(20);
@@ -3284,7 +3284,7 @@ test("with five keepsakes, a boss's means leaving one behind; Thom's back shelf 
     hero.emit('buyKeepsake', 'gamblersCharm', 'loyaltyCard');
     await nextState(hero, s => runOf(s).keepsakes.some(k => k.id === 'gamblersCharm'));
     assert.deepEqual(run.keepsakes.map(k => k.id), ['luckySeat', 'potionBelt', 'misersPurse', 'mysteryFlavour', 'gamblersCharm']);
-    assert.equal(run.purse, 200 - BALANCE.keepsakePrices.gamblersCharm);
+    assert.equal(run.purse, 200 - Math.ceil(BALANCE.keepsakePrices.gamblersCharm * BALANCE.placePrice.yawningPortal)); // (after Martha: the Portal's prices)
 });
 
 test('the Shield and the Loaded Die are only offered from the Yawning Portal on', async () => {
@@ -3377,4 +3377,108 @@ test('a player meets each opponent as they sit down, remembered by name across r
     // The same name at another table, typed differently, has met Frak too; someone else hasn't.
     assert.ok((await metAt(' rover ')).met.includes('frak'), 'met in an earlier run');
     assert.ok(!(await metAt('Newcomer')).met.includes('frak'));
+});
+
+// ---- Gold and keepsakes (17 Nov, docs/economy-brainstorm.md) ----
+
+const keepsakeObj = id => server.TAVERN_KEEPSAKES.find(k => k.id === id);
+
+test('prices follow the place: x1 at the Ghoul and Gourd, x1.5 at the Yawning Portal, x2 aboard', async () => {
+    const { hero, room } = await atThoms('Prices', 500);
+    const run = room.tavernRun;
+    run.shop = { stock: ['healing'], keepsakes: [keepsakeObj('velvetCushion')] };
+    const priced = [];
+    for (const id of ['frak', 'vaelin', 'rokr']) {
+        run.encounterIndex = fightOf(id);
+        server.emitState(codeOf(hero));
+        const st = await nextState(hero, s => runOf(s).shop);
+        priced.push([runOf(st).shop.stock[0].price, runOf(st).shop.keepsakes[0].price, runOf(st).prices.shrine]);
+    }
+    const c = BALANCE.thonicPrices.healing, k = BALANCE.keepsakePrices.velvetCushion, sh = BALANCE.interlude.shrinePrice;
+    assert.deepEqual(priced, [[c, k, sh], [Math.ceil(c * 1.5), Math.ceil(k * 1.5), Math.ceil(sh * 1.5)], [c * 2, k * 2, sh * 2]]);
+});
+
+test('the Gilded Die: pay gold to throw one loose die again, dearer each time, three a fight', async () => {
+    const { hero, room } = await tavernTable('Gilded');
+    const run = room.tavernRun;
+    run.keepsakes = [keepsakeObj('gildedDie')];
+    run.purse = 100;
+    let unpin = pinFaces([1, 1, 3, 3, 5, 6]);
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    unpin();
+    await sleep(rolled.animationMs * 0.01 + 30);
+    const step = BALANCE.keepsakes.gildedStep;
+    const paid = [];
+    for (const face of [2, 4, 6]) {
+        unpin = pinFaces([face]);
+        const again = waitFor(hero, 'diceRolled', d => d.rerolled);
+        const before = run.purse;
+        hero.emit('gildDie', 0);
+        const thrown = await again;
+        unpin();
+        assert.deepEqual(thrown.rerolled, [0]);
+        assert.equal(room.turn.dice[0].value, face);
+        paid.push(before - run.purse);
+        await sleep(thrown.animationMs * 0.01 + 30);
+    }
+    assert.deepEqual(paid, [step, step * 2, step * 3]);
+    hero.emit('gildDie', 1);
+    await sleep(40);
+    assert.equal(room.turn.dice[1].value, 1, 'three a fight');
+    assert.equal(run.purse, 100 - step * 6);
+});
+
+test('the Gilded Die: never a kept die, never without the gold', async () => {
+    const { hero, room } = await tavernTable('Gilded2');
+    const run = room.tavernRun;
+    run.keepsakes = [keepsakeObj('gildedDie')];
+    run.purse = 1;
+    hero.emit('rollDice');
+    const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
+    await sleep(rolled.animationMs * 0.01 + 30);
+    const values = room.turn.dice.map(d => d.value);
+    hero.emit('gildDie', 0);
+    await sleep(40);
+    assert.deepEqual(room.turn.dice.map(d => d.value), values, 'too poor');
+    run.purse = 50;
+    hero.emit('toggleDie', 0);
+    await sleep(40);
+    hero.emit('gildDie', 0);
+    await sleep(40);
+    assert.equal(run.purse, 50, 'a kept die is not thrown again');
+});
+
+test("Bren's Compass: once a fight, rough weather and the sea die is rolled again", async () => {
+    const hero = await tavernAgainst(fightOf('klarg'), 'Compass');
+    const room = roomOf(hero);
+    room.tavernRun.keepsakes = [keepsakeObj('brensCompass')];
+    const seen = [], used = [];
+    hero.on('seaChange', m => seen.push(m));
+    hero.on('keepsakeActivated', m => used.push(m.id));
+    room.tavernRun.sea = 'calm';
+    // Klarg's dial: 1 port, 2-5 calm, 6 starboard. Round 2: a 1 (port), the compass, a 3 (calm). Round 3: a 1, kept.
+    for (const [round, faces] of [[2, [1, 3]], [3, [1]]]) {
+        room.tavernRun.encounterRound = round;
+        const unpin = pinFaces(faces);
+        server.beginTavernRound(codeOf(hero), room);
+        unpin();
+    }
+    await sleep(80);
+    assert.deepEqual(seen.map(m => [m.face, m.id, !!m.compass]), [[1, 'port', false], [3, 'calm', true], [1, 'port', false]]);
+    assert.deepEqual(used, ['brensCompass']);
+    assert.equal(room.tavernRun.sea, 'port');
+});
+
+test("Bren's Compass is sold only aboard, the Gilded Die from the Yawning Portal on", async () => {
+    const { room } = await betweenFights('Wares', { stage: 'choose', spots: [] }, 500);
+    const offered = () => new Set(Array.from({ length: 200 }, () => server.strangerOffer(room).offers.map(k => k.id)).flat());
+    room.tavernRun.encounterIndex = fightOf('frak');
+    let ids = offered();
+    assert.ok(!ids.has('gildedDie') && !ids.has('brensCompass'));
+    room.tavernRun.encounterIndex = fightOf('vaelin');
+    ids = offered();
+    assert.ok(ids.has('gildedDie') && !ids.has('brensCompass'));
+    room.tavernRun.encounterIndex = fightOf('rokr');
+    assert.ok(offered().has('brensCompass'));
 });

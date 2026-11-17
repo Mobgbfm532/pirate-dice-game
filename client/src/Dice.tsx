@@ -274,6 +274,7 @@ export function Dice() {
     const allLooks = useCallback(() => [materials.faces, materials.hidden, materials.loaded, materials.mind, materials.tub, materials.starry, theirs ?? []].flat(), [materials, theirs]);
     useWarmShaders(geometry, allLooks, across ?? '');
     const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
+    const gild = snap.gildPick; // picking a loose die for the Gilded Die (17 Nov)
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);
 
     useFrame((_, delta) => {
@@ -378,7 +379,7 @@ export function Dice() {
 
             // Gold ring under dice locked this roll (they can still be put back), and under the
             // dice a Second Thoughts Thonic could put back while one is being chosen.
-            ring.visible = mesh.visible && (putBack && turn ? canPutBack(turn, die.status) : die.status === 'lockedThisTurn');
+            ring.visible = mesh.visible && (putBack && turn ? canPutBack(turn, die.status) : gild ? die.status === 'active' : die.status === 'lockedThisTurn');
             ring.position.set(mesh.position.x, 0.012, mesh.position.z);
 
             const contact = contacts.current[die.id];
@@ -403,6 +404,7 @@ export function Dice() {
     const tappable = (id: number) => {
         const die = turn?.dice.find(d => d.id === id);
         if (putBack) return canTouch && !!die && !!turn && canPutBack(turn, die.status);
+        if (gild) return canTouch && !!die && die.status === 'active';
         return canTouch && !!die && !die.mind && !die.mustRoll && !die.bound && (die.status === 'active' || die.status === 'lockedThisTurn');
     };
 

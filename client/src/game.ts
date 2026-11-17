@@ -57,6 +57,7 @@ export interface TavernRun {
     devilCap?: number | null; // null: no cap (since 21 Oct)
     maskReady?: boolean; // Martha's mask can be worn this fight (nothing gives it since 4 Nov)
     mystery?: { flavour: string; ready: boolean } | null; // Mystery Flavour, Martha's Elf Bar: this fight's flavour
+    gilded?: { uses: number; max: number; price: number } | null; // the Gilded Die (17 Nov): uses this fight, the next one's price
     enemy: Enemy;
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
@@ -83,7 +84,7 @@ export interface TavernRun {
     lastWin: ShopArrival | null; // the fight just won
     clearEye?: boolean; // a Clear-Eye Thonic is waiting to cancel the opponent's next ability
     abilityUsed?: Record<string, number | boolean>; // uses of each ability this fight
-    encounterKeepsakeUses?: Record<string, boolean>; // keepsakes that have worked this fight
+    encounterKeepsakeUses?: Record<string, boolean | number>; // keepsakes that have worked this fight
     abilityMax?: number; // the opponent's uses a fight, every ability of theirs
     abilitySpent?: number; // how many of them are spent
     powerMarks?: [number, number][]; // [uses, spent] for each of their powers, in order
@@ -226,6 +227,7 @@ export interface Snapshot {
     // his), shown as ghost dice once the dice stop.
     ghosts: { dice: Ghost[]; at: number } | null;
     putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
+    gildPick: boolean; // the Gilded Die is waiting for a loose die to be tapped (17 Nov)
     // A perfect hand's celebration (since 23 Oct): a 24, or in a cursed round (lowest wins) the
     // 2, the 4 and four 1s. who: the player's name when it isn't you.
     celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
@@ -303,6 +305,7 @@ let snapshot: Snapshot = {
     betweenShown: false,
     ghosts: null,
     putBackSlot: null,
+    gildPick: false,
     celebration: null,
     devil: null,
     klargCaughtAt: 0,
@@ -465,6 +468,7 @@ function applyTurn(serverView: TurnView | null) {
     const isNewTurn = !turn || !snapshot.turn || snapshot.turn.key !== turn.key;
     if (isNewTurn) resetTrayForNewTurn();
     if (isNewTurn && snapshot.putBackSlot !== null) update({ putBackSlot: null });
+    if (isNewTurn && snapshot.gildPick) update({ gildPick: false });
     if (turn) recordLockOrder(turn);
     if (pendingTaps.size) setTimeout(() => { if (serverTurn === serverView) applyTurn(serverView); }, PENDING_MS + 50);
     const isMyTurn = computeIsMyTurn(snapshot.state, turn);
@@ -1153,6 +1157,7 @@ export const actions = {
         const { turn, isMyTurn, rolling } = snapshot;
         if (!turn || !isMyTurn || rolling) return;
         startMusic();
+        if (snapshot.gildPick) update({ gildPick: false });
         if (turn.finalized || handComplete(turn)) {
             update({ endingTurn: true });
             socket.emit('endTurn');
@@ -1162,6 +1167,16 @@ export const actions = {
     },
     toggleDie(dieId: number) {
         const { turn, isMyTurn, rolling, putBackSlot } = snapshot;
+        // The Gilded Die: the next tap on a loose die throws it again, for gold.
+        if (turn && isMyTurn && !rolling && snapshot.gildPick) {
+            const loose = turn.dice.find(d => d.id === dieId);
+            if (loose && loose.status === 'active') {
+                update({ gildPick: false });
+                playSound('click');
+                socket.emit('gildDie', dieId);
+            }
+            return;
+        }
         if (turn && isMyTurn && !rolling && putBackSlot !== null) {
             const kept = turn.dice.find(d => d.id === dieId);
             if (kept && canPutBack(turn, kept.status)) {
@@ -1321,6 +1336,13 @@ export const actions = {
     },
     cancelPutBack() {
         if (snapshot.putBackSlot !== null) update({ putBackSlot: null });
+    },
+    // The Gilded Die (17 Nov): pay, then tap the loose die to throw again.
+    startGild() {
+        update({ gildPick: true });
+    },
+    cancelGild() {
+        if (snapshot.gildPick) update({ gildPick: false });
     },
     chooseKeepsake(id: string) {
         playSound('click');

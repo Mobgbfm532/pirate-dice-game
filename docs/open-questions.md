@@ -40,6 +40,11 @@ day they happen, with what's been built marked as it lands.
   trailer's join where its second section repeats (about 27.8 s in).
 
 ### Questions waiting on the user's word
+- **Gold and keepsakes** (`docs/economy-brainstorm.md`, 17 Nov evening): built the same evening, the user's: prices by
+  place (×1, ×1.5, ×2), keepsakes dearer, the Gilded Die and Bren's Compass. To try in play. Open: their paintings
+  (🎲 and 🧭 until then); the Compass rolls again by itself on rough weather (port, a Squall, Heavy seas, Fog, Becalmed):
+  should the player choose instead?; the other ideas in the doc (Fixer's Purse, Mercenary's Contract, Banker's Seal, Money
+  Belt, Pawnbroker's Ticket, Witch's Mirror, Spyglass); should gold left at the end count for more points?
 - **The walk to the Yawning Portal** (`docs/portal-transition-brainstorm.md`): built 17 Nov evening, the user's pick (the walk
   through the city in place of the tournament board, their line "The CAWKs resurface to quench the challenger"). To see on
   a phone. Open: sounds (footsteps, a heavy door, the well's hum) if wanted; something like it after Brodor, before Bren?
@@ -87,7 +92,7 @@ day they happen, with what's been built marked as it lands.
 
 ### Ideas not chosen yet
 - More keepsakes (workshopped 30 Oct): Lodestone, Spyglass, Hangman's Spare Bullet, Devil's Bargain, Brawler's
-  Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror, Sailor's Compass, Gold Tooth. A keepsake pool per
+  Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror, Bren's Compass, Gold Tooth. A keepsake pool per
   place was offered and not taken.
 - A warning on the opponent's nameplate before an ability fires.
 - Housekeeping: delete unused code (the Dice Den, the old keepsake cards, Martha's mask, Dead Eye, Written in the

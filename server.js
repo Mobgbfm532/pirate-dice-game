@@ -346,7 +346,7 @@ const TAVERN_KEEPSAKES = [
     // Portal, the user's call, 30 Oct).
     {
         id: 'bentCopper',
-        name: 'Shield',
+        name: 'Shield of Fuckery', // (the user's name, 17 Nov; it was the Shield)
         text: 'Once per encounter, the first life you would lose is ignored.',
         from: 'yawningPortal'
     },
@@ -391,6 +391,19 @@ const TAVERN_KEEPSAKES = [
         id: 'bottomlessFlask',
         name: 'Bottomless Flask',
         text: 'The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf.'
+    },
+    // 17 Nov, the user's (docs/economy-brainstorm.md): gold into throws, and the ship's own keepsake.
+    {
+        id: 'gildedDie',
+        name: 'Gilded Die',
+        text: 'After a throw, pay gold to throw one loose die again: up to three times a fight, dearer each time.',
+        from: 'yawningPortal'
+    },
+    {
+        id: 'brensCompass',
+        name: "Bren's Compass",
+        text: 'Once a fight, when the sea die brings rough weather, it is rolled again.',
+        from: 'saltySwallow'
     }
 ];
 const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
@@ -502,15 +515,25 @@ const goldText = Rules.formatGold;
 // What something costs this time: its first price, and half as much again (BALANCE.priceRise)
 // for each one already bought this run (the user's call, 23 Oct: the Shrine, the hot tub and each
 // kind of Thonic cost more every purchase). bought: counts by id ('healing', 'shrine', 'hotTub').
+// Since 17 Nov (the user's, docs/economy-brainstorm.md) every price also follows the place, as income does:
+// x1 at the Ghoul and Gourd, x1.5 at the Yawning Portal, x2 aboard (BALANCE.placePrice). Between fights the
+// place is the next fight's.
+function placePrice(run) {
+    let encounter = TAVERN_ENCOUNTERS[Math.min(run.encounterIndex || 0, TAVERN_ENCOUNTERS.length - 1)];
+    return (BALANCE.placePrice && BALANCE.placePrice[encounter.place]) || 1;
+}
 function risingPrice(run, id, base) {
     let times = (run.bought && run.bought[id]) || 0;
-    return Math.ceil(base * (1 + (BALANCE.priceRise || 0) * times));
+    return Math.ceil(base * placePrice(run) * (1 + (BALANCE.priceRise || 0) * times));
 }
 function noteBought(run, id) {
     run.bought = run.bought || {};
     run.bought[id] = (run.bought[id] || 0) + 1;
 }
 const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
+// The Gilded Die (17 Nov): each throw again this fight costs gildedStep more (x the place), at most gildedMax a fight.
+const gildedUses = run => (run.encounterKeepsakeUses && run.encounterKeepsakeUses.gildedDie) || 0;
+const gildedPrice = run => Math.ceil((KEEPSAKE_NUMBERS.gildedStep ?? 3) * (gildedUses(run) + 1) * placePrice(run));
 const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
 const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
 const bardPrice = run => risingPrice(run, 'bard', INTERLUDE.bardPrice || 0);
@@ -724,7 +747,18 @@ function setSea(roomCode, room, encounter) {
     run.sea = faces[face - 1];
     run.seaFace = face;
     sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: was || 'calm', face, faces, changed: run.sea !== (was || 'calm') });
+    // Bren's Compass (17 Nov; named for Skipper Bren, the user's): once a fight, rough weather (anything but a calm sea or listing to
+    // starboard) and the sea die is rolled again. Not under the Ebon Shield, which keeps the sea off you anyway.
+    if (hasKeepsake(room, 'brensCompass') && !run.encounterKeepsakeUses.brensCompass && !run.seaWard && !COMPASS_FAIR.includes(run.sea)) {
+        let rough = run.sea;
+        emitKeepsakeActivated(roomCode, room, 'brensCompass', `The needle swings: the sea die is rolled again.`);
+        face = crypto.randomInt(1, 7);
+        run.sea = faces[face - 1];
+        run.seaFace = face;
+        sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: rough, face, faces, changed: run.sea !== rough, compass: true });
+    }
 }
+const COMPASS_FAIR = ['calm', 'starboard'];
 const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
 
 // Heavy seas: as a hand's second throw is made (once a hand), a rogue wave takes one loose die, at
@@ -819,13 +853,14 @@ function getTavernRunState(room) {
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
         // Mystery Flavour: this fight's flavour (an Elf Bar id) and whether it can still be puffed.
+        gilded: hasKeepsake(room, 'gildedDie') ? { uses: gildedUses(room.tavernRun), max: KEEPSAKE_NUMBERS.gildedMax ?? 3, price: gildedPrice(room.tavernRun) } : null,
         mystery: hasKeepsake(room, MYSTERY_FLAVOUR.id) ? { flavour: mysteryFlavourOf(room.tavernRun), ready: !room.tavernRun.encounterKeepsakeUses.mysteryFlavour } : null,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
         purse: room.tavernRun.purse,
         shelf: room.tavernRun.shelf.map(shelfView(room.tavernRun)),
         shelfSize: shelfSizeOf(room),
-        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale) } : null,
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale(room.tavernRun)) } : null,
         prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun), yvesil: yvesilPrice(room.tavernRun), jorvash: jorvashPrice(room.tavernRun), elfBars: Object.fromEntries(ELF_BARS.map(id => [id, thonicPrice(room.tavernRun, id)])) },
         cloud: !!room.tavernRun.cloud,
         maxKeepsakes: MAX_KEEPSAKES, // Cotton Candy Cloud: the opponent can't see your score this round
@@ -2304,7 +2339,7 @@ function beginTavernRound(roomCode, room) {
             let human = room.players[getHumanPlayerId(room)];
             if (human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper) {
                 run.encounterKeepsakeUses.bentCopper = true;
-                emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield protects a life.');
+                emitKeepsakeActivated(roomCode, room, 'bentCopper', 'The Shield of Fuckery protects a life.');
             } else if (human && human.lives > 1) human.lives--;
         }
         return;
@@ -2542,7 +2577,8 @@ function pickSpots(room) {
 
 // Thom's back shelf (since 21 Oct): keepsakes for gold, two at random from those you don't have.
 const KEEPSAKE_PRICES = BALANCE.keepsakePrices || {};
-const keepsakeForSale = k => ({ ...k, price: KEEPSAKE_PRICES[k.id] });
+const keepsakePrice = (run, id) => (KEEPSAKE_PRICES[id] ? Math.ceil(KEEPSAKE_PRICES[id] * placePrice(run)) : 0);
+const keepsakeForSale = run => k => ({ ...k, price: keepsakePrice(run, k.id) });
 function pickThomKeepsakes(room) {
     return shuffled(unownedKeepsakes(room).filter(k => KEEPSAKE_PRICES[k.id])).slice(0, BALANCE.thomKeepsakes || 0);
 }
@@ -2811,7 +2847,7 @@ function evaluateTavernRound(roomCode) {
 
         if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
             room.tavernRun.encounterKeepsakeUses.bentCopper = true;
-            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield protects a life.');
+            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'The Shield of Fuckery protects a life.');
             return;
         }
 
@@ -3219,7 +3255,7 @@ io.on('connection', (socket) => {
         let run = room.tavernRun;
         let shelf = run.shop.keepsakes || [];
         let keepsake = shelf.find(k => k.id === keepsakeId);
-        let price = keepsake && KEEPSAKE_PRICES[keepsake.id];
+        let price = keepsake && keepsakePrice(run, keepsake.id);
         if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id)) return;
         // Pockets full (17 Nov, the user's): buying it means leaving one of yours behind, as with a boss's drop.
         if (pocketsFull(room)) {
@@ -3556,6 +3592,29 @@ io.on('connection', (socket) => {
         if (!rerolled) return;
         run.song = null;
         sendMoment(roomCode, 'keepsakeActivated', { id: 'inspiringSong', name: 'Inspiring Song', text: 'The Bard plays. Your first throw, thrown again.', who: 'The Bard' });
+        throwAgain(roomCode, room, turn, rerolled);
+        emitState(roomCode);
+    });
+
+    // The Gilded Die (17 Nov): after a throw, pay gold to throw one loose die again (dieId), up to
+    // gildedMax times a fight, each dearer than the last (gildedPrice).
+    socket.on('gildDie', dieId => {
+        let room = tavernPlayer();
+        if (!room || !Number.isInteger(dieId)) return;
+        let roomCode = socket.roomCode;
+        let run = room.tavernRun, turn = room.turn;
+        if (!hasKeepsake(room, 'gildedDie') || !isTurnPlayable(roomCode) || !isMyTurn() || Date.now() < turn.busyUntil) return;
+        let uses = gildedUses(run), price = gildedPrice(run);
+        if (uses >= (KEEPSAKE_NUMBERS.gildedMax ?? 3) || run.purse < price) return;
+        let die = turn.dice.find(d => d.id === dieId);
+        let was = die && die.value;
+        let rerolled = Rules.rerollDie(turn, dieId, rollFaceFor(room, turn));
+        if (!rerolled) return;
+        run.purse -= price;
+        run.stats.spent += price;
+        run.encounterKeepsakeUses.gildedDie = uses + 1;
+        run.stats.keepsakesActivated++;
+        sendMoment(roomCode, 'keepsakeActivated', { id: 'gildedDie', name: 'Gilded Die', text: `${price} gold: ${turn.blurActive ? "a hidden die" : `your ${was}`} is thrown again.` });
         throwAgain(roomCode, room, turn, rerolled);
         emitState(roomCode);
     });

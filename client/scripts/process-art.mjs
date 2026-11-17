@@ -1206,3 +1206,6 @@ await cutOutFlat('keepsake-bottomlessFlask.jpg', 'keepsakes/bottomlessFlask', { 
 // `holes` seed for each pocket inside the smoke's question-mark curl.
 await cutOutFlat('keepsake-mysteryFlavour.jpg', 'keepsakes/mysteryFlavour', { icon: 320, green: true, holes: [[596, 59], [623, 237], [454, 78]] });
 await cutOutFlat('keepsake-gamblersCharm.jpg', 'keepsakes/gamblersCharm', { icon: 320, holes: [[903, 112], [649, 266], [664, 375], [661, 412], [654, 348], [670, 497]] }); // the cord's loop knot, the ring, between the wires, between the die and the clover
+// Two more (17 Nov): the Gilded Die and Bren's Compass (its ring's middle is trapped magenta)
+await cutOutFlat('keepsake-gildedDie.jpg', 'keepsakes/gildedDie', { icon: 320 });
+await cutOutFlat('keepsake-brensCompass.jpg', 'keepsakes/brensCompass', { icon: 320, holes: [[718, 268]] });

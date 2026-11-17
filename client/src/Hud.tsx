@@ -811,6 +811,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
 
     const badge = state ? roundEffectHint(state, turn.playerId === snap.myId, turn) : NO_BADGE;
     const tip = snap.isMyTurn && snap.putBackSlot !== null ? 'Tap a kept die to put it back'
+        : snap.isMyTurn && snap.gildPick ? 'Tap a loose die to throw it again'
         : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && !turn.canRoll && turn.locksThisRoll < keepsNeeded(turn)
             ? (keepsNeeded(turn) >= 2 ? (turn.locksThisRoll === 0 ? 'Squall: keep two dice, then roll again' : 'Squall: keep one more die')
                 // (Becalmed: how many throws the hand has left.)
@@ -868,6 +869,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
                         : k.id === 'mysteryFlavour' ? <MysteryKeepsake key={k.id} snap={snap} state={state} />
+                        : k.id === 'gildedDie' ? <GildedKeepsake key={k.id} snap={snap} state={state} />
                         : <KeepsakeIcon key={k.id} icon={keepsakeIcon(k.id)} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
                     {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." kind="A blessing" blessing />}
                     {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} kind="A song" blessing />}
@@ -883,7 +885,7 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
 }
 
 // Keepsakes that work once a fight (dimmed once they have).
-const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask', 'bottomlessFlask', 'mysteryFlavour']);
+const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marthasMask', 'bottomlessFlask', 'mysteryFlavour', 'brensCompass']);
 
 // Any item's info panel, opened by a tap on it (6 Nov, the user's: like an opponent's card, and it
 // replaces the toast that went away by itself). An item that can be used now has its button here.
@@ -1005,6 +1007,32 @@ function mysteryIcon(flavour?: string) {
 
 // The Bard's Inspiring Song: right after your first throw of the fight, before you keep a die,
 // it lights up; a tap opens its panel, with "Throw again" while it can be.
+// The Gilded Die (17 Nov, the user's; docs/economy-brainstorm.md): after a throw, pay gold to throw one loose
+// die again, up to three times a fight, dearer each time. Lit when it can be used; its panel's button names the
+// price, then a tap on a loose die throws it (actions.startGild; the dice ring the ones it can take).
+function GildedKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
+    const run = state.tavernRun!;
+    const turn = snap.turn;
+    const gilded = run.gilded;
+    const [open, setOpen] = useState(false);
+    const close = useCallback(() => setOpen(false), []);
+    const left = gilded ? gilded.max - gilded.uses : 0;
+    const loose = !!turn && turn.dice.some(d => d.status === 'active');
+    const usable = !!gilded && left > 0 && run.purse >= gilded.price && snap.isMyTurn && !!turn && turn.hasRolled && !turn.finalized && !snap.rolling && loose;
+    const text = 'After a throw, pay gold to throw one loose die again: up to three times a fight, dearer each time.';
+    const status = !gilded ? undefined : left <= 0 ? 'Used three times this fight'
+        : `Next: ${gilded.price} gold · ${left} left this fight${run.purse < gilded.price ? ' · not enough gold' : ''}`;
+    return (
+        <>
+            <button className={`keepsake-icon ${left <= 0 ? 'spent' : ''} ${usable ? 'usable' : ''}`} aria-label="About the Gilded Die" onClick={() => { playSound('click'); if (snap.gildPick) actions.cancelGild(); setOpen(true); }}>
+                <span aria-hidden="true">{keepsakeIcon('gildedDie')}</span>
+            </button>
+            {open && <ItemInfo icon={keepsakeIcon('gildedDie')} kind="A keepsake" name="Gilded Die" text={text} status={status} onClose={close}
+                actions={usable ? [{ label: `Throw a die again · ${gilded!.price} gold`, run: actions.startGild }] : []} />}
+        </>
+    );
+}
+
 function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const turn = snap.turn;
@@ -1237,7 +1265,9 @@ const PAINTED_KEEPSAKES = new Set(['bentCopper', 'velvetCushion', 'luckySeat', '
     // ...and the three of 30 Oct, and Martha's Elf Bar (4 Nov).
     'misersPurse', 'gamblersCharm', 'bottomlessFlask', 'mysteryFlavour',
     // ...and the Salty Swallow's omens and refreshments (9 Nov).
-    'notaroRed', 'ebonShield', 'fairWinds', 'followingSea', 'albatross', 'blackSpot']);
+    'notaroRed', 'ebonShield', 'fairWinds', 'followingSea', 'albatross', 'blackSpot',
+    // ...and the Gilded Die and Bren's Compass (17 Nov).
+    'gildedDie', 'brensCompass']);
 function keepsakeIcon(id: string): React.ReactNode {
     if (id === 'mysteryFlavour') return mysteryIcon();
     if (PAINTED_KEEPSAKES.has(id)) return <img className="item-art" src={`${import.meta.env.BASE_URL}art/keepsakes/${id}.webp`} alt="" draggable={false} />;
@@ -1272,7 +1302,10 @@ const KEEPSAKE_ICONS: Record<string, string> = {
     purpleHaze: '🌫️',
     cottonCandyCloud: '🍭',
     lemonLevitation: '🍋',
-    watermelonHindsight: '🍉'
+    watermelonHindsight: '🍉',
+    // 17 Nov (their emoji, until the user paints them).
+    gildedDie: '🎲',
+    brensCompass: '🧭'
 };
 
 // After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then

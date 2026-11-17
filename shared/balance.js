@@ -101,6 +101,10 @@ module.exports = {
     // Shrine, a soak), it costs this much more of its first price: x1, x1.5, x2, ... (since 23 Oct,
     // the user's call; rounded up to the gold piece). Keepsakes are bought once.
     priceRise: 0.5,
+    // Every price also follows the place (17 Nov, the user's; docs/economy-brainstorm.md): income is about x1.5 at
+    // the Yawning Portal and x2 aboard, so prices are too: Thonics, Elf Bars, keepsakes, the Shrine, the hot tub, the
+    // Bard, Yvesil, Jorvash, the Gilded Die. Between fights the place is the next fight's.
+    placePrice: { ghoulAndGourd: 1, yawningPortal: 1.5, saltySwallow: 2 },
 
     // THE LEADERBOARD ranks runs by points (since 23 Oct, the user's call; it was the purse).
     // Points come from what the run did, plus the gold left in the purse at the end.
@@ -184,7 +188,9 @@ module.exports = {
     thomKeepsakes: 2,
     // (30 Oct: the Miser's Purse, Gambler's Charm and Bottomless Flask, first guesses, and the
     // reworked Loaded Die's, to set by play and simulation.)
-    keepsakePrices: { bentCopper: 30, velvetCushion: 15, luckySeat: 15, loyaltyCard: 13, potionBelt: 13, loadedDie: 12, misersPurse: 12, gamblersCharm: 14, bottomlessFlask: 12 },
+    // 17 Nov (the user's: a little dearer, two affordable by the end of the Ghoul and Gourd), and x placePrice:
+    // the Shield 54 at the Yawning Portal, the Gilded Die 30 there, Bren's Compass 30 aboard (sold only there).
+    keepsakePrices: { bentCopper: 36, velvetCushion: 20, luckySeat: 20, loyaltyCard: 16, potionBelt: 18, loadedDie: 16, misersPurse: 16, gamblersCharm: 20, bottomlessFlask: 16, gildedDie: 20, brensCompass: 15 },
     maxKeepsakes: 5,        // carried at once (the user's call, 30 Oct)
 
     keepsakes: {
@@ -192,6 +198,8 @@ module.exports = {
         beltSlots: 1,           // the Potion Belt: extra shelf slots...
         beltThonic: 'healing',  // ...and the Thonic it comes with
         miserPerTen: 1,         // the Miser's Purse: gold a win adds for every 10 in the purse
-        flaskChance: 50         // the Bottomless Flask: percent the first Thonic each fight stays
+        flaskChance: 50,        // the Bottomless Flask: percent the first Thonic each fight stays
+        gildedStep: 3,          // the Gilded Die: a throw again costs 3, 6, 9 gold in a fight (x placePrice)...
+        gildedMax: 3            // ...at most this many a fight
     }
 };

@@ -285,6 +285,17 @@
         return ones.map(d => d.id);
     }
 
+    // The Gilded Die (17 Nov): one loose die (in play, not kept) thrown again after a throw. Returns
+    // [its id], or null.
+    function rerollDie(turn, dieId, rollFace = defaultRollFace) {
+        if (!turn.hasRolled || turn.finalized) return null;
+        const die = turn.dice.find(d => d.id === dieId);
+        if (!die || !isActive(die)) return null;
+        die.value = rollFace(die);
+        settleTurn(turn);
+        return [die.id];
+    }
+
     // The Bard's Inspiring Song: right after the turn's first throw, before any keep, every die in
     // play rolls again (`stays`: a die already kept for the player, Frak's Mind Whip). Returns
     // the ids thrown, or null.
@@ -506,6 +517,6 @@
         formatGold,
         DICE_COUNT, PERFECT_SCORE, STATUS, SUSPENSE, CALLOUT, ABILITY_NAMES,
         getAbilityMaxUses, scoreDice, createTurn, canRoll, rollTurn, toggleDie, settleTurn,
-        finishTurn, keepRest, keepsNeeded, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
+        finishTurn, keepRest, keepsNeeded, stealHighestActiveDie, bestKeptDie, mindWhip, devilWaitLocks, bestPossibleScore, rerollOnes, rerollDie, rerollActive, redoThrow, putBackDie, viewTurn, chooseBotDiceToLock, keepingAllWins, planBotLocks
     };
 });
