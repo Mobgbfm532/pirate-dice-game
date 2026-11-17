@@ -453,8 +453,8 @@ footer {
 .turn-score { display: flex; align-items: baseline; gap: 10px; text-shadow: 0 2px 6px #000; }
 .turn-score .value.ahead { color: #9ccc65; }
 .turn-score .value.level { color: #ffb74d; }
-.turn-score .label { color: var(--parchment-dim); font-size: 0.95rem; }
-.turn-score .value { font-size: 2.2rem; font-weight: 700; color: var(--gold-bright); }
+.turn-score .label { color: var(--parchment); font-size: 0.95rem; }
+.turn-score .value { font-size: 1.6rem; font-weight: 700; color: var(--gold-bright); }
 .turn-score .value.dust { color: #e57373; }
 .roll {
     min-width: 200px;
@@ -869,7 +869,7 @@ footer {
    the table keeps its room. */
 @media (orientation: portrait) and (max-height: 760px) {
     footer { gap: 4px; }
-    .turn-score .value { font-size: 1.7rem; }
+    .turn-score .value { font-size: 1.6rem; }
     .roll { padding: 9px 26px; font-size: 1.2rem; }
     .reactions button { width: 34px; height: 34px; font-size: 1rem; }
     .hint { font-size: 0.8rem; }
@@ -3977,8 +3977,8 @@ button.film-skip:active, button.sail-skip:active, div.tr-after button:active, bu
     .look-next footer .controls:has(.goal.placeholder) { column-gap: 0; }
     .look-next footer .goal.placeholder { width: 0; padding-left: 0; padding-right: 0; border-left: 0; border-right: 0; overflow: hidden; white-space: nowrap; flex-wrap: nowrap; }
 }
-/* The turn score's and the score to beat's numbers in the reading face: Almendra's bold 0 drew as a blob. */
-.look-next .turn-score .value, .look-next .goal .target { font-family: var(--read); font-variant-numeric: lining-nums; }
+/* (The turn score's and the score to beat's numbers were in the reading face from 15 Nov to 17 Nov; the user: one font throughout, so they're Almendra like the rest of the table.) */
+.look-next .turn-score .value, .look-next .goal .target { font-family: var(--font); }
 
 /* ==== The choice between fights on upright phones (15 Nov, the look check's item 3) ==== */
 /* The two cards floated mid-screen over a backdrop dimmed nearly to black, the bottom of the screen
@@ -4122,7 +4122,7 @@ button.film-skip:active, button.sail-skip:active, div.tr-after button:active, bu
 }
 .round-card.tally li:nth-child(n + 4) .place { background: radial-gradient(circle at 38% 30%, #8a6a4a, #5a3e26 70%); color: #f3e6c8; }
 .round-card.tally .who { font-family: 'Almendra', Georgia, serif; font-size: 1.02rem; }
-.round-card.tally .score { font-family: var(--read, inherit); font-size: 1.2rem; font-variant-numeric: lining-nums tabular-nums; }
+.round-card.tally .score { font-family: var(--font); font-size: 1.2rem; font-variant-numeric: tabular-nums; }
 .round-card.tally .heart-lost { display: flex; justify-content: center; font-family: var(--read, inherit); font-style: italic; font-weight: 400; color: #ffcc80; }
 .round-card.tally .heart-lost .hearts { font-size: 1.15rem; }
 .round-card.tally .round-card-note { font-family: var(--read, inherit); font-style: italic; animation: tally-in 0.3s calc(0.25s + var(--rows, 6) * 0.22s) ease-out both; }
