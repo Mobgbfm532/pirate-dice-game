@@ -124,10 +124,11 @@ const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall
 // Since 17 Nov each place has its own music (the user's), and Brodor and Jaguar a theme of their own.
 // Volumes set from each recording's measured loudness, so each plays about as loud as the tavern tune
 // at 0.4 (-16.7 LUFS): Jaguar's -8.0, the Salty Swallow's -10.8, Brodor's -13.5, the Portal's -14.1.
-export type Tune = 'tavern' | 'portal' | 'brodor' | 'ship' | 'jaguar';
+export type Tune = 'tavern' | 'martha' | 'portal' | 'brodor' | 'ship' | 'jaguar';
 const placeTune = (file: string): HTMLAudioElement => { const el = load(file, 0, true); el.preload = 'none'; return el; };
 const TUNES: Record<Tune, [HTMLAudioElement, number]> = {
     tavern: [music, MUSIC_VOLUME],
+    martha: [placeTune('MarthaTheme.mp3'), MUSIC_VOLUME], // (the user's, 17 Nov: as loud as the tavern tune, -16.7 LUFS)
     portal: [placeTune('YawningPortalTheme.mp3'), 0.3],
     brodor: [placeTune('BrodorTheme.mp3'), 0.28],
     ship: [placeTune('SaltySwallowTheme.mp3'), 0.2],

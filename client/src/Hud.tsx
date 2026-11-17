@@ -2915,7 +2915,7 @@ function SquallRain({ snap }: { snap: Snapshot }) {
 }
 
 // The music for where you are (17 Nov, the user's tracks): the Yawning Portal's and the Salty Swallow's own
-// themes in a crawl there, Brodor's and Jaguar's during their fights (Jaguar's since 10 Nov), the tavern
+// themes in a crawl there, Martha's, Brodor's and Jaguar's during their fights (Jaguar's since 10 Nov), the tavern
 // tune at the Ghoul and Gourd, at a friends' table and on the start screen. Between fights the place's
 // theme plays on (a scene with its own loop fades it down), and the run-over screen goes back to the tavern.
 function PlaceMusic({ snap }: { snap: Snapshot }) {
@@ -2925,6 +2925,7 @@ function PlaceMusic({ snap }: { snap: Snapshot }) {
     const tune: Tune = !run || over ? 'tavern'
         : who === 'jaguar' && !snap.betweenShown ? 'jaguar'
         : who === 'brodor' && !snap.betweenShown ? 'brodor'
+        : who === 'martha' && !snap.betweenShown ? 'martha'
         : /Swallow/.test(run.place) ? 'ship'
         : /Portal/.test(run.place) ? 'portal'
         : 'tavern';

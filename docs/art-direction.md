@@ -329,9 +329,8 @@ hand; `TheCloak.mp3` (brought up 8 dB, a quiet recording) and `AllIn.mp3`.
 **Weather:** Becalmed has no sound (the Squall has the wind, the Fog bank the foghorn, the Rogue wave its own clip).
 
 **Music (since 17 Nov, the user's tracks):** the tavern tune at the Ghoul and Gourd, `YawningPortalTheme.mp3` at the
-Yawning Portal, `SaltySwallowTheme.mp3` aboard, `BrodorTheme.mp3` during Brodor's fight and Jaguar's during his
-(`PlaceMusic` in Hud, `setMusicFor` in sounds.ts; the originals stay in `art/audio/`). Still none: a theme for
-Martha, the Ghoul and Gourd's boss. The tavern's crowd ambience (`Ambience.mp3`) still plays under every place,
+Yawning Portal, `SaltySwallowTheme.mp3` aboard, `MarthaTheme.mp3`, `BrodorTheme.mp3` and Jaguar's during their fights
+(`PlaceMusic` in Hud, `setMusicFor` in sounds.ts; the originals stay in `art/audio/`). Every boss has a theme. The tavern's crowd ambience (`Ambience.mp3`) still plays under every place,
 the ship's too.
 
 **Waiting on the user's word:** `Whoa.mp3` is off until reworked (`WHOA_ON`); Dirty 20! and Astral Flood's wave have none, if wanted; a narrator for the intro film, if wanted (`IntroLine1.mp3` to 5).

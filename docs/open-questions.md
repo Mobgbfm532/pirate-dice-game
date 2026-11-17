@@ -15,7 +15,21 @@ day they happen, with what's been built marked as it lands.
 - A player away two minutes now leaves the table (my choice). Coming back later, they join as a new seat with
   full hearts mid-game. Fine among friends, or should a late return sit out until the next game?
 
-### Going live (the end-to-end check of 15 Nov)
+### Going live: re-checked 17 Nov
+The merge into `main` is still clean (main hasn't moved). Since 15 Nov a crawl saves itself, a player away two
+minutes leaves a friends' table, and the first load is smaller. Still standing, most glaring first:
+1. **The live Render service's settings, before the merge** (or the live game breaks): build command
+   `npm install && npm run build` (without it `/next` doesn't exist: `client/dist` isn't in git), a `SAVE_SECRET`,
+   and a `DATABASE_URL` (without it the leaderboard lives in a file the free plan wipes at every sleep). The same
+   Neon database as the test site (with its test scores), or a clean one?
+2. **`/` is still the old game.** Players at the live address get the classic page, with no way to the new one.
+   Decide: the new game at `/` (the old at `/classic`), or a link from the old page.
+3. **A safety net for an unexpected server error** (log it and keep running): one would end every table. Small.
+4. **One person per Tavern Crawl table** (a second person with the same `TVRN-` code joins the first one's run). Small.
+5. **`npm audit fix`**: 8 known weaknesses in the server's packages (express's and socket.io's parts). Small.
+6. Not yet tried: an iPhone, and the 15-17 Nov changes on your phone.
+
+### Going live (the end-to-end check of 15 Nov) (kept for the record)
 Checked: 181 server tests and 19 client tests pass, the client builds with no type errors and no dev hooks
 in it, the merge into `main` is clean, the test site serves this exact build, 17,200 junk messages didn't
 crash a test server. What's left to decide or fix before the merge:
