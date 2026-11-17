@@ -42,7 +42,12 @@ spots (the Bard) and a new event (the Cult of Kram).
    as it clears, you're standing in the Portal's hall. Ties to her gift (Mystery Flavour), no new painting,
    but it reads as a trick of hers rather than a journey.
 
-## Recommended
+## Recommended (**Built 17 Nov**, the user's pick: "Board, then doors")
+
+Built as `PortalArrival` in Hud (7.6 s, `sailStage: 'portal'` in game.ts, as Sylvester sits down, every run; a tap or
+Esc skips; dev `preview.sail('portal')`; stills in `previews/portal/`). The board is the game's own dark wood in a
+brass rim with the opponents' round portraits (no painting needed); the doors are drawn by the game (oak, iron
+bands, brass rings) over `yawning-portal.webp` until the user paints them. No sound yet. After Brodor: not built.
 
 **4 then 2**, about 7 s, a tap skips:
 1. The tournament board (3 s): the Ghoul and Gourd's names struck through, the Portal's silhouettes lighting.

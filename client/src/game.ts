@@ -216,7 +216,7 @@ export interface Snapshot {
     introAt: number; // when the current Tavern Crawl opponent was introduced
     introShowing: boolean; // their entrance card is up, until it's tapped away
     sailAt: number; // the Salty Swallow: Skipper Bren on the docks, then it sets sail, before Klarg's entrance card (0: none)
-    sailStage: 'dock' | 'sail'; // which of the two is up
+    sailStage: 'dock' | 'sail' | 'portal'; // which of the two is up (or the Yawning Portal's arrival, 17 Nov)
     ability: AbilityMoment | null;
     shopArrival: ShopArrival | null;
     // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
@@ -747,7 +747,10 @@ function introduceOpponent(state: GameState) {
     // The Salty Swallow sets sail (9 Nov, the user's): its scene first, as the ship's first opponent sits down;
     // his entrance card is underneath it. (Not for test scripts, whose cards go by themselves.)
     const sailing = run.place === 'The Salty Swallow' && (run.seated ?? run.enemy).id === 'klarg' && !scriptedIntro;
-    update({ introAt: performance.now(), introShowing: true, turn: null, isMyTurn: false, ...(sailing ? { sailAt: performance.now(), sailStage: 'dock' as const } : {}) });
+    // Arriving at the Yawning Portal (17 Nov, the user's pick of docs/portal-transition-brainstorm.md): the tournament
+    // board, then the Portal's doors opening on its well, as its first opponent sits down.
+    const arriving = run.place === 'The Yawning Portal' && (run.seated ?? run.enemy).id === 'sylvester' && !scriptedIntro;
+    update({ introAt: performance.now(), introShowing: true, turn: null, isMyTurn: false, ...(sailing ? { sailAt: performance.now(), sailStage: 'dock' as const } : arriving ? { sailAt: performance.now(), sailStage: 'portal' as const } : {}) });
     if (scriptedIntro) {
         const gone = performance.now() + INTRO_MS;
         momentFreeAt = Math.max(momentFreeAt, gone);
@@ -1435,7 +1438,7 @@ export const preview = {
     intro() { update({ introAt: performance.now(), introShowing: true }); },
     floodWave() { showFloodWave(); },
     // The Salty Swallow sets sail (its scene alone; hold: freeze it that many ms in, for stills).
-    sail(stage: 'dock' | 'sail' = 'sail') { update({ sailAt: performance.now(), sailStage: stage }); },
+    sail(stage: 'dock' | 'sail' | 'portal' = 'sail') { update({ sailAt: performance.now(), sailStage: stage }); },
     // Aboard: a change of sea's moment, e.g. sea('starboard', 'calm'); hold keeps it up that much longer.
     sea(id: SeaState['id'] = 'starboard', from: string | null = 'calm', hold = 0, face = 0) {
         const names = { calm: 'Calm seas', starboard: 'Listing to starboard', port: 'Listing to port', rogue: 'Heavy seas', squall: 'Squall', fog: 'Fog bank', becalmed: 'Becalmed' };

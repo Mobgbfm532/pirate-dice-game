@@ -40,9 +40,10 @@ day they happen, with what's been built marked as it lands.
   trailer's join where its second section repeats (about 27.8 s in).
 
 ### Questions waiting on the user's word
-- **The Ghoul and Gourd to the Yawning Portal** (`docs/portal-transition-brainstorm.md`, 17 Nov): which idea for a
-  transition screen (Claude recommends the tournament board, then the Portal's doors opening on the well)? After
-  Brodor too? Every run, or the first time only?
+- **The Ghoul and Gourd to the Yawning Portal** (`docs/portal-transition-brainstorm.md`): built 17 Nov, the user's
+  pick, the tournament board then the doors (every run, skippable). Open: the doors painting (the prompt is in
+  `docs/art-direction.md`), sounds (a heavy door, the well's hum, ink on the strikes) if wanted; the board after
+  Brodor too, before Bren on the quay?
 - **Multiplayer:** a player away two minutes leaves the table (Claude's choice); coming back later they join as a
   new seat with full hearts mid-game. Fine among friends, or should a late return sit out until the next game?
 - **The Ebon Shield in fog:** you see his hand (Claude's call, 17 Nov: "unaffected"), though he still can't see

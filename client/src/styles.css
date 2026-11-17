@@ -4208,3 +4208,94 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 .sea-news .sea-ward { margin-top: 6px; padding: 3px 12px; border-radius: 12px; border: 1px solid rgba(190, 220, 255, 0.55); background: rgba(6, 10, 22, 0.82);
     font-family: 'Alegreya', Georgia, serif; font-style: italic; font-weight: 700; font-size: clamp(13px, min(3.8vw, 3.6vh), 18px); color: #d8ecff; text-shadow: 0 1px 3px #000; }
 .round-sea .sea-ward { color: #bcdcff; font-weight: 700; }
+
+/* ==== Arriving at the Yawning Portal (17 Nov, the user's pick: the tournament board, then the doors) ==== */
+/* 0-3.3 s the board: the Ghoul and Gourd's five struck through in red ink one by one, the Portal's five lit as
+   silhouettes, the ship's dark. 3.1 s on the doors: they swing open on the well's cold light, the hall pushes in,
+   the name rises. Built from the game's own materials (dark wood, brass rim, parchment type, wax-seal red). */
+.portal-arrival { position: fixed; inset: 0; z-index: 62; overflow: hidden; background: #050403; cursor: pointer; }
+.pa-board-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px;
+    background: radial-gradient(ellipse at 50% 45%, rgba(70, 44, 20, 0.55), transparent 70%), #0b0704;
+    animation: pa-board-out 0.55s ease-in 3.25s both; }
+@keyframes pa-board-out { to { opacity: 0; transform: scale(1.08); } }
+.pa-board { width: min(94vw, 600px); padding: 16px 14px 18px; border-radius: 14px; text-align: center;
+    background: linear-gradient(#3a2414, #24150b); border: 2px solid rgba(224, 180, 76, 0.75);
+    box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.18), inset 0 0 40px rgba(0, 0, 0, 0.55), 0 14px 40px rgba(0, 0, 0, 0.7);
+    animation: pa-board-in 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes pa-board-in { from { opacity: 0; transform: translateY(18px) scale(0.96); } }
+.pa-board h2 { margin: 0 0 10px; font-family: 'Almendra', Georgia, serif; font-size: clamp(1.3rem, 6vw, 1.9rem); color: #ffd36a; letter-spacing: 0.04em; text-shadow: 0 2px 4px #000; }
+.pa-row { padding: 8px 0 10px; border-top: 1px solid rgba(224, 180, 76, 0.25); }
+.pa-place { display: block; margin-bottom: 6px; font-family: 'Almendra', Georgia, serif; font-size: clamp(0.95rem, 4vw, 1.15rem); color: var(--parchment); }
+.pa-faces { display: flex; justify-content: center; gap: clamp(6px, 2.4vw, 14px); }
+.pa-face { position: relative; width: clamp(48px, 14.5vw, 80px); aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, #4a2e18, #1b0f07); border: 2px solid rgba(224, 180, 76, 0.55); }
+.pa-face img { position: absolute; left: 50%; top: 4%; height: 150%; transform: translateX(-50%); }
+/* The Ghoul and Gourd: their faces, dimmed, each struck through in wax-seal red, one after another. */
+.pa-row.beaten .pa-face img { filter: saturate(0.6) brightness(0.8); }
+.pa-strike { position: absolute; left: -10%; top: 50%; width: 120%; height: 5px; border-radius: 3px; background: #c62828;
+    box-shadow: 0 0 6px rgba(255, 60, 40, 0.7); transform: rotate(-35deg) scaleX(0); transform-origin: left center;
+    animation: pa-strike 0.28s ease-out calc(0.65s + var(--i) * 0.22s) forwards; }
+@keyframes pa-strike { to { transform: rotate(-35deg) scaleX(1); } }
+/* The Portal: silhouettes, lit from behind in its well's cold blue-green as the row wakes. */
+.pa-row.next .pa-face { border-color: rgba(120, 230, 220, 0.4); }
+.pa-row.next .pa-face img { filter: brightness(0); animation: pa-backlit 0.6s ease-out calc(1.9s + var(--i) * 0.08s) both; }
+@keyframes pa-backlit { from { filter: brightness(0); } to { filter: brightness(0) drop-shadow(0 0 2px rgba(150, 255, 240, 1)) drop-shadow(0 0 10px rgba(80, 220, 210, 0.8)); } }
+.pa-row.next .pa-place { animation: pa-wake 0.5s ease-out 1.85s both; }
+@keyframes pa-wake { from { color: var(--parchment-dim); } to { color: #9ff3e8; text-shadow: 0 0 10px rgba(80, 220, 210, 0.7); } }
+.pa-note { display: block; margin-top: 6px; font-family: 'Alegreya', Georgia, serif; font-style: italic; font-size: clamp(0.85rem, 3.6vw, 1rem); color: #cfeee9;
+    animation: pa-note 0.5s ease-out 2.2s both; }
+@keyframes pa-note { from { opacity: 0; transform: translateY(4px); } }
+/* The ship's: dark shapes, a promise. */
+.pa-row.later { opacity: 0.45; }
+.pa-row.later .pa-face img { filter: brightness(0); }
+.pa-row.later .pa-face { border-color: rgba(224, 180, 76, 0.25); }
+
+/* The doors (drawn by the game until the user's painting): two oak leaves with iron bands and brass rings, over the hall. */
+.pa-doors-stage { position: absolute; inset: 0; perspective: 1200px; opacity: 0; animation: pa-doors-in 0.35s ease-out 3.05s forwards; }
+@keyframes pa-doors-in { to { opacity: 1; } }
+.pa-hall { position: absolute; inset: 0; background-size: cover; background-position: center; transform: scale(1.18); filter: brightness(0.75);
+    animation: pa-hall-in 3.8s cubic-bezier(0.2, 0.7, 0.3, 1) 3.6s forwards; }
+@keyframes pa-hall-in { to { transform: scale(1); filter: brightness(1); } }
+.pa-well-light { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: radial-gradient(ellipse 45% 60% at 50% 62%, rgba(190, 255, 245, 0.95), rgba(80, 220, 210, 0.55) 35%, rgba(40, 120, 160, 0.15) 65%, transparent 80%);
+    animation: pa-well 2.4s ease-out 3.75s forwards; }
+@keyframes pa-well { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0.25; } }
+.pa-doors { position: absolute; inset: 0; display: flex; transform-style: preserve-3d; }
+.pa-door { position: relative; flex: 1; height: 100%;
+    background:
+        linear-gradient(transparent 17%, #1c1a18 17%, #2b2724 19%, transparent 19%, transparent 79%, #1c1a18 79%, #2b2724 81%, transparent 81%),
+        repeating-linear-gradient(90deg, #4a2c16 0 46px, #3b2311 46px 48px, #55331a 48px 94px, #3b2311 94px 96px),
+        #44291a;
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.75); }
+.pa-door.left { transform-origin: left center; border-right: 2px solid #120a05; animation: pa-door-left 1.25s cubic-bezier(0.5, 0, 0.3, 1) 3.65s forwards; }
+.pa-door.right { transform-origin: right center; border-left: 2px solid #120a05; animation: pa-door-right 1.25s cubic-bezier(0.5, 0, 0.3, 1) 3.65s forwards; }
+@keyframes pa-door-left { to { transform: rotateY(-105deg); filter: brightness(0.4); } }
+@keyframes pa-door-right { to { transform: rotateY(105deg); filter: brightness(0.4); } }
+.pa-door .ring { position: absolute; top: 50%; width: 34px; height: 34px; margin-top: -17px; border-radius: 50%; border: 5px solid #c9a24a; box-shadow: 0 2px 4px #000, inset 0 0 3px rgba(0, 0, 0, 0.6); }
+.pa-door.left .ring { right: 18px; }
+.pa-door.right .ring { left: 18px; }
+/* The name rises as the doors open. */
+.pa-title { position: absolute; left: 0; right: 0; top: 16%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 16px; text-align: center;
+    opacity: 0; animation: pa-title 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 4.5s forwards; pointer-events: none; }
+@keyframes pa-title { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.pa-title strong { font-family: 'Almendra', Georgia, serif; font-size: clamp(34px, min(11vw, 10vh), 76px); line-height: 1; color: #eafffb;
+    text-shadow: 0 0 22px rgba(80, 220, 210, 0.8), 0 3px 6px #000; }
+.pa-title span { font-family: 'Alegreya', Georgia, serif; font-style: italic; font-size: clamp(16px, min(5vw, 4.6vh), 24px); color: #ffe7a8; text-shadow: 0 2px 4px #000, 0 0 12px rgba(0, 0, 0, 0.9); }
+@media (prefers-reduced-motion: reduce) {
+    .pa-door.left, .pa-door.right { animation: none; opacity: 0; }
+    .pa-hall { animation: none; transform: none; filter: none; }
+}
+/* (A computer: the board larger. A phone on its side: compact, so its three rows fit in 390 px.) */
+@media (min-width: 900px) and (min-height: 600px) {
+    .pa-board { width: min(70vw, 780px); padding: 22px 24px 24px; }
+    .pa-face { width: clamp(64px, 7vw, 100px); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+    .pa-board { width: min(80vw, 560px); padding: 8px 12px 10px; }
+    .pa-board h2 { margin-bottom: 4px; font-size: 1.15rem; }
+    .pa-row { padding: 4px 0 5px; }
+    .pa-place { margin-bottom: 3px; font-size: 0.85rem; }
+    .pa-face { width: clamp(36px, 10vh, 48px); }
+    .pa-note { margin-top: 3px; font-size: 0.8rem; }
+    .pa-title { top: 10%; }
+}

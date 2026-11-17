@@ -2776,6 +2776,61 @@ function BrenSilhouette() {
     );
 }
 
+// Arriving at the Yawning Portal (17 Nov, the user's pick: "Board, then doors"; docs/portal-transition-brainstorm.md).
+// First the tournament board, built from the game's own materials (dark wood in a brass rim, like the tally board):
+// a row per place, the Ghoul and Gourd's five struck through in red ink one by one, the Portal's five lighting up as
+// silhouettes, the ship's still dark. Then the Portal's doors swing open on its well's light and the hall behind,
+// and its name rises. A tap or Esc skips. (The doors are drawn by the game until the user's painting comes.)
+const PORTAL_MS = 7600;
+const BOARD_ROWS: { place: string; who: { art: string; name: string }[]; state: 'beaten' | 'next' | 'later' }[] = [
+    { place: 'The Ghoul and Gourd', state: 'beaten', who: [{ art: 'mcgrath', name: 'Sperm McGrath' }, { art: 'frak', name: 'Frak' }, { art: 'danhausen', name: 'Danhausen' }, { art: 'duke', name: 'Duke Morrigan' }, { art: 'martha', name: 'Martha/Mystery' }] },
+    { place: 'The Yawning Portal', state: 'next', who: [{ art: 'sylvester', name: '?' }, { art: 'vaelin-inkhand', name: '?' }, { art: 'stason', name: '?' }, { art: 'ridgeler', name: '?' }, { art: 'brodor', name: '?' }] },
+    { place: 'The Salty Swallow', state: 'later', who: [{ art: 'klarg', name: '?' }, { art: 'rokr', name: '?' }, { art: 'aed', name: '?' }, { art: 'hangman', name: '?' }, { art: 'jaguar', name: '?' }] }
+];
+function PortalArrival({ at }: { at: number }) {
+    useEffect(() => {
+        const timers = [setTimeout(() => actions.endSail(), Math.max(0, PORTAL_MS - (performance.now() - at)))];
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.endSail(); };
+        window.addEventListener('keydown', onKey);
+        return () => { timers.forEach(clearTimeout); window.removeEventListener('keydown', onKey); };
+    }, [at]);
+    const art = (a: string) => `${import.meta.env.BASE_URL}art/${a}.webp`;
+    return createPortal(
+        <div className="portal-arrival" role="dialog" aria-label="On to the Yawning Portal" onClick={() => actions.endSail()}>
+            <div className="pa-board-stage">
+                <div className="pa-board">
+                    <h2>The Tournament</h2>
+                    {BOARD_ROWS.map((row, r) => (
+                        <div key={row.place} className={`pa-row ${row.state}`}>
+                            <span className="pa-place">{row.place}</span>
+                            <div className="pa-faces">
+                                {row.who.map((w, i) => (
+                                    <span key={w.art} className="pa-face" style={{ '--i': i, '--r': r } as React.CSSProperties}>
+                                        <img src={art(w.art)} alt="" draggable={false} />
+                                        {row.state === 'beaten' && <i className="pa-strike" aria-hidden="true" />}
+                                    </span>
+                                ))}
+                            </div>
+                            {row.state === 'next' && <span className="pa-note">Five rivals who play their best</span>}
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div className="pa-doors-stage" aria-hidden="true">
+                <div className="pa-hall" style={{ backgroundImage: `url("${import.meta.env.BASE_URL}art/yawning-portal.webp")` }} />
+                <span className="pa-well-light" />
+                <div className="pa-doors"><span className="pa-door left"><i className="ring" /></span><span className="pa-door right"><i className="ring" /></span></div>
+            </div>
+            <div className="pa-title">
+                <strong>The Yawning Portal</strong>
+                <span>Here they play their best.</span>
+            </div>
+            <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endSail(); }}>Skip ›</button>
+        </div>,
+        document.body
+    );
+}
+
 const SAIL_MS = 6400;
 function SetSail({ at }: { at: number }) {
     useEffect(() => {
@@ -3348,7 +3403,7 @@ export function Hud() {
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
-            {snap.sailAt ? (snap.sailStage === 'dock' ? <DockScene /> : <SetSail at={snap.sailAt} />) : <EncounterIntro snap={snap} />}
+            {snap.sailAt ? (snap.sailStage === 'dock' ? <DockScene /> : snap.sailStage === 'portal' ? <PortalArrival at={snap.sailAt} /> : <SetSail at={snap.sailAt} />) : <EncounterIntro snap={snap} />}
             {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
                 <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>
                     <OpponentCard enemy={state.tavernRun.seated ?? state.tavernRun.enemy} place={state.tavernRun.place} state={state} close="Tap to close" />
