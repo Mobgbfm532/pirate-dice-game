@@ -42,7 +42,7 @@
         reachAround: 'Reach Around',
         constellationBlur: 'Starry Form', // Rokr's (Constellation Blur until 25 Oct, Written in the Stars until 6 Nov)
         deadeye24: 'The Ace of Spades',
-        smoothTalk: 'Smooth Talk',
+        smoothTalk: 'Smooth Talker',
         mindWhip: 'Mind Whip',
         cursed: 'You are Cursed!',
         devil: 'Sympathy for the Devil',
@@ -56,7 +56,7 @@
         writtenInStars: 'Written in the Stars', // Rokr's
         deadEye: 'Dead Eye', // the Hangman's until 6 Nov (its code is dormant)
         penitentStare: 'Penitent Stare', // the Hangman's, beside his Ace
-        jaguarPhases: 'Smooth Talk', // Jaguar's first phase (the use is a Thonic he talks off your shelf)
+        jaguarPhases: 'Smooth Talker', // Jaguar's first phase (the use is a Thonic he talks off your shelf)
         cloak: 'The Cloak', // Jaguar's second phase
         allIn: 'All In', // and his last
         // Áéd's metamagic (11 Nov, the user's): his sorcery points, spent on four tricks.

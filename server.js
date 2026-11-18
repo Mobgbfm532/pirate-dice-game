@@ -123,7 +123,8 @@ LEAGUE_ROOMS.forEach(roomCode => {
 function recordLeagueGame(roomCode, room, winnerId) {
     if (!LEAGUE_ROOMS.has(roomCode)) return;
     let seen = new Set();
-    let names = room.playerOrder.map(id => room.players[id] && String(room.players[id].name).trim().substring(0, 20))
+    // (not those sitting this game out, waiting for the next)
+    let names = room.playerOrder.filter(id => room.players[id] && !room.players[id].waiting).map(id => room.players[id] && String(room.players[id].name).trim().substring(0, 20))
         .filter(name => name && !seen.has(playerKey(name)) && seen.add(playerKey(name)));
     if (names.length < 2) return;
     let winner = winnerId && room.players[winnerId] ? String(room.players[winnerId].name).trim().substring(0, 20) : null;
@@ -338,7 +339,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.jaguar,
         ability: 'jaguarPhases',
         blurb: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm.", // (the user's, 13 Nov)
-        powers: [{ name: "Smooth Talk", text: "Twice a fight: after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
+        powers: [{ name: "Smooth Talker", text: "Twice a fight: after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
     }
 ];
 
@@ -573,6 +574,11 @@ function pickThomStock(place) {
 }
 
 // The shelf, one slot more with the Potion Belt.
+// The Potion Belt left behind (18 Nov, the user's): the Thonic in its slot goes with it (the last on the shelf).
+function dropBeltThonics(room) {
+    let shelf = room.tavernRun.shelf;
+    if (shelf.length > shelfSizeOf(room)) shelf.splice(shelfSizeOf(room));
+}
 function shelfSizeOf(room) {
     return SHELF_SIZE + (hasKeepsake(room, 'potionBelt') ? KEEPSAKE_NUMBERS.beltSlots : 0);
 }
@@ -1588,7 +1594,7 @@ function performEndTurn(roomCode) {
         }
         if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
             room.players[currentId].score = Math.max(0, score - 3);
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.' });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talker', text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.' });
             io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.', color: "#ffb74d" });
         }
 
@@ -1641,6 +1647,12 @@ function forfeitIfStillAway(roomCode, room, token) {
     player.score = 0;
     if (room.turn) room.turn.ended = true;
     advanceTurn(roomCode);
+}
+
+// A friends' game under way: someone has played a hand or lost a heart, or it's past its first round.
+function gameUnderway(room) {
+    if (room.mode === 'tavern-crawl' || !room.roundPlayers.length) return false;
+    return room.roundNumber > 1 || room.playerOrder.some(id => room.players[id] && !room.players[id].waiting && (room.players[id].score !== null || room.players[id].lives < room.startingLives));
 }
 
 // A friends' table: a player still away after AWAY_LEAVE_MS gives up their seat. Not on their own turn
@@ -2116,17 +2128,15 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
     let safeNames = activeIds
         .filter(id => !lifeLosers.includes(id))
         .map(id => room.players[id] ? room.players[id].name : 'A player');
+    // (18 Nov, the user's: "Lost a life: name", not "Dust: name", which it said even for a valid lower hand.)
+    let count = lifeLosers.length === 1 ? lost[lifeLosers[0]] : 0;
     let resultLines = [
-        dustNames.length ? `Dust: ${dustNames.join(', ')}.` : null,
+        dustNames.length ? `${count > 1 ? `Lost ${count} lives` : lifeLosers.length > 1 ? 'Lost lives' : 'Lost a life'}: ${dustNames.join(', ')}.` : null,
         safeNames.length ? `Safe: ${safeNames.join(', ')}.` : null
     ].filter(Boolean).join('\n');
 
     if (lifeLosers.length > 0) {
-        let names = lifeLosers
-            .map(id => room.players[id] ? room.players[id].name : 'A player')
-            .join(', ');
-        let count = lifeLosers.length === 1 ? lost[lifeLosers[0]] : 0;
-        message = `${resultLines}\n${names} lost ${count === 1 ? 'a life' : count > 1 ? `${count} lives` : 'lives'}.\nThe round is over.`;
+        message = `${resultLines}\nThe round is over.`;
     } else if (tiedPlayers.length > 1) {
         let names = tiedPlayers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
@@ -2205,7 +2215,7 @@ function createTavernRun() {
 
 function getRandomAbilityRound(encounter) {
     if (!encounter || !encounter.ability) return 0;
-    // Jaguar's Smooth Talk belongs to his first phase (4 and 3 lives): ready from the first round, or a
+    // Jaguar's Smooth Talker belongs to his first phase (4 and 3 lives): ready from the first round, or a
     // fight that took him to 2 lives inside two rounds never saw it (13 Nov).
     if (encounter.ability === 'jaguarPhases') return 1;
     return Math.floor(Math.random() * 3) + 1;
@@ -2452,7 +2462,7 @@ function beginTavernRound(roomCode, room) {
 }
 
 // Jaguar Cantona, the final boss, in three phases by his lives left (since 25 Oct):
-//   Smooth Talk (3+ lives): once a round, up to abilityUses.jaguarPhases a fight, he talks a Thonic
+//   Smooth Talker (3+ lives): once a round, up to abilityUses.jaguarPhases a fight, he talks a Thonic
 //     off your shelf and drinks it (Healing heals him, Steady counts his dust as it lies); with
 //     your shelf empty he talks talkThreeWhenEmpty off your next finished hand instead.
 //   The Cloak (2 lives): he throws after you (cloakThrowsSecond), his dice hidden until his hand is done.
@@ -2476,7 +2486,7 @@ function beginJaguarRound(roomCode, room, encounter) {
     if (phase !== 'talk' && phase !== was) sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES[phase], text: JAGUAR_PHASE_TEXT[phase] });
 }
 
-// Smooth Talk (14 Nov, the user's): as the round after one he lost a heart in begins (a heart lost in his
+// Smooth Talker (14 Nov, the user's): as the round after one he lost a heart in begins (a heart lost in his
 // first phase), he demands one of your Thonics and drinks it: a Healing first (it heals the heart he lost),
 // else a Steady (his dust this round scores as it lies), else any other. Never an Elf Bar. Nothing on your
 // shelf: nothing then (an empty shelf costs you 3 at a round's end instead, smoothTalkAtEnd).
@@ -2494,7 +2504,7 @@ function jaguarDemandsThonic(roomCode, room, encounter, bot) {
     sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He demands your ${THONICS[id].name} and drinks it${what}.`, thonic: id });
 }
 
-// Jaguar's Smooth Talk with your shelf empty (14 Nov, the user's): at the round's end, never telegraphed, like
+// Jaguar's Smooth Talker with your shelf empty (14 Nov, the user's): at the round's end, never telegraphed, like
 // the Hangman's Penitent Stare. With both hands done, in his first phase, when he'd lose the round and you have
 // no Thonic (an Elf Bar doesn't count), he talks you into scoring talkThreeWhenEmpty less, only when that wins or
 // ties him the round (never in a cursed round). (With Thonics on your shelf he takes one instead, as the next
@@ -3131,12 +3141,15 @@ io.on('connection', (socket) => {
             }
 
         } else {
+            // A friends' game already under way (18 Nov, the user's: a late return, or anyone new): they sit out
+            // until the next game (no hearts, `waiting`), and are dealt in with everyone as it starts.
+            let late = gameUnderway(room);
             room.players[socket.id] = {
-                id: socket.id, token, name: finalName, avatar, lives: room.startingLives, score: null, busted: false, connected: true
+                id: socket.id, token, name: finalName, avatar, lives: late ? 0 : room.startingLives, score: null, busted: false, connected: true, ...(late ? { waiting: true } : {})
             };
             room.playerOrder.push(socket.id);
 
-            if (!room.isTieBreaker) {
+            if (!room.isTieBreaker && !late) {
                 if (!room.roundPlayers.includes(socket.id)) room.roundPlayers.push(socket.id);
             }
         }
@@ -3147,6 +3160,7 @@ io.on('connection', (socket) => {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
                     room.players[id].lives = room.startingLives;
+                    room.players[id].waiting = false;
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
@@ -3220,6 +3234,7 @@ io.on('connection', (socket) => {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
                     room.players[id].lives = room.startingLives;
+                    room.players[id].waiting = false;
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
@@ -3354,6 +3369,7 @@ io.on('connection', (socket) => {
             let index = run.keepsakes.findIndex(k => k.id === giveUp);
             if (index < 0) return;
             run.keepsakes.splice(index, 1);
+            dropBeltThonics(room);
         }
         run.purse -= price;
         run.stats.spent += price;
@@ -3571,6 +3587,7 @@ io.on('connection', (socket) => {
                 let index = run.keepsakes.findIndex(k => k.id === giveUp);
                 if (index < 0) return;
                 run.keepsakes.splice(index, 1);
+                dropBeltThonics(room);
             }
             run.keepsakes.push(drop);
         } else if (take === false) {

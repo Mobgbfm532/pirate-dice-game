@@ -84,7 +84,7 @@ const sfx = {
     // The sea die's dial (the user's, 13 Nov): the needle ticks past each sector line, and clunks as it lands on its face.
     dialNeedle: load('DialNeedle.mp3', 0.45),
     dialClunk: load('DialClunk.mp3', 0.8),
-    // Jaguar's (the user's, 17 Nov): Smooth Talk's two (he drinks your Thonic; he talks points off your
+    // Jaguar's (the user's, 17 Nov): Smooth Talker's two (he drinks your Thonic; he talks points off your
     // hand), the Cloak (brought up 8 dB to the others' level: a quiet recording) and All In.
     smoothTalkThonic: load('SmoothTalkThonic.mp3', ABILITY_VOLUME),
     smoothTalkMinus: load('SmoothTalkMinus.mp3', ABILITY_VOLUME),
@@ -138,6 +138,9 @@ const TUNES: Record<Tune, [HTMLAudioElement, number]> = {
     jaguar: [placeTune('JaguarBossBattle.mp3'), 0.15] // (9.8 MB, fetched only then)
 };
 let tuneNow: Tune = 'tavern';
+// The tavern's crowd (Ambience.mp3) is a tavern's: aboard the ship it goes quiet (18 Nov, the user's).
+const ABOARD: Tune[] = ['ship', 'jaguar'];
+const crowdVolume = () => (ABOARD.includes(tuneNow) ? 0 : AMBIENCE_VOLUME);
 const allTunes = () => Object.values(TUNES).map(([el]) => el); // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
 Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
 export type SceneAmbience = keyof typeof sceneAmbience;
@@ -547,7 +550,7 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Mind Whip': 'mindWhip',
     'You are Cursed!': 'cursed',
     'Sympathy for the Devil': 'sympathy',
-    'Smooth Talk': 'smoothTalkMinus', // (his Thonic demand plays smoothTalkThonic: game.ts)
+    'Smooth Talker': 'smoothTalkMinus', // (his Thonic demand plays smoothTalkThonic: game.ts)
     'The Cloak': 'theCloak',
     'All In': 'allIn',
     'Disguise Self': 'marthaAbility' // the user's clip (4 Nov); her switch of faces comes with the trick she copies
@@ -564,6 +567,7 @@ export function startMusic() {
     if (!now.paused) return;
     now.volume = volume;
     now.play().catch(() => {});
+    ambience.volume = crowdVolume(); // (quiet aboard the ship)
     ambience.play().catch(() => {});
 }
 
@@ -578,6 +582,7 @@ export function setMusicFor(next: Tune) {
     const [from] = TUNES[tuneNow];
     const [to, volume] = TUNES[next];
     tuneNow = next;
+    fade(ambience, crowdVolume(), 1800); // (the crowd: quiet aboard, back ashore)
     if (musicOff) return;
     if (allTunes().some(el => !el.paused)) { // (the music has started: after the first tap)
         to.currentTime = 0;
@@ -669,11 +674,11 @@ export function startSceneAmbience(name: SceneAmbience) {
     if (audioContext && audioContext.state === 'running') {
         const stop = startSceneLoop(audioContext, name);
         fade(song, full * duck, 700);
-        fade(ambience, AMBIENCE_VOLUME * duck, 700);
+        fade(ambience, crowdVolume() * duck, 700);
         return () => {
             stop();
             if (song === tune()[0]) fade(song, full, 1000);
-            fade(ambience, AMBIENCE_VOLUME, 1000);
+            fade(ambience, crowdVolume(), 1000);
         };
     }
     const el = sceneAmbience[name];
@@ -682,11 +687,11 @@ export function startSceneAmbience(name: SceneAmbience) {
     el.play().catch(() => {});
     fade(el, SCENE_VOLUME[name], 700);
     fade(song, full * duck, 700);
-    fade(ambience, AMBIENCE_VOLUME * duck, 700);
+    fade(ambience, crowdVolume() * duck, 700);
     return () => {
         fade(el, 0, 700, () => el.pause());
         if (song === tune()[0]) fade(song, full, 1000);
-        fade(ambience, AMBIENCE_VOLUME, 1000);
+        fade(ambience, crowdVolume(), 1000);
     };
 }
 

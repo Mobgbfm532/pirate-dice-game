@@ -94,8 +94,8 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 **The Hangman**: Dead Eye, and The Ace of Spades (his revolver)
 - Entrance card: "The Hangman seals your fate with the Ace of Spades. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24."
 
-**Jaguar Cantona**: Smooth Talk, then The Cloak, then All In
-- Entrance card: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm. Smooth Talk: twice a fight, after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him. At two lives, The Cloak. At his last, All In."
+**Jaguar Cantona**: Smooth Talker, then The Cloak, then All In
+- Entrance card: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm. Smooth Talker: twice a fight, after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him. At two lives, The Cloak. At his last, All In."
 - Badges: "The Cloak: Jaguar throws after you, his dice hidden"; "All In: whoever loses this round loses two hearts"
 
 ## Between fights

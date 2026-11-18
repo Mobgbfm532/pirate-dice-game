@@ -367,6 +367,12 @@ one too, or saves only last until the server restarts, which on the free tier is
     game's files; Brodor's dice repainted by the user (readable), Sylvester's paler; the tavern backdrops hold still
     (only the ship drifts); Astral Flood's new banner sound; the arrival at the Yawning Portal (the tournament board,
     then the doors); all pushed and on the test site.
+  - 18 Nov (the user's answers to the open questions): a friends' game under way seats a late return or a newcomer for
+    the next game ("Next game", `waiting`, `gameUnderway`); Smooth Talk renamed **Smooth Talker** (the banner class
+    `smooth-talker`; its painting and clips keep their file names); the "Classic game" link gone from the start screen;
+    a round's result "Lost a life: name"; the Potion Belt left behind drops its Thonic (`dropBeltThonics`); no tavern
+    crowd aboard (`crowdVolume` in sounds.ts); an expert player for the numbers, `balance/expert-crawl.js` (real crawls
+    on the real server, sped up).
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the
@@ -838,8 +844,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   keepsakes you don't have, for gold (`keepsakePrices`: Shield 30, Trap Card and Velvet Cushion
   15, Loyalty Card and Potion Belt 13, Loaded Die 8; priced under what each adds when bought
   around fight 3, `balance/experiments/keepsake-when.js`; `buyKeepsake`, `pickThomKeepsakes`; since 30 Oct also the Miser's Purse, Gambler's Charm and Bottomless Flask, and the Loaded Die at 12). A shelf holds up to 2 (`shelfSize`, the user's call, 18 Oct), carried
-  between fights (since 10 Nov a shelf may hold more than its size for a while: leaving the Potion Belt for a boss's
-  keepsake keeps its Thonic, drawn in an extra slot, until it's drunk). Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
+  between fights (since 18 Nov, the user's, leaving the Potion Belt behind drops the Thonic in its slot, the last on the
+  shelf: `dropBeltThonics`; from 10 Nov it was kept in an extra slot). Each Thonic is drunk at its own moment on your turn (server `drinkThonic`
   handler; the client's `drinkable()` mirrors it), with a cork pop:
 
   | Thonic | Price | When | Effect |

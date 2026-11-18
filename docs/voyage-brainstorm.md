@@ -110,6 +110,24 @@ Every leg now lists 1 round in 3 (the brainstorm gave Rokr no starboard and the 
 the rule wins). The Hangman keeps one calm face, as his storm has no gift without St Elmo's fire. To
 be simulated before the numbers are trusted.
 
+## Becalmed's look (18 Nov, the user asked "what look should Becalmed have")
+
+Now it has only a still plaque under Roll. What a dead calm could look and sound like, gentlest first:
+
+1. **Three lanterns** (Claude's pick): three small ship's lanterns on the plaque, or by the slot rail, one put out with
+   a curl of smoke at each throw of the hand. It's the rule shown as a picture: you see at a glance how many throws are
+   left, which is the one thing Becalmed changes. Both sides' hands.
+2. **The glassy sea**: as the sea die lands on Becalmed, the wave of the other seas is replaced by the sea going flat:
+   a slow mirror-like sheen across the moment, the needle drifting to a stop instead of swinging, "Becalmed" fading in
+   rather than slamming. The page doesn't heave (the other seas do).
+3. **The hanging sail**: the user's painting of a slack sail drooping over the top of the screen while the round lasts
+   (like the Squall's rain), stirring now and then and falling still. A painting to ask for.
+4. **Heat and stillness**: a faint heat shimmer over the felt and the dust in the air hanging, barely moving.
+5. **The sound**: no music change, the ship's creak slowing, a rope knocking against the mast, a single gull far off
+   (the user's clips). Silence is the point: the wind's loop stops.
+
+Claude's recommendation: 1 and 2 now (no new art needed), 3 and 5 when the user paints and records them.
+
 ## After the weather (the later steps)
 
 **Cut 10 Nov (the user): the player's say** (a Compass, a Spyglass, Yvesil's forecast, a Ginger Thonic): no keepsakes or forecasts for the sea. Still to come: choosing a course, events

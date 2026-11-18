@@ -21,72 +21,27 @@ day they happen, with what's been built marked as it lands.
 3. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
    server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
 
-### To judge on a phone (built, never seen there)
-- **17 Nov:** Divine Smite's quake (strong enough, or too much?); the Elf Bars' vapour clouds; Astral Flood no
-  longer stalling (does it still look right?); the ship's dice with clean pips, Jaguar's dark pips, Frak's yellow
-  6s (`previews/dice-eval/`); swapping a keepsake on Thom's back shelf; the Ebon Shield's line as a fight begins
-  and on the sea die; the turn score the size of the score to beat, both in Almendra; music per place, Martha's
-  theme and Jaguar's clips (the clips not yet heard in a real fight).
-- **15-17 Nov:** a crawl that saves itself (is restarting the fight the right price for a lost table, and is an
-  hour right?); the phone's start screen (the red Play bar, 44 px buttons, the Options sheet); the look check's
-  fixes (the footer tray: should your chip join it too? a computer's pool of light: strong enough? the choice
-  between fights; Áéd's painting, a pale rim still round his right-hand dice; the dice not yet thrown); the
-  multiplayer tally board and bigger cards; Klarg's stolen die (the bug fixed 15 Nov: was it what looked weird on
-  10 Nov?).
-- **12-13 Nov:** the start screen and interface; ability moments without a stutter; the ship's weather, Bren and
-  the sailing scene, Áéd.
-- **By ear:** the three sound beds re-encoded smaller on 16 Nov (`Ambience.mp3`, `IntroRain.mp3`,
-  `IntroTavernAmbience.mp3`); the Squall's wind (0.22), Jaguar's music (0.15) and the rogue wave (full); the
-  trailer's join where its second section repeats (about 27.8 s in).
-
 ### Questions waiting on the user's word
-- **The Cult of Kram** (built 17 Nov, the user's): "Kram abhors all ugly things"; spots 10% dearer while sworn; Klarg one
-  more Reach Around for a run that swore, told on his card. Claude's readings, to confirm: "known only when they face
-  Kram" taken as when they face **Klarg** (Kram himself never sits at the table); the 10% covers everything bought at
-  a spot (Thom's Thonics and keepsakes, the Shrine, the hot tub, the Bard, Johnny's Elf Bars), from the moment you swear
-  until the walk after your last sworn fight; Klarg's extra use holds for the rest of the run, however long ago you
-  swore.
-- **Abilities at their best moment** (built 17 Nov, the user's): Sylvester, Stason, Frak's Mind Whip, Divine Smite, Astral
-  Flood and Áéd's Heightened Dice now wait for a moment that pays (details in CLAUDE.md, "Abilities"). To see in play:
-  whether they now come too rarely. Open: You are Cursed!, Inkfire Brand and Starry Form still fire as soon as they're
-  ready (no information to wait for as a round begins); should they wait for a round that decides the fight? Martha
-  still picks her disguise at random: should she pick the one that helps most? The numbers (`abilityTiming`) are first
-  guesses.
+- **Becalmed's look** (the user asked, 18 Nov): ideas in `docs/voyage-brainstorm.md`, "Becalmed's look"; Claude recommends the three
+  lanterns (one put out at each throw), the glassy sea and the hanging sail, with the slack rigging's creak. Which?
 - **Gold and keepsakes** (`docs/economy-brainstorm.md`, 17 Nov evening): built the same evening, the user's: prices by
-  place (×1, ×1.5, ×2), keepsakes dearer, the Gilded Die and Bren's Compass. To try in play. Open: their paintings
-  (🎲 and 🧭 until then); the Compass rolls again by itself on rough weather (port, a Squall, Heavy seas, Fog, Becalmed):
-  should the player choose instead?; the other ideas in the doc (Fixer's Purse, Mercenary's Contract, Banker's Seal, Money
-  Belt, Pawnbroker's Ticket, Witch's Mirror, Spyglass); should gold left at the end count for more points?
-- **The walk to the Yawning Portal** (`docs/portal-transition-brainstorm.md`): built 17 Nov evening, the user's pick (the walk
-  through the city in place of the tournament board, their line "The CAWKs resurface to quench the challenger"). To see on
-  a phone. Open: sounds (footsteps, a heavy door, the well's hum) if wanted; something like it after Brodor, before Bren?
-- **Multiplayer:** a player away two minutes leaves the table (Claude's choice); coming back later they join as a
-  new seat with full hearts mid-game. Fine among friends, or should a late return sit out until the next game?
-- **The Ebon Shield in fog:** you see his hand (Claude's call, 17 Nov: "unaffected"), though he still can't see
-  yours. Keep, or should fog still hide his hand from you?
-- **Áéd:** too hard for the ship's third fight (the simple player won 23% against his six uses, 33% against
-  three)? His four tricks' texts are Claude's: anything he says? His Squall on face 3: another face, or another
-  storm? A painting per trick? His scales (an extra heart) left out?
+  place (×1, ×1.5, ×2), keepsakes dearer, the Gilded Die and Bren's Compass. To try in play (their paintings are in, 17 Nov). Open: the other ideas in the doc (Fixer's Purse, Mercenary's Contract, Banker's Seal, Money
+  Belt, Pawnbroker's Ticket, Witch's Mirror, Spyglass).
 - **The voyage:** the dials are first guesses, never simulated. Is All In with a rogue wave two rounds in three
-  too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Becalmed's look and sound
-  (only a still plaque now). Teach the opponents (and the simulator) that a wave is coming? The ship's ability
-  names (Smooth Talk, the Cloak, All In) are still working names.
+  too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Teach the opponents (and the simulator) that a wave is coming? The Cloak and All In
+  are still working names (Smooth Talk became Smooth Talker, 18 Nov).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
 - **The start screen:** clear enough on a phone? The computer's title on the left: good? The tavern tune on the
   first tap (idea 9)? The Hall of Legends' place and name, and its text on points? The hearts button for a new
-  table's lives clear enough? The die left out on phones under 740 px tall: OK? The "Classic game" link: keep?
+  table's lives clear enough? The die left out on phones under 740 px tall: OK? (The "Classic game" link is gone, 18 Nov.)
   Not built: a "How to play" card.
 - **Small things:**
-  - Tavern Crawl's round result says "Dust: [name]" for whoever lost a heart, even with a valid lower score.
-  - The Potion Belt left behind with 3 Thonics carried: the third is kept in an extra slot. Or lost?
-  - Cotton Candy Cloud in a fog bank does nothing more but still uses the puff. Leave, or don't offer it?
   - `Whoa.mp3` is off until reworked (`WHOA_ON`). Dirty 20!'s colour (`#c5d04a`) not seen by eye; a sound for it,
     and for Astral Flood's wave, if wanted.
 
 ### What a player would notice (found in the 17 Nov review; none built yet)
 - **Nothing teaches a newcomer on the table:** the entrance card explains the rules, but nothing shows how to keep
   a die or why Roll waits. A first-crawl hint or two against Sperm McGrath?
-- **The tavern's crowd plays aboard the ship** (`Ambience.mp3` under every place's music).
 - **Silences** (the list is in `docs/art-direction.md`): Becalmed; five scenes between fights with no loop of
   their own (Johnny, Jorvash, Darren, the Stranger, the thief); the synthesized sounds (the sea's swell, the
   ship's bell, the shared keepsake chime, the coins) could become real clips.
@@ -128,6 +83,14 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 18 Nov (the user's answers): everything in "To judge on a phone" is good. The Cult of Kram's "face Kram" meant Klarg (as
+  built). The abilities' timing, Bren's Compass rolling by itself, the walk to the Portal, the Ebon Shield showing his hand
+  in fog, Áéd and Cotton Candy Cloud in fog stay as they are. Gold left at the end already counts, a point a gold piece
+  (kept). Built the same day: a friends' game already under way seats a late return (or anyone new) for the next game
+  ("Next game" on their card, `waiting`, `gameUnderway`; a test); Smooth Talk is **Smooth Talker**; the start screen's
+  "Classic game" link is gone; a round's result says "Lost a life: name" (it said "Dust: name" even for a valid lower
+  hand); the Potion Belt left behind drops the Thonic in its slot (`dropBeltThonics`); no tavern crowd aboard the ship
+  (`crowdVolume` in sounds.ts). Numbers for an expert player: `balance/expert-crawl.js`, written up in `balance/README.md`.
 - 17 Nov: the old service worker (the classic page's, covering the whole site) stored everything the new game
   fetched; now it keeps only the classic page's few files and leaves the rest alone (found in the 17 Nov review).
 - 17 Nov: the Water of the Ebon Shield keeps the sea die off you for a fight (no list, Squall, Becalmed, rogue wave

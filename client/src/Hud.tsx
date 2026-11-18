@@ -262,7 +262,6 @@ function JoinScreen() {
                     </>
                 );
             })()}
-            <a className="classic-link" href="/">Classic game</a>
             <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
             {legendsOpen && <HallOfLegends me={name} onClose={() => setLegendsOpen(false)} />}
         </div>
@@ -449,9 +448,9 @@ function Players({ snap, state, ids, className = '' }: { snap: Snapshot; state: 
                             <Hearts lives={p.lives} starting={id === BOT_ID && state.tavernRun ? (state.tavernRun.seated ?? state.tavernRun.enemy).lives : state.startingLives} fight={fightKey(state)} player={id} />
                             {id === BOT_ID && state.tavernRun && <AbilityMarks state={state} />}
                         </div>
-                        {p.connected
-                            ? <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>
-                            : <div className="score away">Away</div>}
+                        {!p.connected ? <div className="score away">Away</div>
+                            : p.waiting ? <div className="score away">Next game</div>
+                            : <div className={`score ${scoreClass(state, id)}`}>{scoreText(p)}</div>}
                         {multiplayer && <SeatCallout snap={snap} id={id} />}
                     </div>
                 );
@@ -607,9 +606,9 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
                 {/* Their score this round, big once they've finished: what you have to beat (keyed, so
                     it lands with a pop each time it changes). */}
                 {/* (Away: a small word under the name, not in the score's place, where it ran over the hearts.) */}
-                {p.connected
-                    ? <div key={`${p.score}:${p.busted}`} className={`score ${scoreClass(state, id)} ${finished ? 'final' : ''}`}>{scoreText(p)}</div>
-                    : <div className="score away">Away</div>}
+                {!p.connected ? <div className="score away">Away</div>
+                    : p.waiting ? <div className="score away">Next game</div>
+                    : <div key={`${p.score}:${p.busted}`} className={`score ${scoreClass(state, id)} ${finished ? 'final' : ''}`}>{scoreText(p)}</div>}
                 <SeatCallout snap={snap} id={id} />
             </div>
         );
@@ -1614,7 +1613,7 @@ const ABILITY_ART: Record<string, string> = {
     'The Ace of Spades': 'ability-ace-of-spades.webp',
     'All In': 'ability-all-in.webp',
     // 27 Oct: Jaguar's.
-    'Smooth Talk': 'ability-smooth-talk.webp',
+    'Smooth Talker': 'ability-smooth-talk.webp',
     'The Cloak': 'ability-the-cloak.webp',
     // 28 Oct: the Ridgeler's.
     'Divine Smite': 'ability-divine-smite.webp',
@@ -1777,14 +1776,14 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {(!takeover && !moment.thonic && moment.name !== 'Shrine to the Lady' || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
-                {moment.ability === 'Smooth Talk' && fx && /talks you into (taking|scoring)/.test(moment.text ?? '') && <span className="minus">−3</span>}
+                {moment.ability === 'Smooth Talker' && fx && /talks you into (taking|scoring)/.test(moment.text ?? '') && <span className="minus">−3</span>}
                 {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>
             {fx && moment.ability === 'Reach Around' && (
                 <div className="claw-marks" aria-hidden="true"><span /><span /><span /></div>
             )}
-            {fx && moment.ability === 'Smooth Talk' && <div className="gold-sweep" aria-hidden="true" />}
+            {fx && moment.ability === 'Smooth Talker' && <div className="gold-sweep" aria-hidden="true" />}
             {fx && moment.ability === 'Back of the Head' && <div className="punch-burst" aria-hidden="true" />}
             {moment.ability === 'Disguise Self' && <div className="mask-flare" aria-hidden="true">🎭</div>}
             {keepsake && <div className={`keepsake-flare ${ELF_BARS.has(keepsake) || PAINTED_KEEPSAKES.has(keepsake) ? 'painted' : ''}`} aria-hidden="true">{ELF_BARS.has(keepsake) ? <img src={elfBarArt(keepsake)} alt="" /> : keepsakeIcon(keepsake)}</div>}

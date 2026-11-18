@@ -2127,8 +2127,8 @@ button.keepsake.used { opacity: 0.55; }
 .the-ace-of-spades .ability-banner .what { color: #eceff1; }
 
 /* Jaguar: Smooth Talk. A sweep of golden charm across the screen; a gold banner. */
-.smooth-talk .ability-banner { background: linear-gradient(#5d4300, #241a00); border-color: #ffd54f; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 213, 79, 0.6); }
-.smooth-talk .ability-banner .what { color: #fff8e1; }
+.smooth-talker .ability-banner { background: linear-gradient(#5d4300, #241a00); border-color: #ffd54f; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 213, 79, 0.6); }
+.smooth-talker .ability-banner .what { color: #fff8e1; }
 .gold-sweep {
     position: fixed; inset: 0; pointer-events: none;
     background: linear-gradient(105deg, transparent 35%, rgba(255, 224, 130, 0.45) 48%, rgba(255, 248, 225, 0.6) 50%, rgba(255, 224, 130, 0.45) 52%, transparent 65%);
@@ -2387,7 +2387,7 @@ button.keepsake.used { opacity: 0.55; }
 .takeover.reach-around { --flare: rgba(255, 171, 64, 0.5); }
 .takeover.starry-form { --flare: rgba(130, 170, 255, 0.55); }
 .takeover.the-ace-of-spades { --flare: rgba(236, 239, 241, 0.6); }
-.takeover.smooth-talk { --flare: rgba(255, 213, 79, 0.55); }
+.takeover.smooth-talker { --flare: rgba(255, 213, 79, 0.55); }
 
 /* Thom's back shelf (since 21 Oct): two keepsakes for gold, under the Thonics. Compact rows,
    so the counter still fits a small phone. */

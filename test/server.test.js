@@ -358,7 +358,7 @@ test("Jaguar's sea dial follows his phase (the user, 10 Nov)", async () => {
     for (const [lives, phase] of [[3, 'talk'], [2, 'cloak'], [1, 'allIn']]) {
         bot.lives = lives;
         room.tavernRun.encounterRound = 2;
-        room.tavernRun.abilityUsed = { jaguarPhases: 99 }; // (no Smooth Talk in the way)
+        room.tavernRun.abilityUsed = { jaguarPhases: 99 }; // (no Smooth Talker in the way)
         const unpin = pinFaces([3]);
         server.beginTavernRound(codeOf(hero), room);
         unpin();
@@ -482,7 +482,7 @@ test("Áéd's Heightened Dice never comes in a fight's first round; from the sec
     assert.ok(moves.includes('Heightened Dice'));
 });
 
-test("Jaguar's Smooth Talk is ready from his first round", async () => {
+test("Jaguar's Smooth Talker is ready from his first round", async () => {
     const hero = await tavernAgainst(fightOf('jaguar'), 'JagRound1');
     const room = roomOf(hero);
     for (let i = 0; i < 10; i++) {
@@ -832,7 +832,7 @@ test("the omens and Notaro Red work in a fight", async () => {
     }
 });
 
-// Jaguar's Smooth Talk (14 Nov, the user's): a Thonic as the round after one he lost a heart in begins; 3 less at a round's end with your shelf empty.
+// Jaguar's Smooth Talker (14 Nov, the user's): a Thonic as the round after one he lost a heart in begins; 3 less at a round's end with your shelf empty.
 async function jaguarRound(name, { mine, his, mineDust = false, hisDust = false, shelf = [], lives = 4 }) {
     const hero = await tavernAgainst(fightOf('jaguar'), name);
     const room = roomOf(hero);
@@ -847,7 +847,7 @@ async function jaguarRound(name, { mine, his, mineDust = false, hisDust = false,
     return { hero, room };
 }
 
-test("Jaguar's Smooth Talk: nothing as a round begins unless he lost a heart in the last", async () => {
+test("Jaguar's Smooth Talker: nothing as a round begins unless he lost a heart in the last", async () => {
     const hero = await tavernAgainst(fightOf('jaguar'), 'JagQuiet');
     const room = roomOf(hero);
     room.players.BOT_MOLAR.lives = 4;
@@ -858,13 +858,13 @@ test("Jaguar's Smooth Talk: nothing as a round begins unless he lost a heart in 
     assert.ok(!room.tavernRun.abilityUsed.jaguarPhases, 'not telegraphed');
 });
 
-test("Jaguar's Smooth Talk: after a round he loses a heart, he demands a Thonic as the next begins", async () => {
+test("Jaguar's Smooth Talker: after a round he loses a heart, he demands a Thonic as the next begins", async () => {
     // Losing 18 to your 20, Fizzy and Healing on your shelf: nothing at the round's end; he loses a heart,
     // and as the next round begins he takes your Healing and heals it.
     let { hero, room } = await jaguarRound('JagHeal', { mine: 20, his: 18, shelf: ['fizzy', 'healing'] });
     let atEnd = false;
-    hero.on('signatureMove', m => { if (m.ability === 'Smooth Talk' && /scoring/.test(m.text)) atEnd = true; });
-    let move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    hero.on('signatureMove', m => { if (m.ability === 'Smooth Talker' && /scoring/.test(m.text)) atEnd = true; });
+    let move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talker', 4000);
     server.evaluateTavernRound(codeOf(hero));
     assert.equal(room.players.BOT_MOLAR.lives, 3, 'he loses the heart');
     assert.equal(room.tavernRun.talkNext, room.tavernRun.encounterIndex);
@@ -875,7 +875,7 @@ test("Jaguar's Smooth Talk: after a round he loses a heart, he demands a Thonic 
     // No Healing: a Steady, and his dust that round scores as it lies.
     ({ hero, room } = await jaguarRound('JagSteady', { mine: 20, his: 18, shelf: ['fizzy', 'steady'] }));
     room.tavernRun.talkNext = room.tavernRun.encounterIndex;
-    move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talker', 4000);
     server.beginTavernRound(codeOf(hero), room);
     assert.match((await move).text, /Steady.*dust this round scores as it lies/);
     assert.equal(room.tavernRun.jaguarSteady, true);
@@ -889,15 +889,15 @@ test("Jaguar's Smooth Talk: after a round he loses a heart, he demands a Thonic 
     // A Clear-Eye stops it.
     ({ hero, room } = await jaguarRound('JagClear', { mine: 20, his: 18, shelf: ['clearEye', 'healing'] }));
     room.tavernRun.talkNext = room.tavernRun.encounterIndex;
-    move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talker', 4000);
     server.beginTavernRound(codeOf(hero), room);
     assert.equal((await move).cancelled, true);
     assert.deepEqual(room.tavernRun.shelf, ['healing']);
 });
 
-test("Jaguar's Smooth Talk with your shelf empty: 3 less at the round's end, only when it saves him", async () => {
+test("Jaguar's Smooth Talker with your shelf empty: 3 less at the round's end, only when it saves him", async () => {
     let { hero, room } = await jaguarRound('JagThree', { mine: 20, his: 18 });
-    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talk', 4000);
+    const move = waitFor(hero, 'signatureMove', m => m.ability === 'Smooth Talker', 4000);
     server.evaluateTavernRound(codeOf(hero));
     assert.equal((await move).extra, '20 → 17');
     assert.equal(room.players[hero.id].lives, 2);
@@ -906,7 +906,7 @@ test("Jaguar's Smooth Talk with your shelf empty: 3 less at the round's end, onl
     for (const [name, opts] of [['JagShort', { mine: 24, his: 18 }], ['JagShelf', { mine: 20, his: 18, shelf: ['fizzy'] }], ['JagElf', { mine: 24, his: 18, shelf: ['purpleHaze'] }]]) {
         ({ hero, room } = await jaguarRound(name, opts));
         let seen = null;
-        hero.on('signatureMove', m => { if (m.ability === 'Smooth Talk' && /scoring/.test(m.text)) seen = m; });
+        hero.on('signatureMove', m => { if (m.ability === 'Smooth Talker' && /scoring/.test(m.text)) seen = m; });
         server.evaluateTavernRound(codeOf(hero));
         await sleep(80);
         assert.equal(seen, null, name);
@@ -1129,6 +1129,22 @@ test("someone away from a friends' table for two minutes leaves it; back sooner,
     assert.equal(server.rooms.AWAY2.playerOrder.length, 2, 'still seated after the two minutes');
     assert.ok(!server.rooms.AWAY2.players[dId]);
     [a, b, c, e, back].forEach(s => s.disconnect());
+});
+
+test("joining a friends' game already under way, you sit out until the next game (18 Nov)", async () => {
+    const a = await join('Ann', 'LATE1', { token: 'ann-late' });
+    const b = await join('Ben', 'LATE1', { token: 'ben-late' });
+    await waitFor(b, 'gameStateUpdate', s => s.playerOrder.length === 2);
+    const room = server.rooms.LATE1;
+    assert.ok(!room.players[b.id].waiting, 'before anyone has played, you are dealt in');
+    room.players[a.id].lives = room.startingLives - 1; // (a heart lost: the game is under way)
+    const c = await join('Cal', 'LATE1', { token: 'cal-late' });
+    const seen = await waitFor(c, 'gameStateUpdate', s => s.players[c.id]);
+    assert.equal(seen.players[c.id].waiting, true);
+    assert.equal(seen.players[c.id].lives, 0, 'no hearts this game');
+    assert.ok(!room.roundPlayers.includes(c.id), 'not in this round');
+    assert.ok(room.playerOrder.includes(c.id), 'but seated for the next game');
+    [a, b, c].forEach(s => s.disconnect());
 });
 
 test("a Tavern Crawl is one person's: someone else at its table is turned away; its owner can come back (17 Nov)", async () => {
@@ -2395,7 +2411,7 @@ test("the Duke saves his Devil when he doesn't need it: your 13 against his 2, 4
     const result = waitFor(hero, 'roundResult', () => true, 6000);
     await playHand(hero, room, [2, 4, 3, 3, 3, 4]); // 13
     assert.deepEqual(await hand, [1, 2, 4, 5, 5, 5], 'he kept the lot: 16 beats 13');
-    assert.match((await result).message, /Dust: Thirteen/, 'you lose the life');
+    assert.match((await result).message, /Lost a life: Thirteen/, 'you lose the life');
     assert.ok(!room.tavernRun.abilityUsed.devil, 'his Devil saved for a round that needs it');
 });
 
@@ -2828,7 +2844,7 @@ test("the Ridgeler's Divine Smite: if he wins the round, you lose two hearts", a
     const result = waitFor(hero, 'roundResult', () => true, 8000);
     const hammer = waitFor(hero, 'signatureMove', m => m.ability === 'Divine Smite' && m.hit, 8000);
     await playHand(hero, room, [2, 4, 1, 1, 1, 1]); // 4: he beats it
-    assert.match((await result).message, /lost 2 lives/);
+    assert.match((await result).message, /Lost 2 lives/);
     await hammer; // the hammer lands: its moment again, the sound and the screen shake
     assert.equal(room.players[hero.id].lives, 1);
 });

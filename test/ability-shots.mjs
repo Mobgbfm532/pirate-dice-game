@@ -31,8 +31,8 @@ const ABILITIES = {
     // (The Hangman's two come only after he has lost a life, or at his last: usually stand-ins.)
     penitentStare: { fight: 12, name: 'Penitent Stare', who: 'The Hangman' },
     aceOfSpades: { fight: 12, name: 'The Ace of Spades', who: 'The Hangman' },
-    // Jaguar's phases (Smooth Talk at 3+ lives, The Cloak at 2): they rarely come up in time, so usually stand-ins.
-    smoothTalk: { fight: 13, name: 'Smooth Talk', who: 'Jaguar Cantona' },
+    // Jaguar's phases (Smooth Talker at 3+ lives, The Cloak at 2): they rarely come up in time, so usually stand-ins.
+    smoothTalk: { fight: 13, name: 'Smooth Talker', who: 'Jaguar Cantona' },
     cloak: { fight: 13, name: 'The Cloak', who: 'Jaguar Cantona' },
     allIn: { fight: 13, name: 'All In', who: 'Jaguar Cantona' }
 };

@@ -28,7 +28,7 @@ module.exports = {
         suckerPunch: 1, inkfire: 1, flourish: 2, divineSmite: 1, astralFlood: 1,
         reachAround: 2, constellationBlur: 2, deadeye24: 1, smoothTalk: 1,
         // The Salty Swallow as the final tier (25 Oct; balance/experiments/final-ship.js): Rokr's
-        // Written in the Stars (turns a fight), the Hangman's Dead Eye, Jaguar's Smooth Talk
+        // Written in the Stars (turns a fight), the Hangman's Dead Eye, Jaguar's Smooth Talker
         // (Thonics he talks off your shelf, in his first phase).
         writtenInStars: 3, deadEye: 1, jaguarPhases: 2,
         // 6 Nov, the user's: the Hangman's Penitent Stare in place of Dead Eye.

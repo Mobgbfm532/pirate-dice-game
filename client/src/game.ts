@@ -27,6 +27,7 @@ export interface Player {
     busted: boolean;
     connected: boolean;
     scoreHidden?: boolean; // a fog bank: they've finished, but their hand stays hidden until yours is done
+    waiting?: boolean; // joined a friends' game under way: sits out until the next game (18 Nov)
 }
 
 export interface Keepsake { id: string; name: string; text: string }
@@ -786,7 +787,7 @@ socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
 });
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
-const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare', 'The Ace of Spades', 'Smooth Talk', 'Mind Whip', 'You are Cursed!', 'Sympathy for the Devil',
+const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare', 'The Ace of Spades', 'Smooth Talker', 'Mind Whip', 'You are Cursed!', 'Sympathy for the Devil',
     'Disguise Self', 'Back of the Head', 'Inkfire Brand', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In',
@@ -803,8 +804,8 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
     const steal = data.ability === 'Reach Around';
     const flood = data.ability === 'Astral Flood' && !data.cancelled;
     enqueueMoment(() => {
-        // (Jaguar's Smooth Talk has two clips: drinking your Thonic, or talking points off your hand.)
-        const sound = data.ability === 'Smooth Talk' && data.thonic ? 'smoothTalkThonic' : ABILITY_SOUNDS[data.ability];
+        // (Jaguar's Smooth Talker has two clips: drinking your Thonic, or talking points off your hand.)
+        const sound = data.ability === 'Smooth Talker' && data.thonic ? 'smoothTalkThonic' : ABILITY_SOUNDS[data.ability];
         if (data.cancelled) { /* a Clear-Eye stopped it: silent */ }
         else if (data.disguise && data.ability !== 'Disguise Self') {
             playSound('marthaSwitch');
