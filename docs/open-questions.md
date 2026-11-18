@@ -83,6 +83,8 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 18 Nov: points (`docs/points-brainstorm.md`): a perfect hand is worth 50 (a 24, or a cursed Perfect ...4?), and winning
+  the crawl 2,000. The other parts stay as they are.
 - 18 Nov (the user's answers): everything in "To judge on a phone" is good. The Cult of Kram's "face Kram" meant Klarg (as
   built). The abilities' timing, Bren's Compass rolling by itself, the walk to the Portal, the Ebon Shield showing his hand
   in fog, Áéd and Cotton Candy Cloud in fog stay as they are. Gold left at the end already counts, a point a gold piece

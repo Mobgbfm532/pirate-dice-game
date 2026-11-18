@@ -111,6 +111,24 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > fifth of the face's width, with no rims, studs, rings or highlights. No emblems or decorations on any face.
 > Flat even lighting, no glare." And a background unlike the dice, e.g. light grey behind gold.)
 
+**Becalmed** (18 Nov, the user asked for its art; no sound or music, the user's call; ideas in `docs/voyage-brainstorm.md`, "Becalmed's look")
+- `art/becalmed-sail.jpg`, the slack sail, hung over the top of the screen while a becalmed round lasts (as the Squall's
+  rain is), wide, about 1584 x 896:
+> The underside of a great weathered canvas sail on a pirate ship, hanging slack and motionless from a heavy wooden
+> yard across the very top of the picture, seen from below, filling the top half of a wide image edge to edge, its
+> lower edge drooping in soft heavy folds with patches and old stitching, loose ropes and a reef line hanging limp
+> from it, warm evening light glowing through the canvas from above, everything still. The bottom half of the picture
+> is plain: on a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean
+> edges, no text, no lettering. *+ style line*
+- `art/becalmed-lantern-lit.jpg` and `art/becalmed-lantern-out.jpg`, the three lanterns that count a becalmed hand's
+  throws (one goes out at each throw), square item icons:
+> One small brass ship's lantern with a wire cage and glass panes, a warm candle flame burning inside, a carrying ring
+> on top. One object only, centred and filling the frame, bold clear silhouette that reads at a small size, thick dark
+> outline. On a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean
+> edges, no text, no lettering. Square image. *+ style line*
+>
+> (The same lantern for the second, its flame put out: the glass dark, a thin curl of grey smoke rising from the top.)
+
 **Vaelin Inkhand's dice, repainted** (17 Nov, the user's: "inky black but with pips that are legible"; `art/dice-vaelin.jpg`, the old ink-stained ivory one kept as `dice-vaelin-v1.jpg`; **painted by the user 17 Nov and in the game**: the 1's ring redrawn crisp, `RING_ONE`)
 > A 3 by 2 sprite sheet of six square die faces, evenly spaced on a plain flat light grey background, each face
 > filling its square, row one showing 1, 2, 3 and row two showing 4, 5, 6 pips in standard die layouts. The faces are

@@ -3635,3 +3635,21 @@ test("Divine Smite and Astral Flood wait until a heart can really be taken", asy
     server.beginTavernRound(codeOf(hero), room);
     assert.equal(room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind, 'smite');
 });
+
+test('points: 50 a perfect hand (a 24, or a cursed Perfect ...4?), 2,000 for winning the crawl (18 Nov)', async () => {
+    const { hero, room } = await tavernTable('Perfecto');
+    const run = room.tavernRun;
+    room.players.BOT_MOLAR.lives = 3;
+    run.roundEffect = { kind: 'curse', by: 'opponent', ability: 'cursed' };
+    opponentAlwaysDusts(hero, room);
+    await playHand(hero, room, [2, 4, 1, 1, 1, 1]); // a cursed round's Perfect ...4?
+    for (let i = 0; i < 100 && run.stats.perfect24s < 1; i++) await sleep(20);
+    assert.equal(run.stats.perfect24s, 1);
+    run.stats.encountersDefeated = server.TAVERN_ENCOUNTERS.length;
+    const won = server.getTavernScoreSummary(room, true);
+    assert.equal(won.breakdown.perfect, BALANCE.points.perPerfect24);
+    assert.equal(won.breakdown.champion, BALANCE.points.champion);
+    assert.ok(won.lines.some(l => /Crawl champion/.test(l)));
+    run.stats.encountersDefeated = 14;
+    assert.equal(server.getTavernScoreSummary(room, false).breakdown.champion, 0, 'not for a run that fell');
+});

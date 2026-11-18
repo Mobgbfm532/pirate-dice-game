@@ -1598,7 +1598,9 @@ function performEndTurn(roomCode) {
             io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.', color: "#ffb74d" });
         }
 
-        if (currentId !== BOT_ID && room.players[currentId].score === 24 && room.tavernRun.stats) {
+        // (18 Nov: a perfect hand is worth points, so it counts as the game celebrates it: a 24, or in a cursed
+        // round the Perfect ...4?, four 1s with the 2 and the 4; a cursed 24 isn't one.)
+        if (currentId !== BOT_ID && !busted && room.players[currentId].score === (cursed ? 4 : 24) && room.tavernRun.stats) {
             room.tavernRun.stats.perfect24s++;
             room.tavernRun.stats.perfectGold += GOLD.perfect24;
             room.tavernRun.purse += GOLD.perfect24;
@@ -2234,11 +2236,12 @@ function getTavernScoreSummary(room, completedRun = false) {
         hearts: POINTS.perHeartLeft * (stats.heartsSpared || 0),
         perfect: POINTS.perPerfect24 * stats.perfect24s,
         reached: fell ? POINTS.reachedPerPlace * (beaten + 1) : 0,
+        champion: completedRun ? POINTS.champion || 0 : 0, // (beating Jaguar: the crawl won, 18 Nov)
         gold: Math.round(POINTS.perGold * totalGold),
         // and the gold side, for the record
         purse: totalGold, events: stats.eventGold, spent: stats.spent
     };
-    let points = breakdown.fights + breakdown.hearts + breakdown.perfect + breakdown.reached + breakdown.gold;
+    let points = breakdown.fights + breakdown.hearts + breakdown.perfect + breakdown.reached + breakdown.champion + breakdown.gold;
     return {
         points,
         totalGold,
@@ -2247,6 +2250,8 @@ function getTavernScoreSummary(room, completedRun = false) {
             `Points: ${points}`,
             `Opponents beaten: ${breakdown.fights}`,
             `Hearts spared: ${breakdown.hearts}`,
+            ...(breakdown.perfect ? [`Perfect hands (${stats.perfect24s} × ${POINTS.perPerfect24}): ${breakdown.perfect}`] : []),
+            ...(breakdown.champion ? [`Crawl champion: ${breakdown.champion}`] : []),
             ...(fell ? [`How far you got: ${breakdown.reached}`] : []),
             `Gold left (${goldText(totalGold)}): ${breakdown.gold}`
         ]
@@ -3869,4 +3874,4 @@ if (require.main === module) {
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

@@ -117,7 +117,8 @@ module.exports = {
     points: {
         perPlace: 100,        // each opponent beaten: 100 x their place (McGrath 100 ... Jaguar 1,400)
         perHeartLeft: 25,     // each heart still standing when a fight is won
-        perPerfect24: 0,      // a perfect 24 (none for now, as with gold)
+        perPerfect24: 50,     // each perfect hand: a 24, or a cursed round's Perfect ...4? (18 Nov, the user's; it was 0)
+        champion: 2000,       // beating Jaguar, the crawl won (18 Nov, the user's), so a finished run tops any that fell
         reachedPerPlace: 25,  // a run that ends: 25 x the place of the opponent you fell to
         perGold: 1            // the purse at the end: 1 point a gold piece
     },

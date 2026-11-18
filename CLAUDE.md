@@ -835,7 +835,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **Points and the leaderboard (since 23 Oct):** the run's score is points, not the purse
   (`getTavernScoreSummary`, `BALANCE.points`): 100 x the place of each opponent beaten, 25 per
   heart left at each win (`stats.heartsSpared`), 25 x the place a lost run fell at, and the purse
-  at the end at 1 point a gold piece. Leaderboard entries are `{ name, points, gold }` (each
+  at the end at 1 point a gold piece; since 18 Nov (the user's, `docs/points-brainstorm.md`) 50 for each perfect hand
+  (`perPerfect24`: a 24, or a cursed round's Perfect ...4?; `stats.perfect24s`) and 2,000 for winning the crawl
+  (`champion`). Leaderboard entries are `{ name, points, gold }` (each
   name's best; an older entry's gold counts as points). No made-up names: `leaderboard.json` is
   no longer in git and starts empty. The run-over screen shows the points and their parts.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from

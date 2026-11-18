@@ -128,6 +128,8 @@ Now it has only a still plaque under Roll. What a dead calm could look and sound
 
 Claude's recommendation: 1 and 2 now (no new art needed), 3 and 5 when the user paints and records them.
 
+18 Nov, the user: no sounds or music for it. The art prompts (the slack sail, the lit and put-out lantern) are in `docs/art-direction.md`, "Becalmed".
+
 ## After the weather (the later steps)
 
 **Cut 10 Nov (the user): the player's say** (a Compass, a Spyglass, Yvesil's forecast, a Ginger Thonic): no keepsakes or forecasts for the sea. Still to come: choosing a course, events

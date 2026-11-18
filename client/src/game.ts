@@ -155,7 +155,7 @@ export interface TavernSummary {
     fellTo: string | null;
     points: number; // the leaderboard's score (since 23 Oct)
     gold: number;    // the purse at the end
-    breakdown: { fights: number; hearts: number; perfect: number; reached: number; gold: number; purse: number; events: number; spent: number };
+    breakdown: { fights: number; hearts: number; perfect: number; reached: number; champion?: number; gold: number; purse: number; events: number; spent: number };
     stats: { encountersDefeated: number; livesLost: number; keepsakesActivated: number; perfect24s: number };
     keepsakes: string[];
 }

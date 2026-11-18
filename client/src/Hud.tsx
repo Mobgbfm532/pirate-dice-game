@@ -1369,7 +1369,8 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
     const rows: [string, string][] = [
         ['Opponents beaten', String(b.fights)],
         ['Hearts spared', String(b.hearts)],
-        ...(b.perfect ? [['Perfect 24s', String(b.perfect)] as [string, string]] : []),
+        ...(b.perfect ? [['Perfect hands', String(b.perfect)] as [string, string]] : []),
+        ...(b.champion ? [['Crawl champion', String(b.champion)] as [string, string]] : []),
         ...(b.reached ? [['How far you got', String(b.reached)] as [string, string]] : []),
         [`Gold left · ${coins(b.purse)}`, String(b.gold)]
     ];
