@@ -124,6 +124,13 @@ const DIE_SHAPE = clippedCube(DIE_HALF, 0.14); // matches the drawn dice's corne
 // The Salty Swallow listing (9 Nov): gravity leans toward the low side (+x, the right, to starboard),
 // so the dice drift that way as they land. Only the look: the faces are still the server's.
 const LEAN_PULL = 6.5;
+// The throw's feel (18 Nov): how hard the dice are thrown, and the rails: a die that reaches the far rail stays near
+// it instead of bouncing back across (the user: "sometimes they barely roll across the dice tray"). Mutable for the dev
+// hook's measurements (window.__game.throwFeel).
+// Measured 18 Nov over 30 six-dice throws each: every short die was in the back row, run into by the front one; starting
+// it 1.5 higher (it arcs over) and the front row a little faster (out of its way) halves the short dice; a deader rail,
+// a harder back row or a harder throw overall didn't help as much. The rest is the choice of throw below.
+export const throwFeel = { speedMin: 10, speedMax: 13, wallRestitution: 0.3, wallFriction: 0.3, rearBoost: 0, rearLift: 1.5, frontBoost: 3 };
 
 function buildWorld(lean = 0) {
     const world = new CANNON.World({ gravity: new CANNON.Vec3(lean * LEAN_PULL, -24, 0) });
@@ -132,6 +139,8 @@ function buildWorld(lean = 0) {
 
     const diceMaterial = new CANNON.Material('dice');
     const tableMaterial = new CANNON.Material('table');
+    const wallMaterial = new CANNON.Material('wall');
+    world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, wallMaterial, { friction: throwFeel.wallFriction, restitution: throwFeel.wallRestitution }));
     world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, tableMaterial, { friction: 0.3, restitution: 0.3 }));
     world.addContactMaterial(new CANNON.ContactMaterial(diceMaterial, diceMaterial, { friction: 0.2, restitution: 0.4 }));
 
@@ -151,7 +160,7 @@ function buildWorld(lean = 0) {
     ];
     const walls: CANNON.Body[] = [];
     wallBoxes.forEach(([x, z, hx, hz]) => {
-        const wall = new CANNON.Body({ mass: 0, material: tableMaterial, shape: new CANNON.Box(new CANNON.Vec3(hx, h, hz)) });
+        const wall = new CANNON.Body({ mass: 0, material: wallMaterial, shape: new CANNON.Box(new CANNON.Vec3(hx, h, hz)) });
         wall.position.set(x, h, z);
         world.addBody(wall);
         walls.push(wall);
@@ -183,11 +192,13 @@ function simulateOnce(count: number, direction: 1 | -1, lean = 0) {
         const cz = (TRAY.minZ + TRAY.maxZ) / 2;
         body.position.set(
             startX + direction * col * 1.3 + rand(-0.1, 0.1),
-            rand(0.85, 1.1),
+            rand(0.85, 1.1) + (col === 0 ? throwFeel.rearLift : 0), // (the back row higher, to arc over the front one)
             cz + (row - (rows - 1) / 2) * 1.3 + rand(-0.1, 0.1)
         );
         body.quaternion.setFromEuler(rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2));
-        const speed = rand(10, 13);
+        // (A little harder since 18 Nov, the user's: "sometimes they barely roll across the dice tray"; it was 10-13.)
+        // (the back row, which starts behind the front one, a little harder, so it doesn't run into it and stall)
+        const speed = rand(throwFeel.speedMin, throwFeel.speedMax) + (col === 0 ? throwFeel.rearBoost : throwFeel.frontBoost);
         body.velocity.set(direction * speed, rand(-1, 0.3), rand(-1.6, 1.6));
         // Forward roll: spinning about z at about the rate that matches rolling on the felt
         // (speed / half-size), plus some wobble so it isn't a perfect wheel.
@@ -237,8 +248,13 @@ function simulateOnce(count: number, direction: 1 | -1, lean = 0) {
         world.step(STEP);
     }
 
-    return { recorded, bodies, impacts, flat: bodies.every(isFlat), frames: recorded.length / (count * FLOATS_PER_DIE) };
+    // Across: every die ends past the tray's middle, on the far side from where it was thrown (18 Nov, the user's).
+    const across = bodies.every(b => b.position.x * direction > (TRAY.minX + TRAY.maxX) / 2 * direction + 0.2);
+    return { recorded, bodies, impacts, flat: bodies.every(isFlat), across, frames: recorded.length / (count * FLOATS_PER_DIE) };
 }
+
+// For the dev hook: one throw as simulated, before a throw is chosen (to measure the physics).
+export const throwOnce = (count: number, direction: 1 | -1, lean = 0, seed?: number) => { random = seed === undefined ? Math.random : seededRandom(seed); return simulateOnce(count, direction, lean); };
 
 // Flat on the felt: one face pointing straight up and not resting on another die.
 function isFlat(b: CANNON.Body) {
@@ -250,16 +266,18 @@ function isFlat(b: CANNON.Body) {
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
 export function simulateRoll(dieIds: number[], targetValues: number[], seed?: number, lean = 0): RollTrack {
     random = seed === undefined ? Math.random : seededRandom(seed);
-    // Prefer a throw that ends flat within ~3.2s; otherwise keep the best one seen
-    // (flat beats cocked, then shorter beats longer).
-    const QUICK_FRAMES = 3.2 * 60;
+    // Prefer a throw that ends flat, with every die across the tray's middle; otherwise keep the
+    // best one seen (flat beats cocked, then across beats short, then shorter beats longer). Since 18 Nov (the
+    // user's: dice that "barely roll across the dice tray") a throw must be across too: preferring the shortest
+    // had favoured throws whose dice hardly moved.
     const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
-        a.flat !== b.flat ? a.flat : a.frames < b.frames;
+        a.flat !== b.flat ? a.flat : a.across !== b.across ? a.across : a.frames < b.frames;
     // (Aboard a listing ship the dice are thrown toward the low side, so they end up there.)
     const toss = random() < 0.5 ? 1 : -1;
     const direction = lean > 0 ? 1 : lean < 0 ? -1 : toss;
     let result = simulateOnce(dieIds.length, direction, lean);
-    for (let attempt = 0; attempt < 6 && !(result.flat && result.frames <= QUICK_FRAMES); attempt++) {
+    // (the first that lands flat and across will do: holding out for a quick one too made a throw cost a second or more)
+    for (let attempt = 0; attempt < 8 && !(result.flat && result.across); attempt++) {
         const next = simulateOnce(dieIds.length, direction, lean);
         if (better(next, result)) result = next;
     }

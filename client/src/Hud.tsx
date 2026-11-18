@@ -2635,7 +2635,7 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     const rows = [
         { key: 'win', label: `Beating ${won.defeated}`, detail: won.place ? `opponent ${won.place}` : '', amount: gold.win },
         ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${coins(gold.perHeart)}` : '', amount: gold.hearts }] : []),
-        ...(gold.miser ? [{ key: 'miser', label: "Miser's Purse", detail: '1 for every 10 in your purse', amount: gold.miser }] : [])
+        ...(gold.miser ? [{ key: 'miser', label: "Miser's Purse", detail: '1 for every 5 in your purse', amount: gold.miser }] : [])
     ];
     const total = gold.win + gold.hearts + (gold.miser ?? 0);
     const [before] = useState(() => Math.max(0, run.purse - total));

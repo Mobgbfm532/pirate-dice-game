@@ -206,7 +206,7 @@ module.exports = {
         loadedDieLow: 4,        // the Loaded Die: once your 2 and 4 are kept, it rolls this or higher
         beltSlots: 1,           // the Potion Belt: extra shelf slots...
         beltThonic: 'healing',  // ...and the Thonic it comes with
-        miserPerTen: 1,         // the Miser's Purse: gold a win adds for every 10 in the purse
+        miserEvery: 5,          // the Miser's Purse: a win adds 1 gold for every this many in the purse (18 Nov, the user's; it was 10)
         flaskChance: 50,        // the Bottomless Flask: percent the first Thonic each fight stays
         gildedStep: 3,          // the Gilded Die: a throw again costs 3, 6, 9 gold in a fight (x placePrice)...
         gildedMax: 3            // ...at most this many a fight

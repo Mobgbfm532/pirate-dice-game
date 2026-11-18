@@ -44,7 +44,7 @@ function runOnce(stats) {
     // The fight: Thonics drunk (about one in two fights uses a Healing)
     if (run.shelf.length && Math.random() < 0.5) run.shelf.pop();
     const hl = heartsLeft(id);
-    const miser = run.keepsakes.includes('misersPurse') ? Math.floor(run.purse / 10) * B.keepsakes.miserPerTen : 0;
+    const miser = run.keepsakes.includes('misersPurse') ? Math.floor(run.purse / (B.keepsakes.miserEvery ?? 5)) : 0;
     const earned = G.winFirst + G.winStep * i + G.perHeartLeft * hl + miser;
     run.purse += earned;
     stats.earned[i] += earned; stats.purseAfterWin[i].push(run.purse);

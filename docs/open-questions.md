@@ -22,8 +22,10 @@ day they happen, with what's been built marked as it lands.
    server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
 
 ### Questions waiting on the user's word
-- **Becalmed's look** (the user asked, 18 Nov): ideas in `docs/voyage-brainstorm.md`, "Becalmed's look"; Claude recommends the three
-  lanterns (one put out at each throw), the glassy sea and the hanging sail, with the slack rigging's creak. Which?
+- **Becalmed's look** (`docs/voyage-brainstorm.md`, "Becalmed's look"): the three lanterns were tried and taken out (18 Nov,
+  the user: "too confusing"). Open: the slack sail would cover the opponent's bust over the table (the user, 18 Nov);
+  Claude suggests it only in the sea die's Becalmed moment, as a full painting, or not at all. And the glassy sea on the
+  dial (no art needed): wanted?
 - **Gold and keepsakes** (`docs/economy-brainstorm.md`, 17 Nov evening): built the same evening, the user's: prices by
   place (×1, ×1.5, ×2), keepsakes dearer, the Gilded Die and Bren's Compass. To try in play (their paintings are in, 17 Nov). Open: the other ideas in the doc (Fixer's Purse, Mercenary's Contract, Banker's Seal, Money
   Belt, Pawnbroker's Ticket, Witch's Mirror, Spyglass).
@@ -83,6 +85,9 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 18 Nov: difficulty: the user finds a good player clears the crawl (far better than the expert's numbers in
+  `balance/README.md`, "18 Nov: an expert on the real game"), so nothing changes; the numbers are kept for now. The Miser's
+  Purse pays 1 gold for every 5 in the purse (it was 10).
 - 18 Nov: points (`docs/points-brainstorm.md`): a perfect hand is worth 50 (a 24, or a cursed Perfect ...4?), and winning
   the crawl 2,000. The other parts stay as they are.
 - 18 Nov (the user's answers): everything in "To judge on a phone" is good. The Cult of Kram's "face Kram" meant Klarg (as

@@ -112,8 +112,9 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > Flat even lighting, no glare." And a background unlike the dice, e.g. light grey behind gold.)
 
 **Becalmed** (18 Nov, the user asked for its art; no sound or music, the user's call; ideas in `docs/voyage-brainstorm.md`, "Becalmed's look")
-- `art/becalmed-sail.jpg`, the slack sail, hung over the top of the screen while a becalmed round lasts (as the Squall's
-  rain is), wide, about 1584 x 896:
+- `art/becalmed-sail.jpg`, the slack sail (**not painted**; 18 Nov, the user: hung over the top of the screen it would cover
+  the opponent's bust. Claude's suggestion: only in the sea die's Becalmed moment, as one full painting, a prompt given in
+  the chat of 18 Nov: the ship's slack sails from the deck, a glassy sea and a still amber sky). The first prompt:
 > The underside of a great weathered canvas sail on a pirate ship, hanging slack and motionless from a heavy wooden
 > yard across the very top of the picture, seen from below, filling the top half of a wide image edge to edge, its
 > lower edge drooping in soft heavy folds with patches and old stitching, loose ropes and a reef line hanging limp
@@ -121,7 +122,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 > is plain: on a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean
 > edges, no text, no lettering. *+ style line*
 - `art/becalmed-lantern-lit.jpg` and `art/becalmed-lantern-out.jpg`, the three lanterns that count a becalmed hand's
-  throws (one goes out at each throw), square item icons:
+  throws (one goes out at each throw), square item icons (**painted by the user 18 Nov**; on the sea's plaque the same day, then taken out: "too confusing", the user):
 > One small brass ship's lantern with a wire cage and glass panes, a warm candle flame burning inside, a carrying ring
 > on top. One object only, centred and filling the frame, bold clear silhouette that reads at a small size, thick dark
 > outline. On a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean

@@ -37,6 +37,7 @@ function playCrawl(url, n) {
     return new Promise(resolve => {
         const socket = connect(url, { transports: ['websocket'], forceNew: true });
         let state = null, latest = null, busy = false, lastMove = Date.now();
+        const began = Date.now();
         const log = { fights: [], bought: [], spots: [], stalled: false };
         let fightAt = -1;
         let usedThisThrow = new Set(), drankThisTurn = new Set();
@@ -175,7 +176,6 @@ function playCrawl(url, n) {
             const k = `${it.stage}:${r.encounterNumber}:${it.roll || ''}:${it.claim || ''}:${r.purse}`;
             if (k === handledKey) return;
             handledKey = k;
-            lastMove = Date.now();
             switch (it.stage) {
                 case 'pickpocket': case 'darren':
                     if (!it.roll) socket.emit(it.stage, 'roll'); else socket.emit('lookAround');
@@ -253,7 +253,8 @@ function playCrawl(url, n) {
             finish(over.tavern || null);
         });
         const watchdog = setInterval(() => {
-            if (Date.now() - lastMove > 30000) { log.stalled = true; finish(null); return; }
+            // (stuck: no throw for 30 s, or a crawl past 25 minutes, e.g. caught in a loop between fights)
+            if (Date.now() - lastMove > 30000 || Date.now() - began > 1500000) { log.stalled = true; log.stage = run() && run().interlude && run().interlude.stage; finish(null); return; }
             const t = latest;
             if (run() && (run().interlude || run().shop)) { handledKey = ''; between(); return; }
             if (!t || t.playerId !== socket.id || busy) return;

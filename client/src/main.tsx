@@ -7,12 +7,12 @@ import { Backdrop } from './Backdrop';
 import { lookNext } from './look';
 import { renderDpr } from './tuning';
 import { actions, preview, store, table, tableCover } from './game';
-import { simulateRoll } from './physics';
+import { simulateRoll, throwOnce, throwFeel } from './physics';
 import { renderCorkPop, renderImpacts } from './sounds';
 import './styles.css';
 
 // Development only (left out of production builds): lets test scripts drive the game.
-if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, preview, store, table, simulateRoll, renderImpacts, renderCorkPop };
+if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, preview, store, table, simulateRoll, throwOnce, throwFeel, renderImpacts, renderCorkPop };
 
 // The loading screen in index.html goes once the table can be drawn.
 function hideLoadingScreen() {

@@ -3376,7 +3376,7 @@ test('the Shield and the Loaded Die are only offered from the Yawning Portal on'
     assert.ok(ids.has('bentCopper') && ids.has('loadedDie'));
 });
 
-test("the Miser's Purse: a win pays 1 more gold for every 10 in the purse", async () => {
+test("the Miser's Purse: a win pays 1 more gold for every 5 in the purse", async () => {
     const hero = await tavernAgainst(1, 'Miser');
     const room = roomOf(hero);
     room.tavernRun.keepsakes.push({ id: 'misersPurse', name: "Miser's Purse", text: '' });
@@ -3388,8 +3388,8 @@ test("the Miser's Purse: a win pays 1 more gold for every 10 in the purse", asyn
     const won = waitFor(hero, 'offerShop', () => true, 6000);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     const offer = await won;
-    assert.equal(offer.gold.miser, 4);
-    assert.equal(room.tavernRun.purse, 47 + 4 + offer.gold.win + offer.gold.hearts);
+    assert.equal(offer.gold.miser, 9); // (47 gold: nine 5s)
+    assert.equal(room.tavernRun.purse, 47 + 9 + offer.gold.win + offer.gold.hearts);
 });
 
 test("the Gambler's Charm: the last die is thrown twice and the better kept", async () => {

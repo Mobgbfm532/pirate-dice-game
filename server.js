@@ -382,7 +382,7 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'misersPurse',
         name: "Miser's Purse",
-        text: 'Each win pays 1 more gold for every 10 in your purse.'
+        text: 'Each win pays 1 more gold for every 5 in your purse.'
     },
     {
         id: 'gamblersCharm',
@@ -2992,8 +2992,8 @@ function evaluateTavernRound(roomCode) {
         let stats = room.tavernRun.stats;
         let winGold = GOLD.winFirst + GOLD.winStep * room.tavernRun.encounterIndex;
         let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
-        // The Miser's Purse: 1 more gold for every 10 in the purse (before this win's gold).
-        let miserGold = hasKeepsake(room, 'misersPurse') ? Math.floor(room.tavernRun.purse / 10) * (KEEPSAKE_NUMBERS.miserPerTen ?? 1) : 0;
+        // The Miser's Purse: 1 more gold for every miserEvery (5 since 18 Nov, the user's; it was 10) in the purse (before this win's gold).
+        let miserGold = hasKeepsake(room, 'misersPurse') ? Math.floor(room.tavernRun.purse / (KEEPSAKE_NUMBERS.miserEvery ?? 5)) : 0;
         stats.miserGold = (stats.miserGold || 0) + miserGold;
         room.tavernRun.purse += miserGold;
         stats.encountersDefeated++;

@@ -259,3 +259,45 @@ Also changed by hand since, none of it in the simulator yet, so its numbers over
 
 To play-test first. Then teach the simulator these and the Elf Bars, the Bard, the Cult, the new keepsakes and Astral
 Flood taking a heart before trusting its numbers.
+
+## 18 Nov: an expert on the real game
+
+`node balance/expert-crawl.js [crawls] [lanes]` plays whole crawls on the real server, sped up (everything in the
+game today: every opponent and ability, the sea, the spots and events, prices by place, keepsakes, Thonics). The
+expert keeps dice with the opponents' own best-play brain against the score to beat, drinks Healing when hurt,
+Clear-Eye as a fight with abilities begins, Fizzy on 1s and Steady when a hand is in trouble, uses the Gilded Die and
+the Inspiring Song, and between fights goes where it pays and buys keepsakes in order of worth. Options:
+`NUMBERS='{"playerHearts":4}'` changes shared/balance.js for the run only; `LIVES_LESS=1` takes a life off every
+opponent (never below 1). Stuck crawls (no throw for 30 s, or past 10 minutes) are left out; in the "both" run 51 were,
+mostly long runs deep into the ship, so its finishing figures there are a little low.
+
+400 crawls each (fights won, of those who faced them):
+
+| | Today (3 hearts) | 4 hearts | Opponents a life fewer | Both |
+|---|---|---|---|---|
+| Finish the crawl | 0% | 1% | 1% | 3% |
+| Reach the Yawning Portal | 21% | 32% | 38% | 56% |
+| Reach the ship | 1% | 4% | 5% | 16% |
+| McGrath / Frak / Danhausen | 90 / 77 / 73 | 93 / 88 / 77 | 91 / 89 / 82 | 96 / 96 / 88 |
+| The Duke / Martha | 62 / 66 | 71 / 71 | 72 / 78 | 80 / 87 |
+| Sylvester ... the Ridgeler | 52-77 | 60-77 | 65-84 | 81-91 |
+| **Brodor** | 50 | 48 | 48 | 54 |
+| **Klarg** | (5 fights) | 27 | 38 | 43 |
+| Rokr, Áéd, the Hangman, Jaguar | too few | 50-100 (few) | 50-100 (few) | 61-100 |
+| Points, median | 826 | 964 | 970 | 2,147 |
+
+What it says:
+- **Even played well, the crawl is very hard:** an expert gets through the Ghoul and Gourd only one time in five, and has
+  never finished it in 400 tries on today's numbers. Each fight is close to a coin toss with a lean, and fifteen of them
+  in a row multiply down.
+- **Brodor and Klarg are the walls, whatever else changes:** about 50% and 27-43% even with both easings, against 80-90% for
+  the opponents around them. Astral Flood (a heart healed and one of yours taken) and Klarg's two steals of the 2 or 4
+  you need are each worth far more than the other abilities.
+- **4 hearts or a life off each opponent** each help about as much; together they let an expert finish about 1 run in 30.
+- Once past Klarg, the rest of the ship is beaten more often than not (few runs got there to measure).
+
+**The user's verdict (18 Nov):** "a good player clears this no problem", with far better results in play than these;
+nothing changes, the results are kept for now. (A test of 4 hearts, Brodor on 3 lives and Klarg one steal a fight moved
+Brodor 48 → 53% and Klarg 27 → 35%, on too few fights to trust: `previews/expert/tuned.txt`, gitignored.) Possible
+reasons the expert does worse than the user: it keeps blind under Starry Form and in fog, never drinks Second Thoughts or
+Elf Bars, and shops simply.
