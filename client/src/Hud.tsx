@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { tableCover, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
-import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, spotPortrait, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
@@ -1687,7 +1687,8 @@ function SmiteQuake() {
     return (
         <div className="smite-quake">
             <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                {QUAKE_CRACKS.map((d, i) => <path key={i} d={d} style={{ animationDelay: `${0.25 + (i % 3) * 0.04}s` }} />)}
+                {QUAKE_CRACKS.map((d, i) => <path key={`g${i}`} className="glow" d={d} />)}
+                {QUAKE_CRACKS.map((d, i) => <path key={`c${i}`} className="core" d={d} />)}
             </svg>
             {QUAKE_CHIPS.map((c, i) => <span key={i} className="chip" style={{ left: `${c.x}%`, '--dx': `${c.dx}vw`, '--dy': `${c.dy}vh`, '--s': `${c.s}px`, animationDelay: `${0.25 + c.d}s` } as React.CSSProperties} />)}
         </div>
@@ -2184,7 +2185,8 @@ function SpotScene({ spot, state, next, leaving, onMoveOn, onLookAround }: { spo
     const result = interlude.stage === 'done' && interlude.spot === 'hotTub' ? (interlude.surge.good ? 'tubGood' : 'tubBad')
         : interlude.stage === 'done' && interlude.spot === 'shrine' ? 'ladyChoice'
             : interlude.stage === 'done' && interlude.spot === 'yvesil' && interlude.omen ? (interlude.omen.good ? 'yvesilWeal' : 'yvesilWoe') : null;
-    useEffect(() => { if (result) playSound(result); }, [result]);
+    // (Her omen's sound over her theme: the theme dips while Weal, the good omen's, or Woe, the bad one's, plays. 18 Nov.)
+    useEffect(() => { if (!result) return; if (result === 'yvesilWeal' || result === 'yvesilWoe') duckScenes(result === 'yvesilWeal' ? 4600 : 1900); playSound(result); }, [result]);
     return (
         <div className={`thom-scene spot-scene ${spot} ${mood} ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`${SCENES[spot].name}${line ? `: ${line}` : ''}`}>
             <div className="thom-stage" aria-hidden="true"

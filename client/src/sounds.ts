@@ -30,8 +30,8 @@ const sfx = {
     penitentStare: load('PenitentStare.mp3', ABILITY_VOLUME),
     // Áéd's Unlimited Power (the user's, 13 Nov): one clip for each of his four tricks.
     unlimitedPower: load('UnlimitedPower.mp3', ABILITY_VOLUME),
-    yvesilWeal: load('YvesilWeal.mp3', 0.8),
-    yvesilWoe: load('YvesilWoe.mp3', 0.8),
+    yvesilWeal: load('YvesilWeal.mp3', 1), // (full since 18 Nov: at 0.8 under her theme the omen was lost)
+    yvesilWoe: load('YvesilWoe.mp3', 1),
     gunshot: load('Gunshot.mp3', 1),
     // The user's ability sounds (26 Oct).
     mindWhip: load('MindWhip.mp3', ABILITY_VOLUME),
@@ -693,6 +693,25 @@ export function startSceneAmbience(name: SceneAmbience) {
         if (song === tune()[0]) fade(song, full, 1000);
         fade(ambience, crowdVolume(), 1000);
     };
+}
+
+// A scene's own loop lowered while a sound says what happened there (18 Nov, the user's: Yvesil's good and bad omens
+// should be heard: her theme, a loud loop, played over them), then back up.
+export function duckScenes(ms: number, to = 0.25) {
+    if (audioContext) {
+        const now = audioContext.currentTime;
+        playingScenes.forEach(level => {
+            const full = level.gain.value;
+            level.gain.cancelScheduledValues(now);
+            level.gain.setTargetAtTime(full * to, now, 0.08);
+            level.gain.setTargetAtTime(full, now + ms / 1000, 0.4);
+        });
+    }
+    (Object.keys(sceneAmbience) as (keyof typeof sceneAmbience)[]).forEach(name => {
+        const el = sceneAmbience[name];
+        if (el.paused) return;
+        fade(el, SCENE_VOLUME[name] * to, 250, () => { window.setTimeout(() => { if (!el.paused) fade(el, SCENE_VOLUME[name], 900); }, ms); });
+    });
 }
 
 export function setMusicOff(value: boolean) {

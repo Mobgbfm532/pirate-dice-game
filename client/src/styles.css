@@ -4164,35 +4164,39 @@ button.film-skip:active, button.sail-skip:active, div.tr-after button:active, bu
 /* ==== Divine Smite lands: earth-shattering (17 Nov, the user's) ==== */
 /* The whole page quakes much harder and longer than the other shakes: a heavy slam, the ground
    heaving, then aftershocks dying away (game.ts shakeScreen(…, true)). */
-body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19,.97); }
+/* (18 Nov, the user: "glitchy". Measured at a phone's speed it drew 16-64 frames in 2.6 s, stalling up to half a second.
+   The quake now jolts less and doesn't tilt (the tilt opened bare gaps at the screen's edges), and the page is a touch
+   bigger while it shakes, so no edge shows.) */
+body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19,.97); will-change: transform; }
 @keyframes screen-quake {
-    0%, 100% { transform: translate(0, 0) rotate(0); }
-    3% { transform: translate(0, 30px) scale(1.02); }
-    7% { transform: translate(-28px, -18px) rotate(-1.4deg) scale(1.02); }
-    12% { transform: translate(26px, 20px) rotate(1.2deg); }
-    17% { transform: translate(-24px, 14px) rotate(-1deg); }
-    23% { transform: translate(22px, -16px) rotate(0.9deg); }
-    30% { transform: translate(-18px, 12px) rotate(-0.7deg); }
-    38% { transform: translate(14px, -10px) rotate(0.5deg); }
-    47% { transform: translate(-10px, 8px) rotate(-0.3deg); }
-    56% { transform: translate(6px, -4px); }
-    64% { transform: translate(-12px, 6px) rotate(-0.4deg); } /* an aftershock */
-    72% { transform: translate(9px, -6px) rotate(0.3deg); }
-    82% { transform: translate(-4px, 3px); }
-    91% { transform: translate(2px, -1px); }
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    3% { transform: translate(0, 18px) scale(1.05); }
+    7% { transform: translate(-16px, -11px) scale(1.05); }
+    12% { transform: translate(15px, 12px) scale(1.05); }
+    17% { transform: translate(-14px, 8px) scale(1.05); }
+    23% { transform: translate(13px, -9px) scale(1.04); }
+    30% { transform: translate(-10px, 7px) scale(1.04); }
+    38% { transform: translate(8px, -6px) scale(1.03); }
+    47% { transform: translate(-6px, 5px) scale(1.03); }
+    56% { transform: translate(4px, -3px) scale(1.02); }
+    64% { transform: translate(-7px, 4px) scale(1.02); } /* an aftershock */
+    72% { transform: translate(5px, -3px) scale(1.02); }
+    82% { transform: translate(-2px, 2px) scale(1.01); }
+    91% { transform: translate(1px, -1px) scale(1); }
 }
 /* Cracks of gold light run out across the screen from the strike and linger; stone chips fly. */
 .smite-quake { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
-.smite-quake svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 52%; animation: quake-open 0.32s 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) both; }
-@keyframes quake-open { 0% { transform: scale(0); } 100% { transform: scale(1); } }
-.smite-quake path {
-    fill: none; stroke: #fff6d0; stroke-width: 3.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke;
-    filter: drop-shadow(0 0 3px rgba(255, 213, 79, 0.95)) drop-shadow(0 0 9px rgba(255, 170, 40, 0.7));
-    animation: quake-crack 1.6s ease-out both;
-}
-@keyframes quake-crack { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+/* (18 Nov: no blur filters, and the cracks drawn once: the whole layer grows and fades, which a phone does without
+   redrawing it. The glow is a wide soft line under each crack. Lesson as with Astral Flood: no filter on a full-screen
+   moving layer.) */
+.smite-quake svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 52%; will-change: transform, opacity;
+    animation: quake-open 1.85s 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) both; }
+@keyframes quake-open { 0% { transform: scale(0); opacity: 1; } 17% { transform: scale(1); } 55% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+.smite-quake path { fill: none; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.smite-quake path.glow { stroke: rgba(255, 176, 48, 0.32); stroke-width: 14px; }
+.smite-quake path.core { stroke: #fff6d0; stroke-width: 3.5px; }
 .smite-quake .chip {
-    position: absolute; top: 52%; width: var(--s); height: var(--s); border-radius: 2px;
+    position: absolute; top: 52%; width: var(--s); height: var(--s); border-radius: 2px; will-change: transform, opacity;
     background: #6b5a44; box-shadow: 0 0 4px rgba(255, 213, 79, 0.6);
     opacity: 0; animation: quake-chip 1.1s ease-out both;
 }
@@ -4278,4 +4282,28 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 @media (orientation: landscape) and (max-height: 500px) {
     .pa-title { top: 10%; }
     .pw-line { bottom: 12%; }
+}
+
+/* ==== The phone's footer, tighter (18 Nov, the user's) ==== */
+/* The strip doubled up at 384 px with three Thonics and five keepsakes (it needed ~396 px of 352): the Thonic
+   slots are narrower (their height stays a full thumb's), the bottles inside them a touch smaller, and the gaps
+   tighter, so it fits one line. And the turn score's plaque hugs its words: it stretched to its grid column
+   (157 px for "Turn score 0"), and with nothing to beat it now spans the footer, centred. */
+@media (orientation: portrait) and (max-width: 600px) {
+    .look-next footer .shelf { gap: 3px; }
+    .look-next footer .shelf-slot:not(:disabled) { width: 32px; }
+    .look-next footer .shelf-slot .bottle.painted, .look-next footer .shelf-slot .vape.painted { width: 30px; height: 30px; }
+    .look-next footer .tavern-strip { gap: 5px; }
+    .look-next footer .keepsake-row { gap: 3px; }
+    .look-next footer .keepsake-icon { width: 28px; height: 28px; }
+    .look-next footer .controls .turn-score { justify-self: center; }
+    .look-next footer .controls:has(.goal.placeholder) .turn-score { grid-column: 1 / -1; }
+}
+/* (and on the narrowest phones, up to 370 px wide: a little smaller again, so the strip still fits one line at 360) */
+@media (orientation: portrait) and (max-width: 370px) {
+    .look-next footer .tavern-strip .purse { padding: 3px 8px 3px 5px; font-size: 0.95rem; gap: 4px; }
+    .look-next footer .shelf-slot:not(:disabled) { width: 30px; }
+    .look-next footer .shelf-slot .bottle.painted, .look-next footer .shelf-slot .vape.painted { width: 28px; height: 28px; }
+    .look-next footer .keepsake-row { gap: 2px; }
+    .look-next footer .keepsake-icon { width: 26px; height: 26px; }
 }
