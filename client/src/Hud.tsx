@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { tableCover, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
-import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
+import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, startMusic, holdMusic, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
 import { LivingPainting, preloadPainting } from './LivingPainting';
 import { AVATAR_IDS, EDITABLE, PORTRAITS, SEATABLE, SPOT_PORTRAITS, spotPortrait, avatarStyle, editPortrait, editSeat, editablePortrait, portraitEdits, portraitFor, seatEditsNow, seatPreview } from './portraits';
@@ -115,6 +115,16 @@ function JoinScreen() {
     }, [playIntro, invite]);
     const continuing = !!saved && !invite;
     const beginCrawl = () => { if (playIntro) setFilm('crawl'); else join('TAVERN'); };
+    // The Ghoul and Gourd's tune on the start screen (18 Nov, the user's): from the first tap or key press, as a
+    // browser plays no sound before one. (It was silent until you sat down at a table.) The intro film has its own
+    // music, so the tune fades out while it plays and comes back after.
+    useEffect(() => {
+        const start = () => startMusic();
+        window.addEventListener('pointerdown', start, { once: true });
+        window.addEventListener('keydown', start, { once: true });
+        return () => { window.removeEventListener('pointerdown', start); window.removeEventListener('keydown', start); };
+    }, []);
+    useEffect(() => (film ? holdMusic() : undefined), [film]);
     if (film) return <IntroFilm onDone={() => {
         liftCurtain();
         if (film === 'crawl') join('TAVERN');

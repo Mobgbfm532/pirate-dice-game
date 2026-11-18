@@ -9,7 +9,7 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
-(Tidied 17 Nov: what was done moved to "Settled" below; what's left is here, most pressing first.)
+(Tidied 17 Nov, again 18 Nov evening: what was done moved to "Settled" below; what's left is here, most pressing first.)
 
 ### Going live
 1. **The live Render service's settings (the user's to do, before the merge, or the live game breaks):** the build
@@ -33,8 +33,8 @@ day they happen, with what's been built marked as it lands.
   too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Teach the opponents (and the simulator) that a wave is coming? The Cloak and All In
   are still working names (Smooth Talk became Smooth Talker, 18 Nov).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
-- **The start screen:** clear enough on a phone? The computer's title on the left: good? The tavern tune on the
-  first tap (idea 9)? The Hall of Legends' place and name, and its text on points? The hearts button for a new
+- **The start screen:** clear enough on a phone? The computer's title on the left: good? (The tavern tune plays from
+  the first tap since 18 Nov, the user's.) The Hall of Legends' place and name, and its text on points? The hearts button for a new
   table's lives clear enough? The die left out on phones under 740 px tall: OK? (The "Classic game" link is gone, 18 Nov.)
   Not built: a "How to play" card.
 - **Small things:**
@@ -44,24 +44,23 @@ day they happen, with what's been built marked as it lands.
 ### What a player would notice (found in the 17 Nov review; none built yet)
 - **Nothing teaches a newcomer on the table:** the entrance card explains the rules, but nothing shows how to keep
   a die or why Roll waits. A first-crawl hint or two against Sperm McGrath?
-- **Silences** (the list is in `docs/art-direction.md`): Becalmed; five scenes between fights with no loop of
+- **Silences** (the list is in `docs/art-direction.md`; Becalmed stays silent, the user's, 18 Nov): five scenes between fights with no loop of
   their own (Johnny, Jorvash, Darren, the Stranger, the thief); the synthesized sounds (the sea's swell, the
   ship's bell, the shared keepsake chime, the coins) could become real clips.
 - **Light and living backdrops per place** (the Portal's well light, swinging lanterns aboard, the fire
   flickering): the biggest lift left for the look.
 
-### Numbers to set (after play-testing; simulate first with `balance/`)
-- The Ghoul and Gourd's lives; the Duke's `devilWhenBelow` (0.7); keepsake prices (Miser's Purse 12, Gambler's
-  Charm 14, Bottomless Flask 12, Loaded Die 12), and whether the Miser's Purse needs a cap; the Elf Bars (8-14); the
-  Bard (8); the Cult (15% of walks, 2 fights); uses per fight for the Yawning Portal's five; Yvesil's and
-  Jorvash's prices and chances; the sea dials; Áéd's numbers.
-- Overall difficulty: the simulator says hard (0.3% finish), the user finds it easier. The simulator doesn't know
-  anything added since late October (Áéd, the sea, the Elf Bars, the Bard, the Cult, the new keepsakes): teach it
-  first.
+### Numbers to set (after play-testing)
+- Overall difficulty is settled for now (18 Nov, the user: "a good player clears this no problem"; the expert's numbers
+  are kept in `balance/README.md`). Still first guesses, to change if play says so: the Duke's `devilWhenBelow` (0.7);
+  the keepsake prices (16-36, x the place, since 17 Nov) and the Miser's Purse's 1 a 5 (18 Nov); the Elf Bars (8-14);
+  the Bard (8); the Cult (15% of walks, 2 fights); Yvesil's and Jorvash's prices and chances; the sea dials; Áéd's
+  numbers; `abilityTiming`. `balance/expert-crawl.js` plays whole crawls on the real game to measure any of them.
 
 ### Ideas not chosen yet
 - More keepsakes (workshopped 30 Oct): Lodestone, Spyglass, Hangman's Spare Bullet, Devil's Bargain, Brawler's
-  Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror, Bren's Compass, Gold Tooth. A keepsake pool per
+  Knuckles, Sigil of Kram, Rokr's Star Chart, Witch's Mirror, Gold Tooth (the Sailor's, now Bren's, Compass was built
+  17 Nov). A keepsake pool per
   place was offered and not taken.
 - A warning on the opponent's nameplate before an ability fires.
 - Housekeeping: delete unused code (the Dice Den, the old keepsake cards, Martha's mask, Dead Eye, Written in the
@@ -85,6 +84,10 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 18 Nov evening: the start screen plays the Ghoul and Gourd's tavern tune from the first tap (it was silent until you sat
+  down), fading out under the intro film. Martha's letter has the user's words and comes by flying snake. The phone's
+  strip fits one line; the turn score's plaque is slimmer; Yvesil's omens are heard over her theme; Divine Smite's
+  landing is about twice as smooth; every dice throw crosses the tray.
 - 18 Nov: difficulty: the user finds a good player clears the crawl (far better than the expert's numbers in
   `balance/README.md`, "18 Nov: an expert on the real game"), so nothing changes; the numbers are kept for now. The Miser's
   Purse pays 1 gold for every 5 in the purse (it was 10).

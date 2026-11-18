@@ -571,6 +571,22 @@ export function startMusic() {
     ambience.play().catch(() => {});
 }
 
+// The tavern's tune (and its crowd) faded out and paused while the intro film plays its own music; the returned
+// function brings them back (18 Nov: the start screen now plays the Ghoul and Gourd's tune from the first tap).
+export function holdMusic() {
+    const [song] = TUNES[tuneNow];
+    fade(song, 0, 600, () => song.pause());
+    fade(ambience, 0, 600, () => ambience.pause());
+    return () => {
+        if (musicOff) return;
+        const [now, volume] = TUNES[tuneNow];
+        if (now.paused) { now.volume = 0; now.play().catch(() => {}); }
+        fade(now, volume, 1200);
+        if (ambience.paused) { ambience.volume = 0; ambience.play().catch(() => {}); }
+        fade(ambience, crowdVolume(), 1200);
+    };
+}
+
 // The music playing now (the tavern's tune, a place's, Brodor's or Jaguar's) and its full volume.
 function tune(): [HTMLAudioElement, number] {
     return TUNES[tuneNow];
