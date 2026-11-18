@@ -35,6 +35,8 @@ day they happen, with what's been built marked as it lands.
 - **What an ability did** (`docs/ability-feedback-brainstorm.md`, 18 Nov): an aftermath ribbon with a plain line
   after Astral Flood, Smooth Talker, Penitent Stare, Divine Smite, the Ace; Jaguar's Thonic flying from your shelf to
   him instead of the drinking moment. Which ideas, and the lines' words?
+- **The finale after Jaguar** (`docs/finale-brainstorm.md`, 18 Nov): which beats, Jaguar's line, the Can Garda's look and
+  line, the art and sounds. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
 - **The Hangman's Ace** (18 Nov): it fires only on his own 16-23 on his last life; on any valid hand instead?
 - **Grammar** (18 Nov): the list of suspect lines put to the user (comma splice in Brodor's letter, "Once per
   encounter", "Thom's Cart", "honorable", "Alright", the dash in Sylvester's card).
