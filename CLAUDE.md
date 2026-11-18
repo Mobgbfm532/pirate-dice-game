@@ -806,7 +806,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 - **The invitations and saving:** beating a boss gives `interlude.stage = 'invitation'` instead of
   an event (`invitation(room, name)`: `place`, `from`, `boss`, `drop`, `save`): after Martha "You
   qualify for the Yawning Portal", after Brodor "Word from the docks" (the Salty Swallow is soon to set
-  sail; `INVITATIONS` in Hud). Since 10 Nov Brodor's letter is brought by the user's flying snake from the docks
+  sail; `INVITATIONS` in Hud). Since 18 Nov Martha's is brought by the snake too, with the user's new words ("Upon beating Martha/Mystery, you receive an invitation by flying snake...", her "You can always come back here for refills, it's not addictive."; `docs/character-text.md`). Since 10 Nov Brodor's letter is brought by the user's flying snake from the docks
   (`art/flying-snake.jpg` → `flying-snake.webp`, `courier: 'snake'`, `.courier-snake`): it swoops in with the scroll in its
   jaws, hovers beating its wings and flies off as the invitation unrolls, in place of the sealed envelope. "On to ..." or "Save and continue
   later": the server seals the run (`sealSave`, HMAC with `SAVE_SECRET`); the client keeps it in

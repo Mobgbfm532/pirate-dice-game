@@ -2006,10 +2006,13 @@ function Interlude({ state }: { state: GameState }) {
 // courier: who brings it (the sealed letter flutters down by itself; after Brodor the flying snake from the docks
 // carries it in, the user's painting, 10 Nov).
 const INVITATIONS: Record<string, { title: string; line: (place: string) => string; after?: string; gift: string; courier?: 'snake' }> = {
+    // (18 Nov, the user's words; her letter comes by flying snake too, as Brodor's does)
     'Martha/Mystery': {
         title: 'You qualify for the Yawning Portal',
-        line: place => `Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You've earned this. Guess the flavour. Show it at ${inSentence(place)}."`,
-        gift: "is yours: it never runs out. One puff a fight, and each fight is a different flavour at random."
+        courier: 'snake',
+        line: () => 'Upon beating Martha/Mystery, you receive an invitation by flying snake. As champion of the Ghoul and Gourd you may progress to the Yawning Portal.',
+        after: `Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You can always come back here for refills, it's not addictive."`,
+        gift: 'is yours. One puff a fight, and each fight is a different flavour at random.'
     },
     Brodor: {
         title: 'Word from the docks',
