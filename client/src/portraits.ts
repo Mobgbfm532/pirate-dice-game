@@ -57,6 +57,7 @@ export const PORTRAITS: Record<string, Portrait> = {
     // (His second painting, 13 Nov, the user's: the round portrait and the seat to be framed again in the tuning panel.)
     Klarg: seated('klarg.webp', [53.6, 24], 1.55, 1189, 830, [-6, -7.3]), // (14 Nov: his third painting, framed by the user)
     Rokr: seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]),
+    'Røkr': seated('rokr.webp', [46, 28], 1.75, 952, 720, [-1.3, -7.7]), // (his name since 18 Nov; Rokr stays for the classic avatar)
     // Áéd, the dragon sorcerer (the user's painting, 11 Nov): framed by the user in the Portraits tab (13 Nov).
     'Áéd': seated('aed.webp', [54, 20], 1.7, 625, 720, [-10.8, -9.8]),
     'The Hangman': seated('hangman.webp', [45, 36], 1.25, 793, 720, [-10.1, -4]),

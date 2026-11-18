@@ -61,6 +61,8 @@ const sfx = {
     whoa: load('Whoa.mp3', 0.8),
     thiefLaugh: load('ThiefLaugh.mp3', 0.8),
     tavernVictory: load('TavernCrawlVictory.mp3', 0.8),
+    // The fanfare as a whole crawl is won, on the run-over screen (the user's Victory.mp3, 18 Nov; a fight's win keeps tavernVictory).
+    crawlVictory: load('Victory.mp3', 0.8),
     multiplayerVictory: load('MultiplayerVictory.mp3', 0.8),
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
     bardTune: load('BardTune.mp3', 0.8),

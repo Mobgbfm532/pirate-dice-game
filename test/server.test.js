@@ -2301,7 +2301,7 @@ test("the run is fifteen fights: the Ghoul and Gourd, the Yawning Portal, then t
     const names = server.TAVERN_ENCOUNTERS.map(e => e.name);
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha/Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
-        'Klarg', 'Rokr', 'Áéd', 'The Hangman', 'Jaguar Cantona']);
+        'Klarg', 'Røkr', 'Áéd', 'The Hangman', 'Jaguar Cantona']);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 3, 4]);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(5).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
@@ -2583,7 +2583,7 @@ test("the menu's Save: back to the start of the fight against that opponent (14 
     room.tavernRun.purse = 25;
     hero.emit('saveFight');
     const between = await waitFor(hero, 'fightSaved');
-    assert.equal(between.next, 'Rokr');
+    assert.equal(between.next, 'Røkr');
     assert.equal(between.purse, 25);
 });
 

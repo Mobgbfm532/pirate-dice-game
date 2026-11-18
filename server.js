@@ -245,7 +245,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.vaelin,
         ability: 'inkfire',
         blurb: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster.", // (the user's, 13 Nov)
-        powers: [{ name: "Inkfire Blast", text: "For a round, the 6's burn on your dice." }]
+        powers: [{ name: "Inkfire Blast", text: "For a round, the 6s burn on your dice." }]
     },
     {
         id: 'stason',
@@ -295,11 +295,11 @@ const TAVERN_ENCOUNTERS = [
     {
         id: 'rokr',
         place: 'saltySwallow',
-        name: 'Rokr',
+        name: 'Røkr', // (18 Nov, the user's: was Rokr; the id stays rokr)
         avatar: '✨',
         lives: BALANCE.opponentLives.rokr,
         ability: 'constellationBlur',
-        blurb: "Rokr, a druid of the stars who charts his own destiny.", // (the user's, 13 Nov)
+        blurb: "Røkr, a druid of the stars who charts his own destiny.", // (the user's, 13 Nov)
         powers: [{ name: "Starry Form", text: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." }]
     },
     {
@@ -2424,7 +2424,7 @@ function roundEffectMove(room, effect, text) {
 const ROUND_EFFECT_TEXT = {
     curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
     devil: { opponent: 'Three 6s land on the table.', player: 'Three 6s for you.' },
-    ink: { opponent: "The 6's burn on your dice. This round your dice that land on it roll again." },
+    ink: { opponent: "The 6s burn on your dice. This round your dice that land on one roll again." },
     smite: { opponent: 'If he wins this round, you lose two hearts.' }
 };
 

@@ -1085,7 +1085,7 @@ socket.on('offerKeepsakes', (data: Omit<Extract<Modal, { type: 'keepsakes' }>, '
 
 socket.on('gameOver', (data: { message: string; tavern?: TavernSummary; winnerId?: string | null }) => {
     if (data.tavern) {
-        playSound(data.tavern.won ? 'tavernVictory' : 'aww'); // (the user's Tavern Crawl Victory, 4 Nov)
+        playSound(data.tavern.won ? 'crawlVictory' : 'aww'); // (the user's Victory fanfare since 18 Nov; Tavern Crawl Victory until then)
         update({ modal: { type: 'tavernOver', summary: data.tavern } });
     } else {
         // (After the last round's result card has been read.)

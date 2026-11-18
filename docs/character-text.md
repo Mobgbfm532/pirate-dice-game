@@ -68,8 +68,8 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - Entrance card: "Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
 
 **Vaelin Inkhand**: Inkfire Blast (renamed from Inkfire Brand, 18 Nov, the user's)
-- Ability moment (the server's line, not shown on screen since 28 Oct): "The 6's burn on your dice. This round your dice that land on it roll again."
-- Entrance card: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Blast: For a round, the 6's burn on your dice."
+- Ability moment (the server's line, not shown on screen since 28 Oct): "The 6s burn on your dice. This round your dice that land on one roll again."
+- Entrance card: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Blast: For a round, the 6s burn on your dice."
 - Badge: "Inkfire round: your dice can't land on 6"
 
 **Stason Jatham**: Vexing Rapier
