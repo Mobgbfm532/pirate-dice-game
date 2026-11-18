@@ -543,7 +543,7 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
     'Twinned Dice': 'unlimitedPower',
     'The Ace of Spades': 'gunshot',
     'Back of the Head': 'sylvesterPunch',
-    'Inkfire Brand': 'inkfire',
+    'Inkfire Blast': 'inkfire',
     'Vexing Rapier': 'flourish',
     'Divine Smite': 'smite',
     'Astral Flood': 'astralFlood',

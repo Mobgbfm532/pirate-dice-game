@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { tableCover, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, startMusic, holdMusic, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
@@ -741,7 +741,7 @@ function SeaInfo({ sea, face, faces, phase, ward, onClose }: { sea: SeaState; fa
 }
 
 // An opponent's ability (or a round's effect) on the plaque: its painting and what it does.
-const KIND_ABILITY: Record<string, string> = { curse: 'You are Cursed!', ink: 'Inkfire Brand', stare: 'Penitent Stare', smite: 'Divine Smite', mind: 'Mind Whip', devil: 'Sympathy for the Devil', cloak: 'The Cloak', allin: 'All In' };
+const KIND_ABILITY: Record<string, string> = { curse: 'You are Cursed!', ink: 'Inkfire Blast', stare: 'Penitent Stare', smite: 'Divine Smite', mind: 'Mind Whip', devil: 'Sympathy for the Devil', cloak: 'The Cloak', allin: 'All In' };
 function AbilityInfo({ badge, powers, onClose }: { badge: RoundBadge; powers: { name: string; text: string }[]; onClose: () => void }) {
     const name = KIND_ABILITY[badge.kind] ?? badge.title;
     const power = powers.find(p => p.name === name || p.name === badge.title);
@@ -1614,7 +1614,7 @@ const ABILITY_ART: Record<string, string> = {
     'Disguise Self': 'ability-disguises.webp',
     // 26 Oct: the Yawning Portal's and the ship's.
     'Back of the Head': 'ability-back-of-the-head.webp',
-    'Inkfire Brand': 'ability-inkfire.webp',
+    'Inkfire Blast': 'ability-inkfire.webp',
     'Vexing Rapier': 'ability-flourish.webp',
     'Astral Flood': 'ability-astral-flood.webp',
     'Reach Around': 'ability-reach-around.webp',
@@ -1709,6 +1709,36 @@ const VAPOUR_PUFFS = Array.from({ length: 16 }, (_, i) => ({ x: ((i * 37) % 60) 
 // While the painting's stage covers the screen (opaque from 7% to 88% of its 1.85 s), the table isn't drawn.
 const COVER_FROM_MS = 160, COVER_UNTIL_MS = 1580;
 
+// What an ability did, in plain words (18 Nov, the user's): once its moment has gone, a parchment ribbon in a brass
+// rim drops in just above the opponent's nameplate with the ability's painting and one line, for AFTERMATH_MS; a tap
+// sends it away. Jaguar's Smooth Talker first sends your bottle flying from your shelf to him (it played as if you
+// drank it), and the ribbon follows as it reaches him.
+function AftermathRibbon({ after }: { after: Aftermath | null }) {
+    if (!after) return null;
+    const plate = document.querySelector('.opponent-plate')?.getBoundingClientRect();
+    const seen = !!plate && plate.width > 0;
+    const to = seen ? { x: plate!.left + plate!.width / 2, y: plate!.top + plate!.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight * 0.3 };
+    const top = Math.max(8, (seen ? plate!.top : window.innerHeight * 0.3) - 62);
+    const flight = !!(after.thonic && after.from);
+    const art = ABILITY_ART[after.ability];
+    return (
+        <>
+            {flight && (
+                <div key={`b${after.at}`} className={`stolen-bottle potion-${after.thonic}`} aria-hidden="true"
+                    style={{ left: after.from!.x, top: after.from!.y, '--dx': `${to.x - after.from!.x}px`, '--dy': `${to.y - after.from!.y}px`, '--ms': `${BOTTLE_FLIGHT_MS}ms` } as React.CSSProperties}>
+                    <Bottle thonic={{ id: after.thonic } as Thonic} />
+                </div>
+            )}
+            <button key={after.at} type="button" className="aftermath-ribbon" onClick={dismissAftermath}
+                style={{ top, '--delay': `${flight ? BOTTLE_FLIGHT_MS - 150 : 0}ms`, '--ms': `${AFTERMATH_MS}ms` } as React.CSSProperties} aria-live="polite">
+                {after.thonic ? <span className="aftermath-icon bottle-icon"><Bottle thonic={{ id: after.thonic } as Thonic} /></span>
+                    : art ? <img className="aftermath-icon" src={`${import.meta.env.BASE_URL}art/${art}`} alt="" /> : null}
+                <span className="aftermath-text">{after.text}</span>
+            </button>
+        </>
+    );
+}
+
 function AbilityMomentView({ snap }: { snap: Snapshot }) {
     const moment = snap.ability;
     const [visible] = useMoment(moment?.at ?? 0, MOMENT_SHOW_MS);
@@ -1772,7 +1802,8 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                     <span className="blessing-icon">{keepsakeIcon(moment.blessing)}</span>
                 </div>
             )}
-            {moment.thonic && (
+            {/* (Jaguar's Smooth Talker: not this, his bottle flies to him afterwards: AftermathRibbon, 18 Nov) */}
+            {moment.thonic && moment.ability !== 'Smooth Talker' && (
                 <div className={`potion-moment potion-${moment.thonic}`} aria-hidden="true">
                     <span className="potion-glow" />
                     {Array.from({ length: 9 }, (_, i) => <span key={i} className="bubble" style={{ '--x': `${(i * 23) % 60 - 30}px`, '--s': `${5 + (i * 7) % 9}px`, '--d': `${0.25 + (i * 0.09) % 0.6}s` } as React.CSSProperties} />)}
@@ -1806,7 +1837,7 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                     {VAPOUR_PUFFS.map((p, i) => <span key={i} style={{ '--x': `${p.x}vw`, '--y': `${p.y}vh`, '--s': p.s, '--d': `${p.d}s` } as React.CSSProperties} className={i % 3 === 2 ? 'alt' : ''} />)}
                 </div>
             )}
-            {fx && moment.ability === 'Inkfire Brand' && <div className="ink-six" aria-hidden="true">6</div>}
+            {fx && moment.ability === 'Inkfire Blast' && <div className="ink-six" aria-hidden="true">6</div>}
             {fx && moment.ability === 'Vexing Rapier' && <div className="rapier-slash" aria-hidden="true"><span /><span /></div>}
             {fx && moment.ability === 'Divine Smite' && <div className="smite-beam" aria-hidden="true" />}
             {/* The hammer lands (a won Smite round): a white-gold flash and cracks of light from the middle. */}
@@ -1933,7 +1964,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
 const thomLine = (first: boolean) => (first ? 'Vim, vigour, vitality!' : "What ya havin'?");
 // Aboard the Salty Swallow Thom has stowed away, so as not to lose his best customer (6 Nov, the
 // user's words): one of these, drawn once for each fight.
-const THOM_SHIP_LINES = ["Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest.", "There's number one customer!", "You're putting my kid through Dwemercore!"];
+const THOM_SHIP_LINES = ["Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest.", "There's my number one customer!", "You're putting my kid through Dwemercore!"];
 const thomShipLines = new Map<number, string>();
 function thomSays(run: { place?: string; encounterNumber: number }, first: boolean) {
     if (run.place !== 'The Salty Swallow') return thomLine(first);
@@ -3492,6 +3523,7 @@ export function Hud() {
                 </button>
             )}
             <AbilityMomentView snap={snap} />
+            <AftermathRibbon after={snap.aftermath} />
             {snap.floodWaveAt && <FloodWave key={snap.floodWaveAt} />}
             <SeaMoment snap={snap} />
             <WaveMoment snap={snap} />

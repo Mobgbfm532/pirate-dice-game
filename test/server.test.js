@@ -2716,6 +2716,7 @@ test('from Klarg on, opponents keep what the best-play brain chooses', async () 
     const hero = await tavernAgainst(fightOf('hangman'), 'BestPlay');
     const room = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hero.id])];
     room.tavernRun.abilityRound = 99;
+    room.tavernRun.abilityUsed = { penitentStare: 1, deadeye24: 1 }; // (they judge their own moment since 18 Nov)
     let keptIds = null;
     hero.on('diceRolled', d => {
         if (d.turn.playerId !== 'BOT_MOLAR') return;
@@ -2804,7 +2805,7 @@ test('Back of the Head waits for a hand that counts (not dust)', async () => {
     assert.equal(room.tavernRun.abilityUsed.suckerPunch, undefined, 'still in his pocket');
 });
 
-test("Vaelin's Inkfire Brand: in his round your dice never land on 6", async () => {
+test("Vaelin's Inkfire Blast: in his round your dice never land on 6", async () => {
     const { hero, room } = await roundAgainst('vaelin', 'Inked');
     assert.equal(room.tavernRun.roundEffect.kind, 'ink');
     const face = server.rollFaceFor(room, room.turn);
@@ -2987,7 +2988,7 @@ test('the next round, and its ability, wait until the round result has gone out'
     const next = nextState(hero, s => s.tavernRun && s.tavernRun.encounterRound === 2);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     await next;
-    const result = events.indexOf('result'), ink = events.lastIndexOf('Inkfire Brand'), round2 = events.indexOf('round 2');
+    const result = events.indexOf('result'), ink = events.lastIndexOf('Inkfire Blast'), round2 = events.indexOf('round 2');
     assert.ok(result >= 0 && ink > result && round2 > ink, `result, then the ability, then the new round: ${events.join(', ')}`);
 });
 
@@ -3625,7 +3626,8 @@ test("Divine Smite and Astral Flood wait until a heart can really be taken", asy
     assert.equal(server.heartTakeable(room), false, 'your Shield waits');
     room.tavernRun.encounterKeepsakeUses.bentCopper = true;
     assert.equal(server.heartTakeable(room), true, 'your Shield is spent');
-    // The Smite itself, with you on your last heart: no round effect.
+    // The Smite itself, with you on your last heart: no round effect (he on 3).
+    room.players.BOT_MOLAR.lives = 3;
     room.players[hero.id].lives = 1;
     room.tavernRun.abilityRound = 1;
     room.tavernRun.abilityUsed = {};
@@ -3634,6 +3636,23 @@ test("Divine Smite and Astral Flood wait until a heart can really be taken", asy
     room.players[hero.id].lives = 3;
     server.beginTavernRound(codeOf(hero), room);
     assert.equal(room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind, 'smite');
+    // 18 Nov: on your last heart with your Shield waiting, it counts (the Shield catches one, the other is lost).
+    room.players[hero.id].lives = 1;
+    room.tavernRun.abilityUsed = {};
+    room.tavernRun.encounterKeepsakeUses = {};
+    room.tavernRun.abilityRound = 3;
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.roundEffect, null, 'not before his ready round');
+    room.tavernRun.abilityRound = 1;
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind, 'smite', 'your Shield waits');
+    // And on his last life he smites whatever the hearts, ready round or not.
+    room.tavernRun.encounterKeepsakeUses.bentCopper = true;
+    room.tavernRun.abilityUsed = {};
+    room.tavernRun.abilityRound = 3;
+    room.players.BOT_MOLAR.lives = 1;
+    server.beginTavernRound(codeOf(hero), room);
+    assert.equal(room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind, 'smite', 'his last life');
 });
 
 test('points: 50 a perfect hand (a 24, or a cursed Perfect ...4?), 2,000 for winning the crawl (18 Nov)', async () => {

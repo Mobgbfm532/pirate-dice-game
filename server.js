@@ -245,7 +245,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.vaelin,
         ability: 'inkfire',
         blurb: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster.", // (the user's, 13 Nov)
-        powers: [{ name: "Inkfire Brand", text: "For a round he burns the 6 into the table, and your dice that land on it roll again." }]
+        powers: [{ name: "Inkfire Blast", text: "For a round, the 6's burn on your dice." }]
     },
     {
         id: 'stason',
@@ -1355,6 +1355,14 @@ function heartTakeable(room) {
     return !!human && human.lives >= 2 && !shield;
 }
 
+// Divine Smite's second heart counts (18 Nov: heartTakeable skipped it while your Shield waited, yet then
+// the Shield catches one heart and the other is lost).
+function smiteCounts(room) {
+    let human = room.players[getHumanPlayerId(room)];
+    let shield = hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper;
+    return !!human && (human.lives >= 2 || shield);
+}
+
 // A die kept: the server's answer to everyone, after Sylvester has had his chance.
 function emitKept(roomCode, result) {
     let room = rooms[roomCode];
@@ -1552,8 +1560,9 @@ function performEndTurn(roomCode) {
             room.players[currentId].score = score;
         }
         if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
+            let was = room.players[currentId].score;
             room.players[currentId].score = 24;
-            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.' });
+            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.', after: `The Hangman fires the Ace of Spades: his ${was} becomes a perfect 24.` });
             if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
         // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
@@ -1784,7 +1793,7 @@ function stareTurnsRound(roomCode, room, human, enemy) {
     if (!fireTavernAbility(roomCode, room, encounter, 'penitentStare')) return; // (a Clear-Eye saw it coming)
     let was = human.score;
     human.score = Math.max(0, was - off);
-    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.penitentStare, text: `Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}` });
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.penitentStare, text: `Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}`, after: `The Hangman's stare: your ${was} becomes ${human.score}.` });
 }
 
 // True when a Tavern Crawl opponent can no longer win or tie the round, whatever the dice
@@ -2094,9 +2103,11 @@ function sendMoment(roomCode, event, data) {
 const momentsLeft = room => Math.max(0, (room.momentEnd || 0) - Date.now());
 
 // (Sylvester's, Stason's and Frak's judge their own moment since 17 Nov: no random round to wait for.)
-const JUDGED_ABILITIES = ['suckerPunch', 'flourish', 'mindWhip'];
+// (18 Nov: the Hangman's Stare and Ace judge theirs too, and Divine Smite on the Ridgeler's last life.)
+const JUDGED_ABILITIES = ['suckerPunch', 'flourish', 'mindWhip', 'penitentStare', 'deadeye24'];
 function canUseTavernAbility(room, encounter, abilityId) {
-    let abilityReady = JUDGED_ABILITIES.includes(abilityId) || (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
+    let lastLife = abilityId === 'divineSmite' && room.players[BOT_ID] && room.players[BOT_ID].lives <= 1;
+    let abilityReady = JUDGED_ABILITIES.includes(abilityId) || lastLife || (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
     return encounter && abilitiesOf(encounter).includes(abilityId) && abilityReady && getAbilityUseCount(room, abilityId) < abilityUsesFor(room, abilityId);
 }
 // An opponent's abilities: one, or (the Hangman) two.
@@ -2393,7 +2404,7 @@ function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
 //   mind   Mind Whip: on the player's first throw Frak makes them keep a random die (Rules.mindWhip)
 //   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
 //   devil  Sympathy for the Devil: `by` throws three 6s first (and, if devilCap is set, the other side can't score above it)
-//   ink    Vaelin's Inkfire Brand: the 6 is burned into the table; the player's dice that land on it roll again (rollFaceFor)
+//   ink    Vaelin's Inkfire Blast: the 6 is burned into the table; the player's dice that land on it roll again (rollFaceFor)
 //   smite  The Ridgeler's Divine Smite: if he wins the round, the player loses two hearts (evaluateTavernRound)
 // `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
 // Martha (or the mask) wears.
@@ -2413,7 +2424,7 @@ function roundEffectMove(room, effect, text) {
 const ROUND_EFFECT_TEXT = {
     curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
     devil: { opponent: 'Three 6s land on the table.', player: 'Three 6s for you.' },
-    ink: { opponent: 'The 6 burns into the table. This round your dice that land on it roll again.' },
+    ink: { opponent: "The 6's burn on your dice. This round your dice that land on it roll again." },
     smite: { opponent: 'If he wins this round, you lose two hearts.' }
 };
 
@@ -2439,8 +2450,11 @@ function beginTavernRound(roomCode, room) {
         // (17 Nov: only when it can take one of yours as well, or he's on his last life and needs the heal)
         if (bot && bot.lives < encounter.lives && (heartTakeable(room) || bot.lives <= 1) && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
             bot.lives++;
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a life and takes one of yours.' });
             let human = room.players[getHumanPlayerId(room)];
+            let shielded = !!human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper;
+            // (after: the line the aftermath ribbon shows once the moment has gone, 18 Nov, the user's)
+            let after = shielded ? 'Brodor heals a heart. Your Shield of Fuckery holds yours.' : human && human.lives > 1 ? 'Brodor heals a heart and takes one of yours.' : 'Brodor heals a heart.';
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a life and takes one of yours.', after });
             if (human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper) {
                 run.encounterKeepsakeUses.bentCopper = true;
                 emitKeepsakeActivated(roomCode, room, 'bentCopper', 'The Shield of Fuckery protects a life.');
@@ -2458,8 +2472,9 @@ function beginTavernRound(roomCode, room) {
     // (applyTavernRollAbilities); each is spent, and shown, only then.
     if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
     if (ability === 'mindWhip') { run.pendingMind = { as: disguise ? disguise.as : null }; return; }
-    // Divine Smite (17 Nov): only when its second heart counts (you'd lose two: 2+ hearts, your Shield spent).
-    if (ability === 'divineSmite' && !heartTakeable(room)) return;
+    // Divine Smite (17 Nov): only when its second heart counts: you on 2+ hearts, or your Shield of Fuckery still
+    // waiting (it catches one, the other is lost). 18 Nov, the user's: on his last life he smites anyway.
+    if (ability === 'divineSmite' && !smiteCounts(room) && !(bot && bot.lives <= 1)) return;
     if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
     run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
     disguiseMoves(room, run.roundEffect).forEach(move => sendMoment(roomCode, 'signatureMove', move));
@@ -2506,7 +2521,7 @@ function jaguarDemandsThonic(roomCode, room, encounter, bot) {
     if (id === 'healing' && bot.lives < encounter.lives) bot.lives++;
     if (id === 'steady') run.jaguarSteady = true;
     let what = id === 'healing' ? ' and heals a heart' : id === 'steady' ? ': his dust this round scores as it lies' : '';
-    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He demands your ${THONICS[id].name} and drinks it${what}.`, thonic: id });
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He demands your ${THONICS[id].name} and drinks it${what}.`, thonic: id, after: `Jaguar takes your ${THONICS[id].name} and drinks it${id === 'healing' ? ': he heals a heart' : what}.` });
 }
 
 // Jaguar's Smooth Talker with your shelf empty (14 Nov, the user's): at the round's end, never telegraphed, like
@@ -2524,7 +2539,7 @@ function smoothTalkAtEnd(roomCode, room, human, enemy, cursed) {
     if (!canUseTavernAbility(room, encounter, 'jaguarPhases') || !fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
     let was = human.score;
     human.score = Math.max(0, was - off);
-    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he talks you into scoring ${off} less. Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}` });
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he talks you into scoring ${off} less. Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}`, after: `Jaguar talks your ${was} down to ${human.score}.` });
 }
 
 // Martha's disguise shows first, then the trick she copies (the user's call, 21 Oct).
@@ -2935,7 +2950,7 @@ function evaluateTavernRound(roomCode) {
     if (effect && effect.kind === 'smite' && losersThisRound.length === 1 && losersThisRound[0].id === humanId) {
         losersThisRound.push({ id: humanId, reason: 'Divine Smite.' });
         // The hammer comes down (3 Nov): the moment again, its sound, and the whole screen shakes.
-        sendMoment(roomCode, 'signatureMove', { name: enemy.name, ability: Rules.ABILITY_NAMES.divineSmite, text: 'The hammer falls: you lose two hearts.', hit: true });
+        sendMoment(roomCode, 'signatureMove', { name: enemy.name, ability: Rules.ABILITY_NAMES.divineSmite, text: 'The hammer falls: you lose two hearts.', hit: true, after: hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper ? 'Divine Smite: two hearts. Your Shield of Fuckery catches one.' : 'Divine Smite: you lose two hearts.' });
     }
     // Jaguar's All In: the round's loser loses two hearts (each can still be caught as above).
     if (room.tavernRun.jaguarPhase === 'allIn') losersThisRound = losersThisRound.flatMap(loser => [loser, { ...loser, reason: 'All In.' }]);

@@ -42,7 +42,7 @@ function kindOf(m: AbilityMoment): string | null {
     if (m.name === 'Keepsake') return 'keepsake';
     switch (m.ability) {
         case 'Sympathy for the Devil': return 'devil';
-        case 'Inkfire Brand': return 'ink';
+        case 'Inkfire Blast': return 'ink';
         case 'Divine Smite': return 'smite';
         case 'Astral Flood': return 'flood';
         case 'Starry Form': return 'stars';

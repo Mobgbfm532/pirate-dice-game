@@ -390,6 +390,12 @@ one too, or saves only last until the server restarts, which on the free tier is
     Divine Smite's landing about twice as smooth; Martha's letter in the user's words, by flying snake; the start
     screen's Ghoul and Gourd tune from the first tap; Becalmed's lanterns built and taken out. The expert's numbers
     are kept, with no change to difficulty (the user's).
+  - also 18 Nov (the user's): the Ridgeler's Divine Smite fires while your Shield waits (it was skipped) and always on his
+    last life (`smiteCounts`); the Hangman's Stare and Ace judge their own moment (`JUDGED_ABILITIES`); Inkfire Brand renamed
+    **Inkfire Blast** (the user's text; banner class `inkfire-blast`); after Astral Flood, Smooth Talker, Penitent Stare, the
+    Smite's landing and the Ace, a parchment ribbon over the opponent's nameplate says what happened (`after` on
+    `signatureMove`, `AftermathRibbon`, `docs/ability-feedback-brainstorm.md`), and Jaguar's Smooth Talker sends your bottle
+    flying to him instead of the drinking moment; Thom's "There's my number one customer!".
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the

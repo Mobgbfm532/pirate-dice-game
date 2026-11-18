@@ -32,6 +32,12 @@ day they happen, with what's been built marked as it lands.
 - **The voyage:** the dials are first guesses, never simulated. Is All In with a rogue wave two rounds in three
   too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Teach the opponents (and the simulator) that a wave is coming? The Cloak and All In
   are still working names (Smooth Talk became Smooth Talker, 18 Nov).
+- **What an ability did** (`docs/ability-feedback-brainstorm.md`, 18 Nov): an aftermath ribbon with a plain line
+  after Astral Flood, Smooth Talker, Penitent Stare, Divine Smite, the Ace; Jaguar's Thonic flying from your shelf to
+  him instead of the drinking moment. Which ideas, and the lines' words?
+- **The Hangman's Ace** (18 Nov): it fires only on his own 16-23 on his last life; on any valid hand instead?
+- **Grammar** (18 Nov): the list of suspect lines put to the user (comma splice in Brodor's letter, "Once per
+  encounter", "Thom's Cart", "honorable", "Alright", the dash in Sylvester's card).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
 - **The start screen:** clear enough on a phone? The computer's title on the left: good? (The tavern tune plays from
   the first tap since 18 Nov, the user's.) The Hall of Legends' place and name, and its text on points? The hearts button for a new

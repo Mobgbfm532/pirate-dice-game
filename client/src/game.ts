@@ -162,6 +162,9 @@ export interface TavernSummary {
 
 // An opponent's signature move, shown as its own moment rather than a pop-up.
 // cancelled: a Clear-Eye stopped it (its banner shows, without its effect; the Thonic's moment follows).
+export interface Aftermath { text: string; ability: string; thonic?: string; from?: { x: number; y: number }; at: number }
+export const AFTERMATH_MS = 3600; // the ribbon's time on screen (with the bottle's flight before it: BOTTLE_FLIGHT_MS more)
+export const BOTTLE_FLIGHT_MS = 900;
 export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; blessing?: string; cancelled?: boolean; hit?: boolean; vapour?: string }
 
 // What the last fight paid out, shown when Thom's cart opens.
@@ -220,6 +223,9 @@ export interface Snapshot {
     sailAt: number; // the Salty Swallow: Skipper Bren on the docks, then it sets sail, before Klarg's entrance card (0: none)
     sailStage: 'dock' | 'sail' | 'portal'; // which of the two is up (or the Yawning Portal's arrival, 17 Nov)
     ability: AbilityMoment | null;
+    // What an ability did, in plain words, once its moment has gone (18 Nov, the user's): a ribbon over the
+    // opponent's nameplate. thonic/from: Jaguar's Smooth Talker, the bottle flying from your shelf (from: its slot's middle).
+    aftermath: Aftermath | null;
     shopArrival: ShopArrival | null;
     // The scenes between fights are up (the summary, the event, Thom's cart): they wait for the
     // fight's last roll to finish (BETWEEN_PAUSE_MS), and while they're up nobody sits at the table.
@@ -302,6 +308,7 @@ let snapshot: Snapshot = {
     sailAt: 0,
     sailStage: 'dock',
     ability: null,
+    aftermath: null,
     shopArrival: null,
     betweenShown: false,
     ghosts: null,
@@ -788,19 +795,19 @@ socket.on('leaderboardUpdate', (entries: LeaderboardEntry[]) => {
 
 // Moves with their own on-table moment (see Hud's AbilityMoment and the 3D dice).
 const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare', 'The Ace of Spades', 'Smooth Talker', 'Mind Whip', 'You are Cursed!', 'Sympathy for the Devil',
-    'Disguise Self', 'Back of the Head', 'Inkfire Brand', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
+    'Disguise Self', 'Back of the Head', 'Inkfire Blast', 'Vexing Rapier', 'Divine Smite', 'Astral Flood',
     // the Salty Swallow as the final tier (25 Oct)
     'Written in the Stars', 'Dead Eye', 'The Cloak', 'All In',
     // Áéd's metamagic (11 Nov)
     'Heightened Dice', 'Quickened Dice', 'Empowered Dice', 'Twinned Dice']);
 
 // The Yawning Portal's hard hitters: the whole screen shakes with their moment.
-const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Brand', 'Divine Smite']);
+const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Blast', 'Divine Smite']);
 
 // The server sends a move while the dice may still be tumbling on screen, so it waits its
 // turn in the queue: it shows once the roll has finished. Reach Around waits for the dice to
 // settle, and the die it takes goes once its banner has.
-socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean; thonic?: string }) => {
+socket.on('signatureMove', (data: { name: string; ability: string; text: string; cancelled?: boolean; disguise?: string | null; hit?: boolean; thonic?: string; after?: string }) => {
     const steal = data.ability === 'Reach Around';
     const flood = data.ability === 'Astral Flood' && !data.cancelled;
     enqueueMoment(() => {
@@ -814,6 +821,7 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
         // The screen shakes as these land (5 Nov, the user's), and as the Ridgeler's hammer comes down.
         if (!data.cancelled && (data.hit || SHAKING_ABILITIES.has(data.ability))) shakeScreen(250, !!data.hit);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
+        if (data.after && !data.cancelled) showAftermath(data, flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_SHOW_MS);
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
         // His hand comes for the die as the banner leaves (its last 0.15 s are it rising away).
         if (steal && !data.cancelled) {
@@ -830,6 +838,25 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
 });
 
 const FLOOD_WAVE_MS = 2200; // (the server's too)
+
+// The aftermath ribbon (18 Nov, the user's: "a banner that tells the player what happens"), `delay` ms from now, as the
+// moment leaves. For Jaguar's Smooth Talker the Thonic's slot is measured now, while your shelf still shows it (the
+// state that takes it away waits behind the moment), so its bottle can fly from there to him.
+function showAftermath(data: { ability: string; after?: string; thonic?: string }, delay: number) {
+    let from: { x: number; y: number } | undefined;
+    if (data.thonic) {
+        const shelf = snapshot.state?.tavernRun?.shelf ?? [];
+        const slot = document.querySelectorAll('.shelf .shelf-slot')[shelf.findIndex(t => t?.id === data.thonic)] as HTMLElement | undefined;
+        const r = slot?.getBoundingClientRect();
+        if (r && r.width > 0) from = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+    setTimeout(() => {
+        const at = performance.now();
+        update({ aftermath: { text: data.after!, ability: data.ability, thonic: data.thonic, from, at } });
+        setTimeout(() => { if (snapshot.aftermath?.at === at) update({ aftermath: null }); }, AFTERMATH_MS + (data.thonic ? BOTTLE_FLIGHT_MS : 0));
+    }, delay);
+}
+export function dismissAftermath() { update({ aftermath: null }); }
 // Aboard the Salty Swallow, each round from the second begins with the sea die (9 Nov, the user's):
 // its moment, in turn with the rest (the server's clock too): the die tumbles in and lands, the dial's
 // needle swings onto its face, and when the sea changes a wave breaks across, the whole screen heaves
@@ -1460,6 +1487,9 @@ export const preview = {
     // e.g. ability('Keepsake', 'Shield', { keepsake: 'bentCopper', text: 'Shield protects a life.' })
     // (hold: keep it up that much longer, to look at a still of it)
     ability(name: string, ability: string, more: Partial<AbilityMoment> = {}, hold = 0) { if (more.hit || SHAKING_ABILITIES.has(ability)) shakeScreen(250, !!more.hit); update({ ability: { name, ability, text: '', ...more, at: performance.now() + hold } }); },
+    // The aftermath ribbon alone, e.g. aftermath('Astral Flood', 'Brodor heals a heart and takes one of yours.'),
+    // or Jaguar's bottle with aftermath('Smooth Talker', '...', 'healing') (a Thonic on your shelf to fly from).
+    aftermath(ability: string, after: string, thonic?: string, delay = 0) { showAftermath({ ability, after, thonic }, delay); },
     intro() { update({ introAt: performance.now(), introShowing: true }); },
     floodWave() { showFloodWave(); },
     // The Salty Swallow sets sail (its scene alone; hold: freeze it that many ms in, for stills).

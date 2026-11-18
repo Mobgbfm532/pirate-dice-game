@@ -20,7 +20,7 @@ Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a h
 
 **Jorvash**, "Manservant of the Salty Swallow". Card: "Something to fortify you?" / "A refreshment for the next fight". Scene: "One of these before you face [next]?" After: "Very good." / "As you wish." Refreshments (the user's names): Notaro Red, "Your first hand that counts next fight scores 2 more."; Water of the Ebon Shield, "The sea die can't touch you next fight: your dice never list, and no squall, wave, fog or calm holds you back." (since 17 Nov; it was an extra heart). As that fight begins, and under the sea die's news on every roll: "Your Ebon Shield holds: you are unaffected in this fight" (the user's words); on the plaque under Roll, "· 💧 not you".
 
-**Thom, aboard** (the user's words, one at random each fight): "Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest." / "There's number one customer!" / "You're putting my kid through Dwemercore!"
+**Thom, aboard** (the user's words, one at random each fight): "Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest." / "There's my number one customer!" / "You're putting my kid through Dwemercore!"
 
 ## The voyage (9 Nov)
 
@@ -67,8 +67,9 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 **Sylvester Stonefist**: Back of the Head
 - Entrance card: "Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
 
-**Vaelin Inkhand**: Inkfire Brand
-- Entrance card: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Brand: for a round he burns the 6 into the table, and your dice that land on it roll again."
+**Vaelin Inkhand**: Inkfire Blast (renamed from Inkfire Brand, 18 Nov, the user's)
+- Ability moment (the server's line, not shown on screen since 28 Oct): "The 6's burn on your dice. This round your dice that land on it roll again."
+- Entrance card: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Blast: For a round, the 6's burn on your dice."
 - Badge: "Inkfire round: your dice can't land on 6"
 
 **Stason Jatham**: Vexing Rapier

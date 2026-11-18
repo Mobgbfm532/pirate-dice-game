@@ -48,7 +48,7 @@
         devil: 'Sympathy for the Devil',
         disguises: 'Disguise Self',
         suckerPunch: 'Back of the Head', // Sylvester's (the id is the simulator's)
-        inkfire: 'Inkfire Brand',
+        inkfire: 'Inkfire Blast',
         flourish: 'Vexing Rapier', // (Flourish until 3 Nov; the id stays)
         divineSmite: 'Divine Smite',
         astralFlood: 'Astral Flood',
