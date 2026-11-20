@@ -121,12 +121,17 @@ function JoinScreen() {
     // music, so the tune fades out while it plays and comes back after.
     // (20 Nov, the user heard nothing on a phone: a touch only counts as a tap for sound as the finger lifts, so the
     // finger going down was refused. It now tries on every kind of tap until the music is really playing.)
+    // (Later on 20 Nov, the user: it should play as anyone lands. No browser lets a page make sound before a tap, so it's
+    // tried at once, which plays where the browser allows it (Chrome on a computer, for a site visited often), and
+    // otherwise a small note says a tap brings the music.)
+    const [silent, setSilent] = useState(() => !isMusicOff());
     useEffect(() => {
         const events = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
         let done = false;
         const stop = () => events.forEach(e => window.removeEventListener(e, start));
-        const start = () => { if (!done) startMusic().then(ok => { if (ok && !done) { done = true; stop(); } }); };
+        const start = () => { if (!done) startMusic().then(ok => { if (ok && !done) { done = true; stop(); setSilent(false); } }); };
         events.forEach(e => window.addEventListener(e, start));
+        start();
         return () => { done = true; stop(); };
     }, []);
     useEffect(() => (film ? holdMusic() : undefined), [film]);
@@ -296,6 +301,8 @@ function JoinScreen() {
                 );
             })()}
             {diceOpen && <DicePicker name={name} onClose={() => setDiceOpen(false)} />}
+            {/* While the browser keeps it silent: a quiet note that a tap brings the music (any tap does). */}
+            {silent && !film && <button type="button" className="music-hint" aria-label="Tap for music"><span aria-hidden="true">♪</span> Tap for music</button>}
             <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
             {legendsOpen && <HallOfLegends me={name} onClose={() => setLegendsOpen(false)} />}
         </div>

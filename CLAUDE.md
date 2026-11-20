@@ -427,6 +427,10 @@ one too, or saves only last until the server restarts, which on the free tier is
     only for the finger going down; it now tries on pointerdown, pointerup, touchend, click and keydown until the music really
     plays (`startMusic` resolves true/false). The logo's purple flecks (magenta mixed into its outline) turned brown in
     `unpinkMagenta`.
+    The user wants the music as anyone lands: no browser allows sound before a tap, so it's tried at once (it plays where the
+    browser allows, e.g. Chrome on a computer for a site visited often; the Browser pane allows it, so **set
+    `tavernMuted` before loading the start screen in the pane**), else a "♪ Tap for music" pill in the top-left corner
+    (`.music-hint`) until a tap starts it.
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the

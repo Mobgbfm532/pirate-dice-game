@@ -4500,3 +4500,19 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 .title-logo { max-width: 100%; } /* (never wider than the title's own column) */
 /* (Notices on the start screen, 20 Nov: above its panel.) */
 .toasts.join-toasts { z-index: 30; }
+
+/* -- "Tap for music" (20 Nov): on the start screen while the browser keeps it silent; any tap starts the music and it goes.
+   A quiet brass-rimmed pill in the top-left corner (the Legends plaque has the right), glowing softly. -- */
+.music-hint {
+    position: absolute; z-index: 3; top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+    display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 14px;
+    border: 2px solid transparent; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(rgba(30, 18, 8, 0.85), rgba(20, 12, 5, 0.85)) padding-box, var(--brass-rim, linear-gradient(#f6dc8e, #c9973a 45%, #7a5318)) border-box;
+    color: #f6e3b4; font: 600 0.9rem/1 Almendra, Georgia, serif; letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    animation: music-hint-in 0.6s ease-out 1.2s both, music-hint-glow 2.8s ease-in-out 1.8s infinite;
+}
+.music-hint span { color: #ffd54f; font-size: 1.1rem; }
+@keyframes music-hint-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes music-hint-glow { 0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); } 50% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 14px rgba(255, 200, 80, 0.45); } }
+@media (prefers-reduced-motion: reduce) { .music-hint { animation: none; } }
