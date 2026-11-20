@@ -2,13 +2,60 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const path = require('path'); 
+const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const os = require('os');
+const Rules = require('./shared/rules');
+const Strategy = require('./shared/strategy');
+const BALANCE = require('./shared/balance');
+// Settings kept on this PC (`neon deploy` writes the database link, DATABASE_URL, to .env.local;
+// never in git). On Render they are set in the service's Environment instead. A setting already
+// given (Render's) wins. The tests and the dev test server (LEADERBOARD_READONLY) skip them, so
+// they never touch the real database.
+if (!process.env.LEADERBOARD_READONLY) for (const file of ['.env.local', '.env']) {
+    const at = path.join(__dirname, file);
+    if (fs.existsSync(at)) process.loadEnvFile(at);
+}
+const { store, playerKey } = require('./db');
 
-app.use(express.static(__dirname));
+const BOT_ID = 'BOT_MOLAR';
+
+// Scales every server-side delay (bot thinking time, roll animations). Tests set this low.
+const TIME_SCALE = Number(process.env.GAME_TIME_SCALE) || 1;
+const delay = msValue => Math.round(msValue * TIME_SCALE);
+
+const rollFace = () => crypto.randomInt(1, 7);
+
+// Phones drop their connection when the screen locks or the app is switched. A table with
+// nobody connected is kept this long so players can come back to it, and the player whose
+// turn it is gets this long to reconnect before their turn counts as dust.
+const EMPTY_TABLE_GRACE_MS = 120000;
+// A Tavern Crawl's table is kept far longer (16 Nov, the user's "so a crawl is never lost"): a phone call
+// or a long message used to end a run of fifteen fights. Its opponent waits while nobody is there.
+const CRAWL_TABLE_GRACE_MS = 3600000;
+const TURN_RECONNECT_GRACE_MS = 30000;
+// At a friends' table, someone away this long leaves it (17 Nov, the user's "fix bugs": a player who
+// closed the tab stayed as an "Away" card until the table ended). Back sooner, they keep their seat.
+const AWAY_LEAVE_MS = 120000;
+
+// The avatars a player may pick: the 3D client's seven item icons (30 Oct), then the classic
+// page's six characters.
+// "Shield of Fuckery" (the user's name, 17 Nov; it was "Shield", still taken from older pages and given the new name).
+const AVATARS = ["Martha's Mask", "Loaded Die", "Brodor's Sunglasses", "Shield of Fuckery", "Healing Thonic", "Purple Haze", "Sign of Kram", 'Devil', 'Vaelin', 'Rokr', 'The Hangman', 'Klarg', 'Jaguar Cantona'];
+// (The 3D client's five since 3 Nov, the user's: Cheers, Ha!, Ooh, Smug, Woe.)
+const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross', '🍻', '🃏', '😏', '💔'];
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/shared', express.static(path.join(__dirname, 'shared')));
+// The 3D client prototype (client/), once built with `npm run build:client`.
+// (16 Nov: its code and styles carry a fingerprint of their contents in their names, so a browser may
+// keep them for good and never ask again; everything else is checked on each visit, as before.)
+app.use('/next/assets', express.static(path.join(__dirname, 'client', 'dist', 'assets'), { immutable: true, maxAge: '365d' }));
+app.use('/next', express.static(path.join(__dirname, 'client', 'dist')));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/leaderboard', (req, res) => {
@@ -17,132 +64,779 @@ app.get('/leaderboard', (req, res) => {
 
 let rooms = {};
 
-const LEADERBOARD_PATH = path.join(__dirname, 'leaderboard.json');
-const DEFAULT_TAVERN_LEADERBOARD = [
-    { name: 'Dr. Dice', gold: 1900 },
-    { name: 'SlyVestWearer', gold: 1800 }
-];
-
+// The Tavern Crawl's leaderboard: each name's best run by points (since 23 Oct; it was gold), with
+// the gold that run ended with. It starts empty (no made-up names). Since 3 Nov it lives in the
+// database when there is one (db.js; on Render, Neon), else in leaderboard.json (not in git). The
+// server keeps it in memory and saves each change without waiting. An older entry with only gold
+// counts that gold as its points.
 function normalizeLeaderboard(entries) {
     let bestByName = new Map();
     entries.forEach(entry => {
         let name = String(entry.name || '').trim().substring(0, 20);
+        let points = Math.max(0, parseInt(entry.points ?? entry.gold, 10) || 0);
         let gold = Math.max(0, parseInt(entry.gold, 10) || 0);
         if (!name) return;
         let existing = bestByName.get(name);
-        if (!existing || gold > existing.gold) bestByName.set(name, { name, gold });
+        if (!existing || points > existing.points) bestByName.set(name, { name, points, gold });
     });
-    return Array.from(bestByName.values()).sort((a, b) => b.gold - a.gold).slice(0, 20);
+    return Array.from(bestByName.values()).sort((a, b) => b.points - a.points).slice(0, 20);
 }
 
-function loadTavernLeaderboard() {
-    try {
-        if (fs.existsSync(LEADERBOARD_PATH)) {
-            let parsed = JSON.parse(fs.readFileSync(LEADERBOARD_PATH, 'utf8'));
-            return normalizeLeaderboard(parsed);
-        }
-    } catch (error) {
-        console.warn('Could not load leaderboard:', error.message);
-    }
-    return normalizeLeaderboard(DEFAULT_TAVERN_LEADERBOARD);
-}
+let tavernLeaderboard = [];
+store.loadLeaderboard().then(entries => {
+    // (a score submitted while it loaded is kept)
+    tavernLeaderboard = normalizeLeaderboard([...entries, ...tavernLeaderboard]);
+    io.emit('leaderboardUpdate', tavernLeaderboard);
+}).catch(error => console.warn('Could not load the leaderboard:', error.message));
 
-let tavernLeaderboard = loadTavernLeaderboard();
-
-function saveTavernLeaderboard() {
-    try {
-        fs.writeFileSync(LEADERBOARD_PATH, JSON.stringify(tavernLeaderboard, null, 2));
-    } catch (error) {
-        console.warn('Could not save leaderboard:', error.message);
-    }
-}
-
-function submitTavernLeaderboardScore(name, gold) {
-    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, gold }]);
-    saveTavernLeaderboard();
+function submitTavernLeaderboardScore(name, points, gold) {
+    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, points, gold }]);
+    store.saveLeaderboard(tavernLeaderboard, { name: String(name).trim().substring(0, 20), points, gold })
+        .catch(error => console.warn('Could not save the leaderboard:', error.message));
     return tavernLeaderboard;
 }
 
+// The league (4 Nov, the user's call): at these multiplayer tables every finished game is counted,
+// by player name (trimmed, any case): games played and games won. Kept in the database (db.js).
+const LEAGUE_ROOMS = new Set(['JUGS']);
+const leagues = new Map(); // room -> player key -> { name, wins, games }
+function leagueTable(roomCode) {
+    return [...(leagues.get(roomCode) || new Map()).values()]
+        .sort((a, b) => b.wins - a.wins || a.games - b.games || a.name.localeCompare(b.name));
+}
+// Every league, for the start screen's Hall of Legends (12 Nov): sent to everyone, not only its table.
+const leagueBoards = () => [...LEAGUE_ROOMS].map(room => ({ room, rows: leagueTable(room) }));
+LEAGUE_ROOMS.forEach(roomCode => {
+    store.loadLeague(roomCode).then(rows => {
+        let table = leagues.get(roomCode) || new Map();
+        // (a game finished while it loaded is added to what was saved)
+        rows.forEach(row => {
+            let key = playerKey(row.name), now = table.get(key);
+            table.set(key, { name: now ? now.name : row.name, wins: row.wins + (now ? now.wins : 0), games: row.games + (now ? now.games : 0) });
+        });
+        leagues.set(roomCode, table);
+        io.to(roomCode).emit('leagueUpdate', leagueTable(roomCode));
+        io.emit('leagueBoards', leagueBoards());
+    }).catch(error => console.warn('Could not load the league:', error.message));
+});
+// A multiplayer game has ended at a league table. (winnerId null: no one survived. A table of one isn't a game.)
+function recordLeagueGame(roomCode, room, winnerId) {
+    if (!LEAGUE_ROOMS.has(roomCode)) return;
+    let seen = new Set();
+    // (not those sitting this game out, waiting for the next)
+    let names = room.playerOrder.filter(id => room.players[id] && !room.players[id].waiting).map(id => room.players[id] && String(room.players[id].name).trim().substring(0, 20))
+        .filter(name => name && !seen.has(playerKey(name)) && seen.add(playerKey(name)));
+    if (names.length < 2) return;
+    let winner = winnerId && room.players[winnerId] ? String(room.players[winnerId].name).trim().substring(0, 20) : null;
+    let table = leagues.get(roomCode) || new Map();
+    leagues.set(roomCode, table);
+    names.forEach(name => {
+        let key = playerKey(name), row = table.get(key) || { name, wins: 0, games: 0 };
+        row.name = name;
+        row.games++;
+        if (winner !== null && key === playerKey(winner)) row.wins++;
+        table.set(key, row);
+    });
+    store.addLeagueResult(roomCode, names, winner).catch(error => console.warn('Could not save the league:', error.message));
+    io.to(roomCode).emit('leagueUpdate', leagueTable(roomCode));
+    io.emit('leagueBoards', leagueBoards());
+}
+
+// Who each player has met (3 Nov, the user's call): opponents they have never sat down with show as
+// a "?" in the run-over screen's line of opponents. Kept by name
+// (db.js `playerKey`), across runs and devices; loaded as a player joins a Tavern Crawl.
+const metByPlayer = new Map(); // player key -> Set of opponents' ids
+function metOf(name) {
+    let key = playerKey(name);
+    if (!metByPlayer.has(key)) metByPlayer.set(key, new Set());
+    return metByPlayer.get(key);
+}
+function loadMet(roomCode, name) {
+    store.loadMet(name).then(ids => {
+        let met = metOf(name);
+        let before = met.size;
+        ids.forEach(id => met.add(id));
+        let room = rooms[roomCode];
+        let p = room && Object.values(room.players).find(q => q.id !== BOT_ID && playerKey(q.name) === playerKey(name));
+        let had = p && p.dice;
+        if (p) settleDice(roomCode, p);
+        if (room && (met.size !== before || (p && p.dice !== had))) emitState(roomCode);
+    }).catch(error => console.warn('Could not load who has been met:', error.message));
+}
+// The player at this Tavern Crawl table meets an opponent (as they sit down).
+function meet(room, who) {
+    let human = Object.values(room.players).find(p => p.id !== BOT_ID);
+    if (!human || !who) return;
+    let met = metOf(human.name);
+    if (met.has(who)) return;
+    met.add(who);
+    store.addMet(human.name, who).catch(error => console.warn('Could not save who has been met:', error.message));
+}
+
+// The opponents a player has beaten, in any run (20 Nov, the user's: you may throw their dice once you have).
+// Kept as "beat:<id>" beside who you've met; before 20 Nov nothing was kept, so meeting an opponent counts every one
+// before them in the tournament as beaten too.
+function beatenBy(name) {
+    let met = metOf(name);
+    let furthest = Math.max(-1, ...TAVERN_ENCOUNTERS.map((e, i) => (met.has(e.id) ? i : -1)));
+    return new Set(TAVERN_ENCOUNTERS.filter((e, i) => i < furthest || met.has('beat:' + e.id)).map(e => e.id));
+}
+// The opponents whose dice can be thrown (their painted sets; McGrath throws the ivory ones).
+const DICE_SETS = new Set(['frak', 'danhausen', 'duke', 'martha', 'sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor', 'klarg', 'rokr', 'aed', 'hangman', 'jaguar']);
+// A player's own dice: one of those sets, once its opponent is beaten (p.diceWanted, sent as they join).
+function settleDice(roomCode, p) {
+    if (!p || !p.diceWanted) { if (p) delete p.dice; return; }
+    let ok = DICE_SETS.has(p.diceWanted) && beatenBy(p.name).has(p.diceWanted);
+    if (ok) p.dice = p.diceWanted; else delete p.dice;
+}
+
+// The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
+// the high-roller table), the Yawning Portal (five more, Brodor the boss), then the final aboard
+// the Salty Swallow (Klarg's crew). `place` is a key of PLACES. A boss drops a keepsake (`drops`)
+// and sends you on to the next place (the invitation). McGrath is the Molar renamed and keeps
+// his id ('molar'): he plays simply, as a teacher.
 const TAVERN_ENCOUNTERS = [
     {
         id: 'molar',
-        name: 'The Molar',
+        place: 'ghoulAndGourd',
+        name: 'Sperm McGrath',
         avatar: '🦷',
-        lives: 2,
+        lives: BALANCE.opponentLives.molar,
         ability: null,
-        intro: 'The Molar slides into the seat and teaches you the house game: find a 2, find a 4, then chase 24.'
+        blurb: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24.",
+        powers: []
+    },
+    {
+        id: 'frak',
+        place: 'ghoulAndGourd',
+        name: 'Frak',
+        avatar: '🦑',
+        lives: BALANCE.opponentLives.frak,
+        ability: 'mindWhip',
+        blurb: "Frak, a repugnant ne’er-do-well, slimes into place.",
+        powers: [{ name: "Mind Whip", text: "On your first throw he makes you keep one of your dice, at random." }]
+    },
+    {
+        id: 'danhausen',
+        place: 'ghoulAndGourd',
+        name: 'Danhausen',
+        avatar: '🧛',
+        lives: BALANCE.opponentLives.danhausen,
+        ability: 'cursed',
+        blurb: "Danhausen: Very Nice, Very Evil and Mayor of Waterdeep?",
+        powers: [{ name: "You are Cursed!", text: "For a round, the lowest valid score wins." }]
+    },
+    {
+        id: 'duke',
+        place: 'ghoulAndGourd',
+        name: 'Duke Morrigan',
+        avatar: '😈',
+        lives: BALANCE.opponentLives.duke,
+        ability: 'devil',
+        blurb: "Duke Morrigan, noble, roguish and scion of Avernus.",
+        powers: [{ name: "Sympathy for the Devil", text: "His roll comes up three 6s." }]
+    },
+    {
+        id: 'martha',
+        place: 'ghoulAndGourd',
+        name: 'Martha/Mystery',
+        avatar: '🎭',
+        lives: BALANCE.opponentLives.martha,
+        ability: 'disguises',
+        boss: true, // beating her wins her Elf Bar, Mystery Flavour, and the invitation to the Yawning Portal
+        drops: 'mysteryFlavour',
+        blurb: "Martha? Mystery? Who knows?",
+        powers: [{ name: "Disguise Self", text: "Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick." }]
+    },
+    {
+        id: 'sylvester',
+        place: 'yawningPortal',
+        name: 'Sylvester Stonefist',
+        avatar: '👊',
+        lives: BALANCE.opponentLives.sylvester,
+        ability: 'suckerPunch',
+        blurb: "Sylvester Stonefist, a Master Monk – if you can imagine that.",
+        powers: [{ name: "Back of the Head", text: "As you keep your last die, he knocks your best die loose and you roll it again." }]
+    },
+    {
+        id: 'vaelin',
+        place: 'yawningPortal',
+        name: 'Vaelin Inkhand',
+        avatar: '🖋️',
+        lives: BALANCE.opponentLives.vaelin,
+        ability: 'inkfire',
+        blurb: "Vaelin Inkhand, honourable son of Brazenthrone and unwilling apprentice to Halaster.", // (the user's, 13 Nov)
+        powers: [{ name: "Inkfire Blast", text: "For a round, the 6s burn on your dice." }]
+    },
+    {
+        id: 'stason',
+        place: 'yawningPortal',
+        name: 'Stason Jatham',
+        avatar: '🤺',
+        lives: BALANCE.opponentLives.stason,
+        ability: 'flourish',
+        blurb: "Stason Jatham, action hero, beekeeper.",
+        powers: [{ name: "Vexing Rapier", text: "Twice a fight, for one whole turn, each of his dice rolls twice and he keeps the better." }]
+    },
+    {
+        id: 'ridgeler',
+        place: 'yawningPortal',
+        name: 'The Ridgeler',
+        avatar: '🐉',
+        lives: BALANCE.opponentLives.ridgeler,
+        ability: 'divineSmite',
+        blurb: "The Ridgeler, dragonborn paladin and a War Daddy.",
+        powers: [{ name: "Divine Smite", text: "For a round, if he wins it, you lose two hearts." }]
+    },
+    {
+        id: 'brodor',
+        place: 'yawningPortal',
+        name: 'Brodor',
+        avatar: '🕶️',
+        lives: BALANCE.opponentLives.brodor,
+        ability: 'astralFlood',
+        boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
+        drops: 'brodorsSunglasses',
+        blurb: "Brodor, Goblin-mania champion, will send you to the Mezzanine.", // (the user's, 13 Nov)
+        powers: [{ name: "Astral Flood", text: "Once he has lost a heart, he floods the table with light, heals one and takes one of yours." }]
     },
     {
         id: 'klarg',
+        place: 'saltySwallow',
         name: 'Klarg',
         avatar: '🐻',
-        lives: 3,
+        lives: BALANCE.opponentLives.klarg,
         ability: 'reachAround',
-        intro: 'Klarg, bugbear paladin and sworn enemy of Kram, may steal one active die with Reach Around.'
+        // Since 25 Oct (the final tier): twice a fight he waits for a 2 or 4 you still need,
+        // snatches it and keeps it for his own hand (it starts his next turn already kept).
+        keepsStolen: true,
+        blurb: "Klarg, bugbear paladin and sworn enemy of Kram.",
+        powers: [{ name: "Reach Around", text: "Twice a fight he snatches a 2 or 4 you need, and keeps it for his own hand." }]
     },
     {
         id: 'rokr',
-        name: 'Rokr',
+        place: 'saltySwallow',
+        name: 'Røkr', // (18 Nov, the user's: was Rokr; the id stays rokr)
         avatar: '✨',
-        lives: 3,
+        lives: BALANCE.opponentLives.rokr,
         ability: 'constellationBlur',
-        intro: 'Rokr reads the dice in the stars. Once per match, constellations can blur your active dice.'
+        blurb: "Røkr, a druid of the stars who charts his own destiny.", // (the user's, 13 Nov)
+        powers: [{ name: "Starry Form", text: "Twice a fight your dice land hidden under twinkling constellations: you keep blind, and they show at your next throw." }]
+    },
+    {
+        // Áéd, the dragon sorcerer (11 Nov, the user's): metamagic with sorcery points (BALANCE.metamagic).
+        id: 'aed',
+        place: 'saltySwallow',
+        name: 'Áéd',
+        avatar: '🐲',
+        lives: BALANCE.opponentLives.aed,
+        ability: 'metamagic',
+        sorcery: true, // six uses a fight (his gems), each of his four tricks at least once (13 Nov, the user's; it was three, any trick)
+        blurb: "Áéd, dragon sorcerer of unlimited power. Just ask Jorvash.", // (the user's, 11 Nov)
+        powers: [
+            { name: "Unlimited Power", text: "Six times a fight he manipulates his dice, and every one of his four tricks comes out at least once." },
+            { name: "Heightened Dice", text: "Your next throw is at disadvantage: each die rolls twice and you keep the worse." },
+            { name: "Quickened Dice", text: "He throws again without keeping a die." },
+            { name: "Empowered Dice", text: "He rolls one of his own dice again." },
+            { name: "Twinned Dice", text: "A die he keeps is copied onto one of his loose dice." }
+        ]
     },
     {
         id: 'hangman',
+        place: 'saltySwallow',
         name: 'The Hangman',
         avatar: '🤠',
-        lives: 3,
-        ability: 'deadeye24',
-        intro: 'The Hangman keeps one round in the chamber. At one life, The Ace of Spades can turn a score of 16 or higher into a perfect 24.'
+        lives: BALANCE.opponentLives.hangman,
+        ability: 'penitentStare',
+        abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
+        blurb: "The Hangman seals your fate with the Ace of Spades.", // (the user's, 13 Nov)
+        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a heart, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "On his last heart, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart." }]
     },
     {
         id: 'jaguar',
+        place: 'saltySwallow',
         name: 'Jaguar Cantona',
         avatar: '😎',
-        lives: 4,
-        ability: 'smoothTalk',
-        intro: 'Jaguar Cantona has the smile, the cloak, and an extra life. Once per match, Smooth Talk worsens your finished score.'
+        lives: BALANCE.opponentLives.jaguar,
+        ability: 'jaguarPhases',
+        blurb: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm.", // (the user's, 13 Nov)
+        powers: [{ name: "Smooth Talker", text: "Twice a fight: after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him." }, { name: "The Cloak", text: "On two hearts he throws after you, his dice hidden." }, { name: "All In", text: "On his last heart, whoever loses the round loses two hearts." }]
     }
 ];
 
 const TAVERN_KEEPSAKES = [
+    // `from`: offered only from that place on (the Shield and the Loaded Die from the Yawning
+    // Portal, the user's call, 30 Oct).
     {
         id: 'bentCopper',
-        name: 'Shield',
-        text: 'Once per encounter, the first life you would lose is ignored.'
-    },
-    {
-        id: 'blessedTankard',
-        name: "Brodor's Sunglasses",
-        text: 'A perfect 24 restores one extra life.'
+        name: 'Shield of Fuckery', // (the user's name, 17 Nov; it was the Shield)
+        text: 'Once a fight, the first heart you would lose is kept.',
+        from: 'yawningPortal'
     },
     {
         id: 'luckySeat',
         name: 'Trap Card',
-        text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
+        text: 'Once a fight, your first tied round counts as safe for you and a loss for the opponent.'
     },
     {
         id: 'velvetCushion',
         name: 'Velvet Cushion',
-        text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.'
+        text: 'Once a fight, losing by exactly 1 point becomes a tie instead.'
     },
     {
-        id: 'steadyHand',
-        name: 'Steady Hand Wrap',
-        text: 'Once per encounter, if you dust, it becomes a score of 0 instead of a dust result.'
+        id: 'loadedDie',
+        name: 'Loaded Die',
+        text: "One of your dice lands only on a 2 or a 4 until you've kept both; after that, only on 4, 5 or 6.",
+        from: 'yawningPortal'
+    },
+    {
+        id: 'potionBelt',
+        name: 'Potion Belt',
+        text: 'Your shelf holds one more Thonic. Comes with a Healing Thonic.'
+    },
+    {
+        id: 'loyaltyCard',
+        name: "Thom's Loyalty Card",
+        text: "Thom's cart is always one of the spots, and your first Thonic each visit is free."
+    },
+    // 30 Oct, the user's picks.
+    {
+        id: 'misersPurse',
+        name: "Miser's Purse",
+        text: 'Each win pays 1 more gold for every 5 in your purse.'
+    },
+    {
+        id: 'gamblersCharm',
+        name: "Gambler's Charm",
+        text: 'When only one die is left to throw, it is thrown twice and you keep the better.'
+    },
+    {
+        id: 'bottomlessFlask',
+        name: 'Bottomless Flask',
+        text: 'The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf.'
+    },
+    // 17 Nov, the user's (docs/economy-brainstorm.md): gold into throws, and the ship's own keepsake.
+    {
+        id: 'gildedDie',
+        name: 'Gilded Die',
+        text: 'After a throw, pay gold to throw one loose die again: up to three times a fight, dearer each time.',
+        from: 'yawningPortal'
+    },
+    {
+        id: 'brensCompass',
+        name: "Bren's Compass",
+        text: 'Once a fight, when the sea die brings rough weather, it is rolled again.',
+        from: 'saltySwallow'
     }
 ];
+const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
+// You carry at most this many keepsakes (the user's call, 30 Oct): with full pockets Thom's back
+// shelf won't sell, the Stranger stays away, and a boss's keepsake means leaving one behind.
+const MAX_KEEPSAKES = BALANCE.maxKeepsakes || 5;
+const pocketsFull = room => room.tavernRun.keepsakes.length >= MAX_KEEPSAKES;
+
+// Martha's mask: Martha's drop until 4 Nov (the user's call: her Elf Bar instead). Nothing gives
+// it now; its code stays (the wearMask handler) in case it comes back. Once a fight, before you
+// roll, you wear one of her disguises for the round. Old saves carrying it get Mystery Flavour.
+const MARTHAS_MASK = {
+    id: 'marthasMask',
+    name: "Martha's Mask",
+    text: "Once a fight, before you roll: Danhausen's Curse (lowest valid score wins the round) or the Duke's Devil (three 6s for you)."
+};
+// Brodor's Sunglasses: dropped by Brodor (never offered by the Stranger or Thom). A finished 23
+// restores a heart too, like a 24 (performEndTurn).
+const BRODORS_SUNGLASSES = {
+    id: 'brodorsSunglasses',
+    name: "Brodor's Sunglasses",
+    text: 'A finished 23 restores a heart, like a 24.'
+};
+// Mystery Flavour (4 Nov, the user's pick): Martha's own Elf Bar, dropped by her. A keepsake, not
+// a shelf item: it never runs out, one puff a fight, and each fight it tastes of one of Johnny's
+// four Elf Bars, drawn at random as the fight starts (run.mysteryFlavour; the puffMystery handler).
+const MYSTERY_FLAVOUR = {
+    id: 'mysteryFlavour',
+    name: 'Mystery Flavour',
+    text: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random."
+};
+// The classic page shows it all as one line.
+TAVERN_ENCOUNTERS.forEach(e => { e.intro = [e.blurb, ...e.powers.map(p => `${p.name}: ${p.text}`)].join(' '); });
+
+// What each boss drops (TAVERN_ENCOUNTERS `drops`).
+const BOSS_DROPS = { mysteryFlavour: MYSTERY_FLAVOUR, brodorsSunglasses: BRODORS_SUNGLASSES };
+// Saves from before 4 Nov may carry Martha's mask: it comes back as her Elf Bar.
+const OLD_DROPS = { marthasMask: 'mysteryFlavour' };
+const LOADED_DIE = 0; // the die the Loaded Die keepsake loads (marked on the table)
+
+// Thom's Thonics: potions bought from Thom between fights and kept on a shelf (up to
+// SHELF_SIZE) until drunk. `drink` = tapped by the player on their own turn (when exactly
+// depends on the Thonic: see the drinkThonic handler); Last Gasp works by itself.
+const THONICS = {
+    healing: { id: 'healing', name: 'Healing Thonic', text: '+1 heart, up to your maximum. Drink it before you roll.', price: BALANCE.thonicPrices.healing, drink: true },
+    lastGasp: { id: 'lastGasp', name: 'Last Gasp Thonic', text: 'Works by itself: a round that would take your last heart leaves you on 1.', price: BALANCE.thonicPrices.lastGasp, drink: false },
+    fizzy: { id: 'fizzy', name: 'Fizzy Thomic', text: 'After a roll: your 1s roll again, once.', price: BALANCE.thonicPrices.fizzy, drink: true },
+    secondThoughts: { id: 'secondThoughts', name: 'Second Thoughts Thonic', text: 'Put back a die you kept, then roll it again.', price: BALANCE.thonicPrices.secondThoughts, drink: true },
+    steady: { id: 'steady', name: 'Steady Thonic', text: "This turn, a missing 2 or 4 doesn't dust you: your dice score as they lie.", price: BALANCE.thonicPrices.steady, drink: true },
+    clearEye: { id: 'clearEye', name: 'Clear-Eye Thonic', text: "Cancels the opponent's next ability, whenever it comes.", price: BALANCE.thonicPrices.clearEye, drink: true },
+    // Elf Bars (28 Oct, the user's): magic vapes from Johnny Elf Bar, one of Frak's street
+    // urchins. They sit on the shelf like Thonics, but each has ELF_BAR_PUFFS puffs, at most one
+    // a fight (run.puffs, run.puffed); the last puff empties it. No side effects (the user's call).
+    purpleHaze: { id: 'purpleHaze', name: 'Purple Haze Elf Bar', text: 'After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes the one you need.', price: BALANCE.elfBarPrices.purpleHaze, drink: true, elf: true },
+    cottonCandyCloud: { id: 'cottonCandyCloud', name: 'Cotton Candy Cloud Elf Bar', text: "On your turn, while your opponent is still to throw: they play this round without seeing your score.", price: BALANCE.elfBarPrices.cottonCandyCloud, drink: true, elf: true },
+    lemonLevitation: { id: 'lemonLevitation', name: 'Lemon Levitation Elf Bar', text: 'After a throw: throw again without keeping a die.', price: BALANCE.elfBarPrices.lemonLevitation, drink: true, elf: true },
+    watermelonHindsight: { id: 'watermelonHindsight', name: 'Watermelon Hindsight Elf Bar', text: 'Undo your last throw: those dice are thrown again.', price: BALANCE.elfBarPrices.watermelonHindsight, drink: true, elf: true }
+};
+const ELF_BARS = Object.keys(THONICS).filter(id => THONICS[id].elf);
+const ELF_BAR_PUFFS = BALANCE.elfBarPuffs || 3;
+const SHELF_SIZE = BALANCE.shelfSize;
+const SHOP_SIZE = BALANCE.shopSize; // Thonics on Thom's cart per visit: Healing, plus two others at random
+
+// The places in the run: what Thom sells there and the spots between fights. (Each opponent
+// names its place.) The hot tub is only at the Ghoul and Gourd (the user's call, 21 Oct); the
+// ship's own spots and events are still to workshop.
+// The Dice Den is out of every place for now (the user, 28 Oct); its code stays.
+const PLACES = {
+    ghoulAndGourd: {
+        name: 'The Ghoul and Gourd',
+        thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
+        // Between fights two of these catch your eye, and you go to one, unless the pickpocket,
+        // the Hooded Stranger or one of the place's own events finds you first (startInterlude).
+        spots: ['thom', 'shrine', 'hotTub', 'elfKid'],
+        events: ['darren'] // Darren Snakehands is the barman here
+    },
+    yawningPortal: {
+        name: 'The Yawning Portal',
+        thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
+        // The hot tub is the Ghoul and Gourd's (the user's call, 21 Oct); the Bard and the Cult of
+        // Kram are the Yawning Portal's own (28 Oct).
+        spots: ['thom', 'shrine', 'bard', 'elfKid'],
+        events: ['kram']
+    },
+    // A ship docked after the Yawning Portal: Klarg's crew, top-tier players.
+    saltySwallow: {
+        name: 'The Salty Swallow',
+        thomStock: ['healing', 'lastGasp', 'fizzy', 'secondThoughts', 'steady', 'clearEye'],
+        spots: ['thom', 'shrine', 'jorvash', 'yvesil'], // (Thom stows away, 6 Nov; Johnny Elf Bar stays ashore, 9 Nov)
+        noEvents: true, // no thief, no Hooded Stranger aboard: straight to the spots (the user's, 9 Nov)
+        events: []
+    }
+};
+
+// Where the run is now (between fights: where the next fight is).
+function placeOf(room) {
+    let index = Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1);
+    return PLACES[TAVERN_ENCOUNTERS[index].place];
+}
+
+// Between fights, one event: now and then a pickpocket or the Hooded Stranger finds you, else
+// two spots in the room catch your eye and you choose one. Gold during a run goes into the purse as it is won, and the purse
+// is the final score. The numbers live in shared/balance.js.
+const INTERLUDE = BALANCE.interlude;
+const GOLD = BALANCE.gold;
+const POINTS = BALANCE.points;
+const goldText = Rules.formatGold;
+
+// What something costs this time: its first price, and half as much again (BALANCE.priceRise)
+// for each one already bought this run (the user's call, 23 Oct: the Shrine, the hot tub and each
+// kind of Thonic cost more every purchase). bought: counts by id ('healing', 'shrine', 'hotTub').
+// Since 17 Nov (the user's, docs/economy-brainstorm.md) every price also follows the place, as income does:
+// x1 at the Ghoul and Gourd, x1.5 at the Yawning Portal, x2 aboard (BALANCE.placePrice). Between fights the
+// place is the next fight's.
+function placePrice(run) {
+    let encounter = TAVERN_ENCOUNTERS[Math.min(run.encounterIndex || 0, TAVERN_ENCOUNTERS.length - 1)];
+    return (BALANCE.placePrice && BALANCE.placePrice[encounter.place]) || 1;
+}
+// Sworn to Kram (17 Nov, the user's): while you wear his emblem (fights still to come without 1s), every spot's
+// prices are kramPriceRise (10%) higher. Told as you swear.
+const kramMarkup = run => ((run.kramFights || 0) > 0 ? 1 + (INTERLUDE.kramPriceRise ?? 0.1) : 1);
+function risingPrice(run, id, base) {
+    let times = (run.bought && run.bought[id]) || 0;
+    return Math.ceil(base * placePrice(run) * kramMarkup(run) * (1 + (BALANCE.priceRise || 0) * times));
+}
+function noteBought(run, id) {
+    run.bought = run.bought || {};
+    run.bought[id] = (run.bought[id] || 0) + 1;
+}
+const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
+// The Gilded Die (17 Nov): each throw again this fight costs gildedStep more (x the place), at most gildedMax a fight.
+const gildedUses = run => (run.encounterKeepsakeUses && run.encounterKeepsakeUses.gildedDie) || 0;
+const gildedPrice = run => Math.ceil((KEEPSAKE_NUMBERS.gildedStep ?? 3) * (gildedUses(run) + 1) * placePrice(run));
+const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
+const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
+const bardPrice = run => risingPrice(run, 'bard', INTERLUDE.bardPrice || 0);
+const yvesilPrice = run => risingPrice(run, 'yvesil', INTERLUDE.yvesilPrice || 0);
+const jorvashPrice = run => risingPrice(run, 'jorvash', INTERLUDE.jorvashPrice || 0);
+
+// The Wild Magic Hot Tub's surges (weights in shared/balance.js). The dice ones work on
+// HOT_TUB_DIE, on the player's turns, for the next fight (tavernRun.tubSurge).
+const HOT_TUB_DIE = INTERLUDE.hotTubDie;
+const HOT_TUB_SURGES = {
+    noOnes: { name: 'Bubbly Die', text: 'One of your dice never rolls a 1 next fight.', good: true },
+    twin: { name: 'Double Bubble', text: 'One of your dice rolls twice and keeps the better next fight.', good: true },
+    lucky: { name: 'Lucky Splash', text: 'One of your dice only rolls 4, 5 or 6 next fight.', good: true },
+    scalding: { name: 'Scalding Die', text: 'One of your dice always lands on a 6 next fight.', good: true },
+    soggy: { name: 'Soggy Die', text: 'One of your dice never rolls a 6 next fight.', good: false },
+    pruney: { name: 'Pruney Fingers', text: 'You start the next fight a heart short.', good: false }
+};
+function pickHotTubSurge() {
+    let weights = Object.entries(INTERLUDE.hotTubSurges).filter(([id]) => HOT_TUB_SURGES[id]);
+    let roll = crypto.randomInt(0, weights.reduce((a, [, w]) => a + w, 0));
+    for (let [id, w] of weights) { if (roll < w) return id; roll -= w; }
+    return weights[0][0];
+}
+
+// What Thom has on his cart this visit: always Healing, plus others picked at random.
+function pickThomStock(place) {
+    let others = place.thomStock.filter(id => id !== 'healing');
+    for (let i = others.length - 1; i > 0; i--) {
+        let j = crypto.randomInt(0, i + 1);
+        [others[i], others[j]] = [others[j], others[i]];
+    }
+    return ['healing', ...others.slice(0, SHOP_SIZE - 1)];
+}
+
+// The shelf, one slot more with the Potion Belt.
+// The Potion Belt left behind (18 Nov, the user's): the Thonic in its slot goes with it (the last on the shelf).
+function dropBeltThonics(room) {
+    let shelf = room.tavernRun.shelf;
+    if (shelf.length > shelfSizeOf(room)) shelf.splice(shelfSizeOf(room));
+}
+function shelfSizeOf(room) {
+    return SHELF_SIZE + (hasKeepsake(room, 'potionBelt') ? KEEPSAKE_NUMBERS.beltSlots : 0);
+}
+
+// How the dice land on this turn: the Loaded Die only rolls loadedDieLow or more; in Vaelin's
+// Inkfire round your dice that land on 6 roll again; Stason's Flourish rolls his twice.
+function rollFaceFor(room, turn) {
+    if (room.mode !== 'tavern-crawl') return rollFace;
+    // The rolls that lost, this throw (Double Bubble, Flourish): sent with diceRolled as ghosts.
+    turn.ghosts = [];
+    let roll = seaRoll(seaWarded(room, turn) ? 0 : seaShift(room));
+    if (turn.playerId === BOT_ID) return turn.flourish ? flourishFace(turn, roll) : roll;
+    let plainFace = playerFace(room, turn, roll);
+    // Yvesil's Fair Winds and the Albatross: on your first throw of each round, your 1s (or 6s) roll again.
+    let omen = room.tavernRun.omen;
+    let again = !turn.hasRolled && (omen === 'fairWinds' ? 1 : omen === 'albatross' ? 6 : 0);
+    let face = again ? d => { let v = plainFace(d); return v === again ? plainFace(d) : v; } : plainFace;
+    if (!hasKeepsake(room, 'gamblersCharm')) return withHeightened(room, turn, face);
+    // The Gambler's Charm: the last die left to throw is thrown twice, and you keep the better (a
+    // 2 or 4 you still need, else the higher; in a cursed round the lower). The other rises as a ghost.
+    return withHeightened(room, turn, d => {
+        if (!d || turn.dice.filter(x => x.status === Rules.STATUS.ACTIVE).length !== 1) return face(d);
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let a = face(d), b = face(d);
+        let cursed = !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+        let pick = cursed ? Math.min(a, b) : Math.max(a, b);
+        for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
+        let lost = pick === a ? b : a;
+        if (lost !== pick) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        return pick;
+    });
+}
+
+// Áéd's Heightened Dice (11 Nov): your throw at disadvantage. Each die rolls twice and you keep the
+// worse: the one that isn't a 2 or 4 you still need, else the lower (in a cursed round the higher).
+// The other rises from the die as a ghost, like the Vexing Rapier's.
+function withHeightened(room, turn, face) {
+    if (!turn.heightened) return face;
+    return d => {
+        if (!d) return face(d);
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let a = face(d), b = face(d);
+        let cursed = !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+        let pick = cursed ? Math.max(a, b) : Math.min(a, b);
+        let needed = v => (v === 2 || v === 4) && !kept.includes(v);
+        if (needed(a) && !needed(b)) pick = b;
+        else if (needed(b) && !needed(a)) pick = a;
+        let lost = pick === a ? b : a;
+        if (lost !== pick && turn.ghosts) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        return pick;
+    };
+}
+
+// How your dice land (before the Gambler's Charm): the Loaded Die, the hot tub's surge, Vaelin's
+// Inkfire, fealty to Kram.
+function playerFace(room, turn, roll = rollFace) {
+    let loaded = hasKeepsake(room, 'loadedDie');
+    let surge = room.tavernRun.tubSurge;
+    let effect = room.tavernRun.roundEffect;
+    let ink = !!effect && effect.kind === 'ink';
+    let kram = !!room.tavernRun.kram; // sworn to Kram: your dice never land on 1
+    if (!loaded && !surge && !ink && !kram) return roll;
+    // The Loaded Die (reworked 30 Oct): a 2 or a 4 until you've kept both, then 4, 5 or 6.
+    let loadedFace = () => {
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let needed = [2, 4].filter(n => !kept.includes(n));
+        // (Listing to port no die lands on 6, the Loaded Die neither: the user, 10 Nov.)
+        return needed.length ? needed[crypto.randomInt(0, needed.length)] : crypto.randomInt(KEEPSAKE_NUMBERS.loadedDieLow, !seaWarded(room, turn) && seaShift(room) < 0 ? 6 : 7);
+    };
+    let plain = d => (loaded && d && d.id === LOADED_DIE ? loadedFace() : kram ? Math.max(2, roll()) : roll());
+    let base = ink ? d => { let v; do v = plain(d); while (v === 6); return v; } : plain;
+    if (!surge) return base;
+    return d => {
+        if (!d || d.id !== HOT_TUB_DIE) return base(d);
+        if (surge === 'noOnes') return crypto.randomInt(2, 7);
+        if (surge === 'soggy') return crypto.randomInt(kram ? 2 : 1, 6);
+        if (surge === 'lucky') return crypto.randomInt(4, 7);
+        if (surge === 'scalding') return 6;
+        if (surge === 'twin') {
+            // The better of two: a 2 or 4 still needed, else the higher.
+            let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+            let a = base(d), b = base(d);
+            // In a cursed round (the lowest valid score wins) the better is the lower.
+            let cursed = room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+            let pick = cursed ? Math.min(a, b) : Math.max(a, b);
+            for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
+            let lost = pick === a ? b : a;
+            if (lost !== pick) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'tub' });
+            return pick;
+        }
+        return base(d);
+    };
+}
+
+// Stason's Flourish: for his whole turn each die rolls twice and he keeps the better (a 2 or 4
+// he still needs, else the higher).
+// ---- The Salty Swallow's sea (9 Nov, the user's) ----
+// Each round aboard has its weather, drawn from the leg's mix (BALANCE.voyage, by opponent) and
+// forecast a round ahead; a fight's first round is calm. Heeling leans every die thrown, both
+// sides': to starboard one higher (no 1s), to port one lower (no 6s). The Loaded Die's magic and
+// the Devil's three 6s are untouched (but to port the Loaded Die's high faces are 4-5, 10 Nov); Kram's fealty still means no 1s.
+const SEAS = {
+    calm: { name: 'Calm seas', text: 'The deck is steady.', shift: 0 },
+    starboard: { name: 'Listing to starboard', text: 'Every die lands one higher: no 1s.', shift: 1 },
+    port: { name: 'Listing to port', text: 'Every die lands one lower: no 6s.', shift: -1 },
+    // The Rogue wave (10 Nov, the user's; docs/voyage-brainstorm.md): as each hand's second throw is made,
+    // a wave crosses the deck and one loose die goes over the rail (rogueWave). Both sides.
+    rogue: { name: 'Heavy seas', text: 'After the first throw a rogue wave takes one loose die over the rail.', shift: 0, wave: true },
+    // The Squall (10 Nov, the user's; docs/voyage-brainstorm.md): rain and wind, and every hand must keep two
+    // dice from each throw (turn.mustKeep, Rules.keepsNeeded; never more than were thrown). Both sides.
+    squall: { name: 'Squall', text: 'Rain and wind: keep two dice from every throw.', shift: 0, mustKeep: 2 },
+    // A fog bank (10 Nov, the user's; docs/voyage-brainstorm.md): neither side sees the other's hand until
+    // both have finished. His dice land hidden and stay so (turn.fogged, viewTurn), his score is kept out
+    // of the state (fogMask), and he can't see yours (getTavernScoreToBeat), so he plays for his best.
+    fog: { name: 'Fog bank', text: "Neither side sees the other's hand until both have finished.", shift: 0, fog: true },
+    // Becalmed (10 Nov, the user's; docs/voyage-brainstorm.md): the sails hang slack. A hand gets three
+    // throws (turn.maxThrows, Rules.canRoll), and the dice the third leaves stay as they lie
+    // (Rules.keepRest, as it lands). Both sides; the solver counts the throws left.
+    becalmed: { name: 'Becalmed', text: 'The sails hang slack: three throws, then the dice stay as they lie.', shift: 0, maxThrows: 3 }
+};
+// How many dice each throw must keep this round (the Squall's two, else one).
+function seaKeeps(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return sea && SEAS[sea] && SEAS[sea].mustKeep ? SEAS[sea].mustKeep : 1;
+}
+function seaThrows(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return sea && SEAS[sea] && SEAS[sea].maxThrows ? SEAS[sea].maxThrows : 0;
+}
+function seaFog(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return !!(sea && SEAS[sea] && SEAS[sea].fog);
+}
+function seaShift(room) {
+    let sea = room.mode === 'tavern-crawl' && room.tavernRun.sea;
+    return sea && SEAS[sea] ? SEAS[sea].shift : 0;
+}
+// Jorvash's Water of the Ebon Shield (17 Nov, the user's; it was an extra heart): for the next fight
+// the sea die doesn't touch you. Your throws don't lean, no Squall or Becalmed limit on your hands, no
+// rogue wave takes your dice, and you see through a fog bank (he still can't see your hand in it).
+const seaWarded = (room, turn) => room.mode === 'tavern-crawl' && !!room.tavernRun.seaWard && !!turn && turn.playerId !== BOT_ID;
+// What the fog hides from you: nothing under the Water of the Ebon Shield.
+const fogForYou = room => seaFog(room) && !room.tavernRun.seaWard;
+const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight.'; // (the user's words, 17 Nov)
+// A plain throw of one die, leaning with the sea.
+function seaRoll(shift) {
+    return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
+}
+// The sea die's dial for this leg: what each face (1-6) brings (BALANCE.voyage, by opponent).
+// Jaguar's dial follows his phase (10 Nov, the user's): { talk, cloak, allIn }, by his lives. As a
+// round begins (fresh) it is read from his lives, as his phase is about to be; the state shows this
+// round's phase's dial until the next round begins.
+function jaguarPhaseOf(lives) {
+    return lives >= 3 ? 'talk' : lives === 2 ? 'cloak' : 'allIn';
+}
+function seaFaces(encounter, room, fresh) {
+    let faces = encounter && (BALANCE.voyage || {})[encounter.id];
+    if (faces && !Array.isArray(faces)) {
+        let bot = room && room.players[BOT_ID];
+        faces = faces[(!fresh && room && room.tavernRun.jaguarPhase) || jaguarPhaseOf(bot ? bot.lives : 3)];
+    }
+    return Array.isArray(faces) && faces.length === 6 && faces.every(id => SEAS[id]) ? faces : ['calm', 'calm', 'calm', 'calm', 'calm', 'calm'];
+}
+// As a round begins aboard (9 Nov, the user's: "a dice roll to determine which weather"): from a
+// fight's second round the sea die is rolled, and its face on the leg's dial is this round's sea. The
+// roll is a moment of its own (seaChange: the die tumbles, the dial's needle swings to its face, and
+// a change of sea brings its wave and name), before the round's abilities; the throws wait for it.
+function setSea(roomCode, room, encounter) {
+    let run = room.tavernRun;
+    run.nextSea = null; // (the forecast, until the sea die: 9 Nov)
+    if (!encounter || encounter.place !== 'saltySwallow') { run.sea = null; run.seaFace = null; return; }
+    let was = run.sea;
+    if ((run.encounterRound || 1) <= 1) { run.sea = 'calm'; run.seaFace = null; return; }
+    let faces = seaFaces(encounter, room, true);
+    let face = crypto.randomInt(1, 7);
+    run.sea = faces[face - 1];
+    run.seaFace = face;
+    sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: was || 'calm', face, faces, changed: run.sea !== (was || 'calm') });
+    // Bren's Compass (17 Nov; named for Skipper Bren, the user's): once a fight, rough weather (anything but a calm sea or listing to
+    // starboard) and the sea die is rolled again. Not under the Ebon Shield, which keeps the sea off you anyway.
+    if (hasKeepsake(room, 'brensCompass') && !run.encounterKeepsakeUses.brensCompass && !run.seaWard && !COMPASS_FAIR.includes(run.sea)) {
+        let rough = run.sea;
+        emitKeepsakeActivated(roomCode, room, 'brensCompass', `The needle swings: the sea die is rolled again.`);
+        face = crypto.randomInt(1, 7);
+        run.sea = faces[face - 1];
+        run.seaFace = face;
+        sendMoment(roomCode, 'seaChange', { ...seaView(run.sea), from: rough, face, faces, changed: run.sea !== rough, compass: true });
+    }
+}
+const COMPASS_FAIR = ['calm', 'starboard'];
+const seaView = id => (id && SEAS[id] ? { id, ...SEAS[id] } : null);
+
+// Heavy seas: as a hand's second throw is made (once a hand), a rogue wave takes one loose die, at
+// random, over the rail: out of play (STOLEN, `washed`), so the hand ends on five dice (best 18). It
+// spares a last loose die (an open question: docs/open-questions.md). Its moment plays before the
+// throw, which waits for it. Returns the die, or null.
+const WAVE_SHOW_MS = 2400; // (the client's too)
+function rogueWave(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || !SEAS[room.tavernRun.sea] || !SEAS[room.tavernRun.sea].wave || seaWarded(room, turn)) return null;
+    if (!turn.hasRolled || turn.waveDone || !Rules.canRoll(turn)) return null;
+    turn.waveDone = true;
+    let loose = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (loose.length < 2) return null;
+    let die = loose[crypto.randomInt(0, loose.length)];
+    die.status = Rules.STATUS.STOLEN;
+    die.washed = true;
+    let who = room.players[turn.playerId];
+    sendMoment(roomCode, 'rogueWave', { dieId: die.id, value: die.value, playerId: turn.playerId, name: who ? who.name : '' });
+    return die;
+}
+
+function flourishFace(turn, roll = rollFace) {
+    return d => {
+        let kept = turn.dice.filter(x => x.status === Rules.STATUS.LOCKED).map(x => x.value);
+        let a = roll(), b = roll();
+        let pick = Math.max(a, b);
+        for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
+        // The other roll rises from the die as a ghost (like Double Bubble's; the user's call, 21 Oct).
+        let lost = pick === a ? b : a;
+        if (d && lost !== pick && turn.ghosts) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        return pick;
+    };
+}
+
+const thonicView = id => ({ id, name: THONICS[id].name, text: THONICS[id].text, price: THONICS[id].price, drink: THONICS[id].drink, ...(THONICS[id].elf ? { elf: true } : {}) });
+// On the shelf, an Elf Bar also shows its puffs left and whether it was puffed this fight.
+const shelfView = run => id => (THONICS[id].elf ? { ...thonicView(id), puffs: (run.puffs && run.puffs[id]) || ELF_BAR_PUFFS, puffed: !!(run.puffed && run.puffed[id]) } : thonicView(id));
 
 function getRoomState(roomCode) {
     let room = rooms[roomCode];
     if (!room) return {};
-    
+
     return {
-        players: room.players,
+        players: fogMask(room),
         playerOrder: room.playerOrder,
         roundPlayers: room.roundPlayers,
-        currentTurnId: room.roundPlayers[room.currentTurnIndex], 
+        currentTurnId: room.roundPlayers[room.currentTurnIndex],
         isTieBreaker: room.isTieBreaker,
         roundNumber: room.roundNumber,
         startingLives: room.startingLives,
@@ -151,16 +845,95 @@ function getRoomState(roomCode) {
     };
 }
 
+// In a fog bank, a moment that would give his hand away before yours is done (his Ace of Spades, the
+// Bard's Cutting Words) waits for the round's end (the user's, 10 Nov), and shows just before its result.
+function fogHeld(roomCode, room, event, data) {
+    let human = room.players[getHumanPlayerId(room)];
+    if (fogForYou(room) && human && human.score === null) (room.tavernRun.fogHeld = room.tavernRun.fogHeld || []).push([event, data]);
+    else sendMoment(roomCode, event, data);
+}
+function sendFogHeld(roomCode, room) {
+    let held = room.tavernRun.fogHeld || [];
+    room.tavernRun.fogHeld = [];
+    held.forEach(([event, data]) => sendMoment(roomCode, event, data));
+}
+
+// In a fog bank his finished hand stays out of sight until yours is done too: no score, no dust.
+function fogMask(room) {
+    let bot = room.players[BOT_ID];
+    let human = room.mode === 'tavern-crawl' && room.players[getHumanPlayerId(room)];
+    if (!bot || !human || !fogForYou(room) || bot.score === null || human.score !== null) return room.players;
+    return { ...room.players, [BOT_ID]: { ...bot, score: null, busted: false, scoreHidden: true } };
+}
+
 function getTavernRunState(room) {
     if (!room || room.mode !== 'tavern-crawl') return null;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    // Who sits across the table: the current opponent, or, between fights, the one just beaten
+    // (enemy is already the next one then). Browsers draw the table from this.
+    let bot = room.players[BOT_ID];
+    let seatedIndex = bot ? TAVERN_ENCOUNTERS.findIndex(e => e.name === bot.name) : -1;
+    let seated = seatedIndex >= 0 ? { ...encounterView(room, TAVERN_ENCOUNTERS[seatedIndex]), number: seatedIndex + 1 } : { ...encounterView(room, encounter), number: room.tavernRun.encounterIndex + 1 };
     return {
         encounterNumber: room.tavernRun.encounterIndex + 1,
+        seated,
         totalEncounters: TAVERN_ENCOUNTERS.length,
-        enemy: encounter,
+        place: placeOf(room).name,
+        enemy: encounterView(room, encounter),
+        roundEffect: room.tavernRun.roundEffect || null, // this round's Curse, Devil or Mind Whip (see beginTavernRound)
+        devilCap: BALANCE.devilCap,
+        maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
+        // Mystery Flavour: this fight's flavour (an Elf Bar id) and whether it can still be puffed.
+        gilded: hasKeepsake(room, 'gildedDie') ? { uses: gildedUses(room.tavernRun), max: KEEPSAKE_NUMBERS.gildedMax ?? 3, price: gildedPrice(room.tavernRun) } : null,
+        mystery: hasKeepsake(room, MYSTERY_FLAVOUR.id) ? { flavour: mysteryFlavourOf(room.tavernRun), ready: !room.tavernRun.encounterKeepsakeUses.mysteryFlavour } : null,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
+        purse: room.tavernRun.purse,
+        shelf: room.tavernRun.shelf.map(shelfView(room.tavernRun)),
+        shelfSize: shelfSizeOf(room),
+        shop: room.tavernRun.shop ? { stock: room.tavernRun.shop.stock.map(id => ({ ...thonicView(id), price: thonicPrice(room.tavernRun, id) })), free: !!room.tavernRun.shop.free, first: !!room.tavernRun.shop.first, keepsakes: (room.tavernRun.shop.keepsakes || []).map(keepsakeForSale(room.tavernRun)) } : null,
+        prices: { shrine: shrinePrice(room.tavernRun), hotTub: hotTubPrice(room.tavernRun), bard: bardPrice(room.tavernRun), yvesil: yvesilPrice(room.tavernRun), jorvash: jorvashPrice(room.tavernRun), elfBars: Object.fromEntries(ELF_BARS.map(id => [id, thonicPrice(room.tavernRun, id)])) },
+        cloud: !!room.tavernRun.cloud,
+        maxKeepsakes: MAX_KEEPSAKES, // Cotton Candy Cloud: the opponent can't see your score this round
+        // The Bard's song for this fight: Inspiring Song ('ready' until your first throw, 'now' while
+        // that throw can be thrown again) or Cutting Words (until it lands); nextSong: bought for the next.
+        bard: {
+            song: room.tavernRun.song === 'ready' ? 'ready' : room.tavernRun.song && room.turn && room.tavernRun.song === room.turn.key && room.turn.rollCount === 1 ? 'now' : null,
+            words: !!room.tavernRun.cuttingWords,
+            nextSong: room.tavernRun.nextFightSong || null
+        },
+        // Sworn to Kram: this fight (now) and how many more after it (more).
+        kram: { now: !!room.tavernRun.kram, more: room.tavernRun.kramFights || 0, markup: (room.tavernRun.kramFights || 0) > 0 ? Math.round((INTERLUDE.kramPriceRise ?? 0.1) * 100) : 0 },
+        // Yvesil's omen and Jorvash's Notaro Red: this fight's, and bought for the next.
+        omen: omenView(room.tavernRun.omen),
+        nextOmen: omenView(room.tavernRun.nextOmen),
+        notaro: !!room.tavernRun.notaro,
+        nextNotaro: !!room.tavernRun.nextNotaro,
+        // Jorvash's Water of the Ebon Shield: this fight's, and bought for the next.
+        seaWard: !!room.tavernRun.seaWard,
+        nextSeaWard: !!room.tavernRun.nextSeaWard,
+        thomMet: !!room.tavernRun.thomMet, // you've been to Thom's cart this run
+        // The opponents the player has met, in any run (ids): the rest show as "?" when the run ends.
+        met: [...metOf((Object.values(room.players).find(p => p.id !== BOT_ID) || {}).name)],
+        interlude: room.tavernRun.interlude,
+        lastWin: room.tavernRun.lastWin,
+        nextFightHearts: room.tavernRun.nextFightHearts,
+        ladysGrace: !!room.tavernRun.ladysGrace,
+        // The hot tub's surge on one of your dice, this fight (tubSurge) or the next (nextSurge).
+        tubSurge: room.tavernRun.tubSurge ? { id: room.tavernRun.tubSurge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[room.tavernRun.tubSurge] } : null,
+        nextSurge: room.tavernRun.nextFightSurge || null,
         abilityUsed: room.tavernRun.abilityUsed,
+        // Uses a fight of every ability the seated opponent has, and how many are spent (the ✦ on
+        // the nameplate; 9 Nov, the user's: the Hangman's Ace and Jaguar's Cloak and All In count too).
+        ...abilityMarks(room, seated),
+        jaguarPhase: room.tavernRun.jaguarPhase || null, // Jaguar's: 'talk', 'cloak' or 'allIn'
+        klargHand: room.tavernRun.klargHand || null, // the die Klarg snatched, waiting for his turn
+        sea: seaView(room.tavernRun.sea), // aboard the Salty Swallow: this round's weather
+        nextSea: seaView(room.tavernRun.nextSea), // (the old forecast: null since the sea die)
+        seaFace: room.tavernRun.seaFace || null, // the sea die's face this round
+        seaFaces: placeOf(room) === PLACES.saltySwallow ? seaFaces(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex], room) : null, // the leg's dial
+        clearEye: !!room.tavernRun.clearEyeArmed || (room.tavernRun.fogHeld || []).some(([event, data]) => event === 'thonicUsed' && data.id === 'clearEye'), // a Clear-Eye is waiting for the next ability (in fog, still shown so until its cancel is told)
+        abilityLeft: !!encounterAbilityLeft(room),
         abilityRound: room.tavernRun.abilityRound,
         encounterRound: room.tavernRun.encounterRound,
         encounterKeepsakeUses: room.tavernRun.encounterKeepsakeUses,
@@ -169,13 +942,1068 @@ function getTavernRunState(room) {
     };
 }
 
+// ---- Turns ----
+// The server owns the dice. Browsers ask to roll, lock or end; the server decides
+// what happens and broadcasts the result, so every screen shows the same board.
+
+// (Solo vs The Molar, the COMP- tables, was taken out on 4 Nov, the user's call: a bot sits only
+// at a Tavern Crawl table now; a code typed as COMP is an ordinary table.)
+function isBotRoom(roomCode) {
+    return roomCode.startsWith('TVRN');
+}
+
+function getTurnKey(room) {
+    let id = room.roundPlayers[room.currentTurnIndex];
+    if (!id || !room.players[id]) return null;
+    return `${room.turnEpoch}:${room.roundNumber}:${room.currentTurnIndex}:${id}`;
+}
+
+// A classic table needs two players; a tavern table pauses while a keepsake is chosen.
+function isTurnPlayable(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || !room.turn || room.turn.ended) return false;
+    if (room.mode === 'tavern-crawl' && (room.tavernRun.pendingKeepsakeChoices || room.tavernRun.shop || room.tavernRun.interlude)) return false;
+    return isBotRoom(roomCode) || room.playerOrder.length >= 2;
+}
+
+// Starts a fresh turn whenever the current player changes.
+function syncTurn(roomCode) {
+    let room = rooms[roomCode];
+    if (!room) return;
+    let key = getTurnKey(room);
+    if (!key) { room.turn = null; return; }
+    if (room.turn && room.turn.key === key) return;
+
+    room.turn = Rules.createTurn(room.roundPlayers[room.currentTurnIndex]);
+    room.turn.key = key;
+    room.turn.busyUntil = 0;
+    room.turn.ended = false;
+    if (room.mode === 'tavern-crawl' && room.turn.playerId === BOT_ID) {
+        let run = room.tavernRun;
+        // Klarg starts his turn with the die he snatched from you, already kept.
+        if (run.klargHand) {
+            Object.assign(room.turn.dice[0], { value: run.klargHand, status: Rules.STATUS.LOCKED });
+            room.turn.klargDie = 0;
+            run.klargHand = null;
+        }
+        if (run.jaguarPhase === 'cloak') room.turn.cloaked = true;
+        if (fogForYou(room)) room.turn.fogged = true;
+    }
+    if (room.turn.playerId === BOT_ID && isTurnPlayable(roomCode)) {
+        botLater(roomCode, key, Math.max(1000, Math.round(momentsLeft(room) / TIME_SCALE) + 300), () => runBotRoll(roomCode));
+    }
+}
+
+function emitTurn(roomCode, event = null) {
+    let room = rooms[roomCode];
+    if (!room) return;
+    io.to(roomCode).emit('turnState', { turn: Rules.viewTurn(room.turn), event });
+}
+
+function emitState(roomCode) {
+    syncTurn(roomCode);
+    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    emitTurn(roomCode);
+    sendAutoSave(roomCode);
+}
+
+// A Tavern Crawl saves itself (16 Nov, the user's "so a crawl is never lost"): the player's browser is
+// sent the run's save whenever it changes, and keeps it. If this table is gone when they come back (the
+// server restarted or slept, or they were away over an hour), their seat brings the save with it and the
+// run carries on (joinTavern's resume): in a fight, from that fight's start; between fights, as things
+// stand; at an invitation, there. Only the newest save opens (while the server runs): the one before is
+// used up as the next is sent, and the last one when the run ends ('autoSave' with null: forget it).
+function sendAutoSave(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || room.mode !== 'tavern-crawl') return;
+    let run = room.tavernRun;
+    let humanId = getHumanPlayerId(room);
+    let me = humanId && room.players[humanId];
+    if (!me || !run.started) return;
+    let over = run.runComplete || me.lives <= 0 || run.encounterIndex >= TAVERN_ENCOUNTERS.length;
+    let save = null;
+    if (!over) {
+        let interlude = run.interlude;
+        if (interlude && interlude.stage === 'invitation') save = interlude.save;
+        else if (interlude || run.shop) {
+            // (Unchanged since the last one sent: the same save. A thief not yet faced has had his share.)
+            let thief = interlude && interlude.stage === 'pickpocket' && !interlude.roll ? interlude.steal : 0;
+            let key = JSON.stringify([run.encounterIndex, run.purse - thief, run.shelf, run.keepsakes.map(k => k.id), run.puffs, run.bought, run.ladysGrace, run.kramFights,
+                run.nextFightHearts, run.nextFightSurge, run.nextFightSong, run.nextOmen, run.nextNotaro, run.nextSeaWard]);
+            if (run.autoSaveKey !== key) { run.autoSaveKey = key; run.autoSaveBetween = sealFightSave(room, me.name, thief ? { purse: Math.max(0, run.purse - thief) } : {}); }
+            save = run.autoSaveBetween;
+        } else save = run.fightSave || null;
+        if (!save) return;
+    }
+    if (save === (run.autoSave || null)) return;
+    if (run.autoSave) markSaveUsed(saveInfo(run.autoSave).id);
+    run.autoSave = save;
+    if (!save) { io.to(humanId).emit('autoSave', null); return; }
+    let info = saveInfo(save);
+    io.to(humanId).emit('autoSave', { save, name: me.name, next: TAVERN_ENCOUNTERS[run.encounterIndex].name, place: placeOf(room).name, purse: Number(info.purse) || 0 });
+}
+
+function sendBotReaction(roomCode, emoji, times = 3) {
+    let room = rooms[roomCode];
+    if (!room || room.mode === 'tavern-crawl') return;
+    for (let i = 0; i < times; i++) {
+        setTimeout(() => io.to(roomCode).emit('receiveReaction', { name: 'The Molar', emoji }), delay(i * 300));
+    }
+}
+
+function applyTavernRollAbilities(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl') return [];
+    let run = room.tavernRun;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    let moves = [];
+    let effect = run.roundEffect;
+    let mine = turn.playerId !== BOT_ID;
+    let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    // (Three 6s the Devil ability forces: its own moment has just played, so no "Devil's titties" after it.)
+    let sixes = () => { shuffled(active).slice(0, 3).forEach(d => { d.value = 6; }); turn.abilitySixes = true; };
+
+    // The Duke's Sympathy for the Devil (or Martha in his face): it waits until he has kept a 2
+    // and a 4 with three dice still to throw; that throw comes up three 6s, and the player can't
+    // score above devilCap this round (capped when the round is judged if they played first).
+    let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+    // (Not in a round the player's mask already claimed.)
+    // Since 4 Nov only when his last decision said he wants it (turn.devilPlan, devilPlan).
+    if (!mine && run.pendingDevil && turn.devilPlan && !run.roundEffect && kept.includes(2) && kept.includes(4) && active.length >= 3) {
+        let as = run.pendingDevil.as;
+        run.pendingDevil = null;
+        if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
+            sixes();
+            run.roundEffect = { kind: 'devil', by: 'opponent', ability: 'devil', as, landed: true };
+            moves.push(...disguiseMoves(room, run.roundEffect));
+            moves.push(roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT.devil.opponent));
+        }
+    }
+
+    // Martha's mask: the player's Devil comes up three 6s on the next throw after it's worn
+    // (before the first roll, or mid-turn with three or more dice to throw).
+    if (mine && effect && effect.kind === 'devil' && effect.by === 'player' && !effect.landed && active.length >= 3) {
+        effect.landed = true;
+        sixes();
+    }
+    // Klarg (since 25 Oct): he waits for a throw showing a 2 or 4 you still need, snatches it and
+    // keeps it for his own hand (syncTurn puts it in his next turn). At most once a round (the
+    // user's, 9 Nov): your turn is the round's one chance.
+    if (mine && encounter && encounter.keepsStolen && FINAL_SHIP.klargWaits && !turn.reachedAround) {
+        let keptNow = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+        let inPlayNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+        let showing = inPlayNow.some(d => (d.value === 2 && !keptNow.includes(2)) || (d.value === 4 && !keptNow.includes(4)));
+        if (showing && inPlayNow.length >= 2 && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
+            let stolen = Rules.stealHighestActiveDie(turn);
+            if (stolen) {
+                turn.reachedAround = true;
+                run.klargHand = stolen.value;
+                moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: `Klarg snatches your ${stolen.value} and keeps it for his own hand.` });
+            }
+        }
+    }
+    // Rokr's Written in the Stars: this throw's marked faces bind the dice that land on them (they
+    // can't be kept this throw); if every die in play is bound, the throw is free. The next
+    // throw's marks are drawn at once, so they show before you roll.
+    if (mine && turn.stars) {
+        turn.marks = turn.nextMarks || twoFaces();
+        let inPlayNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+        let bound = inPlayNow.filter(d => turn.marks.includes(d.value));
+        turn.boundIds = bound.map(d => d.id);
+        if (bound.length && bound.length === inPlayNow.length) turn.freeRoll = true;
+        turn.nextMarks = twoFaces();
+    }
+    if (turn.rollCount !== 1 || !mine) return moves;
+
+    // Frak's Mind Whip: he makes the player keep one of their dice, at random (Rules.mindWhip).
+    // Spent only now, as it lands, so his mark flashes with it (not as the round began).
+    if (run.pendingMind && !run.roundEffect && active.length > 1 && mindWhipWorthIt(room, active)) {
+        let as = run.pendingMind.as;
+        run.pendingMind = null;
+        if (fireTavernAbility(roomCode, room, encounter, encounter.ability)) {
+            run.roundEffect = { kind: 'mind', by: 'opponent', ability: 'mindWhip', as, landed: true };
+            let die = Rules.mindWhip(turn, n => crypto.randomInt(0, n));
+            moves.push(...disguiseMoves(room, run.roundEffect));
+            if (die) moves.push(roundEffectMove(room, run.roundEffect, 'He keeps one of your dice for you. You may keep others too.'));
+        }
+    }
+
+    let inPlay = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length;
+    if (inPlay > 1 && !(encounter.keepsStolen && FINAL_SHIP.klargWaits) && fireTavernAbility(roomCode, room, encounter, 'reachAround')) {
+        Rules.stealHighestActiveDie(turn);
+        moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.reachAround, text: 'Klarg uses Reach Around and steals one die.' });
+    }
+    if (fireTavernAbility(roomCode, room, encounter, 'constellationBlur')) {
+        turn.blurActive = true;
+        moves.push({ name: encounter.name, ability: Rules.ABILITY_NAMES.constellationBlur, text: 'Your dice land hidden under twinkling constellations.' });
+    }
+    return moves;
+}
+
+// Stason's Flourish, as his turn's first throw begins: the whole turn, each die rolls twice
+// (flourishFace). Returns the move to show, or null.
+function startFlourish(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || turn.playerId !== BOT_ID || turn.rollCount !== 0) return null;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!canUseTavernAbility(room, encounter, 'flourish') || !flourishWorthIt(room)) return null;
+    if (!fireTavernAbility(roomCode, room, encounter, 'flourish')) return null;
+    turn.flourish = true;
+    return { name: encounter.name, ability: Rules.ABILITY_NAMES.flourish, text: 'This turn every die he throws rolls twice, and he keeps the better.' };
+}
+
+// ---- Áéd, the dragon sorcerer (11 Nov, the user's): metamagic with sorcery points ----
+// A pool of points a fight (his gems on the nameplate; BALANCE.metamagic), spent on four tricks:
+// Heightened (your next throw at disadvantage), Quickened (he throws again without keeping a die),
+// Empowered (he rolls one of his own dice again), Twinned (a die he keeps is copied onto one of his
+// loose dice). He spends them where the strategy brain says they raise his chance most.
+const METAMAGIC = BALANCE.metamagic;
+const METAMAGIC_TEXT = {
+    heightened: 'Your next throw is at disadvantage: each die rolls twice, and you keep the worse.',
+    quickened: 'He throws again without keeping a die.',
+    empowered: 'He rolls one of his own dice again.',
+    twinned: 'A die he keeps is copied onto one of his loose dice.'
+};
+const aedSeated = room => room.mode === 'tavern-crawl' && !!(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] || {}).sorcery;
+// Each trick at least once a fight (13 Nov, the user's; METAMAGIC.eachOnce): a trick not yet tried this fight
+// is cast whenever it doesn't cost him (no gain needed), and once either side is on its last heart, at the
+// first chance it can be; a trick already tried is cast only while enough uses stay for those not yet tried.
+const aedTried = (room, trick) => getAbilityUseCount(room, trick) > 0;
+function aedMayCast(room, trick) {
+    let left = room.tavernRun.sorcery || 0, cost = METAMAGIC.costs[trick];
+    if (left < cost) return false;
+    if (!METAMAGIC.eachOnce || !aedTried(room, trick)) return true;
+    let owed = Object.keys(METAMAGIC.costs).filter(t => !aedTried(room, t)).reduce((n, t) => n + METAMAGIC.costs[t], 0);
+    return left - cost >= owed;
+}
+function aedLastChance(room) {
+    let bot = room.players[BOT_ID], human = room.players[getHumanPlayerId(room)];
+    return (!!bot && bot.lives <= 1) || (!!human && human.lives <= 1);
+}
+// The gain in his chance of winning the round a trick must bring.
+const aedNeedGain = (room, trick) => (!METAMAGIC.eachOnce || aedTried(room, trick) ? METAMAGIC.minGain[trick] : aedLastChance(room) ? -Infinity : 0);
+// Spends a trick's points. A Clear-Eye waiting cancels it (its points still spent). Returns true if it goes ahead.
+function castMetamagic(roomCode, room, trick, show = (event, data) => sendMoment(roomCode, event, data), text = METAMAGIC_TEXT[trick]) {
+    let run = room.tavernRun;
+    let cost = METAMAGIC.costs[trick];
+    if (!run || (run.sorcery || 0) < cost) return false;
+    run.sorcery -= cost;
+    markAbilityUsed(room, trick);
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    let name = Rules.ABILITY_NAMES[trick];
+    if (run.clearEyeArmed) {
+        run.clearEyeArmed = false;
+        show('signatureMove', { name: encounter.name, ability: name, text: 'A Clear-Eye Thonic saw it coming.', cancelled: true });
+        show('thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${name} is cancelled` });
+        return false;
+    }
+    show('signatureMove', { name: encounter.name, ability: name, text });
+    return true;
+}
+// Heightened, as your hand's first throw begins: once a round, when he's lost a heart or from the
+// fight's second round. Returns the move to show first, or null.
+function startHeightened(roomCode, room, turn) {
+    if (!aedSeated(room) || turn.playerId === BOT_ID || turn.rollCount !== 0) return null;
+    let run = room.tavernRun;
+    let round = run.encounterRound || 1;
+    if (!aedMayCast(room, 'heightened') || run.heightenedRound === round) return null;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    let bot = room.players[BOT_ID];
+    // Never in a fight's first round (17 Nov, the user's), even when not yet tried.
+    if (!bot || !(bot.lives < encounter.lives || round >= 2)) return null;
+    run.heightenedRound = round;
+    let move = null;
+    let show = (event, data) => { if (event === 'signatureMove' && !data.cancelled) move = data; else emitMoment(roomCode, room, event, data); };
+    if (castMetamagic(roomCode, room, 'heightened', show)) turn.heightened = true;
+    return move;
+}
+// His chance of winning the round from these dice, keeping his best.
+const aedChance = (dice, toBeat, opts) => Strategy.chanceAfterKeep(dice, Strategy.bestKeeps(dice, toBeat, opts), toBeat, opts);
+// His own throw, before he keeps: the whole throw again (Quickened) or one die again (Empowered), when
+// it raises his chance enough. One trick a throw. Returns true if he cast one (the turn goes on from it).
+function aedBeforeKeep(roomCode, room, turn, toBeat, opts) {
+    let run = room.tavernRun;
+    if (!aedSeated(room) || turn.finalized || turn.locksThisRoll > 0 || turn.maxThrows || turn.magicAt === turn.rollCount || !(run.sorcery > 0)) return false;
+    let active = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (active.length < 2) return false;
+    let now = aedChance(turn.dice, toBeat, opts);
+    let options = [];
+    if (aedMayCast(room, 'quickened')) options.push({ trick: 'quickened', gain: Strategy.chanceAfterKeep(turn.dice, [], toBeat, opts) - now });
+    if (aedMayCast(room, 'empowered')) {
+        let pick = null;
+        for (let d of active) {
+            let total = 0;
+            for (let face = 1; face <= 6; face++) total += aedChance(turn.dice.map(x => (x.id === d.id ? { ...x, value: face } : x)), toBeat, opts);
+            let gain = total / 6 - now;
+            if (!pick || gain > pick.gain) pick = { trick: 'empowered', gain, die: d.id };
+        }
+        if (pick) options.push(pick);
+    }
+    // (a trick not yet tried this fight first)
+    let choice = options.filter(o => o.gain >= aedNeedGain(room, o.trick)).sort((a, b) => aedTried(room, a.trick) - aedTried(room, b.trick) || b.gain - a.gain)[0];
+    if (!choice) return false;
+    turn.magicAt = turn.rollCount;
+    let cast = castMetamagic(roomCode, room, choice.trick);
+    emitState(roomCode);
+    if (!cast) return false;
+    let key = turn.key;
+    if (choice.trick === 'quickened') {
+        turn.freeRoll = true;
+        botLater(roomCode, key, 400, () => runBotRoll(roomCode));
+        return true;
+    }
+    let die = turn.dice.find(d => d.id === choice.die);
+    die.value = rollFaceFor(room, turn)(die);
+    throwAgain(roomCode, room, turn, [die.id]);
+    botLater(roomCode, key, Math.round(momentsLeft(room) / TIME_SCALE) + 1500, () => runBotDecision(roomCode));
+    return true;
+}
+// Twinned, as he keeps: one of his kept dice copied onto a loose one, when it raises his chance enough.
+// Returns true if he cast it (he then decides his keep again, with the copy).
+function aedTwin(roomCode, room, turn, toBeat, opts, toLock) {
+    let run = room.tavernRun;
+    if (!aedSeated(room) || turn.finalized || turn.maxThrows || turn.magicAt === turn.rollCount || !aedMayCast(room, 'twinned')) return false;
+    let loose = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !toLock.includes(d.id));
+    let keeps = turn.dice.filter(d => toLock.includes(d.id));
+    if (!loose.length || !keeps.length) return false;
+    let now = aedChance(turn.dice, toBeat, opts);
+    let pick = null;
+    for (let from of keeps) for (let to of loose) {
+        if (to.value === from.value) continue;
+        let gain = aedChance(turn.dice.map(x => (x.id === to.id ? { ...x, value: from.value } : x)), toBeat, opts) - now;
+        if (!pick || gain > pick.gain) pick = { gain, from, to };
+    }
+    if (!pick || pick.gain < aedNeedGain(room, 'twinned')) return false;
+    turn.magicAt = turn.rollCount;
+    let cast = castMetamagic(roomCode, room, 'twinned', undefined, `His ${pick.from.value} is copied onto another of his dice.`);
+    emitState(roomCode);
+    if (!cast) return false;
+    pick.to.value = pick.from.value;
+    throwAgain(roomCode, room, turn, [pick.to.id]);
+    botLater(roomCode, turn.key, Math.round(momentsLeft(room) / TIME_SCALE) + 1500, () => runBotDecision(roomCode));
+    return true;
+}
+
+// Rokr's Written in the Stars, as your turn's first throw begins: the whole turn, two faces are
+// marked before each throw (applyTavernRollAbilities). Returns the move to show, or null.
+function startStars(roomCode, room, turn) {
+    if (room.mode !== 'tavern-crawl' || turn.playerId === BOT_ID || turn.rollCount !== 0) return null;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!fireTavernAbility(roomCode, room, encounter, 'writtenInStars')) return null;
+    turn.stars = true;
+    turn.nextMarks = twoFaces();
+    return { name: encounter.name, ability: Rules.ABILITY_NAMES.writtenInStars, text: `This turn the stars mark two faces before every throw. Dice that land on them can't be kept. First: ${turn.nextMarks.join(' and ')}.` };
+}
+
+// Sylvester's Back of the Head (id suckerPunch, as in the simulator): as you keep your last die
+// on a hand that counts, he knocks your best kept die loose and you roll it again
+// (Rules.putBackDie). The event 'punched' tells browsers to drop taps they're still showing.
+// Returns true if he did.
+function suckerPunch(roomCode, room) {
+    let turn = room.turn;
+    if (room.mode !== 'tavern-crawl' || !turn || turn.playerId === BOT_ID || !turn.finalized || turn.outcome.busted) return false;
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!canUseTavernAbility(room, encounter, 'suckerPunch') || !punchWorthIt(room, turn)) return false;
+    if (!fireTavernAbility(roomCode, room, encounter, 'suckerPunch')) return false;
+    let die = Rules.bestKeptDie(turn);
+    Rules.putBackDie(turn, die.id, { mustRoll: true }); // it has to be rolled, not kept again
+    emitTurn(roomCode, { type: 'punched', die: die.id });
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.suckerPunch, text: `A punch to the back of the head knocks your ${die.value} loose. Roll it again.` });
+    return true;
+}
+
+// ---- Abilities at their best moment (17 Nov, the user's: "Sylvester should not use his when the player
+// scores low"; BALANCE.abilityTiming) ----
+// The opponent's round options for the strategy brain (a cursed round, the sea).
+const botRoundOpts = room => {
+    let effect = room.tavernRun.roundEffect;
+    return { low: !!effect && effect.kind === 'curse', shift: seaShift(room), minKeep: seaKeeps(room) };
+};
+const TIMING = BALANCE.abilityTiming || {};
+// A round that decides the fight: either side on its last heart.
+function decisiveRound(room) {
+    let bot = room.players[BOT_ID], human = room.players[getHumanPlayerId(room)];
+    return (!!bot && bot.lives <= 1) || (!!human && human.lives <= 1);
+}
+// A hand's score from its dice values (null: dust).
+function handScore(values) {
+    let rest = values.slice();
+    for (let need of [2, 4]) { let i = rest.indexOf(need); if (i < 0) return null; rest.splice(i, 1); }
+    return rest.reduce((a, b) => a + b, 0);
+}
+// Back of the Head: worth it when knocking your best kept die loose raises his chance of the round by
+// punchMinGain (any gain in a round that decides the fight). If he has played, that's against his own hand
+// (never when he dusted: you win whatever you roll, nor when you're already behind); if not, his chance of
+// beating what you'd be left with. Not in a cursed round (your highest die is your worst there).
+function punchWorthIt(room, turn) {
+    let effect = room.tavernRun.roundEffect;
+    if (effect && effect.kind === 'curse') return false;
+    let die = Rules.bestKeptDie(turn);
+    if (!die) return false;
+    let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN);
+    let others = kept.filter(d => d.id !== die.id).map(d => d.value);
+    let now = handScore(kept.map(d => d.value));
+    if (now === null) return false;
+    let after = [1, 2, 3, 4, 5, 6].map(f => handScore([...others, f]));
+    let bot = room.players[BOT_ID];
+    let his;
+    if (bot && bot.score !== null && bot.score !== undefined) {
+        if (bot.busted) return false;
+        his = sc => (sc === null || sc < bot.score ? 1 : sc === bot.score ? 0.5 : 0);
+    } else {
+        let opts = botRoundOpts(room);
+        his = sc => Strategy.chanceFromStart(sc, opts);
+    }
+    let gain = after.reduce((sum, sc) => sum + his(sc), 0) / 6 - his(now);
+    return gain >= (decisiveRound(room) ? 0.01 : TIMING.punchMinGain ?? 0.1);
+}
+// Vexing Rapier (Stason's Flourish): going first, always; going second, only when without it his chance of
+// beating your hand is under flourishWhenBelow (never when you dusted: he needs only a valid hand). As the
+// Duke saves his Devil.
+function flourishWorthIt(room) {
+    let toBeat = getTavernScoreToBeat(room);
+    if (toBeat === undefined) return true;
+    return Strategy.chanceFromStart(toBeat, botRoundOpts(room)) < (TIMING.flourishWhenBelow ?? BALANCE.devilWhenBelow ?? 0.7);
+}
+// Mind Whip on your first throw: only on a throw where a die kept at random is likely a poor one (1s and 3s,
+// at least mindWhipPoorShare of the dice), or, in a round that decides the fight, on any throw with one.
+function mindWhipWorthIt(room, active) {
+    let poor = active.filter(d => d.value === 1 || d.value === 3).length;
+    return poor / active.length >= (TIMING.mindWhipPoorShare ?? 0.5) || (decisiveRound(room) && poor > 0);
+}
+// A heart taken outright: you'd lose it (not on your last heart, nor while your Shield of Fuckery waits).
+function heartTakeable(room) {
+    let human = room.players[getHumanPlayerId(room)];
+    let shield = hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper;
+    return !!human && human.lives >= 2 && !shield;
+}
+
+// Divine Smite's second heart counts (18 Nov: heartTakeable skipped it while your Shield waited, yet then
+// the Shield catches one heart and the other is lost).
+function smiteCounts(room) {
+    let human = room.players[getHumanPlayerId(room)];
+    let shield = hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper;
+    return !!human && (human.lives >= 2 || shield);
+}
+
+// A die kept: the server's answer to everyone, after Sylvester has had his chance.
+function emitKept(roomCode, result) {
+    let room = rooms[roomCode];
+    if (result.finalizedNow && suckerPunch(roomCode, room)) return;
+    emitTurn(roomCode, result.finalizedNow ? { type: 'finalized', outcome: room.turn.outcome } : { type: 'toggle' });
+}
+
+// Returns the roll's animation length in ms, or 0 if the roll wasn't allowed.
+// Dice thrown again mid-turn (Fizzy, the Bard's Inspiring Song): they tumble like any roll, once
+// the moments ahead of them have gone (only those dice are thrown).
+function throwAgain(roomCode, room, turn, rerolled) {
+    let animationMs = 500;
+    let lead = momentsLeft(room), key = turn.key;
+    turn.busyUntil = Date.now() + lead + delay(animationMs);
+    let thrown = { turn: Rules.viewTurn(turn), preRollCallout: null, suspense: Rules.SUSPENSE.NONE, devil: false, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), rerolled, ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    setTimeout(() => {
+        if (rooms[roomCode] === room && room.turn && room.turn.key === key) io.to(roomCode).emit('diceRolled', thrown);
+    }, lead);
+    // Becalmed: dice thrown again after the hand's last throw stay as they lie too, as after the throw itself.
+    if (turn.maxThrows && turn.rollCount >= turn.maxThrows && turn.dice.some(d => d.status === Rules.STATUS.ACTIVE)) {
+        setTimeout(() => {
+            if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+            let result = Rules.keepRest(room.turn);
+            if (result) emitKept(roomCode, result);
+        }, lead + delay(animationMs));
+    }
+}
+
+// Yvesil the oracle (a spot on the Salty Swallow, 6 Nov): pay, and she reads your next fight.
+const OMENS = {
+    fairWinds: { name: 'Fair Winds', text: 'On your first throw of each round next fight, your 1s roll again.', good: true },
+    followingSea: { name: 'Following Sea', text: 'Your first dust next fight scores its dice as they lie instead.', good: true },
+    albatross: { name: 'The Albatross', text: 'On your first throw of each round next fight, your 6s roll again.', good: false },
+    blackSpot: { name: 'The Black Spot', text: `All your hands next fight score ${INTERLUDE.blackSpot ?? 1} less.`, good: false }
+};
+const omenView = id => (id && OMENS[id] ? { id, ...OMENS[id] } : null);
+// Jorvash the manservant (a spot on the Salty Swallow, 6 Nov): one of two, for the next fight.
+const REFRESHMENTS = [
+    { id: 'notaroRed', name: 'Notaro Red', text: `Your first hand that counts next fight scores ${INTERLUDE.notaroRed ?? 2} more.` },
+    { id: 'ebonShield', name: 'Water of the Ebon Shield', text: "The sea die can't touch you next fight: your dice never list, and no squall, wave, fog or calm holds you back." }
+];
+
+// The Bard's songs (a spot at the Yawning Portal), each for the next fight.
+const BARD_SONGS = [
+    { id: 'cuttingWords', name: 'Cutting Words', text: `Your opponent's first hand that counts next fight scores ${INTERLUDE.cuttingWords ?? 3} less.` },
+    { id: 'inspiringSong', name: 'Inspiring Song', text: 'Your first throw of the next fight: throw it again if you don\'t like it.' }
+];
+
+function performRoll(roomCode) {
+    let room = rooms[roomCode];
+    if (!isTurnPlayable(roomCode)) return 0;
+    let turn = room.turn;
+    if (Date.now() < turn.busyUntil) return 0;
+
+    let signatureMoves = [];
+    let preRollCallout = null;
+    room.rollMoments = []; // moments raised while the dice are thrown wait until they land
+    if (!turn.hasRolled) { let ward = seaWarded(room, turn); turn.mustKeep = ward ? 1 : seaKeeps(room); turn.maxThrows = ward ? 0 : seaThrows(room); } // (the Squall, Becalmed: set as the hand begins)
+    rogueWave(roomCode, room, turn);
+    let flourish = Rules.canRoll(turn) ? startFlourish(roomCode, room, turn) : null;
+    let stars = Rules.canRoll(turn) ? startStars(roomCode, room, turn) : null;
+    let heightened = Rules.canRoll(turn) ? startHeightened(roomCode, room, turn) : null;
+    // The Bard's Inspiring Song waits for your first throw of the fight; after it, it's gone.
+    let run = room.mode === 'tavern-crawl' ? room.tavernRun : null;
+    let firstThrow = run && turn.playerId !== BOT_ID && run.song === 'ready' && !turn.hasRolled;
+    // (Watermelon Hindsight throws these again.)
+    let thrownNow = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
+    let songGone = run && turn.playerId !== BOT_ID && run.song && run.song !== 'ready' && Rules.canRoll(turn);
+    if (songGone) run.song = null;
+    let result = Rules.rollTurn(turn, {
+        rollFace: rollFaceFor(room, turn),
+        onRolled: t => {
+            preRollCallout = t.callout;
+            signatureMoves = applyTavernRollAbilities(roomCode, room, t);
+        }
+    });
+    let moments = room.rollMoments;
+    room.rollMoments = null;
+    turn.heightened = false; // (Heightened is for the one throw)
+    if (!result) return 0;
+    if (firstThrow) run.song = turn.key;
+    turn.lastThrown = thrownNow;
+    // (The strip's song lights up, or goes out: the browsers hear of it.)
+    if (firstThrow || songGone) emitState(roomCode);
+    if (flourish) signatureMoves.unshift(flourish);
+    if (stars) signatureMoves.unshift(stars);
+    if (heightened) signatureMoves.unshift(heightened);
+    // The abilities this throw brings play first, banner and effect, and the dice are thrown once
+    // they (and anything still on screen, like the round's result) have gone. Only Klarg waits
+    // for the dice: his hand takes one that has landed.
+    let afterLanding = signatureMoves.filter(move => move.ability === Rules.ABILITY_NAMES.reachAround);
+    let first = [...signatureMoves.filter(move => !afterLanding.includes(move)).map(move => ['signatureMove', move]), ...moments];
+    first.forEach(([event, data]) => sendMoment(roomCode, event, data));
+    if (first.length) io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    let lead = momentsLeft(room);
+
+    // Browsers show the pre-roll announcement while the dice tumble, then the final board.
+    let animationMs = result.suspense !== Rules.SUSPENSE.NONE ? 2000 : 500;
+    turn.busyUntil = Date.now() + lead + delay(animationMs);
+    let key = turn.key;
+    // throwSeed lets every screen simulate the identical tumble (the values are already decided).
+    let abilitySixes = !!turn.abilitySixes;
+    // (No three 6s moment on hidden dice, Starry Form or the Cloak: it would show what they are. 10 Nov.)
+    turn.abilitySixes = false;
+    let thrown = { sea: (!seaWarded(room, turn) && seaShift(room)) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
+    afterMoments(lead, () => {
+        if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+        io.to(roomCode).emit('diceRolled', thrown);
+    });
+    // (In the bot's and the game's own time from here: the lead in unscaled ms.)
+    let leadMs = Math.round(lead / TIME_SCALE);
+
+    if (result.devil && isBotRoom(roomCode)) botLater(roomCode, key, leadMs + animationMs, () => sendBotReaction(roomCode, 'hood'));
+    if (afterLanding.length) {
+        setTimeout(() => {
+            if (!rooms[roomCode]) return;
+            afterLanding.forEach(move => sendMoment(roomCode, 'signatureMove', move));
+            io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        }, lead + delay(animationMs));
+    }
+
+    // Becalmed: the last of the hand's throws leaves its dice as they lie, kept as they land.
+    let stillActive = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE);
+    if (turn.maxThrows && turn.rollCount >= turn.maxThrows && stillActive.length) {
+        setTimeout(() => {
+            if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+            let result = Rules.keepRest(room.turn);
+            if (result) emitKept(roomCode, result);
+        }, lead + delay(animationMs));
+        return leadMs + animationMs;
+    }
+    // The last die has nothing to choose: once it lands it goes into its slot by itself.
+    // The player still presses End Turn.
+    if (stillActive.length === 1) {
+        let lastDieId = stillActive[0].id;
+        setTimeout(() => {
+            if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
+            let result = Rules.toggleDie(room.turn, lastDieId);
+            if (result) emitKept(roomCode, result);
+        }, lead + delay(animationMs));
+    }
+    return leadMs + animationMs;
+}
+
+function performToggle(roomCode, dieId) {
+    let room = rooms[roomCode];
+    if (!isTurnPlayable(roomCode)) return;
+    let turn = room.turn;
+    if (Date.now() < turn.busyUntil) return;
+
+    // (A player's keep of their last die waits for End Turn, so it can still go back; the bots finish at once.)
+    let result = Rules.toggleDie(turn, dieId, { hold: turn.playerId !== BOT_ID });
+    if (!result) return;
+    emitKept(roomCode, result);
+}
+
+function performEndTurn(roomCode) {
+    let room = rooms[roomCode];
+    if (!isTurnPlayable(roomCode)) return;
+    // A hand held complete (every die kept by the player's taps) is fixed as they end the turn:
+    // its outcome first (and Sylvester's Back of the Head, which reopens it), then the end.
+    if (!room.turn.finalized && Date.now() >= room.turn.busyUntil && Rules.finishTurn(room.turn)) {
+        if (suckerPunch(roomCode, room)) return;
+        emitTurn(roomCode, { type: 'finalized', outcome: room.turn.outcome });
+    }
+    if (!room.turn.finalized) return;
+    room.turn.ended = true;
+    let aceFired = false; // (the Hangman's Ace of Spades made this hand a 24)
+
+    let currentId = room.roundPlayers[room.currentTurnIndex];
+    let { score, busted } = room.turn.outcome;
+    if (room.turn.steady && busted) { busted = false; score = Rules.scoreDice(room.turn.dice).score; } // Steady Thonic: the dice score as they lie
+    // Jaguar drank the Steady he demanded as the round began: his dust scores as it lies.
+    if (room.mode === 'tavern-crawl' && currentId === BOT_ID && busted && room.tavernRun.jaguarSteady) {
+        room.tavernRun.jaguarSteady = false;
+        busted = false;
+        score = Rules.scoreDice(room.turn.dice).score;
+    }
+    // Yvesil's Following Sea: your first dust this fight scores its dice as they lie.
+    if (room.mode === 'tavern-crawl' && currentId !== BOT_ID && busted && room.tavernRun.omen === 'followingSea') {
+        room.tavernRun.omen = null;
+        busted = false;
+        score = Rules.scoreDice(room.turn.dice).score;
+        sendMoment(roomCode, 'keepsakeActivated', { id: 'followingSea', name: OMENS.followingSea.name, text: `Your dust scores ${score}.`, who: 'Yvesil' });
+    }
+    room.players[currentId].score = score;
+    room.players[currentId].busted = busted;
+
+    if (room.mode === 'tavern-crawl') {
+        let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+        let effect = room.tavernRun.roundEffect;
+        let cursed = !!effect && effect.kind === 'curse';
+        if (BALANCE.devilCap != null && effect && effect.kind === 'devil' && (effect.by === 'player') === (currentId === BOT_ID) && !busted && score > BALANCE.devilCap) {
+            score = BALANCE.devilCap;
+            room.players[currentId].score = score;
+        }
+        if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= ACE_FROM && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
+            aceFired = true; // (20 Nov, the user's: from 18, and it heals him like any 24)
+            let was = room.players[currentId].score;
+            room.players[currentId].score = 24;
+            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman shoots a die into a 6. Perfect 24.', after: `The Hangman shoots a die into a 6: his ${was} becomes a perfect 24, and he wins back a heart.` });
+            if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires the Ace of Spades.', color: "#ffd54f" });
+        }
+        // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
+        // points (not in a cursed round, where a lower score would help them).
+        if (currentId === BOT_ID && !cursed && !busted && room.players[BOT_ID].score > 0 && room.tavernRun.cuttingWords) {
+            room.tavernRun.cuttingWords = false;
+            let off = INTERLUDE.cuttingWords ?? 3;
+            let was = room.players[BOT_ID].score;
+            score = room.players[BOT_ID].score = Math.max(0, was - off);
+            // (20 Nov, the user's: what it took off shows, like Smooth Talker's: the minus, the score's change and a ribbon after.)
+            fogHeld(roomCode, room, 'keepsakeActivated', { id: 'cuttingWords', name: 'Cutting Words', text: `${encounter.name}'s ${was} becomes ${score}.`, who: 'The Bard', minus: was - score, extra: `${was} → ${score}`, after: `Cutting Words: ${encounter.name}'s ${was} becomes ${score}.` });
+        }
+
+        // The Hangman's Dead Eye: he shoots your best scoring die (not the 2 and 4 you need) and it
+        // rolls again (FINAL_SHIP.deadEyeRerolls; otherwise it goes to a 1).
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'deadEye')) {
+            let shot = scoringDice(room.turn).sort((a, b) => b.value - a.value)[0];
+            if (shot) {
+                let was = shot.value;
+                shot.value = FINAL_SHIP.deadEyeRerolls ? rollFace() : 1;
+                score = Rules.scoreDice(room.turn.dice).score;
+                room.turn.outcome = { ...room.turn.outcome, score };
+                room.players[currentId].score = score;
+                sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.deadEye, text: `The Hangman shoots your ${was}. It rolls again: ${shot.value}.`, die: shot.id, from: was, to: shot.value });
+                emitTurn(roomCode, { type: 'shot', die: shot.id });
+            }
+        }
+        // Yvesil's Black Spot, and Jorvash's Notaro Red (your first hand that counts).
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.omen === 'blackSpot') {
+            score = Math.max(0, score - (INTERLUDE.blackSpot ?? 1));
+            room.players[currentId].score = score;
+        }
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && room.tavernRun.notaro) {
+            room.tavernRun.notaro = false;
+            let was = score;
+            score = Math.min(Rules.PERFECT_SCORE, score + (INTERLUDE.notaroRed ?? 2));
+            room.players[currentId].score = score;
+            sendMoment(roomCode, 'keepsakeActivated', { id: 'notaroRed', name: 'Notaro Red', text: `Your ${was} becomes ${score}.`, who: 'Jorvash' });
+        }
+        if (currentId !== BOT_ID && !cursed && !busted && score > 0 && fireTavernAbility(roomCode, room, encounter, 'smoothTalk')) {
+            room.players[currentId].score = Math.max(0, score - 3);
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: 'Smooth Talker', text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.' });
+            io.to(roomCode).emit('displayMessage', { text: 'Jaguar smiles. He talks you into taking 3 off your finished hand.', color: "#ffb74d" });
+        }
+
+        // (18 Nov: a perfect hand is worth points, so it counts as the game celebrates it: a 24, or in a cursed
+        // round the Perfect ...4?, four 1s with the 2 and the 4; a cursed 24 isn't one.)
+        if (currentId !== BOT_ID && !busted && room.players[currentId].score === (cursed ? 4 : 24) && room.tavernRun.stats) {
+            room.tavernRun.stats.perfect24s++;
+            room.tavernRun.stats.perfectGold += GOLD.perfect24;
+            room.tavernRun.purse += GOLD.perfect24;
+        }
+    }
+
+    // A 24 restores a life, up to what the player started with (a Tavern Crawl opponent: up to
+    // their own lives for the fight). An opponent's 24 must be rolled: the Hangman's Ace of
+    // Spades makes one too, and since 20 Nov it heals him (the user's).
+    let maxLives = room.mode === 'tavern-crawl' && currentId === BOT_ID ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].lives : room.startingLives;
+    let natural = currentId !== BOT_ID || score === 24 || aceFired;
+    // Brodor's Sunglasses: your finished 23 heals too.
+    let shades = currentId !== BOT_ID && room.players[currentId].score === 23 && !busted && hasKeepsake(room, BRODORS_SUNGLASSES.id);
+    // A cursed round's perfect hand, the Perfect ...4? (the 2, the 4 and four 1s), heals too (20 Nov, the user's), either side.
+    let roundCursed = room.mode === 'tavern-crawl' && !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+    let perfect4 = roundCursed && !busted && room.players[currentId].score === 4;
+    if ((perfect4 || (natural && (room.players[currentId].score === 24 || shades))) && room.players[currentId].lives < maxLives) {
+        room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + 1);
+        if (shades) emitKeepsakeActivated(roomCode, room, BRODORS_SUNGLASSES.id, 'A 23 restores a heart.');
+        io.to(roomCode).emit('displayMessage', { text: '+1 heart restored!', color: "#aed581" });
+    }
+
+    advanceTurn(roomCode);
+}
+
+// Moves to the next connected player, or scores the round if everyone has gone.
+function advanceTurn(roomCode) {
+    let room = rooms[roomCode];
+    room.currentTurnIndex++;
+    skipDisconnectedPlayers(room);
+
+    if (room.currentTurnIndex >= room.roundPlayers.length) {
+        evaluateRound(roomCode);
+    } else {
+        emitState(roomCode);
+    }
+}
+
+// After the reconnect grace: if the player whose turn it is still hasn't come back and
+// others are waiting on them, their turn is dust and play moves on. With nobody else
+// connected there's no rush; the table just waits (and is cleared if no one returns).
+function forfeitIfStillAway(roomCode, room, token) {
+    if (rooms[roomCode] !== room) return;
+    let id = room.roundPlayers[room.currentTurnIndex];
+    let player = room.players[id];
+    if (!player || player.token !== token || player.connected) return;
+    if (!anyHumanConnected(room)) return;
+    player.busted = true;
+    player.score = 0;
+    if (room.turn) room.turn.ended = true;
+    advanceTurn(roomCode);
+}
+
+// A friends' game under way: someone has played a hand or lost a heart, or it's past its first round.
+function gameUnderway(room) {
+    if (room.mode === 'tavern-crawl' || !room.roundPlayers.length) return false;
+    return room.roundNumber > 1 || room.playerOrder.some(id => room.players[id] && !room.players[id].waiting && (room.players[id].score !== null || room.players[id].lives < room.startingLives));
+}
+
+// A friends' table: a player still away after AWAY_LEAVE_MS gives up their seat. Not on their own turn
+// (forfeitIfStillAway moves that on first; this tries again shortly). If everyone left in the round has
+// now played, the round is scored.
+function leaveIfStillAway(roomCode, room, token) {
+    if (rooms[roomCode] !== room || room.mode === 'tavern-crawl') return;
+    let id = Object.keys(room.players).find(k => room.players[k].token === token);
+    let player = id && room.players[id];
+    if (!player || player.connected || id === BOT_ID) return;
+    if (room.roundPlayers[room.currentTurnIndex] === id) {
+        setTimeout(() => leaveIfStillAway(roomCode, room, token), delay(5000));
+        return;
+    }
+    let inRound = room.roundPlayers.indexOf(id);
+    if (inRound >= 0) {
+        room.roundPlayers.splice(inRound, 1);
+        if (inRound < room.currentTurnIndex) room.currentTurnIndex--;
+    }
+    let seat = room.playerOrder.indexOf(id);
+    if (seat >= 0) {
+        room.playerOrder.splice(seat, 1);
+        if (seat < room.dealerIndex) room.dealerIndex--;
+        if (room.playerOrder.length) room.dealerIndex %= room.playerOrder.length;
+        else room.dealerIndex = 0;
+    }
+    delete room.players[id];
+    let playing = room.roundPlayers.length > 0;
+    if (playing && room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
+    else emitState(roomCode);
+}
+
+function skipDisconnectedPlayers(room) {
+    while (room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
+        room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
+        room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
+        room.currentTurnIndex++;
+    }
+}
+
+function anyHumanConnected(room) {
+    return Object.values(room.players).some(p => p.connected && p.id !== BOT_ID);
+}
+
+// Runs `fn` after `ms` unless the room is gone or the turn has moved on. The bot doesn't
+// play to an empty room: it pauses, and resumeBot picks up when someone comes back.
+function botLater(roomCode, key, ms, fn) {
+    let room = rooms[roomCode];
+    setTimeout(() => {
+        let current = rooms[roomCode];
+        if (current !== room || !current.turn || current.turn.key !== key) return;
+        if (!anyHumanConnected(room)) { room.botPaused = true; return; }
+        fn();
+    }, delay(ms));
+}
+
+// Carries on a bot turn that paused while everyone was away.
+function resumeBot(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || !room.botPaused) return;
+    room.botPaused = false;
+    let turn = room.turn;
+    if (!turn || turn.playerId !== BOT_ID || turn.ended) return;
+    if (turn.finalized) botLater(roomCode, turn.key, 1500, () => performEndTurn(roomCode));
+    else if (turn.hasRolled) botLater(roomCode, turn.key, 1000, () => runBotDecision(roomCode));
+    else botLater(roomCode, turn.key, 1000, () => runBotRoll(roomCode));
+}
+
+// Deletes a table once it has had nobody connected for EMPTY_TABLE_GRACE_MS.
+function scheduleEmptyTableCleanup(roomCode) {
+    let room = rooms[roomCode];
+    if (!room || room.cleanupTimer || anyHumanConnected(room)) return;
+    room.cleanupTimer = setTimeout(() => {
+        room.cleanupTimer = null;
+        if (rooms[roomCode] === room && !anyHumanConnected(room)) delete rooms[roomCode];
+    }, delay(room.mode === 'tavern-crawl' ? CRAWL_TABLE_GRACE_MS : EMPTY_TABLE_GRACE_MS));
+}
+
+function runBotRoll(roomCode) {
+    let room = rooms[roomCode];
+    let key = room.turn.key;
+    let animationMs = performRoll(roomCode);
+    if (animationMs) botLater(roomCode, key, animationMs + 1000, () => runBotDecision(roomCode));
+    // A refused roll (dice still busy) must never leave the bot stuck: think again shortly.
+    else if (!room.turn.finalized) botLater(roomCode, key, 1000, () => runBotDecision(roomCode));
+}
+
+// What a Tavern Crawl opponent must beat to win the round: the player's finished score, or
+// null if they dusted. undefined while the player hasn't finished (or outside a Tavern Crawl),
+// so the bot plays on as usual. The opponents know your keepsakes: with Velvet Cushion still
+// unused, winning by exactly 1 would only be a tie.
+function getTavernScoreToBeat(room) {
+    if (room.mode !== 'tavern-crawl') return undefined;
+    let humanId = getHumanPlayerId(room);
+    let human = humanId && room.players[humanId];
+    if (!human || !room.roundPlayers.includes(humanId) || human.score === null) return undefined;
+    if (room.tavernRun.cloud) return undefined; // Cotton Candy Cloud: they can't see it, and play for their best
+    if (seaFog(room)) return undefined; // (a fog bank: nor in fog)
+    if (human.busted) return null;
+    let cushion = hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion;
+    let effect = room.tavernRun.roundEffect;
+    let cursed = effect && effect.kind === 'curse';
+    let score = BALANCE.devilCap != null && effect && effect.kind === 'devil' && effect.by === 'opponent' ? Math.min(human.score, BALANCE.devilCap) : human.score;
+    // The Hangman plays knowing he holds his Penitent Stare: he needs only to reach your hand less it.
+    if (!cursed && !room.tavernRun.clearEyeArmed) score = Math.max(0, score - stareOff(room)); // (as with his Ace, he knows a Clear-Eye is waiting)
+    return score + (cushion ? (cursed ? -1 : 1) : 0);
+}
+
+// The Hangman's Penitent Stare (6 Nov; since 10 Nov kept hidden until it's used, the user's): once a
+// fight, after he's lost a life, 2 off your finished hand for each heart you've taken from him. How
+// much it would take now (0: he can't use it).
+function stareOff(room) {
+    let encounter = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] : null;
+    let bot = room.players[BOT_ID];
+    if (!encounter || encounter.ability !== 'penitentStare' || !bot) return 0;
+    let taken = encounter.lives - bot.lives;
+    if (taken <= 0 || !canUseTavernAbility(room, encounter, 'penitentStare')) return 0;
+    return taken * (INTERLUDE.stareEachHeart ?? 2);
+}
+// With both hands done: he stares only when he isn't winning already and the Stare wins or ties him
+// the round (never on a dust hand, his or yours). Its moment shows your score falling.
+function stareTurnsRound(roomCode, room, human, enemy) {
+    let off = stareOff(room);
+    if (!off || human.busted || enemy.busted || !(human.score > 0) || enemy.score > human.score) return;
+    if (human.score - off > enemy.score) return; // (it wouldn't save him)
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    if (!fireTavernAbility(roomCode, room, encounter, 'penitentStare')) return; // (a Clear-Eye saw it coming)
+    let was = human.score;
+    human.score = Math.max(0, was - off);
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.penitentStare, text: `Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}`, after: `The Hangman's stare: your ${was} becomes ${human.score}.` });
+}
+
+// True when a Tavern Crawl opponent can no longer win or tie the round, whatever the dice
+// do: the player has finished, and the best this hand can still make (24 with the Hangman's
+// shot ready at 16 or more) falls short, or a 2 or 4 is out of reach. `toBeat` is from
+// getTavernScoreToBeat: undefined while the player is still to play (never concede then),
+// null if the player dusted (any valid hand wins).
+// In a cursed round they always play it out; under the player's Devil, their best counts as
+// no more than the cap.
+function tavernRoundLost(turn, toBeat, aceAt16, { low = false, cap = null } = {}) {
+    if (toBeat === undefined || low) return false;
+    let best = Rules.bestPossibleScore(turn.dice);
+    if (best === null) return true;
+    if (aceAt16 && best >= ACE_FROM) best = 24;
+    if (cap !== null) best = Math.min(best, cap);
+    return toBeat !== null && best < toBeat;
+}
+
+// The Duke's Sympathy for the Devil, decided after each of his throws while it waits (the user's
+// calls, 4 Nov). It lands three 6s on the throw after he has kept a 2 and a 4 with three or more
+// dice still to throw, so:
+//   1. A 2, a 4 and a 6 kept (or showing to keep) with three dice left: go for it, a Perfect 24.
+//   2. You dusted: any valid hand wins, so he saves it.
+//   3. You've played: only if his chance of beating your score without it is below
+//      devilWhenBelow; otherwise he plays normally (`normal`, his usual keep) and saves it.
+//   4. He's first: he goes for it, for the best score he can get.
+// Going for it, he keeps the 2 and 4 he still needs (else his highest die), and once he has
+// both, his best other die if three are still left to throw. Returns { use, locks }.
+function devilPlan(turn, toBeat, normal) {
+    let A = Rules.STATUS.ACTIVE;
+    let active = turn.dice.filter(d => d.status === A).sort((a, b) => b.value - a.value);
+    let kept = turn.dice.filter(d => d.status !== A && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+    // 1. The Perfect 24: kept and kept-now exactly a 2, a 4 and a 6, with three dice left.
+    let perfect = [];
+    let ok = kept.every(v => [2, 4, 6].includes(v)) && new Set(kept).size === kept.length;
+    for (let v of [2, 4, 6]) {
+        if (!ok || kept.includes(v)) continue;
+        let die = active.find(d => d.value === v);
+        if (die) perfect.push(die.id); else ok = false;
+    }
+    if (ok && perfect.length > 0 && active.length - perfect.length === 3) return { use: true, locks: perfect };
+    // 2-3. Does he need it?
+    let need = toBeat === undefined ? true
+        : toBeat === null ? false
+        : Strategy.chanceAfterKeep(turn.dice, normal, toBeat) < (BALANCE.devilWhenBelow ?? 0.7);
+    if (!need) return { use: false, locks: normal };
+    // 4. Going for it.
+    let locks = Rules.devilWaitLocks(turn);
+    let valueOf = id => turn.dice.find(d => d.id === id).value;
+    let has = v => kept.includes(v) || locks.some(id => valueOf(id) === v);
+    let left = active.length - locks.length;
+    let extras = kept.filter(v => v !== 2 && v !== 4).length + locks.filter(id => ![2, 4].includes(valueOf(id))).length;
+    if (has(2) && has(4) && left > 3 && extras === 0) {
+        let best = active.find(d => !locks.includes(d.id) && d.value >= 5);
+        if (best) locks.push(best.id);
+    }
+    return { use: true, locks };
+}
+
+function runBotDecision(roomCode) {
+    let room = rooms[roomCode];
+    let turn = room.turn;
+    let key = turn.key;
+    let encounter = room.mode === 'tavern-crawl' ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex] : null;
+    let enemyId = encounter ? encounter.id : 'molar';
+    let toBeat = getTavernScoreToBeat(room);
+    // The Molar (solo games) and the whole Ghoul and Gourd play simply (the qualifier, where you
+    // learn the game; the user's call, 21 Oct). From the Yawning Portal on, opponents play their best: Strategy works out the keep with the best
+    // chance of winning the round (the Hangman counts on his revolver, The Ace of Spades, when he can fire it).
+    // A cursed round is played for the fewest points; under the player's Devil the bot's
+    // score counts as no more than the cap.
+    let effect = room.mode === 'tavern-crawl' ? room.tavernRun.roundEffect : null;
+    let round = { low: !!effect && effect.kind === 'curse', cap: effect && effect.kind === 'devil' && effect.by === 'player' ? BALANCE.devilCap ?? null : null, shift: seaShift(room), minKeep: seaKeeps(room), throws: turn.maxThrows || 0, throwsLeft: turn.maxThrows ? turn.maxThrows - turn.rollCount : undefined };
+    let aceAt16 = !!encounter && !round.low && abilitiesOf(encounter).includes('deadeye24') && room.players[BOT_ID].lives <= 1 && canUseTavernAbility(room, encounter, 'deadeye24') && !room.tavernRun.clearEyeArmed;
+    let simple = !encounter || encounter.place === 'ghoulAndGourd';
+    // Áéd's metamagic, before he keeps: the whole throw again, or one die again.
+    if (encounter && encounter.sorcery && aedBeforeKeep(roomCode, room, turn, toBeat, { aceAt16, ...round })) return;
+    let toLock = simple ? Rules.planBotLocks(turn, enemyId, toBeat, { low: round.low }) : Strategy.bestKeeps(turn.dice, toBeat, { aceAt16, ...round });
+    // The Duke (or Martha in his face) with his Devil waiting: he goes for it only when it helps
+    // (devilPlan), keeping then only what it needs, so it has three dice to land on.
+    if (simple && room.mode === 'tavern-crawl' && room.tavernRun.pendingDevil) {
+        let plan = devilPlan(turn, toBeat, toLock);
+        turn.devilPlan = plan.use;
+        toLock = plan.locks;
+    }
+    // A Tavern Crawl opponent who can no longer win or tie the round doesn't play it out: they
+    // keep everything left at once and end the turn.
+    // (The simple players don't know the Squall: top their keep up to two, best dice first.)
+    let need = Math.min(round.minKeep, turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length);
+    if (toLock.length && toLock.length < need) {
+        let kept = turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+        let worth = d => ([2, 4].includes(d.value) && !kept.includes(d.value) ? 10 : round.low ? 7 - d.value : d.value);
+        let more = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE && !toLock.includes(d.id)).sort((a, b) => worth(b) - worth(a));
+        toLock = [...toLock, ...more.slice(0, need - toLock.length).map(d => d.id)];
+    }
+    let conceding = tavernRoundLost(turn, toBeat, aceAt16, round);
+    if (conceding) toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
+    // Áéd's Twinned Dice, as he keeps: a kept die copied onto a loose one.
+    if (!conceding && encounter && encounter.sorcery && aedTwin(roomCode, room, turn, toBeat, { aceAt16, ...round }, toLock)) return;
+
+    // Lock the dice one after another, and only then decide what next. (Separate timers for
+    // each lock and the check could fire out of order on a busy server, and a check that ran
+    // before the locks found nothing to roll and stopped the bot for good.)
+    let lockFrom = i => {
+        if (i < toLock.length) {
+            performToggle(roomCode, toLock[i]);
+            botLater(roomCode, key, conceding ? 120 : 400, () => lockFrom(i + 1));
+        } else {
+            botLater(roomCode, key, 800, afterLocking);
+        }
+    };
+    let afterLocking = () => {
+        if (!turn.finalized) {
+            // What they just had to keep may have put the round out of reach: then keep the
+            // rest now rather than throw again.
+            if (!conceding && tavernRoundLost(turn, toBeat, aceAt16, round)) {
+                conceding = true;
+                toLock = turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).map(d => d.id);
+                lockFrom(0);
+                return;
+            }
+            runBotRoll(roomCode);
+            return;
+        }
+        let { busted, score } = turn.outcome;
+        if (busted) sendBotReaction(roomCode, 'swords');
+        else if (score === 24) sendBotReaction(roomCode, 'hood');
+        else if (score >= 22) sendBotReaction(roomCode, 'shield');
+        else if (score <= 17) sendBotReaction(roomCode, 'skull');
+        botLater(roomCode, key, 1500, () => performEndTurn(roomCode));
+    };
+    lockFrom(0);
+}
+
+// ---- Tavern Crawl ----
+
+// What an Elf Bar's puff does (a bar on the shelf, or Mystery Flavour tasting of it), always on
+// the player's own turn. Returns { text, rerolled } (rerolled: dice to throw again), or null when
+// it can't be puffed right now (nothing changes then).
+function elfPuff(room, turn, id) {
+    let run = room.tavernRun;
+    let A = Rules.STATUS.ACTIVE;
+    if (id === 'purpleHaze') {
+        // A 1 just thrown becomes the 2 or 4 you still need (it tumbles onto it).
+        if (!turn.hasRolled || turn.finalized) return null;
+        let kept = turn.dice.filter(d => d.status !== A && d.status !== Rules.STATUS.STOLEN).map(d => d.value);
+        let need = !kept.includes(2) ? 2 : !kept.includes(4) ? 4 : null;
+        let one = turn.dice.find(d => d.status === A && d.value === 1 && !(turn.boundIds || []).includes(d.id));
+        if (!need || !one) return null;
+        one.value = need;
+        return { text: `A 1 becomes your ${need}`, rerolled: [one.id] };
+    }
+    if (id === 'cottonCandyCloud') {
+        let bot = room.players[BOT_ID];
+        if (run.cloud || turn.finalized || !bot || !room.roundPlayers.includes(BOT_ID) || bot.score !== null) return null;
+        run.cloud = true;
+        return { text: "This round your opponent can't see your score", rerolled: null };
+    }
+    if (id === 'lemonLevitation') {
+        if (!turn.hasRolled || turn.finalized || turn.locksThisRoll > 0 || turn.freeRoll) return null;
+        turn.freeRoll = true;
+        return { text: 'Throw again without keeping a die', rerolled: null };
+    }
+    if (id === 'watermelonHindsight') {
+        let rerolled = Rules.redoThrow(turn, turn.lastThrown, rollFaceFor(room, turn), turn.mindDieId);
+        return rerolled ? { text: 'Your last throw, thrown again', rerolled } : null;
+    }
+    return null;
+}
+
+// This fight's Mystery Flavour (drawn as the fight starts; drawn now if a fight began without one).
+function mysteryFlavourOf(run) {
+    if (!ELF_BARS.includes(run.mysteryFlavour)) run.mysteryFlavour = ELF_BARS[crypto.randomInt(0, ELF_BARS.length)];
+    return run.mysteryFlavour;
+}
+
 function hasKeepsake(room, keepsakeId) {
     return room.mode === 'tavern-crawl' && room.tavernRun.keepsakes.some(k => k.id === keepsakeId);
 }
 
 function getKeepsake(room, keepsakeId) {
     if (!room || room.mode !== 'tavern-crawl') return null;
-    return room.tavernRun.keepsakes.find(k => k.id === keepsakeId) || TAVERN_KEEPSAKES.find(k => k.id === keepsakeId) || null;
+    return room.tavernRun.keepsakes.find(k => k.id === keepsakeId) || keepsakeById(keepsakeId) || null;
 }
 
 function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
@@ -186,15 +2014,46 @@ function emitKeepsakeActivated(roomCode, room, keepsakeId, text) {
         room.tavernRun.encounterKeepsakeUses = room.tavernRun.encounterKeepsakeUses || {};
         room.tavernRun.encounterKeepsakeUses[keepsakeId] = true;
     }
-    io.to(roomCode).emit('keepsakeActivated', {
+    sendMoment(roomCode, 'keepsakeActivated', {
         id: keepsakeId,
         name: keepsake.name,
         text: text || keepsake.text
     });
 }
 
-function getAbilityMaxUses(abilityId) {
-    return abilityId === 'constellationBlur' ? 2 : 1;
+function abilityMarks(room, seated) {
+    let run = room.tavernRun;
+    // Áéd: his sorcery points, one gem each (the pool is this fight's).
+    if (seated.sorcery) {
+        let points = METAMAGIC.points;
+        let spent = points - Math.max(0, Math.min(points, run.sorcery ?? points));
+        return { abilityMax: points, abilitySpent: spent, powerMarks: [[points, spent]], sorcery: true };
+    }
+    // [uses, spent] for each power, in the order of `powers` (the entrance card marks each power's own, 10 Nov).
+    let marks = abilitiesOf(seated).map(a => {
+        let uses = abilityUsesFor(room, a);
+        return [uses, Math.min(uses, getAbilityUseCount(room, a))];
+    });
+    // Jaguar's Cloak and All In: one each, spent as his phase reaches them.
+    if (seated.ability === 'jaguarPhases') {
+        let phase = run.jaguarPhase;
+        marks.push([1, phase === 'cloak' || phase === 'allIn' ? 1 : 0], [1, phase === 'allIn' ? 1 : 0]);
+    }
+    let max = marks.reduce((n, m) => n + m[0], 0), spent = marks.reduce((n, m) => n + m[1], 0);
+    return { abilityMax: max, abilitySpent: spent, powerMarks: marks };
+}
+
+// Uses a fight of an ability. Klarg, sworn enemy of Kram, has kramKlargExtra more for a run that swore fealty to
+// Kram (17 Nov, the user's; run.krammed), told only on his card as he sits down (encounterView).
+function abilityUsesFor(room, abilityId) {
+    let extra = abilityId === 'reachAround' && room.tavernRun && room.tavernRun.krammed ? (INTERLUDE.kramKlargExtra ?? 1) : 0;
+    return (BALANCE.abilityUses[abilityId] || 0) + extra;
+}
+const KLARG_KRAMMED = "Three times a fight he snatches a 2 or 4 you need, and keeps it for his own hand: once more than he would, as you swore fealty to Kram, his sworn enemy.";
+// An opponent as the browsers see them: Klarg's card says what your fealty to Kram has cost you.
+function encounterView(room, encounter) {
+    if (!encounter || encounter.id !== 'klarg' || !room.tavernRun.krammed) return encounter;
+    return { ...encounter, blurb: `${encounter.blurb} He knows you swore fealty to Kram.`, powers: [{ ...encounter.powers[0], text: KLARG_KRAMMED }] };
 }
 
 function getAbilityUseCount(room, abilityId) {
@@ -207,49 +2066,174 @@ function markAbilityUsed(room, abilityId) {
     room.tavernRun.abilityUsed[abilityId] = getAbilityUseCount(room, abilityId) + 1;
 }
 
-function canUseTavernAbility(room, encounter, abilityId) {
-    let abilityReady = (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
-    return encounter && encounter.ability === abilityId && abilityReady && getAbilityUseCount(room, abilityId) < getAbilityMaxUses(abilityId);
+// The current opponent's ability still has uses left this fight.
+function encounterAbilityLeft(room) {
+    let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    // (Áéd: while he has the points for a trick)
+    if (encounter && encounter.sorcery) return (room.tavernRun.sorcery || 0) >= Math.min(...Object.values(METAMAGIC.costs));
+    // (any of them: the Hangman's Ace is still to come once his Dead Eye is spent)
+    return encounter && abilitiesOf(encounter).some(a => getAbilityUseCount(room, a) < abilityUsesFor(room, a));
 }
 
-function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = []) {
+// The opponent uses their ability: one use is spent, and it happens unless a Clear-Eye Thonic
+// is waiting, which cancels it instead. Returns true if the ability goes ahead.
+// A cancelled ability still shows (its banner, marked cancelled, without its effect), then the
+// Clear-Eye clears it (the user's call, 21 Oct: they used to land at the same instant, often
+// while the dice were still in the air).
+function fireTavernAbility(roomCode, room, encounter, abilityId) {
+    if (!canUseTavernAbility(room, encounter, abilityId)) return false;
+    markAbilityUsed(room, abilityId);
+    if (!room.tavernRun.clearEyeArmed) return true;
+    room.tavernRun.clearEyeArmed = false;
+    let name = Rules.ABILITY_NAMES[abilityId];
+    // (His Ace cancelled in a fog bank: that too waits for the round's end, or it gives his hand away.)
+    let show = abilityId === 'deadeye24' ? (event, data) => fogHeld(roomCode, room, event, data) : (event, data) => emitMoment(roomCode, room, event, data);
+    show('signatureMove', { name: encounter.name, ability: name, text: 'A Clear-Eye Thonic saw it coming.', cancelled: true });
+    show('thonicUsed', { id: 'clearEye', name: THONICS.clearEye.name, text: `${name} is cancelled` });
+    return false;
+}
+
+// A moment for the browsers. During a roll (room.rollMoments) it is held and goes out with the
+// roll's other moves, before the dice are thrown (performRoll).
+function emitMoment(roomCode, room, event, data) {
+    if (room.rollMoments) room.rollMoments.push([event, data]);
+    else sendMoment(roomCode, event, data);
+}
+
+// What the browsers have on screen. They show one moment at a time (an ability, a keepsake, a
+// Thonic, the round's result), MOMENT_GAP_MS apart, each up for its own time, and throw no dice
+// until the last has gone (the user's call, 23 Oct: an ability plays in full, banner and effect,
+// before the dice are thrown). The server keeps the same clock, so a throw (and the bot's next
+// step) waits for it too: momentsLeft.
+const MOMENT_GAP_MS = 1700, MOMENT_SHOW_MS = 1850, RESULT_GAP_MS = 1200, RESULT_SHOW_MS = 2600;
+const TABLE_RESULT_SHOW_MS = 4000; // a multiplayer round's result card, with a line per player (the client's too)
+const FLOOD_WAVE_MS = 2200; // Astral Flood's wave over the table, after its banner (the client's too)
+const SEA_SHOW_MS = 4000; // aboard the Salty Swallow, the sea die's roll when the sea changes (the client's too)
+const SEA_HOLD_MS = 2800; // and when the sea holds (the client's too)
+const INTRO_SHOW_MS = 4500; // an opponent's entrance, until the player taps it away (introDone)
+const INTRO_LEAVE_MS = 300; // the moment after that tap (the client's too)
+function sendMoment(roomCode, event, data) {
+    let room = rooms[roomCode];
+    let shown = !(event === 'roundResult' && data && data.ends); // (the end of a fight shows its summary instead)
+    if (room && shown) {
+        let result = event === 'roundResult';
+        let start = Math.max(Date.now(), room.momentNext || 0);
+        let flood = event === 'signatureMove' && data && data.ability === Rules.ABILITY_NAMES.astralFlood && !data.cancelled;
+        let sea = event === 'seaChange' || event === 'rogueWave';
+        let seaMs = event === 'rogueWave' ? WAVE_SHOW_MS : sea ? (data.changed ? SEA_SHOW_MS : SEA_HOLD_MS) : 0;
+        room.momentNext = start + delay(result ? RESULT_GAP_MS : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? seaMs : MOMENT_GAP_MS);
+        room.momentEnd = Math.max(room.momentEnd || 0, start + delay(result ? (data.results ? TABLE_RESULT_SHOW_MS : RESULT_SHOW_MS) : flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : sea ? seaMs : MOMENT_SHOW_MS));
+    }
+    io.to(roomCode).emit(event, data);
+}
+// Real ms until the browsers' last moment has gone.
+const momentsLeft = room => Math.max(0, (room.momentEnd || 0) - Date.now());
+
+// (Sylvester's, Stason's and Frak's judge their own moment since 17 Nov: no random round to wait for.)
+// (18 Nov: the Hangman's Stare and Ace judge theirs too, and Divine Smite on the Ridgeler's last life.)
+const JUDGED_ABILITIES = ['suckerPunch', 'flourish', 'mindWhip', 'penitentStare', 'deadeye24'];
+function canUseTavernAbility(room, encounter, abilityId) {
+    let lastLife = abilityId === 'divineSmite' && room.players[BOT_ID] && room.players[BOT_ID].lives <= 1;
+    let abilityReady = JUDGED_ABILITIES.includes(abilityId) || lastLife || (room.tavernRun.encounterRound || 1) >= (room.tavernRun.abilityRound || 1);
+    return encounter && abilitiesOf(encounter).includes(abilityId) && abilityReady && getAbilityUseCount(room, abilityId) < abilityUsesFor(room, abilityId);
+}
+// An opponent's abilities: one, or (the Hangman) two.
+const abilitiesOf = encounter => encounter.abilities || (encounter.ability ? [encounter.ability] : []);
+// How the final tier's abilities play (shared/balance.js; set by simulation, 25 Oct).
+const FINAL_SHIP = BALANCE.finalShip || {};
+// The Hangman's Ace of Spades turns his own hand of this or more into a perfect 24 (16 until 20 Nov, the user's: 18).
+const ACE_FROM = 18;
+// Two different faces at random (Rokr's stars).
+const twoFaces = () => shuffled([1, 2, 3, 4, 5, 6]).slice(0, FINAL_SHIP.starFaces || 2).sort((a, b) => a - b);
+// The kept dice that score: all but one 2 and one 4.
+function scoringDice(turn) {
+    let saw2 = false, saw4 = false;
+    return turn.dice.filter(d => d.status !== Rules.STATUS.ACTIVE && d.status !== Rules.STATUS.STOLEN).filter(d => {
+        if (d.value === 2 && !saw2) { saw2 = true; return false; }
+        if (d.value === 4 && !saw4) { saw4 = true; return false; }
+        return true;
+    });
+}
+
+// ends: this round ended a Tavern Crawl fight (or the run); the browser skips the pop-up then,
+// since the fight summary (or the run-over screen) takes its place.
+// results (a multiplayer round, 4 Nov): a line per player, best first; the 3D client draws them as a card.
+function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends = false, results = null, reveal = null) {
     let message;
     let activeIds = (room.roundPlayers || []).filter(id => room.players[id]);
+    // A player can lose two lives in one round (the Ridgeler's Divine Smite): named once.
+    let lost = {};
+    lifeLosers.forEach(id => { lost[id] = (lost[id] || 0) + 1; });
+    lifeLosers = Object.keys(lost);
     let dustNames = lifeLosers
         .map(id => room.players[id] ? room.players[id].name : 'A player');
     let safeNames = activeIds
         .filter(id => !lifeLosers.includes(id))
         .map(id => room.players[id] ? room.players[id].name : 'A player');
+    // (18 Nov, the user's: "Lost a life: name", not "Dust: name", which it said even for a valid lower hand.)
+    let count = lifeLosers.length === 1 ? lost[lifeLosers[0]] : 0;
     let resultLines = [
-        dustNames.length ? `Dust: ${dustNames.join(', ')}.` : null,
+        dustNames.length ? `${count > 1 ? `Lost ${count} hearts` : lifeLosers.length > 1 ? 'Lost hearts' : 'Lost a heart'}: ${dustNames.join(', ')}.` : null,
         safeNames.length ? `Safe: ${safeNames.join(', ')}.` : null
     ].filter(Boolean).join('\n');
 
     if (lifeLosers.length > 0) {
-        let names = lifeLosers
-            .map(id => room.players[id] ? room.players[id].name : 'A player')
-            .join(', ');
-        message = `${resultLines}\n${names} lost ${lifeLosers.length === 1 ? 'a life' : 'lives'}.\nThe round is over.`;
+        message = `${resultLines}\nThe round is over.`;
     } else if (tiedPlayers.length > 1) {
         let names = tiedPlayers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
             .join(' and ');
-        message = `${resultLines}\n${names} tied.\nNo lives lost.`;
+        message = `${resultLines}\n${names} tied.\nNo hearts lost.`;
     } else {
-        message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
+        message = `${resultLines}\nSafe for another round.\nNo hearts lost.`;
     }
-    io.to(roomCode).emit('roundResult', { message });
+    if (results) {
+        let tied = results.filter(r => r.tied).map(r => r.name).join(' and ');
+        message = results.map(r => `${r.name}: ${r.busted ? 'dust' : r.score}${r.lost ? ' (loses a heart)' : ''}`).join('\n')
+            + (tied ? `\n${tied} tied: sudden death.` : lifeLosers.length ? '' : '\nNo hearts lost.');
+    }
+    if (reveal) message = `${reveal.name}: ${reveal.busted ? 'dust' : reveal.score}.\n${message}`;
+    sendMoment(roomCode, 'roundResult', results ? { message, ends, results } : { message, ends, ...(reveal ? { reveal: { score: reveal.score, busted: reveal.busted } } : {}) });
 }
 
 function getHumanPlayerId(room) {
-    return room.playerOrder.find(id => id !== 'BOT_MOLAR' && room.players[id]);
+    return room.playerOrder.find(id => id !== BOT_ID && room.players[id]);
 }
+
+// For testing a particular opponent: TAVERN_START_ENCOUNTER=1 starts runs at Frak, 5 at
+// Sylvester, 10 at Klarg, etc.
+const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(TAVERN_ENCOUNTERS.length - 1, parseInt(process.env.TAVERN_START_ENCOUNTER, 10) || 0));
 
 function createTavernRun() {
     return {
-        encounterIndex: 0,
+        runId: crypto.randomUUID(), // (one live table per run: a save of it can't open a second copy while it's played, 20 Nov)
+        encounterIndex: TAVERN_START_ENCOUNTER,
         keepsakes: [],
         pendingKeepsakeChoices: null,
+        purse: 0,          // in gold
+        bought: {},        // how many of each thing were bought this run (risingPrice)
+        shelf: [],
+        shop: null,
+        interlude: null,   // between fights: { stage, ... } (see startInterlude)
+        lastWin: null,     // the fight just won: { defeated, nextEnemy, place, gold: { win, hearts, heartsLeft, perHeart, perPlace }, at }
+        nextFightHearts: null, // the next fight starts on other than full hearts (the Stranger's price, the Lady's Favour)
+        nextFightSurge: null, // the hot tub's dice surge for the next fight, then tubSurge during it
+        tubSurge: null,
+        ladysGrace: false,     // the Lady's Grace: the next dust that would cost a heart doesn't
+        nextFightSong: null,   // the Bard's song for the next fight ('cuttingWords' or 'inspiringSong')
+        nextOmen: null,        // Yvesil's omen for the next fight, then omen during it
+        omen: null,
+        nextNotaro: false,     // Jorvash's Notaro Red for the next fight, then notaro during it, until it lands
+        nextSeaWard: false,    // Jorvash's Water of the Ebon Shield for the next fight, then seaWard during it
+        notaro: false,
+        song: null,            // Inspiring Song this fight: 'ready', then your first throw's turn key
+        cuttingWords: false,   // Cutting Words this fight, until it lands
+        puffs: {},             // Elf Bars on the shelf: puffs left, by id
+        puffed: {},            // ...and those puffed this fight
+        cloud: false,          // Cotton Candy Cloud this round
+        kramFights: 0,         // sworn to Kram: fights still to come without 1s (and spots dearer meanwhile)
+        krammed: false,        // swore fealty to Kram this run: Klarg has an extra Reach Around
+        kram: false,           // ...and this one
         abilityUsed: {},
         abilityRound: 1,
         encounterRound: 1,
@@ -258,7 +2242,14 @@ function createTavernRun() {
             encountersDefeated: 0,
             livesLost: 0,
             keepsakesActivated: 0,
-            perfect24s: 0
+            perfect24s: 0,
+            heartsSpared: 0, // hearts left over all the fights won (points)
+            winGold: 0,
+            heartGold: 0,
+            perfectGold: 0,
+            spent: 0,
+            eventGold: 0, // won and lost between fights (Shrine, Dice Den, Pickpocket)
+            thonicsDrunk: 0
         },
         started: false,
         runComplete: false
@@ -267,32 +2258,72 @@ function createTavernRun() {
 
 function getRandomAbilityRound(encounter) {
     if (!encounter || !encounter.ability) return 0;
+    // Jaguar's Smooth Talker belongs to his first phase (4 and 3 lives): ready from the first round, or a
+    // fight that took him to 2 lives inside two rounds never saw it (13 Nov).
+    if (encounter.ability === 'jaguarPhases') return 1;
     return Math.floor(Math.random() * 3) + 1;
 }
 
+// The run's score in points (since 23 Oct, the user's call; it was the purse): the opponents
+// beaten (by their place), the hearts left at each win, how far a lost run got, and the gold left
+// in the purse, converted (BALANCE.points). totalGold: the purse at the end.
 function getTavernScoreSummary(room, completedRun = false) {
     let stats = room.tavernRun.stats;
-    let progressGold = 0;
-    for (let i = 0; i < stats.encountersDefeated; i++) {
-        progressGold += (i + 1) * 100;
-    }
-    if (!completedRun && stats.encountersDefeated < TAVERN_ENCOUNTERS.length) {
-        progressGold += (stats.encountersDefeated + 1) * 25;
-    }
-    let lifeBonus = Math.max(0, (stats.encountersDefeated * 3 - stats.livesLost) * 25);
-    let restraintBonus = Math.max(0, 150 - stats.keepsakesActivated * 25);
-    let perfectBonus = stats.perfect24s * 75;
-    let totalGold = progressGold + lifeBonus + restraintBonus + perfectBonus;
-
+    let beaten = stats.encountersDefeated;
+    let fell = !completedRun && beaten < TAVERN_ENCOUNTERS.length;
+    let totalGold = Math.max(0, room.tavernRun.purse);
+    let breakdown = {
+        fights: POINTS.perPlace * beaten * (beaten + 1) / 2, // places 1..beaten
+        hearts: POINTS.perHeartLeft * (stats.heartsSpared || 0),
+        perfect: POINTS.perPerfect24 * stats.perfect24s,
+        reached: fell ? POINTS.reachedPerPlace * (beaten + 1) : 0,
+        champion: completedRun ? POINTS.champion || 0 : 0, // (beating Jaguar: the crawl won, 18 Nov)
+        gold: Math.round(POINTS.perGold * totalGold),
+        // and the gold side, for the record
+        purse: totalGold, events: stats.eventGold, spent: stats.spent
+    };
+    let points = breakdown.fights + breakdown.hearts + breakdown.perfect + breakdown.reached + breakdown.champion + breakdown.gold;
     return {
+        points,
         totalGold,
+        breakdown,
         lines: [
-            `Gold earned: ${totalGold}`,
-            `Progress: ${progressGold}`,
-            `Lives spared bonus: ${lifeBonus}`,
-            `Keepsake restraint bonus: ${restraintBonus}`,
-            `Perfect 24 bonus: ${perfectBonus}`
+            `Points: ${points}`,
+            `Opponents beaten: ${breakdown.fights}`,
+            `Hearts spared: ${breakdown.hearts}`,
+            ...(breakdown.perfect ? [`Perfect hands (${stats.perfect24s} × ${POINTS.perPerfect24}): ${breakdown.perfect}`] : []),
+            ...(breakdown.champion ? [`Crawl champion: ${breakdown.champion}`] : []),
+            ...(fell ? [`How far you got: ${breakdown.reached}`] : []),
+            `Gold left (${goldText(totalGold)}): ${breakdown.gold}`
         ]
+    };
+}
+
+// Takes a Thonic off the shelf if the player has one. Returns it, or null.
+function useThonic(room, thonicId) {
+    let shelf = room.tavernRun.shelf;
+    let index = shelf.indexOf(thonicId);
+    if (index < 0) return null;
+    shelf.splice(index, 1);
+    room.tavernRun.stats.thonicsDrunk++;
+    return THONICS[thonicId];
+}
+
+// What the 3D client's end-of-run screen shows: how far the run got and the gold earned.
+function getTavernOverSummary(room, humanName, scoreSummary, won) {
+    let index = Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1);
+    return {
+        won,
+        name: humanName,
+        defeated: room.tavernRun.stats.encountersDefeated,
+        encounters: TAVERN_ENCOUNTERS.map(e => e.name),
+        encounterIds: TAVERN_ENCOUNTERS.map(e => e.id),
+        fellTo: won ? null : TAVERN_ENCOUNTERS[index].name,
+        points: scoreSummary.points,
+        gold: scoreSummary.totalGold,
+        breakdown: scoreSummary.breakdown,
+        stats: room.tavernRun.stats,
+        keepsakes: room.tavernRun.keepsakes.map(k => k.name)
     };
 }
 
@@ -306,15 +2337,22 @@ function pickKeepsakeChoices(room) {
     return pool.slice(0, 3);
 }
 
-function resetTavernEncounter(roomCode, keepHumanLives = true) {
+// The player's full hearts for a fight (BALANCE.fightHearts, else playerHearts).
+const heartsFor = encounter => (encounter && BALANCE.fightHearts?.[encounter.id]) || BALANCE.playerHearts;
+// ...and for the next fight, from between fights (encounterIndex is already the next opponent).
+const nextHearts = run => heartsFor(TAVERN_ENCOUNTERS[run.encounterIndex]);
+
+// quiet: seat the opponent without announcing them or starting the round (the dev test server's
+// starting places, set up before the run is first shown).
+function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
     let room = rooms[roomCode];
     if (!room || room.mode !== 'tavern-crawl') return;
-    room.startingLives = 3;
 
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    room.startingLives = heartsFor(encounter);
     let humanId = getHumanPlayerId(room);
-    room.players['BOT_MOLAR'] = {
-        id: 'BOT_MOLAR',
+    room.players[BOT_ID] = {
+        id: BOT_ID,
         token: 'BOT_TOKEN',
         name: encounter.name,
         avatar: encounter.avatar,
@@ -325,26 +2363,500 @@ function resetTavernEncounter(roomCode, keepHumanLives = true) {
     };
 
     if (humanId && room.players[humanId]) {
-        room.players[humanId].lives = room.startingLives;
+        // The run as this fight starts, for the menu's Save (14 Nov, the user's): it brings you back here.
+        room.tavernRun.fightSave = sealFightSave(room, room.players[humanId].name);
+        // The Hooded Stranger's price: this one fight starts on fewer hearts.
+        room.players[humanId].lives = room.tavernRun.nextFightHearts || room.startingLives;
+        room.tavernRun.nextFightHearts = null;
+        // The hot tub's surge lasts this one fight.
+        room.tavernRun.tubSurge = room.tavernRun.nextFightSurge || null;
+        // Áéd's sorcery points, a fresh pool each fight.
+        room.tavernRun.sorcery = encounter.sorcery ? METAMAGIC.points : 0;
+        room.tavernRun.heightenedRound = null;
+        room.tavernRun.nextFightSurge = null;
+        // The Bard's song, for this one fight.
+        let song = room.tavernRun.nextFightSong;
+        room.tavernRun.nextFightSong = null;
+        room.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
+        room.tavernRun.cuttingWords = song === 'cuttingWords';
+        // Yvesil's omen and Jorvash's Notaro Red, for this one fight.
+        room.tavernRun.omen = room.tavernRun.nextOmen || null;
+        room.tavernRun.nextOmen = null;
+        room.tavernRun.notaro = !!room.tavernRun.nextNotaro;
+        room.tavernRun.nextNotaro = false;
+        room.tavernRun.seaWard = !!room.tavernRun.nextSeaWard;
+        room.tavernRun.nextSeaWard = false;
+        // Each Elf Bar may be puffed once a fight; Mystery Flavour tastes of a new one each fight.
+        room.tavernRun.puffed = {};
+        room.tavernRun.mysteryFlavour = ELF_BARS[crypto.randomInt(0, ELF_BARS.length)];
+        room.tavernRun.cloud = false;
+        // Fealty to Kram: each fight sworn takes one off the count.
+        room.tavernRun.kram = room.tavernRun.kramFights > 0;
+        if (room.tavernRun.kram) room.tavernRun.kramFights--;
         room.players[humanId].score = null;
         room.players[humanId].busted = false;
-        room.playerOrder = [humanId, 'BOT_MOLAR'];
-        room.roundPlayers = [humanId, 'BOT_MOLAR'];
+        room.playerOrder = [humanId, BOT_ID];
+        room.roundPlayers = [humanId, BOT_ID];
     } else {
-        room.playerOrder = ['BOT_MOLAR'];
-        room.roundPlayers = ['BOT_MOLAR'];
+        room.playerOrder = [BOT_ID];
+        room.roundPlayers = [BOT_ID];
     }
 
     room.currentTurnIndex = 0;
     room.isTieBreaker = false;
     room.dealerIndex = 0;
+    room.turnEpoch++;
     room.tavernRun.pendingKeepsakeChoices = null;
     room.tavernRun.abilityUsed = {};
     room.tavernRun.encounterRound = 1;
     room.tavernRun.abilityRound = getRandomAbilityRound(encounter);
     room.tavernRun.encounterKeepsakeUses = {};
+    room.tavernRun.clearEyeArmed = false;
+    // A round save being resumed (20 Nov): the fight as it stood at that round's start.
+    let resume = room.tavernRun.resumeRound;
+    room.tavernRun.resumeRound = null;
+    if (resume && humanId && room.players[humanId]) {
+        let state = resume.state || {};
+        FIGHT_STATE.forEach(k => { if (state[k] !== undefined) room.tavernRun[k] = JSON.parse(JSON.stringify(state[k])); });
+        if (Number.isInteger(resume.max) && resume.max > 0) room.startingLives = resume.max;
+        room.players[humanId].lives = Math.max(1, Math.min(Number(resume.hearts) || 1, 9));
+        room.players[BOT_ID].lives = Math.max(1, Math.min(Number(resume.theirs) || 1, encounter.lives));
+        room.tavernRun.encounterRound = resume.n;
+        room.roundNumber = resume.n;
+        room.isTieBreaker = !!resume.tie;
+        room.roundPlayers = resume.n % 2 === 1 ? [humanId, BOT_ID] : [BOT_ID, humanId];
+        room.tavernRun.fightSave = sealRoundSave(room, room.players[humanId].name, resume.n, resume.tie);
+    }
     room.tavernRun.started = true;
+    meet(room, encounter.id);
+    if (quiet) return;
+    // The opponent's entrance first (the name card, INTRO_SHOW_MS): the browsers learn who sits
+    // down before anything else, and the round's abilities and the first throw wait until the card
+    // has gone (the user's call, 23 Oct: Martha's entrance and her disguise ran together).
+    let now = Date.now();
+    room.momentNext = Math.max(room.momentNext || 0, now + delay(INTRO_SHOW_MS));
+    room.momentEnd = Math.max(room.momentEnd || 0, now + delay(INTRO_SHOW_MS));
+    room.introEnd = now + delay(INTRO_SHOW_MS); // (the card stays until tapped: introDone sets the clock right)
+    emitState(roomCode);
+    // Jorvash's Water of the Ebon Shield, after the entrance (17 Nov, the user's): it says so as the fight begins.
+    if (room.tavernRun.seaWard) sendMoment(roomCode, 'keepsakeActivated', { id: 'ebonShield', name: 'Water of the Ebon Shield', text: EBON_SHIELD_HOLDS, who: 'Jorvash' });
+    beginTavernRound(roomCode, room);
 }
+
+// ---- Round effects ----
+// Some abilities change a whole round. They're decided as the round begins (beginTavernRound)
+// and kept in tavernRun.roundEffect = { kind, by, ability, as?, landed? }:
+//   mind   Mind Whip: on the player's first throw Frak makes them keep a random die (Rules.mindWhip)
+//   curse  You are Cursed: the lowest valid score wins the round (dust still loses)
+//   devil  Sympathy for the Devil: `by` throws three 6s first (and, if devilCap is set, the other side can't score above it)
+//   ink    Vaelin's Inkfire Blast: the 6 is burned into the table; the player's dice that land on it roll again (rollFaceFor)
+//   smite  The Ridgeler's Divine Smite: if he wins the round, the player loses two hearts (evaluateTavernRound)
+// `by` is 'opponent', or 'player' when Martha's mask puts the disguise on you. `as`: whose face
+// Martha (or the mask) wears.
+const ROUND_ABILITIES = { mindWhip: 'mind', cursed: 'curse', devil: 'devil', inkfire: 'ink', divineSmite: 'smite' };
+const DISGUISES = [
+    { ability: 'mindWhip', as: 'Frak' },
+    { ability: 'cursed', as: 'Danhausen' },
+    { ability: 'devil', as: 'Duke Morrigan' }
+];
+
+function roundEffectMove(room, effect, text) {
+    let humanId = getHumanPlayerId(room);
+    let name = effect.by === 'player' ? (humanId ? room.players[humanId].name : 'You') : TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name;
+    return { name, ability: Rules.ABILITY_NAMES[effect.ability], text, disguise: effect.as || null };
+}
+
+const ROUND_EFFECT_TEXT = {
+    curse: { opponent: 'This round the lowest valid score wins.', player: 'This round the lowest valid score wins.' },
+    devil: { opponent: 'Three 6s land on the table.', player: 'Three 6s for you.' },
+    ink: { opponent: "The 6s burn on your dice. This round your dice that land on one roll again." },
+    smite: { opponent: 'If he wins this round, you lose two hearts.' }
+};
+
+function beginTavernRound(roomCode, room) {
+    if (room.tavernRun) room.tavernRun.fogHeld = []; // (a fog bank's held moments are for its own round)
+    let run = room.tavernRun;
+    run.roundEffect = null;
+    run.pendingDevil = null;
+    run.pendingMind = null;
+    run.jaguarSteady = false;
+    run.cloud = false;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    setSea(roomCode, room, encounter);
+    if (!encounter || !encounter.keepsStolen) run.klargHand = null; // (a fight ended with one in his hand)
+    if (!encounter || encounter.ability !== 'jaguarPhases') run.jaguarPhase = null;
+    if (!encounter || !encounter.ability) return;
+    if (encounter.ability === 'jaguarPhases') { beginJaguarRound(roomCode, room, encounter); return; }
+    // Brodor's Astral Flood: once he has lost a life, he heals one as a round begins, and takes one
+    // of yours (the user's call, 3 Nov). The Shield still catches it; it never takes your last heart
+    // (a round has to be lost for a run to end).
+    let bot = room.players[BOT_ID];
+    if (encounter.ability === 'astralFlood') {
+        // (17 Nov: only when it can take one of yours as well, or he's on his last life and needs the heal)
+        if (bot && bot.lives < encounter.lives && (heartTakeable(room) || bot.lives <= 1) && fireTavernAbility(roomCode, room, encounter, 'astralFlood')) {
+            bot.lives++;
+            let human = room.players[getHumanPlayerId(room)];
+            let shielded = !!human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper;
+            // (after: the line the aftermath ribbon shows once the moment has gone, 18 Nov, the user's)
+            let after = shielded ? 'Brodor heals a heart. Your Shield of Fuckery holds yours.' : human && human.lives > 1 ? 'Brodor heals a heart and takes one of yours.' : 'Brodor heals a heart.';
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a heart and takes one of yours.', after });
+            if (human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper) {
+                run.encounterKeepsakeUses.bentCopper = true;
+                emitKeepsakeActivated(roomCode, room, 'bentCopper', 'The Shield of Fuckery protects a life.');
+            } else if (human && human.lives > 1) human.lives--;
+        }
+        return;
+    }
+    // The Hangman's Penitent Stare isn't decided as a round begins: he keeps it to himself until both
+    // hands are done, and uses it only when it saves him the round (stareTurnsRound, 10 Nov, the user's).
+    if (encounter.ability === 'penitentStare') return;
+    let disguise = encounter.ability === 'disguises' ? DISGUISES[crypto.randomInt(0, DISGUISES.length)] : null;
+    let ability = disguise ? disguise.ability : encounter.ability;
+    if (!ROUND_ABILITIES[ability] || !canUseTavernAbility(room, encounter, encounter.ability)) return;
+    // The Devil waits for the Duke's 2 and 4, Mind Whip for the player's first throw
+    // (applyTavernRollAbilities); each is spent, and shown, only then.
+    if (ability === 'devil') { run.pendingDevil = { as: disguise ? disguise.as : null }; return; }
+    if (ability === 'mindWhip') { run.pendingMind = { as: disguise ? disguise.as : null }; return; }
+    // Divine Smite (17 Nov): only when its second heart counts: you on 2+ hearts, or your Shield of Fuckery still
+    // waiting (it catches one, the other is lost). 18 Nov, the user's: on his last life he smites anyway.
+    if (ability === 'divineSmite' && !smiteCounts(room) && !(bot && bot.lives <= 1)) return;
+    if (!fireTavernAbility(roomCode, room, encounter, encounter.ability)) return;
+    run.roundEffect = { kind: ROUND_ABILITIES[ability], by: 'opponent', ability, as: disguise ? disguise.as : null };
+    disguiseMoves(room, run.roundEffect).forEach(move => sendMoment(roomCode, 'signatureMove', move));
+    sendMoment(roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[run.roundEffect.kind].opponent));
+}
+
+// Jaguar Cantona, the final boss, in three phases by his lives left (since 25 Oct):
+//   Smooth Talker (3+ lives): once a round, up to abilityUses.jaguarPhases a fight, he talks a Thonic
+//     off your shelf and drinks it (Healing heals him, Steady counts his dust as it lies); with
+//     your shelf empty he talks talkThreeWhenEmpty off your next finished hand instead.
+//   The Cloak (2 lives): he throws after you (cloakThrowsSecond), his dice hidden until his hand is done.
+//   All In (his last): whoever loses the round loses two hearts.
+const JAGUAR_PHASE_TEXT = {
+    cloak: 'Jaguar draws his cloak. He throws after you now, his dice hidden until his hand is done.',
+    allIn: 'All In: whoever loses a round loses two hearts.'
+};
+function beginJaguarRound(roomCode, room, encounter) {
+    let run = room.tavernRun;
+    let bot = room.players[BOT_ID];
+    if (!bot) return;
+    jaguarDemandsThonic(roomCode, room, encounter, bot); // (first: a Healing can keep him in his first phase)
+    let phase = jaguarPhaseOf(bot.lives);
+    let was = run.jaguarPhase;
+    run.jaguarPhase = phase;
+    if (phase === 'cloak' && FINAL_SHIP.cloakThrowsSecond !== false) {
+        let humanId = room.roundPlayers.find(id => id !== BOT_ID);
+        if (humanId) room.roundPlayers = [humanId, BOT_ID];
+    }
+    if (phase !== 'talk' && phase !== was) sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES[phase], text: JAGUAR_PHASE_TEXT[phase] });
+}
+
+// Smooth Talker (14 Nov, the user's): as the round after one he lost a heart in begins (a heart lost in his
+// first phase), he demands one of your Thonics and drinks it: a Healing first (it heals the heart he lost),
+// else a Steady (his dust this round scores as it lies), else any other. Never an Elf Bar. Nothing on your
+// shelf: nothing then (an empty shelf costs you 3 at a round's end instead, smoothTalkAtEnd).
+function jaguarDemandsThonic(roomCode, room, encounter, bot) {
+    let run = room.tavernRun;
+    if (run.talkNext !== run.encounterIndex) return;
+    run.talkNext = null;
+    let shelf = run.shelf;
+    let id = ['healing', 'steady'].find(t => shelf.includes(t)) || shelf.find(t => THONICS[t] && !THONICS[t].elf);
+    if (!id || !fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
+    shelf.splice(shelf.indexOf(id), 1);
+    if (id === 'healing' && bot.lives < encounter.lives) bot.lives++;
+    if (id === 'steady') run.jaguarSteady = true;
+    let what = id === 'healing' ? ' and heals a heart' : id === 'steady' ? ': his dust this round scores as it lies' : '';
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `He demands your ${THONICS[id].name} and drinks it${what}.`, thonic: id, after: `Jaguar takes your ${THONICS[id].name} and drinks it${id === 'healing' ? ': he heals a heart' : what}.` });
+}
+
+// Jaguar's Smooth Talker with your shelf empty (14 Nov, the user's): at the round's end, never telegraphed, like
+// the Hangman's Penitent Stare. With both hands done, in his first phase, when he'd lose the round and you have
+// no Thonic (an Elf Bar doesn't count), he talks you into scoring talkThreeWhenEmpty less, only when that wins or
+// ties him the round (never in a cursed round). (With Thonics on your shelf he takes one instead, as the next
+// round begins: beginJaguarRound.) Up to abilityUses.jaguarPhases a fight, both kinds together.
+function smoothTalkAtEnd(roomCode, room, human, enemy, cursed) {
+    let run = room.tavernRun;
+    let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+    if (!encounter || encounter.ability !== 'jaguarPhases' || run.jaguarPhase !== 'talk' || cursed) return;
+    if (run.shelf.some(t => THONICS[t] && !THONICS[t].elf)) return;
+    let off = FINAL_SHIP.talkThreeWhenEmpty ?? 3;
+    if (human.busted || enemy.busted || !(human.score > enemy.score) || human.score - off > enemy.score) return;
+    if (!canUseTavernAbility(room, encounter, 'jaguarPhases') || !fireTavernAbility(roomCode, room, encounter, 'jaguarPhases')) return;
+    let was = human.score;
+    human.score = Math.max(0, was - off);
+    sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.jaguarPhases, text: `Your shelf is empty, so he talks you into scoring ${off} less. Your ${was} becomes ${human.score}.`, extra: `${was} → ${human.score}`, after: `Jaguar talks your ${was} down to ${human.score}.` });
+}
+
+// Martha's disguise shows first, then the trick she copies (the user's call, 21 Oct).
+function disguiseMoves(room, effect) {
+    if (!effect.as || effect.by !== 'opponent') return [];
+    let martha = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
+    return [{ name: martha.name, ability: Rules.ABILITY_NAMES.disguises, text: `She takes ${effect.as}'s face.`, disguise: effect.as }];
+}
+
+// ---- Saving after each place ----
+// The run can be saved at each invitation on to the next place (after Martha, the Yawning
+// Portal; after Brodor, the Salty Swallow). The save lives on the player's
+// phone, sealed with SAVE_SECRET so it can't be edited; each one opens once (while the server
+// runs). Without SAVE_SECRET, saves last only until the server restarts.
+const SAVE_SECRET = process.env.SAVE_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.SAVE_SECRET && !process.env.GAME_TIME_SCALE) console.log('SAVE_SECRET is not set: saved Tavern Crawl runs last only until the server restarts.');
+const SAVE_VERSION = 2; // 2: gold a tenth of before, rising prices (23 Oct)
+const openedSaves = new Set();
+// (Kept in the database too since 20 Nov: a server restart, every sleep and deploy on Render, used to forget them, so an
+// old save copied out of a browser could be opened again.)
+function markSaveUsed(id) {
+    if (!id || openedSaves.has(id)) return;
+    openedSaves.add(id);
+    store.addUsedSave(id).catch(error => console.warn('Could not save a used save:', error.message));
+}
+store.loadUsedSaves().then(ids => ids.forEach(id => openedSaves.add(id))).catch(error => console.warn('Could not load the used saves:', error.message));
+const keepsakeById = id => BOSS_DROPS[id] || TAVERN_KEEPSAKES.find(k => k.id === id);
+
+function sealSave(room, name, extra = {}) {
+    let run = room.tavernRun;
+    let data = {
+        v: SAVE_VERSION, id: crypto.randomUUID(), runId: run.runId, at: Date.now(), name,
+        encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
+        shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
+        kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), krammed: !!run.krammed, puffs: run.puffs || {}, refusedDrops: run.refusedDrops || [],
+        ...extra
+    };
+    let body = Buffer.from(JSON.stringify(data)).toString('base64url');
+    let sig = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
+    return `${body}.${sig}`;
+}
+
+// A save at the start of the fight against the opponent at encounterIndex (the menu's Save, 14 Nov, the
+// user's): sealed as that fight starts (resetTavernEncounter) or, between fights, at once for the next one.
+// It carries what the fight is due to start with (the Stranger's price, the Lady's Favour, the hot tub's
+// surge, the Bard's song, Yvesil's omen, Jorvash's Notaro Red); resumed, the fight starts afresh.
+function sealFightSave(room, name, more = {}) {
+    let run = room.tavernRun;
+    return sealSave(room, name, {
+        ...more,
+        fight: true, kramFights: run.kramFights || 0,
+        nextFightHearts: run.nextFightHearts || null, nextFightSurge: run.nextFightSurge || null, nextFightSong: run.nextFightSong || null,
+        nextOmen: run.nextOmen || null, nextNotaro: !!run.nextNotaro, nextSeaWard: !!run.nextSeaWard
+    });
+}
+
+// A save at the start of the fight's next round (20 Nov, the user's: no save scumming). Sealed at each round's end, it
+// carries the fight as it stands: both sides' hearts, the round, the abilities and keepsakes spent, the songs, omens and
+// Elf Bars of this fight. Continue picks the fight up at that round, so quitting can redo only the round under way.
+const FIGHT_STATE = ['abilityRound', 'abilityUsed', 'clearEyeArmed', 'cuttingWords', 'encounterKeepsakeUses', 'heightenedRound', 'jaguarPhase',
+    'klargHand', 'kram', 'mysteryFlavour', 'notaro', 'omen', 'puffed', 'seaWard', 'song', 'sorcery', 'talkNext', 'tubSurge', 'sea', 'seaFace'];
+function sealRoundSave(room, name, nextRound, tie) {
+    let run = room.tavernRun;
+    let state = {};
+    FIGHT_STATE.forEach(k => { if (run[k] !== undefined) state[k] = run[k]; });
+    if (state.song && state.song !== 'ready') state.song = null; // (a turn's key means nothing at a new table)
+    let human = room.players[getHumanPlayerId(room)], bot = room.players[BOT_ID];
+    return sealSave(room, name, { fight: true, round: { n: nextRound, tie: !!tie, hearts: human ? human.lives : 1, theirs: bot ? bot.lives : 1, max: room.startingLives, state: JSON.parse(JSON.stringify(state)) } });
+}
+
+// What a save says, for the start screen's line (already sealed: no check needed to read it).
+function saveInfo(save) {
+    try { return JSON.parse(Buffer.from(save.split('.')[0], 'base64url').toString()); } catch { return {}; }
+}
+
+// The save's contents, or null if it isn't one of ours, was changed or was opened already.
+function openSave(text) {
+    if (typeof text !== 'string' || text.length > 20000) return null;
+    let [body, sig] = text.split('.');
+    if (!body || !sig) return null;
+    let expected = crypto.createHmac('sha256', SAVE_SECRET).update(body).digest('base64url');
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+    let data;
+    try { data = JSON.parse(Buffer.from(body, 'base64url').toString()); } catch { return null; }
+    if (!data || data.v !== SAVE_VERSION || openedSaves.has(data.id)) return null;
+    if (!Number.isInteger(data.encounterIndex) || data.encounterIndex < 0 || data.encounterIndex >= TAVERN_ENCOUNTERS.length) return null;
+    markSaveUsed(data.id);
+    return data;
+}
+
+function restoreRun(room, data) {
+    let run = room.tavernRun;
+    if (typeof data.runId === 'string') run.runId = data.runId;
+    run.encounterIndex = data.encounterIndex;
+    run.keepsakes = (data.keepsakes || []).map(id => OLD_DROPS[id] || id).map(keepsakeById).filter(Boolean);
+    run.purse = Math.max(0, Number(data.purse) || 0);
+    run.shelf = (data.shelf || []).filter(id => THONICS[id]).slice(0, SHELF_SIZE + KEEPSAKE_NUMBERS.beltSlots);
+    run.stats = { ...run.stats, ...(data.stats || {}) };
+    run.thomMet = !!data.thomMet;
+    run.bought = {};
+    Object.entries(data.bought || {}).forEach(([id, n]) => { if (Number.isInteger(n) && n > 0 && n < 100) run.bought[id] = n; });
+    run.ladysGrace = !!data.ladysGrace;
+    run.refusedDrops = (data.refusedDrops || []).map(id => OLD_DROPS[id] || id).filter(id => BOSS_DROPS[id]);
+    run.krammed = !!data.krammed;
+    run.puffs = {};
+    Object.entries(data.puffs || {}).forEach(([id, n]) => { if (THONICS[id] && THONICS[id].elf && Number.isInteger(n) && n > 0 && n <= ELF_BAR_PUFFS) run.puffs[id] = n; });
+    run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
+    run.lastWin = data.lastWin ? { ...data.lastWin, resumed: true } : null; // its summary was shown before the save
+    if (data.fight) {
+        run.kramFights = Math.min(INTERLUDE.kramFights || 0, Math.max(0, Number(data.kramFights) || 0));
+        run.nextFightHearts = Number.isInteger(data.nextFightHearts) && data.nextFightHearts > 0 ? data.nextFightHearts : null;
+        run.nextFightSurge = data.nextFightSurge || null;
+        run.nextFightSong = BARD_SONGS.some(b => b.id === data.nextFightSong) ? data.nextFightSong : null;
+        run.nextOmen = OMENS[data.nextOmen] ? data.nextOmen : null;
+        run.nextNotaro = !!data.nextNotaro;
+        run.nextSeaWard = !!data.nextSeaWard;
+        // (A round save: resetTavernEncounter picks the fight up at that round.)
+        run.resumeRound = data.round && Number.isInteger(data.round.n) && data.round.n > 1 ? data.round : null;
+    }
+}
+
+// After a boss, the invitation on to the next place: their keepsake is yours (Martha's Mystery
+// Flavour, Brodor's Sunglasses); go on now, or save and come back. `boss`: who was just beaten.
+function invitation(room, name) {
+    let boss = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
+    let drop = boss && BOSS_DROPS[boss.drops];
+    // claim: 'open' until you take the boss's keepsake or leave it; full: taking it means giving one up.
+    let claim = !drop ? null : hasKeepsake(room, drop.id) ? 'took' : (room.tavernRun.refusedDrops || []).includes(drop.id) ? 'refused' : 'open';
+    return {
+        stage: 'invitation', place: placeOf(room).name, from: boss ? PLACES[boss.place].name : null,
+        boss: boss ? boss.name : null, drop: drop || null, claim, full: pocketsFull(room), save: sealSave(room, name)
+    };
+}
+
+// ---- Between fights ----
+// After a win the run pauses in `tavernRun.interlude` until the player moves on:
+// Each walk is one event: the pickpocket strikes, or the Hooded Stranger finds you, or two
+// spots catch your eye and you go to one of them (or neither). Then on to the next fight.
+//   pickpocket  { steal, roll? }         roll one die: pickpocketCatch or more catches him,
+//                                        else he gets away with `steal`; then the next fight
+//   choose      { spots: [a, b] }        two spots from the place's list; Thom opens the cart
+//   shrine      {}                       light a candle ('pray'): the Lady grants a blessing at random
+//   diceDen     { bets, bet?, throws }   bet one of them (or decline), then the player rolls
+//                                        two dice and the gambler two; a tie rolls again
+//   stranger    { offers, hearts }       a random event, while he has keepsakes left: take one
+//                                        (next fight on `hearts`) or turn him down
+//   elfKid      { stock, puffs, bought } Johnny Elf Bar (every place): buy Elf Bars for the shelf
+//   bard        { songs, price }         the Bard (Yawning Portal): pay for a song for the next fight
+//   kram        { fights }               the Cult of Kram (a Yawning Portal event): swear fealty and
+//                                        your dice never land on 1 for `fights` fights, or refuse
+//   done        { spot, ... }            what happened, until the player moves on
+
+function shuffled(list) {
+    let out = list.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+        let j = crypto.randomInt(0, i + 1);
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+}
+
+// Keepsakes you don't have that are offered where the run is now (some only from a later place on).
+function unownedKeepsakes(room) {
+    let owned = new Set(room.tavernRun.keepsakes.map(k => k.id));
+    let order = Object.keys(PLACES);
+    let here = order.indexOf(TAVERN_ENCOUNTERS[Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1)].place);
+    return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id) && (!k.from || order.indexOf(k.from) <= here));
+}
+
+// Two different spots; the Dice Den only if the purse covers its smallest bet. With Thom's
+// Loyalty Card, his cart is always one of them.
+function pickSpots(room) {
+    let purse = room.tavernRun.purse;
+    let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
+    // A spot that costs more than the purse holds isn't offered (the Shrine and the hot tub cost
+    // gold since 21 Oct).
+    let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'yvesil' || purse >= yvesilPrice(room.tavernRun)) && (id !== 'jorvash' || purse >= jorvashPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
+    let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
+    if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
+    return spots;
+}
+
+// Thom's back shelf (since 21 Oct): keepsakes for gold, two at random from those you don't have.
+const KEEPSAKE_PRICES = BALANCE.keepsakePrices || {};
+const keepsakePrice = (run, id) => (KEEPSAKE_PRICES[id] ? Math.ceil(KEEPSAKE_PRICES[id] * placePrice(run) * kramMarkup(run)) : 0);
+const keepsakeForSale = run => k => ({ ...k, price: keepsakePrice(run, k.id) });
+function pickThomKeepsakes(room) {
+    return shuffled(unownedKeepsakes(room).filter(k => KEEPSAKE_PRICES[k.id])).slice(0, BALANCE.thomKeepsakes || 0);
+}
+
+// The Hooded Stranger, with keepsakes you don't have yet.
+// The Stranger's price: the next fight a heart short (strangerHearts is the short count for a 3-heart fight).
+const strangerHearts = run => Math.max(1, nextHearts(run) - (BALANCE.playerHearts - INTERLUDE.strangerHearts));
+function strangerOffer(room) {
+    let offers = shuffled(unownedKeepsakes(room)).slice(0, INTERLUDE.strangerOffers);
+    return { stage: 'stranger', offers, hearts: strangerHearts(room.tavernRun) };
+}
+
+function startInterlude(room, won) {
+    let run = room.tavernRun;
+    run.lastWin = won;
+    let steal = Math.floor(run.purse * INTERLUDE.pickpocketShare);
+    // (At most pickpocketMaxPerPlace thieves at one place. A save is made as a place ends, so this
+    // count needn't travel with it: the next place starts afresh.)
+    let place = TAVERN_ENCOUNTERS[run.encounterIndex].place;
+    run.thieves = run.thieves || {};
+    if (PLACES[place] && PLACES[place].noEvents) {
+        run.interlude = { stage: 'choose', spots: pickSpots(room) };
+    } else if (steal > 0 && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+        run.thieves[place] = (run.thieves[place] || 0) + 1;
+        run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
+    } else if (!pocketsFull(room) && unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
+        run.interlude = strangerOffer(room);
+    } else if ((placeOf(room).events || []).includes('darren') && crypto.randomInt(0, 100) < INTERLUDE.darrenChance) {
+        run.interlude = { stage: 'darren', smashOn: INTERLUDE.darrenSmash, giftOn: INTERLUDE.darrenGift };
+    } else if ((placeOf(room).events || []).includes('kram') && !run.kram && !run.kramFights && crypto.randomInt(0, 100) < INTERLUDE.kramChance) {
+        run.interlude = { stage: 'kram', fights: INTERLUDE.kramFights, markup: Math.round((INTERLUDE.kramPriceRise ?? 0.1) * 100) };
+    } else {
+        run.interlude = { stage: 'choose', spots: pickSpots(room) };
+    }
+}
+
+// Gold won or lost between fights. The purse never goes below 0. Returns what changed.
+function changePurse(run, amount) {
+    let applied = Math.max(amount, -run.purse);
+    run.purse += applied;
+    run.stats.eventGold += applied;
+    return applied;
+}
+
+// Darren Snakehands knocks into you: one die. Low, a Thonic on your shelf smashes (or you pay
+// for the glass); middling, a free Thonic by way of sorry; high, a Thonic and gold.
+function darrenOutcome(room, roll) {
+    let run = room.tavernRun;
+    let freeThonic = () => {
+        if (run.shelf.length >= shelfSizeOf(room)) return { gold: changePurse(run, INTERLUDE.darrenFullShelfGold) };
+        let id = shuffled(placeOf(room).thomStock)[0];
+        run.shelf.push(id);
+        return { thonic: thonicView(id) };
+    };
+    if (roll <= INTERLUDE.darrenSmash) {
+        if (run.shelf.length) {
+            let [smashed] = run.shelf.splice(crypto.randomInt(0, run.shelf.length), 1);
+            return { outcome: 'smash', smashed: thonicView(smashed) };
+        }
+        return { outcome: 'smash', paid: -changePurse(run, -INTERLUDE.darrenGlass) };
+    }
+    if (roll <= INTERLUDE.darrenGift) return { outcome: 'gift', ...freeThonic() };
+    let gift = freeThonic();
+    return { outcome: 'catch', ...gift, gold: (gift.gold || 0) + changePurse(run, INTERLUDE.darrenCatchGold) };
+}
+
+// The Dice Den: one throw of two dice each. `won` is null on a tie (they throw again).
+function throwDiceDen() {
+    let you = [rollFace(), rollFace()], them = [rollFace(), rollFace()];
+    let a = you[0] + you[1], b = them[0] + them[1];
+    return { you, them, won: a === b ? null : a > b };
+}
+
+// From Thom's cart or any point between fights, on to the next fight. Walk on without
+// rolling for the pickpocket and he gets away.
+function moveOnToNextFight(roomCode) {
+    let room = rooms[roomCode];
+    let run = room.tavernRun;
+    if (run.interlude && run.interlude.stage === 'pickpocket' && !run.interlude.roll) changePurse(run, -run.interlude.steal);
+    run.interlude = null;
+    run.shop = null;
+    resetTavernEncounter(roomCode, true);
+    emitState(roomCode);
+}
+
+// ---- Rounds ----
 
 function evaluateRound(roomCode) {
     let room = rooms[roomCode];
@@ -377,17 +2889,16 @@ function evaluateRound(roomCode) {
         }
     }
 
-    emitRoundLifeResult(roomCode, room, losersThisRound.map(l => l.id), tiedPlayers);
+    let lostIds = losersThisRound.map(l => l.id);
+    let results = room.roundPlayers.filter(id => room.players[id]).map(id => {
+        let player = room.players[id];
+        return { id, name: player.name, score: player.score ?? 0, busted: !!player.busted, lost: lostIds.includes(id), tied: tiedPlayers.includes(id) };
+    }).sort((a, b) => Number(a.busted) - Number(b.busted) || b.score - a.score);
+    emitRoundLifeResult(roomCode, room, lostIds, tiedPlayers, false, results);
 
-    let humanLost = losersThisRound.some(l => l.id !== 'BOT_MOLAR');
-    if (room.players['BOT_MOLAR'] && humanLost) {
-        setTimeout(() => {
-            for(let i=0; i<3; i++) {
-                setTimeout(() => {
-                    io.to(roomCode).emit('receiveReaction', { name: "The Molar", emoji: "😉" });
-                }, i * 300);
-            }
-        }, 1000); 
+    let humanLost = losersThisRound.some(l => l.id !== BOT_ID);
+    if (room.players[BOT_ID] && humanLost) {
+        setTimeout(() => sendBotReaction(roomCode, '😉'), delay(1000));
     }
 
     room.roundPlayers.forEach(id => {
@@ -400,34 +2911,31 @@ function evaluateRound(roomCode) {
     let survivors = room.playerOrder.filter(id => room.players[id] && room.players[id].lives > 0);
     if (survivors.length <= 1) {
         let winnerName = survivors.length === 1 ? room.players[survivors[0]].name : "No one";
-        // Fixed: Ensure the final UI state is synced before ending the game
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆` });
-        room.roundPlayers = []; 
+        // Sync the final scoreboard before ending the game
+        emitState(roomCode);
+        recordLeagueGame(roomCode, room, survivors.length === 1 ? survivors[0] : null);
+        // (winnerId: the winner's screen plays the victory fanfare, 4 Nov.)
+        io.to(roomCode).emit('gameOver', { message: `Game Over! ${winnerName} wins the table! 🏆`, winnerId: survivors.length === 1 ? survivors[0] : null });
+        room.roundPlayers = [];
     } else if (tiedPlayers.length > 1) {
         room.isTieBreaker = true;
-        room.roundNumber++; 
+        room.roundNumber++;
         room.roundPlayers = tiedPlayers;
         room.currentTurnIndex = 0;
-        
-        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-            room.currentTurnIndex++;
-        }
+        skipDisconnectedPlayers(room);
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        emitState(roomCode);
         io.to(roomCode).emit('displayMessage', { text: `⚔️ SUDDEN DEATH TIE-BREAKER! ⚔️`, color: "#ffcc80" });
-        
-        if(room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
+
+        if (room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
     } else {
         room.isTieBreaker = false;
-        room.roundNumber++; 
-        
+        room.roundNumber++;
+
         if (room.playerOrder.length > 0) {
             room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
         }
-        
+
         room.roundPlayers = [];
         for (let i = 0; i < room.playerOrder.length; i++) {
             let idx = (room.dealerIndex + i) % room.playerOrder.length;
@@ -436,17 +2944,12 @@ function evaluateRound(roomCode) {
                 room.roundPlayers.push(playerId);
             }
         }
-        
-        room.currentTurnIndex = 0;
-        
-        while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-            room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-            room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-            room.currentTurnIndex++;
-        }
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        if(room.currentTurnIndex >= room.roundPlayers.length && room.roundPlayers.length > 0) evaluateRound(roomCode);
+        room.currentTurnIndex = 0;
+        skipDisconnectedPlayers(room);
+
+        emitState(roomCode);
+        if (room.currentTurnIndex >= room.roundPlayers.length && room.roundPlayers.length > 0) evaluateRound(roomCode);
     }
 }
 
@@ -455,7 +2958,7 @@ function evaluateTavernRound(roomCode) {
     if (!room) return;
 
     let humanId = getHumanPlayerId(room);
-    let enemyId = 'BOT_MOLAR';
+    let enemyId = BOT_ID;
     if (!humanId || !room.players[humanId] || !room.players[enemyId]) return;
 
     let human = room.players[humanId];
@@ -463,37 +2966,42 @@ function evaluateTavernRound(roomCode) {
     let losersThisRound = [];
     let lifeLosersThisRound = [];
     let tiedPlayers = [];
-    let protectedBySteadyHand = false;
-
-    if (human.busted && hasKeepsake(room, 'steadyHand') && !room.tavernRun.encounterKeepsakeUses.steadyHand) {
-        human.busted = false;
-        human.score = 0;
-        protectedBySteadyHand = true;
-        room.tavernRun.encounterKeepsakeUses.steadyHand = true;
-        emitKeepsakeActivated(roomCode, room, 'steadyHand', 'Steady Hand Wrap catches the dice. Dust becomes safe.');
-        io.to(roomCode).emit('displayMessage', { text: 'Steady Hand Wrap catches the dice. Dust becomes safe.', color: '#aed581' });
-    }
 
     let roundPlayers = [humanId, enemyId].filter(id => room.players[id]);
     let busted = roundPlayers.filter(id => room.players[id].busted);
     busted.forEach(id => losersThisRound.push({ id, reason: 'Dust!' }));
 
+    // The Devil's round: the side that didn't play it counts no more than the cap (also when
+    // the mask was worn after the opponent had already played). A cursed round: the highest
+    // valid score loses.
+    let effect = room.tavernRun.roundEffect;
+    if (BALANCE.devilCap != null && effect && effect.kind === 'devil') {
+        let capped = room.players[effect.by === 'player' ? enemyId : humanId];
+        if (!capped.busted) capped.score = Math.min(capped.score, BALANCE.devilCap);
+    }
+    let cursed = !!effect && effect.kind === 'curse';
+    // Was his hand hidden this round (a fog bank, Jaguar's Cloak)? The result then says what he got (14 Nov, the user's).
+    let hidden = fogForYou(room) || room.tavernRun.jaguarPhase === 'cloak';
+    sendFogHeld(roomCode, room);
+    // With both hands done, his dice show on the table (20 Nov, the user's: what you scored against after a fog bank).
+    if (room.turn && room.turn.fogged) { room.turn.fogged = false; emitTurn(roomCode); }
+    if (!cursed) stareTurnsRound(roomCode, room, human, enemy);
+    smoothTalkAtEnd(roomCode, room, human, enemy, cursed);
+    let reveal = hidden ? { score: enemy.busted ? 0 : enemy.score, busted: !!enemy.busted } : null;
     let valid = roundPlayers.filter(id => !room.players[id].busted);
     if (valid.length > 1) {
-        let minScore = Math.min(...valid.map(id => room.players[id].score));
-        let lowest = valid.filter(id => room.players[id].score === minScore);
-        if (lowest.length === 1) {
-            losersThisRound.push({ id: lowest[0], reason: 'Lowest score at the table.' });
+        let scores = valid.map(id => room.players[id].score);
+        let worst = cursed ? Math.max(...scores) : Math.min(...scores);
+        let losing = valid.filter(id => room.players[id].score === worst);
+        if (losing.length === 1) {
+            losersThisRound.push({ id: losing[0], reason: cursed ? 'Highest score in a cursed round.' : 'Lowest score at the table.' });
         } else {
-            tiedPlayers = lowest;
+            tiedPlayers = losing;
         }
     }
+    room.tavernRun.roundEffect = null;
 
-    if (protectedBySteadyHand) {
-        losersThisRound = losersThisRound.filter(loser => loser.id !== humanId);
-    }
-
-    if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && human.score + 1 === enemy.score) {
+    if (losersThisRound.length === 1 && losersThisRound[0].id === humanId && !human.busted && !enemy.busted && hasKeepsake(room, 'velvetCushion') && !room.tavernRun.encounterKeepsakeUses.velvetCushion && Math.abs(human.score - enemy.score) === 1) {
         room.tavernRun.encounterKeepsakeUses.velvetCushion = true;
         losersThisRound = [];
         tiedPlayers = [humanId, enemyId];
@@ -509,13 +3017,36 @@ function evaluateTavernRound(roomCode) {
         io.to(roomCode).emit('displayMessage', { text: 'Trap Card breaks the tie your way.', color: '#ffd54f' });
     }
 
+    // The Ridgeler's Divine Smite: if he wins the round, you lose two hearts (each can still be
+    // caught by the Shield, the Lady's Grace or Last Gasp).
+    if (effect && effect.kind === 'smite' && losersThisRound.length === 1 && losersThisRound[0].id === humanId) {
+        losersThisRound.push({ id: humanId, reason: 'Divine Smite.' });
+        // The hammer comes down (3 Nov): the moment again, its sound, and the whole screen shakes.
+        sendMoment(roomCode, 'signatureMove', { name: enemy.name, ability: Rules.ABILITY_NAMES.divineSmite, text: 'The hammer falls: you lose 2 hearts.', hit: true, after: hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper ? 'You lose 2 hearts. Your Shield of Fuckery catches one.' : 'You lose 2 hearts.' }); // (the user's words, 20 Nov)
+    }
+    // Jaguar's All In: the round's loser loses two hearts (each can still be caught as above).
+    if (room.tavernRun.jaguarPhase === 'allIn') losersThisRound = losersThisRound.flatMap(loser => [loser, { ...loser, reason: 'All In.' }]);
+
     losersThisRound.forEach(loser => {
         let player = room.players[loser.id];
         if (!player) return;
 
+        // The Lady's Grace comes before the Shield (the user's call, 21 Oct): a dust she forgives
+        // leaves the Shield for later in the fight.
+        if (loser.id === humanId && human.busted && room.tavernRun.ladysGrace) {
+            room.tavernRun.ladysGrace = false;
+            sendMoment(roomCode, 'blessingUsed', { id: 'grace', name: "The Lady's Grace", text: 'The Lady saves you from the dust' });
+            return;
+        }
+
         if (loser.id === humanId && hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper) {
             room.tavernRun.encounterKeepsakeUses.bentCopper = true;
-            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'Shield catches the loss.');
+            emitKeepsakeActivated(roomCode, room, 'bentCopper', 'The Shield of Fuckery protects a life.');
+            return;
+        }
+
+        if (loser.id === humanId && player.lives <= 1 && useThonic(room, 'lastGasp')) {
+            sendMoment(roomCode, 'thonicUsed', { id: 'lastGasp', name: THONICS.lastGasp.name, text: 'You cling on with one heart.' });
             return;
         }
 
@@ -524,7 +3055,8 @@ function evaluateTavernRound(roomCode) {
         if (loser.id === humanId && room.tavernRun.stats) room.tavernRun.stats.livesLost++;
     });
 
-    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers);
+    if (room.tavernRun.jaguarPhase === 'talk' && lifeLosersThisRound.includes(enemyId)) room.tavernRun.talkNext = room.tavernRun.encounterIndex;
+    emitRoundLifeResult(roomCode, room, lifeLosersThisRound, tiedPlayers, human.lives <= 0 || enemy.lives <= 0, null, reveal && { ...reveal, name: enemy.name });
 
     roundPlayers.forEach(id => {
         if (!room.players[id]) return;
@@ -537,61 +3069,108 @@ function evaluateTavernRound(roomCode) {
         let scoreSummary = getTavernScoreSummary(room);
         room.roundPlayers = [];
         room.tavernRun.runComplete = true;
-        io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?` });
+        io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
+        emitState(roomCode);
+        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached fight ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
         return;
     }
 
     if (enemy.lives <= 0) {
-        if (room.tavernRun.stats) room.tavernRun.stats.encountersDefeated++;
+        let stats = room.tavernRun.stats;
+        let winGold = GOLD.winFirst + GOLD.winStep * room.tavernRun.encounterIndex;
+        let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
+        // The Miser's Purse: 1 more gold for every miserEvery (5 since 18 Nov, the user's; it was 10) in the purse (before this win's gold).
+        let miserGold = hasKeepsake(room, 'misersPurse') ? Math.floor(room.tavernRun.purse / (KEEPSAKE_NUMBERS.miserEvery ?? 5)) : 0;
+        stats.miserGold = (stats.miserGold || 0) + miserGold;
+        room.tavernRun.purse += miserGold;
+        stats.encountersDefeated++;
+        meet(room, 'beat:' + TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id); // (beaten, in any run: their dice are yours to choose, 20 Nov)
+        stats.winGold += winGold;
+        stats.heartGold += heartGold;
+        stats.heartsSpared = (stats.heartsSpared || 0) + Math.max(0, human.lives);
+        room.tavernRun.purse += winGold + heartGold;
         room.tavernRun.encounterIndex++;
         if (room.tavernRun.encounterIndex >= TAVERN_ENCOUNTERS.length) {
             let scoreSummary = getTavernScoreSummary(room, true);
             room.roundPlayers = [];
             room.tavernRun.runComplete = true;
-            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.totalGold));
-            io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the House Table! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}` });
+            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
+            emitState(roomCode);
+            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final aboard the Salty Swallow! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
         }
 
-        room.tavernRun.pendingKeepsakeChoices = pickKeepsakeChoices(room);
-        room.roundPlayers = [];
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-        io.to(roomCode).emit('offerKeepsakes', {
+        // What the fight paid, for the summary the browser shows before the next event (at: shown once).
+        let won = {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
-            transitionMessage: enemy.id === 'molar' ? 'After defeating the Molar, you are invited to the high roller table...' : null,
-            choices: room.tavernRun.pendingKeepsakeChoices
-        });
+            place: room.tavernRun.encounterIndex,
+            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, ...(miserGold ? { miser: miserGold } : {}) },
+            at: Date.now()
+        };
+        let beaten = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
+        if (beaten.boss) {
+            // A boss's keepsake comes with the invitation on to the next place (no events on the way
+            // there); since 30 Oct you take it or leave it there (claimDrop).
+            let drop = BOSS_DROPS[beaten.drops];
+            won.drop = drop || null;
+            room.tavernRun.lastWin = won;
+            room.tavernRun.interlude = invitation(room, human.name);
+        } else {
+            // Between fights: one event (see startInterlude).
+            startInterlude(room, won);
+        }
+        room.roundPlayers = [];
+        emitState(roomCode);
+        io.to(roomCode).emit('offerShop', won); // the fight is won (the name is historical)
         return;
     }
 
-    room.roundNumber++;
-    room.tavernRun.encounterRound++;
-    room.isTieBreaker = tiedPlayers.length > 1;
-    room.roundPlayers = [humanId, enemyId];
-    room.currentTurnIndex = 0;
-    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+    // The fight goes on: its save moves on to the next round's start (20 Nov, no save scumming), sent at once.
+    room.tavernRun.fightSave = sealRoundSave(room, human.name, room.tavernRun.encounterRound + 1, tiedPlayers.length > 1);
+    sendAutoSave(roomCode);
+
+    // The next round waits a moment, so what this round did (its result, the keepsakes that
+    // fired) shows before the next round's ability (the user's call, 21 Oct: one thing at a time).
+    let epoch = room.turnEpoch;
+    setTimeout(() => {
+        if (rooms[roomCode] !== room || room.turnEpoch !== epoch) return;
+        let humanId = getHumanPlayerId(room); // (a reconnect in the pause gives a new id)
+        if (!humanId) return;
+        room.roundNumber++;
+        room.tavernRun.encounterRound++;
+        room.isTieBreaker = tiedPlayers.length > 1;
+        // Turns alternate: the player goes first in a fight's odd rounds, the opponent in even ones.
+        room.roundPlayers = room.tavernRun.encounterRound % 2 === 1 ? [humanId, enemyId] : [enemyId, humanId];
+        room.currentTurnIndex = 0;
+        beginTavernRound(roomCode, room);
+        emitState(roomCode);
+    }, delay(ROUND_PAUSE_MS));
 }
+const ROUND_PAUSE_MS = 2000;
+
+// ---- Sockets ----
+
+const asText = value => (typeof value === 'string' ? value : '');
 
 io.on('connection', (socket) => {
     socket.emit('leaderboardUpdate', tavernLeaderboard);
-    
+    socket.emit('leagueBoards', leagueBoards());
+
     socket.on('checkRoom', (roomCode) => {
-        let code = roomCode.trim().toUpperCase() || "PUBLIC";
-        let exists = rooms[code] ? true : false;
-        socket.emit('roomStatus', { exists: exists });
+        let code = asText(roomCode).trim().toUpperCase() || "PUBLIC";
+        socket.emit('roomStatus', { exists: !!rooms[code] });
     });
 
     socket.on('joinTavern', (data) => {
-        let roomCode = data.roomCode.trim().toUpperCase();
-        if (roomCode === "") roomCode = "PUBLIC"; 
+        if (!data || typeof data !== 'object') return;
+        let roomCode = asText(data.roomCode).trim().toUpperCase();
+        if (roomCode === "") roomCode = "PUBLIC";
         if (roomCode.length > 10) roomCode = roomCode.substring(0, 10);
-        
+
         socket.roomCode = roomCode;
         socket.join(roomCode);
+        if (LEAGUE_ROOMS.has(roomCode)) socket.emit('leagueUpdate', leagueTable(roomCode));
 
         let requestedLives = parseInt(data.startingLives) || 3;
         requestedLives = Math.max(1, Math.min(5, requestedLives));
@@ -601,42 +3180,73 @@ io.on('connection', (socket) => {
             let isTavernCrawl = roomCode.startsWith("TVRN");
             rooms[roomCode] = {
                 players: {}, playerOrder: [], roundPlayers: [], currentTurnIndex: 0, isTieBreaker: false, isMusicPlaying: false, dealerIndex: 0, roundNumber: 1,
+                turnEpoch: 0, turn: null,
                 startingLives: requestedLives,
                 mode: isTavernCrawl ? 'tavern-crawl' : 'classic',
                 tavernRun: isTavernCrawl ? createTavernRun() : null
             };
-            
-            if (roomCode.startsWith("COMP")) {
-                rooms[roomCode].players['BOT_MOLAR'] = { 
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: requestedLives, score: null, busted: false, connected: true 
+
+            if (isTavernCrawl) {
+                rooms[roomCode].players[BOT_ID] = {
+                    id: BOT_ID, token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
                 };
-                rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
-            } else if (isTavernCrawl) {
-                rooms[roomCode].players['BOT_MOLAR'] = {
-                    id: 'BOT_MOLAR', token: 'BOT_TOKEN', name: 'The Molar', avatar: '🦷', lives: 2, score: null, busted: false, connected: true
-                };
-                rooms[roomCode].playerOrder.push('BOT_MOLAR');
-                rooms[roomCode].roundPlayers.push('BOT_MOLAR');
+                rooms[roomCode].playerOrder.push(BOT_ID);
+                rooms[roomCode].roundPlayers.push(BOT_ID);
             }
         }
-        
+
         let room = rooms[roomCode];
-        let finalName = data.name.trim();
-        if (finalName === "") finalName = "Mysterious Traveler";
+        if (room.cleanupTimer) { clearTimeout(room.cleanupTimer); room.cleanupTimer = null; }
+        let finalName = asText(data.name).trim();
+        if (finalName === "") finalName = "Mysterious Traveller";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
+        let avatar = data.avatar === 'Shield' ? 'Shield of Fuckery' : AVATARS.includes(data.avatar) ? data.avatar : AVATARS[0];
+        let token = asText(data.token).substring(0, 64);
+        // Your dice (20 Nov): a beaten opponent's set, checked against who you've beaten (settleDice).
+        let diceWanted = DICE_SETS.has(asText(data.dice)) ? asText(data.dice) : null;
 
-        let existingPlayerId = Object.keys(room.players).find(id => room.players[id].token === data.token);
+        let existingPlayerId = token && Object.keys(room.players).find(id => room.players[id].token === token);
 
-        if (existingPlayerId && existingPlayerId !== 'BOT_MOLAR') {
+        // A Tavern Crawl is one person's (17 Nov): someone else who comes to its table (the same code, by
+        // chance or by typing it) is turned away, and their browser picks a fresh table ('crawlTaken').
+        if (room.mode === 'tavern-crawl' && !existingPlayerId && Object.keys(room.players).some(id => id !== BOT_ID)) {
+            socket.leave(roomCode);
+            socket.roomCode = null;
+            socket.emit('crawlTaken');
+            scheduleEmptyTableCleanup(roomCode); // (the join cleared its timer)
+            return;
+        }
+
+        // One live table per run (20 Nov, no save scumming): a save of a run still played at another table (a second tab)
+        // doesn't open; one whose table is left with nobody at it retires that table, so only this copy carries on.
+        if (room.mode === 'tavern-crawl' && !existingPlayerId && typeof data.resume === 'string' && !room.tavernRun.started) {
+            let peek = saveInfo(data.resume);
+            let runId = !openedSaves.has(peek.id) && peek.runId; // (a used save just fails to open, below)
+            let other = runId && Object.entries(rooms).find(([code, r]) => code !== roomCode && r.mode === 'tavern-crawl' && r.tavernRun && r.tavernRun.runId === runId && !r.tavernRun.runComplete);
+            if (other && anyHumanConnected(other[1])) {
+                socket.leave(roomCode);
+                socket.roomCode = null;
+                socket.emit('crawlLive');
+                scheduleEmptyTableCleanup(roomCode);
+                return;
+            }
+            if (other) {
+                if (other[1].cleanupTimer) clearTimeout(other[1].cleanupTimer);
+                other[1].turnEpoch++;
+                delete rooms[other[0]];
+            }
+        }
+
+        if (existingPlayerId && existingPlayerId !== BOT_ID) {
             let p = room.players[existingPlayerId];
             p.id = socket.id;
-            p.avatar = data.avatar;
-            p.name = finalName; 
+            p.avatar = avatar;
+            p.name = finalName;
+            p.diceWanted = diceWanted;
             p.connected = true;
-            
+
             room.players[socket.id] = p;
-            
+
             if (existingPlayerId !== socket.id) {
                 delete room.players[existingPlayerId];
                 let oldSocket = io.sockets.sockets.get(existingPlayerId);
@@ -645,51 +3255,95 @@ io.on('connection', (socket) => {
 
             room.playerOrder = room.playerOrder.map(id => id === existingPlayerId ? socket.id : id);
             room.roundPlayers = room.roundPlayers.map(id => id === existingPlayerId ? socket.id : id);
-            
+            if (room.turn && room.turn.playerId === existingPlayerId) {
+                room.turn.playerId = socket.id;
+                room.turn.key = getTurnKey(room);
+            }
+
         } else {
-            room.players[socket.id] = { 
-                id: socket.id, token: data.token, name: finalName, avatar: data.avatar, lives: room.startingLives, score: null, busted: false, connected: true 
+            // A friends' game already under way (18 Nov, the user's: a late return, or anyone new): they sit out
+            // until the next game (no hearts, `waiting`), and are dealt in with everyone as it starts.
+            let late = gameUnderway(room);
+            room.players[socket.id] = {
+                id: socket.id, token, name: finalName, avatar, diceWanted, lives: late ? 0 : room.startingLives, score: null, busted: false, connected: true, ...(late ? { waiting: true } : {})
             };
             room.playerOrder.push(socket.id);
 
-            if (!room.isTieBreaker) {
+            if (!room.isTieBreaker && !late) {
                 if (!room.roundPlayers.includes(socket.id)) room.roundPlayers.push(socket.id);
             }
         }
 
-        let humanPlayers = room.playerOrder.filter(id => id !== 'BOT_MOLAR' && room.players[id] && room.players[id].connected);
-        
+        let humanPlayers = room.playerOrder.filter(id => id !== BOT_ID && room.players[id] && room.players[id].connected);
+
         if (room.roundPlayers.length === 0 && humanPlayers.length > 0) {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
-                    room.players[id].lives = room.startingLives; 
+                    room.players[id].lives = room.startingLives;
+                    room.players[id].waiting = false;
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
             });
-            room.dealerIndex = 0; 
+            room.dealerIndex = 0;
             room.roundPlayers = room.playerOrder.filter(id => room.players[id].connected);
             room.currentTurnIndex = 0;
             room.isTieBreaker = false;
             room.roundNumber = 1;
         }
 
-        if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== 'BOT_MOLAR') {
+        if (room.roundPlayers.length === 1 && room.roundPlayers[0] !== BOT_ID) {
             room.currentTurnIndex = 0;
         }
 
-        if (room.mode === 'tavern-crawl' && !room.tavernRun.started) {
-            resetTavernEncounter(roomCode, false);
+        // A saved run (from an invitation to the next place) carries on at a fresh table: back at the
+        // invitation, with a fresh save in case they leave again.
+        let fresh = room.mode === 'tavern-crawl' && !room.tavernRun.started;
+        let resumed = fresh && data.resume ? openSave(data.resume) : null;
+        if (fresh && data.resume && !resumed) socket.emit('resumeFailed');
+        if (resumed) {
+            restoreRun(room, resumed);
+            room.players[socket.id].name = asText(resumed.name).substring(0, 15) || room.players[socket.id].name;
         }
 
-        if (room.isMusicPlaying) socket.emit('playGlobalMusic');
+        let newRun = room.mode === 'tavern-crawl' && !room.tavernRun.started;
+        // (The dev test server may set a new run up itself, before it's first shown: devHooks.newRun.)
+        let devStart = newRun && !resumed && devHooks.newRun;
+        if (newRun) {
+            resetTavernEncounter(roomCode, false, !!devStart);
+            if (devStart) devHooks.newRun(roomCode, room);
+        }
+        if (resumed && !resumed.fight) {
+            room.tavernRun.interlude = invitation(room, room.players[socket.id].name);
+            room.roundPlayers = [];
+        }
+        // (The browser says so when it came back by itself, its table gone: see sendAutoSave.)
+        if (resumed) socket.emit('crawlResumed', { fight: !!resumed.fight, next: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name, round: resumed.round && resumed.round.n > 1 ? resumed.round.n : null });
 
-        io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
+        if (room.isMusicPlaying) socket.emit('playGlobalMusic');
+        // Who this name has met before (the "?" portraits); the state goes out again once it's in.
+        settleDice(roomCode, room.players[socket.id]);
+        loadMet(roomCode, room.players[socket.id].name); // (every table since 20 Nov: your dice need who you've beaten)
+
+        emitState(roomCode);
+        resumeBot(roomCode);
+    });
+
+    // The start screen asks which opponents a name has beaten (20 Nov): their dice are the ones it may choose.
+    socket.on('beatenList', (data, ack) => {
+        if (typeof ack !== 'function') return;
+        let name = asText(data && data.name).trim().substring(0, 15);
+        if (!name) { ack([]); return; }
+        let answer = () => ack([...beatenBy(name)].filter(id => DICE_SETS.has(id)));
+        store.loadMet(name).then(ids => { let met = metOf(name); ids.forEach(id => met.add(id)); answer(); }).catch(answer);
     });
 
     socket.on('playAgain', () => {
         let room = rooms[socket.roomCode];
         if (room && room.roundPlayers.length === 0) {
+            // A Tavern Crawl restarts only once the run is over (not while Thom's cart is open).
+            if (room.mode === 'tavern-crawl' && !room.tavernRun.runComplete) return;
+            room.turnEpoch++;
             if (room.mode === 'tavern-crawl') {
                 room.playerOrder.forEach(id => {
                     if (room.players[id]) {
@@ -702,7 +3356,7 @@ io.on('connection', (socket) => {
                 room.tavernRun = createTavernRun();
                 room.roundNumber = 1;
                 resetTavernEncounter(socket.roomCode, false);
-                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+                emitState(socket.roomCode);
                 io.to(socket.roomCode).emit('triggerNewGameSplash');
                 return;
             }
@@ -710,15 +3364,16 @@ io.on('connection', (socket) => {
             room.playerOrder.forEach(id => {
                 if (room.players[id]) {
                     room.players[id].lives = room.startingLives;
+                    room.players[id].waiting = false;
                     room.players[id].score = null;
                     room.players[id].busted = false;
                 }
             });
-            
+
             if (room.playerOrder.length > 0) {
                 room.dealerIndex = (room.dealerIndex + 1) % room.playerOrder.length;
             }
-            
+
             room.roundPlayers = [];
             for (let i = 0; i < room.playerOrder.length; i++) {
                 let idx = (room.dealerIndex + i) % room.playerOrder.length;
@@ -727,12 +3382,12 @@ io.on('connection', (socket) => {
                     room.roundPlayers.push(playerId);
                 }
             }
-            
+
             room.currentTurnIndex = 0;
             room.isTieBreaker = false;
             room.roundNumber++;
-            
-            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+
+            emitState(socket.roomCode);
             io.to(socket.roomCode).emit('triggerNewGameSplash');
         }
     });
@@ -741,59 +3396,546 @@ io.on('connection', (socket) => {
         let room = rooms[socket.roomCode];
         if (room && !room.isMusicPlaying) {
             room.isMusicPlaying = true;
-            io.to(socket.roomCode).emit('playGlobalMusic'); 
+            io.to(socket.roomCode).emit('playGlobalMusic');
         }
     });
 
     socket.on('sendReaction', (emoji) => {
         let room = rooms[socket.roomCode];
-        if (room) {
-            if (room.mode === 'tavern-crawl') return;
-            let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
-            io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji });
-        }
+        if (!room || room.mode === 'tavern-crawl' || !PLAYER_REACTIONS.includes(emoji)) return;
+        let playerName = room.players[socket.id] ? room.players[socket.id].name : "Traveler";
+        io.to(socket.roomCode).emit('receiveReaction', { name: playerName, emoji: emoji, id: socket.id });
     });
 
-    socket.on('sendBotReaction', (emoji) => {
+    const isMyTurn = () => {
         let room = rooms[socket.roomCode];
-        if (room && isAuthorized(socket, socket.roomCode)) {
-            if (room.mode === 'tavern-crawl') return;
-            io.to(socket.roomCode).emit('receiveReaction', { name: "The Molar", emoji: emoji });
-        }
-    });
+        return !!(room && room.turn && room.turn.playerId === socket.id);
+    };
 
-    function isAuthorized(socket, roomCode) {
-        let room = rooms[roomCode];
-        if (!room) return false;
-        let currentId = room.roundPlayers[room.currentTurnIndex];
-        return (socket.id === currentId) || ((roomCode.startsWith('COMP') || roomCode.startsWith('TVRN')) && currentId === 'BOT_MOLAR');
-    }
-
-    socket.on('playerRolledDice', (suspenseType) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playerRolledDice', suspenseType) });
-    socket.on('playGameSound', (soundId) => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('playGameSound', soundId) });
-    socket.on('triggerConfetti', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerConfetti') });
-    socket.on('triggerDevilEffect', () => { if(isAuthorized(socket, socket.roomCode)) socket.to(socket.roomCode).emit('triggerDevilEffect') });
-    
-    socket.on('updateBoard', (gameData) => {
-        if (isAuthorized(socket, socket.roomCode)) {
-            socket.to(socket.roomCode).emit('boardUpdated', gameData);
-        }
-    });
-
-    socket.on('broadcastMessage', (msgData) => {
-        if (isAuthorized(socket, socket.roomCode)) {
-            socket.to(socket.roomCode).emit('displayMessage', msgData);
-        }
-    });
-
-    socket.on('useEnemyAbility', (abilityId) => {
+    socket.on('rollDice', () => { if (isMyTurn()) performRoll(socket.roomCode); });
+    socket.on('toggleDie', (dieId) => { if (isMyTurn() && Number.isInteger(dieId)) performToggle(socket.roomCode, dieId); });
+    socket.on('endTurn', () => { if (isMyTurn()) performEndTurn(socket.roomCode); });
+    // The player has tapped the entrance card away (5 Nov, the user's). The browser has held back
+    // what follows it; the moment clock moves to match, whether that took a second or a minute.
+    socket.on('introDone', () => {
         let room = rooms[socket.roomCode];
-        if (!room || room.mode !== 'tavern-crawl') return;
-        let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-        if (canUseTavernAbility(room, encounter, abilityId)) {
-            markAbilityUsed(room, abilityId);
-            io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+        if (!room || !room.introEnd) return;
+        let shift = Date.now() + delay(INTRO_LEAVE_MS) - room.introEnd;
+        room.momentNext = (room.momentNext || 0) + shift;
+        room.momentEnd = (room.momentEnd || 0) + shift;
+        room.introEnd = null;
+    });
+
+    // Thom's cart: the run's one player buys while it is open.
+    const tavernPlayer = () => {
+        let room = rooms[socket.roomCode];
+        if (!room || room.mode !== 'tavern-crawl' || !room.players[socket.id] || socket.id === BOT_ID) return null;
+        return room;
+    };
+
+    // Martha's mask: once a fight, wear Danhausen's Curse (before you roll) or the Duke's Devil
+    // (any time in your turn with three or more dice to throw: the next throw lands three 6s;
+    // the user's call, 21 Oct) for the round (not in a round that already has one).
+    socket.on('wearMask', (kind) => {
+        let room = tavernPlayer();
+        if (!room || (kind !== 'curse' && kind !== 'devil') || !isMyTurn() || !isTurnPlayable(socket.roomCode)) return;
+        let run = room.tavernRun;
+        let turn = room.turn;
+        if (!hasKeepsake(room, MARTHAS_MASK.id) || run.encounterKeepsakeUses.marthasMask || run.roundEffect || turn.finalized || Date.now() < turn.busyUntil) return;
+        if (kind === 'curse' ? turn.hasRolled : turn.dice.filter(d => d.status === Rules.STATUS.ACTIVE).length < 3) return;
+        run.roundEffect = kind === 'curse'
+            ? { kind, by: 'player', ability: 'cursed', as: 'Danhausen' }
+            : { kind, by: 'player', ability: 'devil', as: 'Duke Morrigan' };
+        emitKeepsakeActivated(socket.roomCode, room, MARTHAS_MASK.id, `You wear ${run.roundEffect.as}'s face. ${ROUND_EFFECT_TEXT[kind].player}`);
+        sendMoment(socket.roomCode, 'signatureMove', roundEffectMove(room, run.roundEffect, ROUND_EFFECT_TEXT[kind].player));
+        emitState(socket.roomCode);
+    });
+
+    // Mystery Flavour, Martha's Elf Bar: once a fight, it works as this fight's flavour does.
+    socket.on('puffMystery', () => {
+        let room = tavernPlayer();
+        if (!room || !isMyTurn() || !isTurnPlayable(socket.roomCode)) return;
+        let run = room.tavernRun;
+        let turn = room.turn;
+        if (!hasKeepsake(room, MYSTERY_FLAVOUR.id) || run.encounterKeepsakeUses.mysteryFlavour || Date.now() < turn.busyUntil) return;
+        let flavour = mysteryFlavourOf(run);
+        let puff = elfPuff(room, turn, flavour);
+        if (!puff) return;
+        run.encounterKeepsakeUses.mysteryFlavour = true;
+        run.stats.keepsakesActivated++;
+        let taste = THONICS[flavour].name.replace(/ Elf Bar$/, '');
+        sendMoment(socket.roomCode, 'keepsakeActivated', { id: MYSTERY_FLAVOUR.id, flavour, name: MYSTERY_FLAVOUR.name, text: `Tastes of ${taste}: ${puff.text}`, who: 'Martha\'s Elf Bar', mystery: true });
+        if (puff.rerolled) throwAgain(socket.roomCode, room, turn, puff.rerolled);
+        else emitTurn(socket.roomCode, { type: 'toggle' });
+        emitState(socket.roomCode);
+    });
+
+    socket.on('buyThonic', (thonicId) => {
+        let room = tavernPlayer();
+        if (!room || !room.tavernRun.shop) return;
+        let run = room.tavernRun;
+        if (typeof thonicId !== 'string' || !run.shop.stock.includes(thonicId) || !THONICS[thonicId]) return;
+        let price = run.shop.free ? 0 : thonicPrice(run, thonicId);
+        if (run.purse < price || run.shelf.length >= shelfSizeOf(room)) return;
+        run.shop.free = false;
+        noteBought(run, thonicId); // (the Loyalty Card's free one counts too)
+        run.purse -= price;
+        run.stats.spent += price;
+        run.shelf.push(thonicId);
+        emitState(socket.roomCode);
+    });
+
+    // A keepsake from Thom's back shelf. Spent gold counts with the Thonics (stats.spent).
+    socket.on('buyKeepsake', (keepsakeId, giveUp) => {
+        let room = tavernPlayer();
+        if (!room || !room.tavernRun.shop) return;
+        let run = room.tavernRun;
+        let shelf = run.shop.keepsakes || [];
+        let keepsake = shelf.find(k => k.id === keepsakeId);
+        let price = keepsake && keepsakePrice(run, keepsake.id);
+        if (!keepsake || !price || run.purse < price || hasKeepsake(room, keepsake.id)) return;
+        // Pockets full (17 Nov, the user's): buying it means leaving one of yours behind, as with a boss's drop.
+        if (pocketsFull(room)) {
+            let index = run.keepsakes.findIndex(k => k.id === giveUp);
+            if (index < 0) return;
+            run.keepsakes.splice(index, 1);
+            dropBeltThonics(room);
         }
+        run.purse -= price;
+        run.stats.spent += price;
+        run.keepsakes.push(keepsake);
+        run.shop.keepsakes = shelf.filter(k => k.id !== keepsake.id);
+        // The Potion Belt comes with a Thonic, in its new slot.
+        if (keepsake.id === 'potionBelt' && run.shelf.length < shelfSizeOf(room)) run.shelf.push(KEEPSAKE_NUMBERS.beltThonic);
+        emitState(socket.roomCode);
+    });
+
+    // On to the next fight, from Thom's cart or any point between fights. (`leaveShop` is
+    // the older name; the classic page and the tests still send it.)
+    const moveOn = () => {
+        let room = tavernPlayer();
+        if (!room || !(room.tavernRun.shop || room.tavernRun.interlude)) return;
+        moveOnToNextFight(socket.roomCode);
+    };
+    socket.on('leaveShop', moveOn);
+    socket.on('moveOn', moveOn);
+
+    // Between fights (see startInterlude). Each step only works at its own stage.
+    const interludeAt = stage => {
+        let room = tavernPlayer();
+        let interlude = room && room.tavernRun.interlude;
+        return interlude && interlude.stage === stage ? room : null;
+    };
+
+    // 'roll' once, to try to catch him; then 'on' to the next fight (he is the walk's one event).
+    socket.on('pickpocket', (action) => {
+        let room = interludeAt('pickpocket');
+        if (!room) return;
+        let run = room.tavernRun, interlude = run.interlude;
+        if (action === 'roll' && !interlude.roll) {
+            interlude.roll = rollFace();
+            interlude.caught = interlude.roll >= INTERLUDE.pickpocketCatch;
+            interlude.lost = interlude.caught ? 0 : -changePurse(run, -interlude.steal);
+        } else if (action === 'on' && interlude.roll) {
+            moveOnToNextFight(socket.roomCode);
+            return;
+        } else {
+            return;
+        }
+        emitState(socket.roomCode);
+    });
+
+    // The Wild Magic Hot Tub: 'soak' once, and the wild magic surges (free).
+    socket.on('hotTub', (action) => {
+        let room = interludeAt('hotTub');
+        if (!room || action !== 'soak') return;
+        let run = room.tavernRun;
+        let price = hotTubPrice(run);
+        if (run.purse < price) return;
+        noteBought(run, 'hotTub');
+        run.purse -= price;
+        run.stats.spent += price;
+        let surge = pickHotTubSurge();
+        if (surge === 'pruney') run.nextFightHearts = Math.max(1, (run.nextFightHearts || nextHearts(run)) - 1);
+        else run.nextFightSurge = surge;
+        run.interlude = { stage: 'done', spot: 'hotTub', surge: { id: surge, die: HOT_TUB_DIE, ...HOT_TUB_SURGES[surge] }, hearts: surge === 'pruney' ? run.nextFightHearts : undefined };
+        emitState(socket.roomCode);
+    });
+
+    // Darren Snakehands: 'roll' once; then 'on' to the next fight (he is the walk's one event).
+    socket.on('darren', (action) => {
+        let room = interludeAt('darren');
+        if (!room) return;
+        let interlude = room.tavernRun.interlude;
+        if (action === 'roll' && !interlude.roll) {
+            interlude.roll = rollFace();
+            Object.assign(interlude, darrenOutcome(room, interlude.roll));
+        } else if (action === 'on' && interlude.roll) {
+            moveOnToNextFight(socket.roomCode);
+            return;
+        } else {
+            return;
+        }
+        emitState(socket.roomCode);
+    });
+
+    // After a random event (the thief, the Hooded Stranger, Darren) the walk goes on: two spots
+    // catch your eye (the user's call, 21 Oct; before, the event was the whole walk). 'on' at the
+    // event still goes straight to the next fight.
+    socket.on('lookAround', () => {
+        let room = tavernPlayer();
+        let interlude = room && room.tavernRun.interlude;
+        if (!interlude) return;
+        let finished = ((interlude.stage === 'pickpocket' || interlude.stage === 'darren') && interlude.roll)
+            || (interlude.stage === 'done' && (interlude.spot === 'stranger' || interlude.spot === 'kram'));
+        if (!finished) return;
+        room.tavernRun.interlude = { stage: 'choose', spots: pickSpots(room), after: interlude.stage === 'done' ? interlude.spot : interlude.stage };
+        emitState(socket.roomCode);
+    });
+
+    socket.on('chooseSpot', (spot) => {
+        let room = interludeAt('choose');
+        if (!room || typeof spot !== 'string' || !room.tavernRun.interlude.spots.includes(spot)) return;
+        let run = room.tavernRun;
+        if (spot === 'thom') {
+            run.interlude = null;
+            // Thom's Loyalty Card: the first Thonic of the visit is free.
+            // first: your first visit this run (Thom greets you with "Vim, vigour, vitality!").
+            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room), first: !run.thomMet };
+            run.thomMet = true;
+        } else if (spot === 'shrine') {
+            run.interlude = { stage: 'shrine' };
+        } else if (spot === 'diceDen') {
+            run.interlude = { stage: 'diceDen', bets: INTERLUDE.diceDenBets, bet: null, throws: [] };
+        } else if (spot === 'hotTub') {
+            run.interlude = { stage: 'hotTub' };
+        } else if (spot === 'elfKid') {
+            run.interlude = { stage: 'elfKid', stock: ELF_BARS.map(thonicView), puffs: ELF_BAR_PUFFS, bought: [] };
+        } else if (spot === 'bard') {
+            run.interlude = { stage: 'bard', songs: BARD_SONGS, price: bardPrice(run) };
+        } else if (spot === 'yvesil') {
+            run.interlude = { stage: 'yvesil', price: yvesilPrice(run) };
+        } else if (spot === 'jorvash') {
+            run.interlude = { stage: 'jorvash', drinks: REFRESHMENTS, price: jorvashPrice(run) };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // The Shrine to the Lady: light a candle and she grants a blessing, at random:
+    //   favour  the next fight starts with an extra heart
+    //   grace   the next dust that would cost a heart doesn't (kept until it's needed)
+    // Grace isn't given twice: carrying one already, it's her Favour.
+    socket.on('shrinePick', (action) => {
+        let room = interludeAt('shrine');
+        if (!room || action !== 'pray') return;
+        let run = room.tavernRun;
+        let price = shrinePrice(run);
+        if (run.purse < price) return;
+        noteBought(run, 'shrine');
+        run.purse -= price;
+        run.stats.spent += price;
+        let gift = INTERLUDE.shrineGifts[crypto.randomInt(0, INTERLUDE.shrineGifts.length)];
+        if (gift === 'grace' && run.ladysGrace) gift = 'favour';
+        // Her Favour adds to what the next fight would start on (after the Stranger's price, too).
+        if (gift === 'favour') run.nextFightHearts = (run.nextFightHearts || nextHearts(run)) + INTERLUDE.favourHearts;
+        else run.ladysGrace = true;
+        run.interlude = { stage: 'done', spot: 'shrine', gift, hearts: gift === 'favour' ? run.nextFightHearts : undefined };
+        emitState(socket.roomCode);
+    });
+
+    // The Dice Den: name the bet (0 declines), then 'diceRoll' throws until someone wins.
+    socket.on('diceBet', (bet) => {
+        let room = interludeAt('diceDen');
+        if (!room || room.tavernRun.interlude.bet) return;
+        let run = room.tavernRun;
+        if (bet === 0) {
+            run.interlude = { stage: 'done', spot: 'diceDen', bet: 0 };
+        } else {
+            if (!INTERLUDE.diceDenBets.includes(bet) || run.purse < bet) return;
+            run.interlude.bet = bet;
+        }
+        emitState(socket.roomCode);
+    });
+
+    socket.on('diceRoll', () => {
+        let room = interludeAt('diceDen');
+        let interlude = room && room.tavernRun.interlude;
+        if (!interlude || !interlude.bet) return;
+        let { you, them, won } = throwDiceDen();
+        let throws = [...interlude.throws, { you, them }];
+        if (won === null) {
+            interlude.throws = throws;
+        } else {
+            changePurse(room.tavernRun, won ? interlude.bet : -interlude.bet);
+            room.tavernRun.interlude = { stage: 'done', spot: 'diceDen', bet: interlude.bet, throws, won };
+        }
+        emitState(socket.roomCode);
+    });
+
+    socket.on('strangerPick', (keepsakeId) => {
+        let room = interludeAt('stranger');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (keepsakeId === null) {
+            run.interlude = { stage: 'done', spot: 'stranger', keepsake: null };
+        } else {
+            let keepsake = run.interlude.offers.find(k => k.id === keepsakeId);
+            if (!keepsake) return;
+            run.keepsakes.push(keepsake);
+            // The Potion Belt comes with a Thonic, in its new slot.
+            if (keepsake.id === 'potionBelt' && run.shelf.length < shelfSizeOf(room)) run.shelf.push(KEEPSAKE_NUMBERS.beltThonic);
+            run.nextFightHearts = strangerHearts(run);
+            run.interlude = { stage: 'done', spot: 'stranger', keepsake, hearts: run.nextFightHearts };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // A boss's keepsake, at the invitation: take it (with full pockets, naming one to leave behind)
+    // or leave it. Either way the invitation (and its save) is sealed afresh.
+    // The menu's Save (14 Nov, the user's): in a fight, the run as that fight started; between fights, the run
+    // now, at the start of the next fight. The browser keeps it and leaves; Continue starts that fight afresh.
+    socket.on('saveFight', () => {
+        let room = rooms[socket.roomCode];
+        if (!room || room.mode !== 'tavern-crawl' || socket.id === BOT_ID) return;
+        let run = room.tavernRun;
+        let me = room.players[socket.id];
+        if (!me || run.runComplete || me.lives <= 0 || run.encounterIndex >= TAVERN_ENCOUNTERS.length) return;
+        let between = !!(run.interlude || run.shop);
+        let save = !between && run.fightSave ? run.fightSave : sealFightSave(room, me.name);
+        let info = saveInfo(save);
+        socket.emit('fightSaved', { save, name: me.name, next: TAVERN_ENCOUNTERS[run.encounterIndex].name, place: placeOf(room).name, purse: Number(info.purse) || 0 });
+    });
+
+    socket.on('claimDrop', (take, giveUp) => {
+        let room = interludeAt('invitation');
+        if (!room) return;
+        let run = room.tavernRun, interlude = run.interlude;
+        let drop = interlude.drop && BOSS_DROPS[interlude.drop.id];
+        if (!drop || interlude.claim !== 'open') return;
+        if (take === true) {
+            if (pocketsFull(room)) {
+                let index = run.keepsakes.findIndex(k => k.id === giveUp);
+                if (index < 0) return;
+                run.keepsakes.splice(index, 1);
+                dropBeltThonics(room);
+            }
+            run.keepsakes.push(drop);
+        } else if (take === false) {
+            run.refusedDrops = [...(run.refusedDrops || []), drop.id];
+        } else {
+            return;
+        }
+        run.interlude = invitation(room, room.players[socket.id].name);
+        emitState(socket.roomCode);
+    });
+
+    // Johnny Elf Bar: an Elf Bar for the shelf (not one you already carry), full of puffs.
+    socket.on('buyElfBar', (id) => {
+        let room = interludeAt('elfKid');
+        if (!room || typeof id !== 'string' || !ELF_BARS.includes(id)) return;
+        let run = room.tavernRun;
+        let price = thonicPrice(run, id);
+        if (run.purse < price || run.shelf.length >= shelfSizeOf(room) || run.shelf.includes(id)) return;
+        noteBought(run, id);
+        run.purse -= price;
+        run.stats.spent += price;
+        run.shelf.push(id);
+        run.puffs[id] = ELF_BAR_PUFFS;
+        run.interlude.bought = [...(run.interlude.bought || []), id];
+        emitState(socket.roomCode);
+    });
+
+    // The Bard: pay for one of his songs for the next fight (null: walk away, nothing paid).
+    socket.on('bardPick', (songId) => {
+        let room = interludeAt('bard');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (songId === null) {
+            run.interlude = { stage: 'done', spot: 'bard', song: null };
+        } else {
+            let song = BARD_SONGS.find(s => s.id === songId);
+            let price = bardPrice(run);
+            if (!song || run.purse < price) return;
+            noteBought(run, 'bard');
+            run.purse -= price;
+            run.stats.spent += price;
+            run.nextFightSong = song.id;
+            run.interlude = { stage: 'done', spot: 'bard', song };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // Yvesil: pay and hear your omen for the next fight, good or bad (false: walk away, nothing paid).
+    socket.on('yvesilPick', (ask) => {
+        let room = interludeAt('yvesil');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (!ask) {
+            run.interlude = { stage: 'done', spot: 'yvesil', omen: null };
+        } else {
+            let price = yvesilPrice(run);
+            if (run.purse < price) return;
+            noteBought(run, 'yvesil');
+            run.purse -= price;
+            run.stats.spent += price;
+            let good = crypto.randomInt(0, 100) < (INTERLUDE.omenGoodChance ?? 67);
+            let pool = Object.keys(OMENS).filter(id => OMENS[id].good === good);
+            run.nextOmen = pool[crypto.randomInt(0, pool.length)];
+            run.interlude = { stage: 'done', spot: 'yvesil', omen: omenView(run.nextOmen) };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // Jorvash: pay for one of his two refreshments for the next fight (null: walk away, nothing paid).
+    socket.on('jorvashPick', (drinkId) => {
+        let room = interludeAt('jorvash');
+        if (!room) return;
+        let run = room.tavernRun;
+        if (drinkId === null) {
+            run.interlude = { stage: 'done', spot: 'jorvash', drink: null };
+        } else {
+            let drink = REFRESHMENTS.find(d => d.id === drinkId);
+            let price = jorvashPrice(run);
+            if (!drink || run.purse < price) return;
+            noteBought(run, 'jorvash');
+            run.purse -= price;
+            run.stats.spent += price;
+            if (drink.id === 'notaroRed') run.nextNotaro = true;
+            else run.nextSeaWard = true;
+            run.interlude = { stage: 'done', spot: 'jorvash', drink };
+        }
+        emitState(socket.roomCode);
+    });
+
+    // The Cult of Kram: 'swear' fealty (no 1s for the next fights) or 'refuse'.
+    socket.on('kram', (action) => {
+        let room = interludeAt('kram');
+        if (!room || (action !== 'swear' && action !== 'refuse')) return;
+        let run = room.tavernRun;
+        let sworn = action === 'swear';
+        if (sworn) { run.kramFights = INTERLUDE.kramFights; run.krammed = true; }
+        run.interlude = { stage: 'done', spot: 'kram', sworn, fights: INTERLUDE.kramFights, markup: Math.round((INTERLUDE.kramPriceRise ?? 0.1) * 100) };
+        emitState(socket.roomCode);
+    });
+
+    // The Bard's Inspiring Song: your first throw of the fight, thrown again (before you keep a
+    // die; a die Frak's Mind Whip kept for you stays kept).
+    socket.on('inspiringSong', () => {
+        let room = tavernPlayer();
+        if (!room) return;
+        let roomCode = socket.roomCode;
+        let run = room.tavernRun, turn = room.turn;
+        if (!isTurnPlayable(roomCode) || !isMyTurn() || Date.now() < turn.busyUntil) return;
+        if (!run.song || run.song !== turn.key || turn.rollCount !== 1) return;
+        let rerolled = Rules.rerollActive(turn, rollFaceFor(room, turn), turn.mindDieId);
+        if (!rerolled) return;
+        run.song = null;
+        sendMoment(roomCode, 'keepsakeActivated', { id: 'inspiringSong', name: 'Inspiring Song', text: 'The Bard plays. Your first throw, thrown again.', who: 'The Bard' });
+        throwAgain(roomCode, room, turn, rerolled);
+        emitState(roomCode);
+    });
+
+    // The Gilded Die (17 Nov): after a throw, pay gold to throw one loose die again (dieId), up to
+    // gildedMax times a fight, each dearer than the last (gildedPrice).
+    socket.on('gildDie', dieId => {
+        let room = tavernPlayer();
+        if (!room || !Number.isInteger(dieId)) return;
+        let roomCode = socket.roomCode;
+        let run = room.tavernRun, turn = room.turn;
+        if (!hasKeepsake(room, 'gildedDie') || !isTurnPlayable(roomCode) || !isMyTurn() || Date.now() < turn.busyUntil) return;
+        let uses = gildedUses(run), price = gildedPrice(run);
+        if (uses >= (KEEPSAKE_NUMBERS.gildedMax ?? 3) || run.purse < price) return;
+        let die = turn.dice.find(d => d.id === dieId);
+        let was = die && die.value;
+        let rerolled = Rules.rerollDie(turn, dieId, rollFaceFor(room, turn));
+        if (!rerolled) return;
+        run.purse -= price;
+        run.stats.spent += price;
+        run.encounterKeepsakeUses.gildedDie = uses + 1;
+        run.stats.keepsakesActivated++;
+        sendMoment(roomCode, 'keepsakeActivated', { id: 'gildedDie', name: 'Gilded Die', text: `${price} gold: ${turn.blurActive ? "a hidden die" : `your ${was}`} is thrown again.` });
+        throwAgain(roomCode, room, turn, rerolled);
+        emitState(roomCode);
+    });
+
+    // Drinking, always on your own turn. When exactly, and what it does, depends on the
+    // Thonic; anything not allowed right now changes nothing and the Thonic stays on the shelf.
+    //   healing         before you roll, once you've lost a heart: +1 heart
+    //   clearEye        before you roll, against an opponent with an ability left: it waits and
+    //                   cancels that ability the next time it is used (this fight)
+    //   fizzy           after a roll that left active 1s: those dice roll again
+    //   secondThoughts  after a roll, naming a kept die (dieId): it goes back into play
+    //   steady          any time in your turn: a dust hand this turn scores its dice as they lie
+    socket.on('drinkThonic', (slot, dieId) => {
+        let room = tavernPlayer();
+        if (!room || !Number.isInteger(slot)) return;
+        let roomCode = socket.roomCode;
+        let run = room.tavernRun;
+        let thonicId = run.shelf[slot];
+        let thonic = thonicId && THONICS[thonicId];
+        if (!thonic || !thonic.drink) return;
+        if (!isTurnPlayable(roomCode) || !isMyTurn()) return;
+        let turn = room.turn;
+        if (Date.now() < turn.busyUntil) return;
+        let player = room.players[socket.id];
+        let encounter = TAVERN_ENCOUNTERS[run.encounterIndex];
+        let text, rerolled = null;
+
+        if (thonic.elf) {
+            if (run.puffed[thonicId]) return; // once a fight
+            let puff = elfPuff(room, turn, thonicId);
+            if (!puff) return;
+            ({ text, rerolled } = puff);
+            run.puffed[thonicId] = true;
+            run.puffs[thonicId] = (run.puffs[thonicId] || ELF_BAR_PUFFS) - 1;
+            if (run.puffs[thonicId] <= 0) { run.shelf.splice(slot, 1); delete run.puffs[thonicId]; }
+            sendMoment(roomCode, 'keepsakeActivated', { id: thonicId, name: thonic.name.replace(/ Elf Bar$/, ''), text, who: 'Elf Bar' });
+            if (rerolled) throwAgain(roomCode, room, turn, rerolled);
+            else emitTurn(roomCode, { type: 'toggle' });
+            emitState(roomCode);
+            return;
+        }
+
+        if (thonicId === 'healing') {
+            if (turn.hasRolled || player.lives >= room.startingLives) return;
+            player.lives += 1;
+            text = '+1 heart';
+        } else if (thonicId === 'clearEye') {
+            if (turn.hasRolled || run.clearEyeArmed || !encounterAbilityLeft(room)) return;
+            run.clearEyeArmed = true;
+            text = `${encounter.name}'s next ${Rules.ABILITY_NAMES[encounter.ability]} will be cancelled`;
+        } else if (thonicId === 'fizzy') {
+            rerolled = Rules.rerollOnes(turn, rollFaceFor(room, turn));
+            if (!rerolled) return;
+            text = 'Your 1s roll again';
+        } else if (thonicId === 'secondThoughts') {
+            if (turn.maxThrows && turn.rollCount >= turn.maxThrows) return; // (Becalmed: no throw left)
+            if (!Number.isInteger(dieId) || !Rules.putBackDie(turn, dieId)) return;
+            text = 'A kept die goes back in play';
+        } else if (thonicId === 'steady') {
+            if (turn.steady) return;
+            turn.steady = true;
+            text = 'A dust hand this turn scores as it lies';
+        } else {
+            return;
+        }
+
+        // The Bottomless Flask: the first Thonic drunk each fight may stay on the shelf.
+        let refilled = false;
+        if (hasKeepsake(room, 'bottomlessFlask') && !run.encounterKeepsakeUses.bottomlessFlask) {
+            run.encounterKeepsakeUses.bottomlessFlask = true;
+            refilled = crypto.randomInt(0, 100) < (KEEPSAKE_NUMBERS.flaskChance ?? 50);
+        }
+        if (!refilled) run.shelf.splice(slot, 1);
+        run.stats.thonicsDrunk++;
+        sendMoment(roomCode, 'thonicUsed', { id: thonicId, name: thonic.name, text });
+        if (refilled) emitKeepsakeActivated(roomCode, room, 'bottomlessFlask', `Your ${thonic.name} fills up again.`);
+        if (rerolled) {
+            throwAgain(roomCode, room, turn, rerolled);
+        } else {
+            emitTurn(roomCode, { type: 'toggle' });
+        }
+        emitState(roomCode);
     });
 
     socket.on('chooseKeepsake', (keepsakeId) => {
@@ -804,94 +3946,57 @@ io.on('connection', (socket) => {
 
         room.tavernRun.keepsakes.push(selected);
         resetTavernEncounter(socket.roomCode, true);
-        io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
+        emitState(socket.roomCode);
         io.to(socket.roomCode).emit('displayMessage', { text: selected.name, color: "#ffd54f" });
-    });
-
-    socket.on('endTurn', (turnData) => {
-        let room = rooms[socket.roomCode];
-        if (room && isAuthorized(socket, socket.roomCode)) {
-            let currentId = room.roundPlayers[room.currentTurnIndex];
-            
-            room.players[currentId].score = turnData.score;
-            room.players[currentId].busted = turnData.busted;
-
-            if (room.mode === 'tavern-crawl') {
-                let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
-                if (canUseTavernAbility(room, encounter, 'deadeye24') && currentId === 'BOT_MOLAR' && room.players[currentId].lives <= 1 && !turnData.busted && turnData.score >= 16 && turnData.score < 24) {
-                    room.players[currentId].score = 24;
-                    markAbilityUsed(room, 'deadeye24');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman plays his last card. Perfect 24.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'The Hangman plays The Ace of Spades.', color: "#ffd54f" });
-                }
-
-                if (canUseTavernAbility(room, encounter, 'smoothTalk') && currentId !== 'BOT_MOLAR' && !turnData.busted && turnData.score > 0) {
-                    let reducedScore = Math.max(0, turnData.score - 3);
-                    room.players[currentId].score = reducedScore;
-                    markAbilityUsed(room, 'smoothTalk');
-                    io.to(socket.roomCode).emit('signatureMove', { name: encounter.name, ability: 'Smooth Talk', text: 'Jaguar smiles and worsens your finished hand.' });
-                    io.to(socket.roomCode).emit('displayMessage', { text: 'Jaguar smiles. Smooth Talk knocks 3 from your finished hand.', color: "#ffb74d" });
-                }
-
-                if (currentId !== 'BOT_MOLAR' && room.players[currentId].score === 24 && room.tavernRun.stats) {
-                    room.tavernRun.stats.perfect24s++;
-                }
-            }
-            
-            let tavernEnemyPerfect = room.mode === 'tavern-crawl' && currentId === 'BOT_MOLAR';
-            if (!tavernEnemyPerfect && room.players[currentId].score === 24 && room.players[currentId].lives < room.startingLives) {
-                let restoredLives = (room.mode === 'tavern-crawl' && currentId !== 'BOT_MOLAR' && hasKeepsake(room, 'blessedTankard')) ? 2 : 1;
-                room.players[currentId].lives = Math.min(room.startingLives, room.players[currentId].lives + restoredLives);
-                if (restoredLives > 1) emitKeepsakeActivated(socket.roomCode, room, 'blessedTankard', "Brodor's Sunglasses restore an extra life.");
-                io.to(socket.roomCode).emit('displayMessage', { text: `+${restoredLives} Life Restored!`, color: "#aed581" });
-            }
-
-            room.currentTurnIndex++;
-            
-            while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-                room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-                room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-                room.currentTurnIndex++;
-            }
-
-            if (room.currentTurnIndex >= room.roundPlayers.length) {
-                evaluateRound(socket.roomCode);
-            } else {
-                io.to(socket.roomCode).emit('gameStateUpdate', getRoomState(socket.roomCode));
-            }
-        }
     });
 
     socket.on('disconnect', () => {
         let roomCode = socket.roomCode;
-        if (roomCode && rooms[roomCode]) {
-            let room = rooms[roomCode];
-            if (room.players[socket.id]) {
-                room.players[socket.id].connected = false;
-                
-                if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
-                    room.players[socket.id].busted = true;
-                    room.players[socket.id].score = 0;
-                    room.currentTurnIndex++;
-                    
-                    while(room.roundPlayers[room.currentTurnIndex] && !room.players[room.roundPlayers[room.currentTurnIndex]].connected) {
-                        room.players[room.roundPlayers[room.currentTurnIndex]].busted = true;
-                        room.players[room.roundPlayers[room.currentTurnIndex]].score = 0;
-                        room.currentTurnIndex++;
-                    }
-
-                    if (room.currentTurnIndex >= room.roundPlayers.length) evaluateRound(roomCode);
-                    else io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-                } else {
-                    io.to(roomCode).emit('gameStateUpdate', getRoomState(roomCode));
-                }
+        let room = roomCode && rooms[roomCode];
+        if (!room) return;
+        let player = room.players[socket.id];
+        if (player) {
+            player.connected = false;
+            if (room.roundPlayers[room.currentTurnIndex] === socket.id) {
+                // Their turn: give them a chance to come back before it counts as dust.
+                let token = player.token;
+                setTimeout(() => forfeitIfStillAway(roomCode, room, token), delay(TURN_RECONNECT_GRACE_MS));
             }
-            
-            let anyConnected = Object.values(room.players).some(p => p.connected && p.id !== 'BOT_MOLAR');
-            if (!anyConnected) delete rooms[roomCode];
+            if (room.mode !== 'tavern-crawl') {
+                let token = player.token;
+                setTimeout(() => leaveIfStillAway(roomCode, room, token), delay(AWAY_LEAVE_MS));
+            }
+            emitState(roomCode);
         }
+        scheduleEmptyTableCleanup(roomCode);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => { console.log(`Server is running on port ${PORT}`); });
+function start(port = process.env.PORT || 3000) {
+    return new Promise(resolve => {
+        http.listen(port, () => {
+            let actualPort = http.address().port;
+            console.log(`Server is running on port ${actualPort}`);
+            // The PC's address on the local network changes from time to time, so print
+            // the links to open on a phone connected to the same Wi-Fi.
+            Object.values(os.networkInterfaces()).flat()
+                .filter(net => net && net.family === 'IPv4' && !net.internal && !net.address.startsWith('169.254.'))
+                .forEach(net => console.log(`On your Wi-Fi: http://${net.address}:${actualPort}/next/`));
+            Strategy.warmUp(); // the opponents' best-play tables, quietly in the background
+            resolve(http);
+        });
+    });
+}
+
+if (require.main === module) {
+    // A safety net (17 Nov, before going live): an unexpected error is logged and the server keeps running,
+    // where before it stopped and every table in play ended. (Only when run for real: the tests keep
+    // Node's own handling, so an error there still fails its test.)
+    process.on('uncaughtException', error => console.error('Unexpected error (the server keeps running):', error));
+    process.on('unhandledRejection', error => console.error('Unexpected rejection (the server keeps running):', error));
+    start();
+}
+
+// For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
+const devHooks = {};
+module.exports = { beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

@@ -1,0 +1,231 @@
+// For testing in a browser only, never deployed: the game server on :3002 (or PORT) plus a
+// small control port on :3003 (or CONTROL_PORT, this machine only) that sets up Tavern
+// Crawl situations without playing whole fights. It applies to every Tavern Crawl table.
+//
+//   npm run dev:test-server                  (TAVERN_START_ENCOUNTER=5 starts at Sylvester, 10 at Klarg, 12 at Áéd, etc.)
+//   curl "http://localhost:3003/shop?purse=200"     Thom's cart opens with 200 gold (add
+//        &stock=healing,fizzy,steady to choose what's on it; default: the longest names)
+//   curl "http://localhost:3003/lives?n=1"          the player's hearts
+//   curl "http://localhost:3003/foe?lives=1"        the opponent's lives
+//   curl "http://localhost:3003/opponent-lives?ids=sylvester,vaelin&n=2"   their lives in every fight from now on
+//        (or start the server with OPPONENT_LIVES="sylvester:2,vaelin:2")
+//   curl "http://localhost:3003/surge?id=twin"      a hot tub surge on this fight
+//   curl "http://localhost:3003/shelf?ids=healing,lastGasp"
+//   curl "http://localhost:3003/sea?now=starboard&next=port"   aboard the ship: this round's sea and the forecast
+//   curl "http://localhost:3003/purse?n=150"
+//   curl "http://localhost:3003/fight?n=2"           a fight against opponent 2 (Danhausen), ability ready
+//   curl "http://localhost:3003/won?hearts=2"        the fight is won: the gold summary, then the event
+//   curl "http://localhost:3003/disguise?as=Danhausen"   Martha wears that face this round (fight n=4 first)
+//   curl "http://localhost:3003/invitation"          Martha beaten: the invitation to the Yawning Portal
+//   curl "http://localhost:3003/invitation?boss=brodor"   Brodor beaten: on to the Salty Swallow
+//   curl "http://localhost:3003/keepsakes?ids=loadedDie,potionBelt,loyaltyCard"
+//        (or start the server with START_KEEPSAKES="..." and START_SHELF="healing,healing": every new run gets them)
+//   curl "http://localhost:3003/between?spots=thom,shrine"   between fights, two spots
+//   curl "http://localhost:3003/seed?n=42"           every random draw follows a seed (the same throw each time); /seed alone ends it
+//        (&pickpocket=1 for the thief instead; &stage=stranger for the Hooded Stranger; &stage=shrine|diceDen|hotTub to go straight to a spot; &stage=darren for Darren Snakehands; &stage=bard|kram for the Yawning Portal's Bard and Cult of Kram)
+//
+// Point the dev client at it: GAME_SERVER=http://localhost:3002 (see CLAUDE.md).
+process.env.LEADERBOARD_READONLY = '1';
+const http = require('http');
+const server = require('../server');
+
+const PORT = Number(process.env.PORT) || 3002;
+const CONTROL_PORT = Number(process.env.CONTROL_PORT) || 3003;
+server.start(PORT);
+
+// OPPONENT_LIVES="sylvester:2,vaelin:2" (env): those opponents start every fight on that many lives.
+function setOpponentLives(ids, n, room) {
+    server.TAVERN_ENCOUNTERS.filter(e => ids.includes(e.id)).forEach(e => { e.lives = n; });
+    const bot = room && room.players.BOT_MOLAR;
+    const seated = bot && server.TAVERN_ENCOUNTERS.find(e => e.name === bot.name);
+    if (seated && ids.includes(seated.id)) bot.lives = Math.min(bot.lives, n);
+}
+(process.env.OPPONENT_LIVES || '').split(',').filter(Boolean).forEach(pair => {
+    const [id, n] = pair.split(':');
+    setOpponentLives([id], Number(n));
+});
+
+const tavernTables = () => Object.entries(server.rooms).filter(([, r]) => r.mode === 'tavern-crawl');
+const human = r => Object.values(r.players).find(p => p.id !== 'BOT_MOLAR');
+// Keepsakes by id, with their real names and text (the bosses' drops too).
+const keepsakesOf = ids => ids.map(id => server.TAVERN_KEEPSAKES.find(k => k.id === id)
+    || Object.values(server.BOSS_DROPS).find(k => k.id === id) || { id, name: id, text: '' }).map(k => ({ ...k }));
+
+// START_SHELF="healing,healing,healing" and START_KEEPSAKES="bentCopper,loadedDie" (env): every new
+// Tavern Crawl run starts with them, so a reload (a fresh run) gets them again. Each run once.
+const START_SHELF = (process.env.START_SHELF || '').split(',').filter(Boolean);
+const START_KEEPSAKES = (process.env.START_KEEPSAKES || '').split(',').filter(Boolean);
+// START_AFTER=brodor (or martha, or any opponent such as duke, env): every new run, once kitted, is placed just after beating that
+// boss: the fight's summary, then the invitation on to the next place (as /invitation?boss=...).
+const START_AFTER = process.env.START_AFTER || '';
+// START_PURSE=60 (env, 17 Nov): the purse a new run has once it is set up (after START_AFTER's win).
+const START_PURSE = process.env.START_PURSE ? Number(process.env.START_PURSE) : null;
+// (Applied as the run is made, before it's first shown: server.devHooks.newRun.)
+if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER || START_PURSE != null) server.devHooks.newRun = (code, r) => {
+    if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
+    if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
+    const after = START_AFTER && server.TAVERN_ENCOUNTERS.findIndex(e => e.id === START_AFTER);
+    // A boss: the gold of every fight up to and including theirs, 2 hearts left at each, then the invitation.
+    if (START_AFTER && server.TAVERN_ENCOUNTERS[after].drops) {
+        const G = require('../shared/balance').gold;
+        for (let i = 0; i <= after; i++) r.tavernRun.purse += G.winFirst + G.winStep * i + 2 * G.perHeartLeft;
+        COMMANDS['/invitation'](r, new URLSearchParams({ boss: START_AFTER }), code);
+    }
+    // Any other opponent (START_AFTER=duke): that fight just won, 2 hearts left, with the gold of the
+    // fights before it in the purse; its summary, then the event between fights.
+    else if (START_AFTER) {
+        const G = require('../shared/balance').gold;
+        for (let i = 0; i < after; i++) r.tavernRun.purse += G.winFirst + G.winStep * i + 2 * G.perHeartLeft;
+        // (START_PURSE: what the purse holds once this win is paid, so its summary adds up)
+        if (START_PURSE != null) r.tavernRun.purse = START_PURSE - (G.winFirst + G.winStep * after + 2 * G.perHeartLeft);
+        r.tavernRun.encounterIndex = after;
+        COMMANDS['/won'](r, new URLSearchParams({ hearts: '2' }));
+    }
+    // (Otherwise the fight starts as usual: its entrance, its first round.)
+    else { server.resetTavernEncounter(code, false); }
+    if (START_PURSE != null && !(START_AFTER && !server.TAVERN_ENCOUNTERS[after].drops)) r.tavernRun.purse = START_PURSE;
+};
+
+const COMMANDS = {
+    '/shop': (r, q) => {
+        r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean) };
+        r.tavernRun.purse = Number(q.get('purse') || 200);
+        r.roundPlayers = [];
+    },
+    '/lives': (r, q) => { const p = human(r); if (p) p.lives = Number(q.get('n')); },
+    // The opponent's lives (n=1: the next round you win ends the fight).
+    '/foe': (r, q) => { if (r.players.BOT_MOLAR) r.players.BOT_MOLAR.lives = Number(q.get('lives') || 1); },
+    '/shelf': (r, q) => { r.tavernRun.shelf = (q.get('ids') || '').split(',').filter(Boolean); },
+    // The hot tub's surge on this fight (id: noOnes, twin, lucky, scalding, soggy).
+    '/surge': (r, q) => { r.tavernRun.tubSurge = q.get('id') || 'twin'; },
+    '/purse': (r, q) => { r.tavernRun.purse = Number(q.get('n')); },
+    // Aboard the Salty Swallow: this round's sea and the forecast (calm, starboard, port).
+    '/sea': (r, q) => { r.tavernRun.sea = q.get('now') || 'starboard'; r.tavernRun.nextSea = q.get('next') || 'calm'; },
+    // A fight against opponent n (0 McGrath ... 4 Martha, 5 Sylvester ... 9 Brodor, 10 Klarg ... 13 Jaguar), its ability ready from round 1.
+    '/fight': (r, q, code) => { r.tavernRun.encounterIndex = Number(q.get('n')); r.tavernRun.interlude = null; r.tavernRun.shop = null; server.resetTavernEncounter(code); r.tavernRun.abilityRound = 1; r.tavernRun.abilityUsed = {}; server.beginTavernRound(code, r); },
+    // A fight just won (the current opponent, &hearts=2 left): its gold summary, then the event between fights.
+    '/won': (r, q) => {
+        const run = r.tavernRun, place = run.encounterIndex + 1, left = Number(q.get('hearts') || 2);
+        const enemy = server.TAVERN_ENCOUNTERS[run.encounterIndex], next = server.TAVERN_ENCOUNTERS[place] || enemy;
+        const G = require('../shared/balance').gold;
+        const gold = { win: G.winFirst + G.winStep * (place - 1), hearts: G.perHeartLeft * left, heartsLeft: left, perHeart: G.perHeartLeft };
+        run.stats.heartsSpared = (run.stats.heartsSpared || 0) + left;
+        run.purse += gold.win + gold.hearts;
+        run.encounterIndex = Math.min(place, server.TAVERN_ENCOUNTERS.length - 1);
+        server.startInterlude(r, { defeated: enemy.name, nextEnemy: next.name, place, gold, at: Date.now() });
+        r.roundPlayers = [];
+    },
+    // Martha in a disguise for this round (as=Frak, Danhausen or Duke Morrigan): her mask shows behind the table.
+    '/disguise': (r, q) => { const as = q.get('as') || 'Frak'; const kind = { Frak: 'mind', Danhausen: 'curse', 'Duke Morrigan': 'devil' }[as]; r.tavernRun.roundEffect = { kind, by: 'opponent', ability: { mind: 'mindWhip', curse: 'cursed', devil: 'devil' }[kind], as, landed: true }; },
+    // A boss just beaten (boss=martha, the default, or brodor): their keepsake, to take or leave, and the invitation on.
+    '/invitation': (r, q) => {
+        const boss = server.TAVERN_ENCOUNTERS.findIndex(e => e.id === (q.get('boss') || 'martha'));
+        const run = r.tavernRun, drop = server.BOSS_DROPS[server.TAVERN_ENCOUNTERS[boss].drops];
+        run.encounterIndex = boss + 1;
+        run.keepsakes = run.keepsakes.filter(k => k.id !== drop.id); // (yours to take or leave since 30 Oct)
+        run.refusedDrops = [];
+        run.lastWin = { defeated: server.TAVERN_ENCOUNTERS[boss].name, nextEnemy: server.TAVERN_ENCOUNTERS[boss + 1].name, place: boss + 1, drop, gold: { win: require('../shared/balance').gold.winFirst + require('../shared/balance').gold.winStep * boss, hearts: 2 * require('../shared/balance').gold.perHeartLeft } };
+        run.interlude = server.invitation(r, (human(r) || {}).name || 'Tester');
+        r.roundPlayers = [];
+    },
+    // Opponents' lives for every fight from now on, on this server only (ids as in TAVERN_ENCOUNTERS):
+    // /opponent-lives?ids=sylvester,vaelin&n=2. One already seated drops to n too.
+    '/opponent-lives': (r, q) => setOpponentLives((q.get('ids') || '').split(',').filter(Boolean), Number(q.get('n') || 2), r),
+    // The keepsakes you carry (ids: bentCopper, luckySeat, velvetCushion, loadedDie, potionBelt, loyaltyCard, marthasMask, brodorsSunglasses).
+    '/keepsakes': (r, q) => { r.tavernRun.keepsakes = keepsakesOf((q.get('ids') || '').split(',').filter(Boolean)); },
+    // The Bard's song for this fight (?song=inspiringSong|cuttingWords), as if bought before it.
+    '/song': (r, q) => {
+        const song = q.get('song') || 'inspiringSong';
+        r.tavernRun.song = song === 'inspiringSong' ? 'ready' : null;
+        r.tavernRun.cuttingWords = song === 'cuttingWords';
+    },
+    // Sworn to Kram: no 1s for your dice this fight (?more=n fights after it).
+    '/kram': (r, q) => { r.tavernRun.kram = true; r.tavernRun.kramFights = Number(q.get('more') || 0); },
+    '/between': (r, q) => {
+        const run = r.tavernRun;
+        const spots = (q.get('spots') || 'thom,diceDen').split(',');
+        const stage = q.get('stage');
+        run.lastWin = run.lastWin || { defeated: 'The Molar', nextEnemy: 'Klarg', gold: { win: 10, hearts: 6 } };
+        if (q.get('purse')) run.purse = Number(q.get('purse'));
+        if (q.get('pickpocket')) run.interlude = { stage: 'pickpocket', steal: Math.max(1, Math.floor(run.purse / 4)), catchOn: 4 };
+        else if (stage === 'shrine' || stage === 'hotTub') run.interlude = { stage };
+        else if (stage === 'darren') run.interlude = { stage, smashOn: 2, giftOn: 4 };
+        else if (stage === 'kram') run.interlude = { stage, fights: 2 };
+        else if (stage === 'bard') run.interlude = { stage, songs: server.BARD_SONGS, price: 8 };
+        else if (stage === 'yvesil') run.interlude = { stage, price: 8 };
+        else if (stage === 'jorvash') run.interlude = { stage, drinks: server.REFRESHMENTS, price: 8 };
+        else if (stage === 'diceDen') run.interlude = { stage, bets: [50, 100], bet: null, throws: [] };
+        else if (stage === 'stranger') run.interlude = server.strangerOffer(r);
+        else run.interlude = { stage: 'choose', spots };
+        run.shop = null;
+        r.roundPlayers = [];
+    }
+};
+
+// /seed?n=42: from now on every random draw on the server (dice, throws, abilities) follows that
+// seed, so the same steps give the same throw (before/after screenshots). /seed alone: random again.
+const crypto = require('crypto');
+const realRandomInt = crypto.randomInt;
+// /faces?f=2,4,5,5,5,0: the next dice thrown land on these faces, whoever throws, at any table (0: at random).
+function pinFaces(faces) {
+    const before = crypto.randomInt;
+    crypto.randomInt = (a, b, ...rest) => {
+        if (a !== 1 || b !== 7 || !faces.length) return before(a, b, ...rest);
+        const face = faces.shift();
+        if (!faces.length) crypto.randomInt = before;
+        return face || before(a, b, ...rest);
+    };
+}
+// NATURAL_FIRST=1 (env, 20 Nov): your first throw of every round in a Tavern Crawl lands 2, 4, 6, 6, 6, 6, to see the
+// celebration logo; opponents and later throws as usual. (The faces are drawn after the throw is counted: rollCount 1.)
+if (process.env.NATURAL_FIRST) {
+    const NATURAL = [2, 4, 6, 6, 6, 6];
+    let drawn = 0, lastKey = null;
+    const plain = crypto.randomInt;
+    crypto.randomInt = (a, b, ...rest) => {
+        if (a === 1 && b === 7) {
+            const room = Object.values(server.rooms).find(r => r.mode === 'tavern-crawl' && r.turn && r.turn.playerId !== 'BOT_MOLAR' && r.turn.rollCount === 1 && !r.turn.hasRolled);
+            if (room) {
+                if (room.turn.key !== lastKey) { lastKey = room.turn.key; drawn = 0; }
+                if (drawn < NATURAL.length) return NATURAL[drawn++];
+            }
+        }
+        return plain(a, b, ...rest);
+    };
+}
+function seedRandom(seed) {
+    if (seed === null) { crypto.randomInt = realRandomInt; return; }
+    let s = Number(seed) >>> 0;
+    const next = () => { // mulberry32
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    crypto.randomInt = (min, max) => (max === undefined ? Math.floor(next() * min) : min + Math.floor(next() * (max - min)));
+}
+
+http.createServer((req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (url.pathname === '/seed') {
+        seedRandom(url.searchParams.get('n'));
+        res.end(`ok: seed ${url.searchParams.get('n') ?? 'off'}\n`);
+        return;
+    }
+    if (url.pathname === '/faces') {
+        pinFaces((url.searchParams.get('f') || '').split(',').filter(Boolean).map(Number));
+        res.end('ok: faces pinned\n');
+        return;
+    }
+    const command = COMMANDS[url.pathname];
+    if (!command) {
+        res.statusCode = 404;
+        res.end(`Commands: ${Object.keys(COMMANDS).join(', ')}\n`);
+        return;
+    }
+    const tables = tavernTables();
+    tables.forEach(([code, r]) => { command(r, url.searchParams, code); server.emitState(code); });
+    res.end(`ok: ${tables.length} Tavern Crawl table(s)\n`);
+}).listen(CONTROL_PORT, '127.0.0.1', () => console.log(`Test controls on http://localhost:${CONTROL_PORT}`));

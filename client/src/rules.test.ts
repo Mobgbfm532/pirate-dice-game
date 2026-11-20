@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest';
+import { assignSlots, dirtyTwenty, onePerfect4Away, perfectHand, type Die, type DieStatus } from './rules';
+
+const die = (id: number, value: number, status: DieStatus = 'permanentlyLocked'): Die => ({ id, value, status });
+
+describe('assignSlots', () => {
+    it('puts the first 2 and 4 in the required slots', () => {
+        const slots = assignSlots([die(0, 6), die(1, 2), die(2, 4), die(3, 5)], new Map([[0, 1], [1, 2], [2, 3], [3, 4]]));
+        expect(slots.get(1)).toBe(0);
+        expect(slots.get(2)).toBe(1);
+        expect(slots.get(0)).toBe(2);
+        expect(slots.get(3)).toBe(3);
+    });
+
+    it('never moves a die that is already down when another is locked', () => {
+        const order = new Map([[3, 1], [5, 2]]);
+        const before = assignSlots([die(3, 6), die(5, 5), die(1, 1, 'active')], order);
+
+        // Lock a lower die later, and a second 2 with a lower id than an earlier 2.
+        order.set(1, 3);
+        const after = assignSlots([die(3, 6), die(5, 5), die(1, 1, 'lockedThisTurn')], order);
+        expect(after.get(3)).toBe(before.get(3));
+        expect(after.get(5)).toBe(before.get(5));
+        expect(after.get(1)).toBe(4);
+    });
+
+    it('keeps the earlier 2 in the required slot when a later 2 has a lower id', () => {
+        const order = new Map([[4, 1], [0, 2]]);
+        const slots = assignSlots([die(0, 2, 'lockedThisTurn'), die(4, 2)], order);
+        expect(slots.get(4)).toBe(0);
+        expect(slots.get(0)).toBe(2);
+    });
+
+    it('sends hidden dice to scoring slots', () => {
+        const slots = assignSlots([{ id: 0, value: 0, status: 'lockedThisTurn', hidden: true }], new Map([[0, 1]]));
+        expect(slots.get(0)).toBe(2);
+    });
+
+    it('spreads six hidden dice over all six slots, the fifth and sixth into the 2 and 4 slots', () => {
+        const hidden = (id: number): Die => ({ id, value: 0, status: 'permanentlyLocked', hidden: true });
+        const order = new Map([0, 1, 2, 3, 4, 5].map(id => [id, id + 1] as [number, number]));
+        const five = assignSlots([0, 1, 2, 3, 4].map(hidden), order);
+        const six = assignSlots([0, 1, 2, 3, 4, 5].map(hidden), order);
+        expect([0, 1, 2, 3, 4].map(id => five.get(id))).toEqual([2, 3, 4, 5, 0]);
+        expect([0, 1, 2, 3, 4, 5].map(id => six.get(id))).toEqual([2, 3, 4, 5, 0, 1]);
+    });
+
+    it('uses the 4 slot for a fifth die of a hand with a 2 and no 4 (dust)', () => {
+        const order = new Map([0, 1, 2, 3, 4, 5].map(id => [id, id + 1] as [number, number]));
+        const slots = assignSlots([die(0, 2), die(1, 6), die(2, 6), die(3, 5), die(4, 5), die(5, 1)], order);
+        expect(slots.get(0)).toBe(0);
+        expect(slots.get(5)).toBe(1);
+        expect([1, 2, 3, 4].map(id => slots.get(id))).toEqual([2, 3, 4, 5]);
+    });
+});
+
+describe('perfectHand', () => {
+    it('celebrates a 24, but not in a cursed round, where it is the worst hand', () => {
+        expect(perfectHand({ busted: false, score: 24 }, false)).toBe('perfect24');
+        expect(perfectHand({ busted: false, score: 24 }, true)).toBe(null);
+    });
+    it('celebrates four 1s with the 2 and 4 (a score of 4) only in a cursed round', () => {
+        expect(perfectHand({ busted: false, score: 4 }, true)).toBe('perfect4');
+        expect(perfectHand({ busted: false, score: 4 }, false)).toBe(null);
+    });
+    it('never celebrates dust or an ordinary hand', () => {
+        expect(perfectHand({ busted: true, score: 24 }, false)).toBe(null);
+        expect(perfectHand({ busted: true, score: 4 }, true)).toBe(null);
+        expect(perfectHand({ busted: false, score: 18 }, false)).toBe(null);
+        expect(perfectHand({ busted: false, score: 9 }, true)).toBe(null);
+    });
+});
+
+describe('dirtyTwenty', () => {
+    it('is a finished 20 that counts, and nothing else', () => {
+        expect(dirtyTwenty({ busted: false, score: 20 })).toBe(true);
+        expect(dirtyTwenty({ busted: false, score: 19 })).toBe(false);
+        expect(dirtyTwenty({ busted: false, score: 21 })).toBe(false);
+        expect(dirtyTwenty({ busted: true, score: 20 })).toBe(false);
+    });
+});
+
+describe('onePerfect4Away', () => {
+    const dice = (kept: number[], active = 1): Die[] => [
+        ...kept.map((value, id) => ({ id, value, status: 'permanentlyLocked' as DieStatus })),
+        ...Array.from({ length: active }, (_, i) => ({ id: kept.length + i, value: 3, status: 'active' as DieStatus }))
+    ];
+    it('is the 2, the 4 and three 1s kept with one die left', () => {
+        expect(onePerfect4Away(dice([2, 4, 1, 1, 1]))).toBe(true);
+        expect(onePerfect4Away(dice([1, 1, 4, 2, 1]))).toBe(true);
+    });
+    it('is not anything else', () => {
+        expect(onePerfect4Away(dice([2, 4, 1, 1, 2]))).toBe(false); // a 2 among the scoring dice
+        expect(onePerfect4Away(dice([2, 1, 1, 1, 1]))).toBe(false); // no 4
+        expect(onePerfect4Away(dice([2, 4, 1, 1], 2))).toBe(false); // two dice left
+    });
+});

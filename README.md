@@ -1,0 +1,91 @@
+# 2, 4, 24
+
+A multiplayer tavern dice game. Roll six dice and lock at least one after every roll.
+You must end with a **2** and a **4** locked. The other four dice are your score, so
+four 6s make a perfect **24**. Missing the 2 or the 4 is **dust**, and the lowest score
+each round loses a life. Keeping your last die waits for End Turn, so a die kept this throw
+can still go back.
+
+## Running it
+
+```bash
+npm install
+npm start
+```
+
+Then open http://localhost:3000.
+
+## 3D table prototype (`/next`)
+
+A new 3D client lives in `client/` (Vite + React Three Fiber, physics with cannon-es).
+It talks to the same server as the classic page, so both can be played side by side.
+
+```bash
+npm run build:client
+npm start
+```
+
+Then open http://localhost:3000/next/. While working on the client, run `npm start` in one
+terminal and `npm run dev:client` in another for hot reload at http://localhost:5173/next/.
+
+Rolls are simulated ahead of time and played back. The server has already chosen each
+value, so when a simulated die stops, its faces are relabelled so the server's value is on
+top (`client/src/physics.ts`). Client tests: `npm --prefix client test`.
+
+Multiplayer: start a table with any code; the waiting screen has a **Share invite link**
+button (`/next/?table=CODE`). Each tab remembers its seat, so a refresh or a phone waking
+up rejoins the table. The server keeps an empty table for 2 minutes and gives the player
+whose turn it is 30 seconds to reconnect. To point the dev server at a game server other
+than :3000, set `GAME_SERVER` (e.g. `GAME_SERVER=http://localhost:3002 npm run dev:client`).
+
+Art: originals are in `art/`; `npm --prefix client run art` regenerates the game files in
+`client/public/art` (see `docs/art-direction.md`).
+
+## Table codes
+
+| Code | Mode |
+|---|---|
+| blank or any code | Classic multiplayer. Share the code with friends. |
+| `JUGS` | Classic multiplayer with a league table: every finished game is counted by player name, games won and played. |
+| `TAVERN` | Tavern Crawl: fifteen fights across three places (the Ghoul and Gourd, the Yawning Portal, then the Salty Swallow), Thonics, events between fights, keepsakes, gold to spend (prices rise as you buy) and a leaderboard by points. The run saves itself as it goes: leave and Continue later, or come back after a dropped connection or a server restart. |
+
+## Project layout
+
+| Path | What it is |
+|---|---|
+| `server.js` | Node server (Express + Socket.IO). Owns rooms, turns, dice rolls, the bot and scoring. |
+| `shared/rules.js` | The game rules as pure functions, used by both the server and the browser. |
+| `shared/strategy.js` | Server only: best play for Tavern Crawl opponents from the Yawning Portal on. |
+| `shared/balance.js` | The Tavern Crawl's numbers: hearts, opponents' lives, gold, prices, events. |
+| `db.js` | What lasts between restarts: the leaderboard, who each player has met, the league. In the Neon Postgres database with `DATABASE_URL`, else in JSON files. |
+| `public/` | The classic page: `index.html`, art, audio, service worker, app manifest. |
+| `client/` | The 3D table, served at `/next` once built. |
+| `test/` | `rules.test.js`, `strategy.test.js` and `server.test.js` (real server driven by socket clients); `dev-server.js` sets up Tavern Crawl situations for browser checks (`npm run dev:test-server`). |
+| `balance/` | The balance simulator, its experiments and findings (`balance/README.md`). |
+| `art/`, `docs/` | Original AI art and the art direction (`docs/art-direction.md`). |
+| `leaderboard.json`, `met.json`, `league.json` | Where those are kept without a database (not in git). |
+
+## How a turn works
+
+The server is the only place dice are rolled or scored. A browser can only ask to
+`rollDice`, `toggleDie` or `endTurn`. The server checks it's that player's turn,
+applies the rules from `shared/rules.js`, and sends everyone the same `turnState` /
+`diceRolled` update. The bot opponents also run on the server.
+
+## Tests
+
+```bash
+npm test
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | Port to listen on (default 3000) |
+| `GAME_TIME_SCALE` | Multiplies all server delays, e.g. `0.01` in tests |
+| `DATABASE_URL` | The Neon Postgres link. Without it the leaderboard, who has met whom and the league live in files |
+| `LEADERBOARD_READONLY` | Set to anything to stop writing those files and reading `.env.local` (local testing) |
+| `TAVERN_START_ENCOUNTER` | Start Tavern Crawl runs at a later opponent, for testing (1 = Frak … 5 = Sylvester … 10 = Klarg … 12 = Áéd … 14 = Jaguar) |
+| `GAME_SERVER` | Game server the client's dev server proxies to (default `http://localhost:3000`) |
+| `SAVE_SECRET` | Seals saved Tavern Crawl runs (each crawl saves itself). Set it in production, or a server restart loses every run in play |

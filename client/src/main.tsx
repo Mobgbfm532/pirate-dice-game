@@ -1,0 +1,53 @@
+import { StrictMode, useSyncExternalStore } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Canvas } from '@react-three/fiber';
+import { TableScene } from './TableScene';
+import { Hud } from './Hud';
+import { Backdrop } from './Backdrop';
+import { lookNext } from './look';
+import { renderDpr } from './tuning';
+import { actions, preview, store, table, tableCover } from './game';
+import { simulateRoll, throwOnce, throwFeel } from './physics';
+import { renderCorkPop, renderImpacts } from './sounds';
+import './styles.css';
+
+// Development only (left out of production builds): lets test scripts drive the game.
+if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = { actions, preview, store, table, simulateRoll, throwOnce, throwFeel, renderImpacts, renderCorkPop };
+
+// The loading screen in index.html goes once the table can be drawn.
+function hideLoadingScreen() {
+    const boot = document.getElementById('boot');
+    if (!boot) return;
+    requestAnimationFrame(() => boot.classList.add('gone'));
+    setTimeout(() => boot.remove(), 700);
+}
+
+function App() {
+    // (The intro film covers the table, and so does an ability's painting on its stage: no need to draw it underneath.)
+    const filmPaused = useSyncExternalStore(store.subscribe, () => store.get().filmPause);
+    const covered = useSyncExternalStore(tableCover.subscribe, tableCover.get);
+    const paused = filmPaused || covered;
+    return (
+        <>
+            <Backdrop />
+            <Canvas
+                frameloop={paused ? 'never' : 'always'}
+                shadows={lookNext ? 'soft' : true}
+                dpr={lookNext ? renderDpr() : [1, 2]}
+                camera={{ fov: 40, near: 0.1, far: 80, position: [0, 10, 8] }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ position: 'fixed', inset: 0, zIndex: 1, touchAction: 'none' }}
+                onCreated={hideLoadingScreen}
+            >
+                <TableScene />
+            </Canvas>
+            <Hud />
+        </>
+    );
+}
+
+createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+        <App />
+    </StrictMode>
+);

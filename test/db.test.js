@@ -1,0 +1,54 @@
+// The database side of db.js (the leaderboard and who has met whom), on pg-mem: an in-memory
+// stand-in for Postgres, so the SQL is checked without a real database.
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { newDb } = require('pg-mem');
+const { postgresStore } = require('../db');
+
+function freshStore() {
+    const { Pool } = newDb().adapters.createPg();
+    return postgresStore('postgres://test@localhost/game', Pool);
+}
+
+test('the leaderboard keeps each name\'s best run, highest first', async () => {
+    const store = freshStore();
+    await store.ready;
+    await store.saveLeaderboard(null, { name: 'Ann', points: 300, gold: 20 });
+    await store.saveLeaderboard(null, { name: 'Bo', points: 500, gold: 5 });
+    await store.saveLeaderboard(null, { name: 'Ann', points: 200, gold: 90 }); // worse: ignored
+    await store.saveLeaderboard(null, { name: 'Bo', points: 650, gold: 7 });  // better: replaces
+    assert.deepEqual(await store.loadLeaderboard(), [
+        { name: 'Bo', points: 650, gold: 7 },
+        { name: 'Ann', points: 300, gold: 20 }
+    ]);
+});
+
+test('who a player has met is kept by name, whatever its case or spaces, once each', async () => {
+    const store = freshStore();
+    await store.addMet('Ann', 'molar');
+    await store.addMet(' ann ', 'thom');
+    await store.addMet('ANN', 'molar');
+    await store.addMet('Bo', 'frak');
+    assert.deepEqual((await store.loadMet('Ann')).sort(), ['molar', 'thom']);
+    assert.deepEqual(await store.loadMet('Bo'), ['frak']);
+    assert.deepEqual(await store.loadMet('Cy'), []);
+});
+
+test('a league counts games and wins per table, by name whatever its case', async () => {
+    const store = freshStore();
+    await store.addLeagueResult('JUGS', ['Ann', 'Bo'], 'Ann');
+    await store.addLeagueResult('JUGS', ['ann ', 'Bo', 'Cy'], 'Bo');
+    await store.addLeagueResult('JUGS', ['ANN', 'Bo'], null); // no one survived
+    await store.addLeagueResult('OTHER', ['Ann', 'Bo'], 'Ann');
+    const rows = (await store.loadLeague('JUGS')).sort((a, b) => a.name.localeCompare(b.name));
+    assert.deepEqual(rows.map(r => [r.name.trim().toLowerCase(), r.wins, r.games]), [['ann', 1, 3], ['bo', 1, 3], ['cy', 0, 1]]);
+    assert.equal((await store.loadLeague('NONE')).length, 0);
+});
+
+test('a used save is kept once, so a restart still knows it (20 Nov)', async () => {
+    const store = freshStore();
+    await store.addUsedSave('a1');
+    await store.addUsedSave('b2');
+    await store.addUsedSave('a1');
+    assert.deepEqual((await store.loadUsedSaves()).sort(), ['a1', 'b2']);
+});

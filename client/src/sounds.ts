@@ -1,0 +1,932 @@
+import { paceSeconds, type Pace } from './physics';
+// The game's existing sound effects, served by the game server from public/.
+function load(file: string, volume: number, loop = false) {
+    const audio = new Audio(`/${encodeURI(file)}`);
+    audio.volume = volume;
+    audio.loop = loop;
+    // (16 Nov, a faster first load: nothing is downloaded with the page. All fifty effects, 3.2 MB, used
+    // to come down behind the start screen; now they're fetched once sound starts, the ones a first
+    // throw needs first: decodeClips. Music and scene loops stream as they start playing.)
+    audio.preload = 'none';
+    return audio;
+}
+
+// Every opponent's ability clip (5 Nov, the user: a little louder; they were 0.75).
+const ABILITY_VOLUME = 0.95;
+
+const sfx = {
+    click: load('click.mp3', 0.6),
+    bust: load('bust.mp3', 0.6),
+    aww: load('Aww.mp3', 0.6),
+    yay: load('yay.mp3', 0.6),
+    ohwell: load('ohwell.mp3', 0.6),
+    swoosh: load('Swoosh.mp3', 0.6),
+    devil: load('DevilsTeets.wav', 0.8), // (0.6 until 5 Nov, the user: a little louder)
+    winner: load('Winner.mp3', 0.75),
+    reachAround: load('Reach Around.mp3', ABILITY_VOLUME),
+    // The ship's (the user's, 9 Nov): Rokr's Starry Form (it was Constellation.mp3) and the Hangman's Penitent Stare;
+    // Yvesil's omen as it's told, good (Weal) or bad (Woe).
+    starryForm: load('StarryForm.mp3', ABILITY_VOLUME),
+    penitentStare: load('PenitentStare.mp3', ABILITY_VOLUME),
+    // Áéd's Unlimited Power (the user's, 13 Nov): one clip for each of his four tricks.
+    unlimitedPower: load('UnlimitedPower.mp3', ABILITY_VOLUME),
+    yvesilWeal: load('YvesilWeal.mp3', 1), // (full since 18 Nov: at 0.8 under her theme the omen was lost)
+    yvesilWoe: load('YvesilWoe.mp3', 1),
+    gunshot: load('Gunshot.mp3', 1),
+    // The user's ability sounds (26 Oct).
+    mindWhip: load('MindWhip.mp3', ABILITY_VOLUME),
+    cursed: load('YouAreCursed.mp3', ABILITY_VOLUME),
+    sympathy: load('SympathyForTheDevil.mp3', ABILITY_VOLUME),
+    marthaPuff: load('MarthaPuff.mp3', 0.75), // (unused since 4 Nov: Disguises has the user's MarthaAbility.mp3)
+    marthaAbility: load('MarthaAbility.mp3', ABILITY_VOLUME),
+    // An Elf Bar's puff (the user's, 4 Nov; it borrowed Martha's puff before).
+    vape: load('Vape.mp3', 0.75),
+    marthaSwitch: load('MarthaSwitch.mp3', ABILITY_VOLUME),
+    // Between fights (the user's, 27 Oct): what a soak or a candle brings.
+    tubGood: load('HotTubGood.mp3', 0.75),
+    tubBad: load('HotTubBad.mp3', 0.75),
+    ladyChoice: load('LadyChoice.mp3', 0.75),
+    // 28 Oct: the slow-motion last throw, a fight's payout, the Shield, a Thonic drunk.
+    gasp: load('Gasp.wav', 0.75),
+    coinPayout: load('CoinWinning.mp3', 0.8), // the user's Coin Winning clip (it was CoinPayout.mp3)
+    shield: load('Shield.mp3', 0.75),
+    drinkPotion: load('DrinkPotion.mp3', 0.75),
+    // Buying: a Thonic, and a keepsake from Thom's back shelf or the Stranger (the user's, 28 Oct).
+    potionSelect: load('PotionSelector.mp3', 0.9),
+    itemPickup: load('ItemPickup.mp3', 0.8),
+    // The user's, 4 Nov: a fight's summary tallies its gold (once for the win, once a heart left),
+    // a Tavern Crawl fight (and a whole crawl) won, a multiplayer table won.
+    coinTally: load('CoinTally.mp3', 0.8),
+    // The user's, 4 Nov: a slow-motion last throw lands (with its yay or oh well), and the thief gets away.
+    whoa: load('Whoa.mp3', 0.8),
+    thiefLaugh: load('ThiefLaugh.mp3', 0.8),
+    thiefCaught: load('ThiefCaught.wav', 0.8), // the thief is spotted (the user's clip, 20 Nov; it was the yay)
+    tavernVictory: load('TavernCrawlVictory.mp3', 0.8),
+    // The fanfare as a whole crawl is won, on the run-over screen (the user's Victory.mp3, 18 Nov; a fight's win keeps tavernVictory).
+    crawlVictory: load('Victory.mp3', 0.8),
+    multiplayerVictory: load('MultiplayerVictory.mp3', 0.8),
+    // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
+    bardTune: load('BardTune.mp3', 0.8),
+    // The Yawning Portal's abilities (the user's, 3 Nov).
+    inkfire: load('InkfireBrand.mp3', ABILITY_VOLUME),
+    flourish: load('Flourish.mp3', ABILITY_VOLUME),
+    smite: load('DivineSmite.mp3', ABILITY_VOLUME),
+    // Astral Flood (17 Nov, the user's): their new clip with its banner (`AstralFloodBanner.mp3`, 1.3 s; the
+    // original is art/audio/Ability Astral Flood.mp3), and the old one with the wave pouring over the screen.
+    astralFlood: load('AstralFloodBanner.mp3', ABILITY_VOLUME),
+    astralFloodWave: load('AstralFlood.mp3', ABILITY_VOLUME),
+    // A heart breaking, and one won back by a perfect hand (the user's, 5 Nov; Hearts in Hud, with the picture).
+    loseHeart: load('LoseHeart.mp3', 0.8),
+    healthPickup: load('Perfect24Health.mp3', 0.8),
+    // Sylvester's Back of the Head (the user's, 5 Nov; it was the swoosh).
+    sylvesterPunch: load('SylvesterPunch.mp3', ABILITY_VOLUME),
+    // Heavy seas: a rogue wave takes a die over the rail (the user's, 10 Nov; it was the synthesized swell).
+    rogueWave: load('RogueWave.mp3', 1), // (a quiet recording)
+    // A fog bank rolls in, or holds (the user's, 10 Nov; a loud recording, 2.4 s).
+    fogHorn: load('FogHorn.mp3', 0.6),
+    // The sea die's dial (the user's, 13 Nov): the needle ticks past each sector line, and clunks as it lands on its face.
+    dialNeedle: load('DialNeedle.mp3', 0.45),
+    dialClunk: load('DialClunk.mp3', 0.8),
+    // Jaguar's (the user's, 17 Nov): Smooth Talker's two (he drinks your Thonic; he talks points off your
+    // hand), the Cloak (brought up 8 dB to the others' level: a quiet recording) and All In.
+    smoothTalkThonic: load('SmoothTalkThonic.mp3', ABILITY_VOLUME),
+    smoothTalkMinus: load('SmoothTalkMinus.mp3', ABILITY_VOLUME),
+    theCloak: load('TheCloak.mp3', ABILITY_VOLUME),
+    allIn: load('AllIn.mp3', ABILITY_VOLUME)
+};
+// Where each clip's sound really starts (s): these open with silence, which came in late against
+// the picture (the user, 28 Oct: the Devil's two lagged; measured from the decoded files).
+const LEAD: Partial<Record<keyof typeof sfx, number>> = { starryForm: 0.24, yvesilWeal: 0.16, devil: 0.66, sympathy: 0.88, marthaPuff: 0.22, coinPayout: 0.11, potionSelect: 0.07, itemPickup: 0.05, whoa: 0.33, thiefLaugh: 0.1, healthPickup: 0.1, dialNeedle: 0.028, dialClunk: 0.06 };
+// The clips decoded for Web Audio once it's running (see audio()): a buffer starts the moment it's
+// asked to, where an <audio> element can lag noticeably on phones.
+const buffers = new Map<keyof typeof sfx, AudioBuffer>();
+let decoding = false;
+function decodeClips(ctx: AudioContext) {
+    if (decoding) return;
+    decoding = true;
+    // The sounds any table's first throws can need, at once and together; then the rest two at a time,
+    // so they don't crowd out the game's own first messages and pictures on a slow connection. (A clip
+    // asked for before it's decoded plays from its <audio> element, as it always could.)
+    const decode = (name: keyof typeof sfx) => fetch(sfx[name].src).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { buffers.set(name, buf); }).catch(() => {});
+    const first: (keyof typeof sfx)[] = ['click', 'bust', 'aww', 'yay', 'ohwell', 'swoosh', 'gasp', 'devil', 'loseHeart', 'healthPickup', 'winner'];
+    const rest = (Object.keys(sfx) as (keyof typeof sfx)[]).filter(n => !first.includes(n));
+    const worker = async () => { for (let n = rest.shift(); n; n = rest.shift()) await decode(n); };
+    void Promise.all(first.map(decode)).then(() => { void worker(); void worker(); });
+}
+
+const MUSIC_VOLUME = 0.4, AMBIENCE_VOLUME = 0.5;
+const music = load('BackgroundMusic.mp3', MUSIC_VOLUME, true);
+const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
+// The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
+// scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
+// (The Lady's music a little louder than the hot tub's bubbling: the user, 28 Oct.)
+const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.41, kram: 0.8, yvesil: 1, squall: 0.22 }; // (the wind is a loud recording: about the music's level at 0.22) // (Yvesil's theme is a quiet recording)
+// (Thom's cart since 28 Oct: the user's loop; the Bard's lute and the Cult of Kram's chant too.)
+const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('BardAmbient.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true), squall: load('Wind.mp3', 0, true) };
+// (The Squall's wind and rain, the user's, 10 Nov: loops for the whole round, the music only a little quieter under it.)
+const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall: 0.7 };
+// Jaguar's fight has its own music (the user's, 10 Nov): it takes over from the tavern tune as he sits
+// down and gives way again when the run ends. 9.9 MB, so fetched only then; streamed, not decoded.
+// Since 17 Nov each place has its own music (the user's), and Brodor and Jaguar a theme of their own.
+// Volumes set from each recording's measured loudness, so each plays about as loud as the tavern tune
+// at 0.4 (-16.7 LUFS): Jaguar's -8.0, the Salty Swallow's -10.8, Brodor's -13.5, the Portal's -14.1.
+export type Tune = 'home' | 'tavern' | 'martha' | 'portal' | 'brodor' | 'ship' | 'jaguar';
+const placeTune = (file: string): HTMLAudioElement => { const el = load(file, 0, true); el.preload = 'none'; return el; };
+// The start screen's own music (20 Nov, the user's HomeScreen.mp3: -25 dB against the tavern tune's -19, so about twice
+// the volume to sound as loud). It ends on 1.5 s of silence, skipped as it loops (homeTune below).
+const homeTune = placeTune('HomeScreen.mp3');
+homeTune.addEventListener('timeupdate', () => { if (homeTune.duration && homeTune.currentTime > homeTune.duration - 1.5) homeTune.currentTime = 0; });
+const TUNES: Record<Tune, [HTMLAudioElement, number]> = {
+    home: [homeTune, 0.8],
+    tavern: [music, MUSIC_VOLUME],
+    martha: [placeTune('MarthaTheme.mp3'), MUSIC_VOLUME], // (the user's, 17 Nov: as loud as the tavern tune, -16.7 LUFS)
+    portal: [placeTune('YawningPortalTheme.mp3'), 0.3],
+    brodor: [placeTune('BrodorTheme.mp3'), 0.28],
+    ship: [placeTune('SaltySwallowTheme.mp3'), 0.2],
+    jaguar: [placeTune('JaguarBossBattle.mp3'), 0.15] // (9.8 MB, fetched only then)
+};
+let tuneNow: Tune = 'home'; // (the start screen's, until a table's tune takes over: PlaceMusic)
+// The tavern's crowd (Ambience.mp3) is a tavern's: aboard the ship it goes quiet (18 Nov, the user's).
+const ABOARD: Tune[] = ['ship', 'jaguar', 'home']; // (and none on the start screen, whose music stands alone, 20 Nov)
+const crowdVolume = () => (ABOARD.includes(tuneNow) ? 0 : AMBIENCE_VOLUME);
+const allTunes = () => Object.values(TUNES).map(([el]) => el); // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
+Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
+export type SceneAmbience = keyof typeof sceneAmbience;
+
+export type SoundName = keyof typeof sfx;
+
+// ---- Dice impacts, synthesized ----
+// Every knock in a roll comes from the physics (see physics.ts Impact), so the sound lines
+// up with what you see and every player hears the same throw. Each impact has two layers:
+// a short burst of filtered noise (the surface texture) and a "body" tone that drops in
+// pitch, which is what gives a hit its thunk and weight. A die-on-die clack, a heavy thud
+// on the felt, a hollow knock on the wooden rail. Harder impacts are louder and brighter.
+
+let audioContext: AudioContext | null = null;
+let noise: AudioBuffer | null = null;
+let impactBus: AudioNode | null = null;
+
+function audio() {
+    try {
+        if (!audioContext) audioContext = new AudioContext();
+        if (audioContext.state === 'suspended') void audioContext.resume();
+        decodeClips(audioContext);
+        if (!noise) {
+            noise = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
+            const data = noise.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        }
+        if (!impactBus) {
+            // A gentle compressor glues many simultaneous knocks together instead of clipping.
+            const glue = audioContext.createDynamicsCompressor();
+            glue.threshold.value = -18;
+            glue.ratio.value = 4;
+            glue.attack.value = 0.003;
+            glue.release.value = 0.12;
+            const level = audioContext.createGain();
+            level.gain.value = 0.85;
+            glue.connect(level).connect(audioContext.destination);
+            impactBus = glue;
+        }
+        return audioContext;
+    } catch {
+        return null;
+    }
+}
+
+interface Voice {
+    filter: BiquadFilterType; freq: number; q: number; noiseDecay: number; noiseLevel: number;
+    bodyFrom: number; bodyTo: number; bodyDecay: number; bodyLevel: number;
+}
+
+const VOICES: Record<'die' | 'felt' | 'wall', Voice> = {
+    // Bone on bone: a woody clack, warmer and lower than a plastic click.
+    die: { filter: 'bandpass', freq: 1700, q: 1.3, noiseDecay: 0.035, noiseLevel: 0.5, bodyFrom: 620, bodyTo: 330, bodyDecay: 0.06, bodyLevel: 0.3 },
+    // Landing on felt over a heavy table: mostly low thump.
+    felt: { filter: 'lowpass', freq: 420, q: 0.7, noiseDecay: 0.09, noiseLevel: 0.6, bodyFrom: 150, bodyTo: 62, bodyDecay: 0.16, bodyLevel: 0.85 },
+    // Hitting the walnut rail: a hollow wooden knock.
+    wall: { filter: 'bandpass', freq: 700, q: 2, noiseDecay: 0.07, noiseLevel: 0.55, bodyFrom: 280, bodyTo: 140, bodyDecay: 0.13, bodyLevel: 0.6 }
+};
+
+function knock(ctx: BaseAudioContext, bus: AudioNode, when: number, kind: keyof typeof VOICES, loudness: number) {
+    const v = VOICES[kind];
+    const vary = 0.88 + Math.random() * 0.24;
+    const out = ctx.createGain();
+    out.connect(bus);
+
+    // Surface texture.
+    const burst = ctx.createBufferSource();
+    burst.buffer = noise;
+    burst.playbackRate.value = vary;
+    const filter = ctx.createBiquadFilter();
+    filter.type = v.filter;
+    filter.frequency.value = v.freq * vary * (0.8 + loudness * 0.4);
+    filter.Q.value = v.q;
+    const burstGain = ctx.createGain();
+    burstGain.gain.setValueAtTime(v.noiseLevel * loudness, when);
+    burstGain.gain.exponentialRampToValueAtTime(0.0001, when + v.noiseDecay);
+    burst.connect(filter).connect(burstGain).connect(out);
+    burst.start(when, Math.random() * 0.25, v.noiseDecay + 0.02);
+
+    // Body: a tone that falls in pitch, so the hit has weight.
+    const body = ctx.createOscillator();
+    body.type = 'sine';
+    body.frequency.setValueAtTime(v.bodyFrom * vary, when);
+    body.frequency.exponentialRampToValueAtTime(v.bodyTo * vary, when + v.bodyDecay);
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, when);
+    bodyGain.gain.exponentialRampToValueAtTime(v.bodyLevel * loudness, when + 0.004);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, when + v.bodyDecay);
+    body.connect(bodyGain).connect(out);
+    body.start(when);
+    body.stop(when + v.bodyDecay + 0.02);
+}
+
+type Impacts = { frame: number; strength: number; kind: keyof typeof VOICES }[];
+
+// Schedules a whole throw's impacts. speed < 1 for slow-motion suspense rolls.
+export function playDiceImpacts(impacts: Impacts, pace: Pace | number = 1) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx || !impactBus) return;
+    scheduleImpacts(ctx, impactBus, ctx.currentTime + 0.02, impacts, typeof pace === 'number' ? { speed: pace } : pace);
+}
+
+function scheduleImpacts(ctx: BaseAudioContext, bus: AudioNode, start: number, impacts: Impacts, pace: Pace) {
+    const lastByKind: Record<string, number> = {};
+    for (const impact of impacts) {
+        // Square-root curve: soft knocks are still heard, hard ones don't dominate.
+        const loudness = Math.min(1, Math.sqrt(impact.strength / 10));
+        if (loudness < 0.2) continue;
+        const when = start + paceSeconds(pace, impact.frame);
+        // Many dice landing in the same instant blur into one knock rather than a buzz.
+        if (when - (lastByKind[impact.kind] ?? -1) < 0.015) continue;
+        lastByKind[impact.kind] = when;
+        knock(ctx, bus, when, impact.kind, loudness);
+    }
+}
+
+// Development only: renders a throw offline to raw samples, for listening to the sound
+// outside the game (see main.tsx's test hook).
+export async function renderImpacts(impacts: Impacts, seconds: number, sampleRate = 44100) {
+    const ctx = new OfflineAudioContext(1, Math.ceil(seconds * sampleRate), sampleRate);
+    const live = audio(); // reuse the noise buffer
+    if (!live || !noise) throw new Error('audio unavailable');
+    const glue = ctx.createDynamicsCompressor();
+    glue.threshold.value = -18; glue.ratio.value = 4; glue.attack.value = 0.003; glue.release.value = 0.12;
+    const level = ctx.createGain();
+    level.gain.value = 0.85;
+    glue.connect(level).connect(ctx.destination);
+    scheduleImpacts(ctx, glue, 0.05, impacts, { speed: 1 });
+    return (await ctx.startRendering()).getChannelData(0);
+}
+
+// ---- A cork pulled from a bottle (every Thonic drunk) ----
+// A short squeak as the cork twists free, then the pop: a hollow tone that drops fast as the
+// air rushes in, over a click of bright noise. The Fizzy Thomic adds a fizz afterwards.
+function scheduleCorkPop(ctx: BaseAudioContext, out: AudioNode, when: number, fizz: boolean) {
+    const squeak = ctx.createOscillator();
+    squeak.type = 'triangle';
+    squeak.frequency.setValueAtTime(1300, when);
+    squeak.frequency.linearRampToValueAtTime(1700, when + 0.07);
+    const squeakGain = ctx.createGain();
+    squeakGain.gain.setValueAtTime(0.0001, when);
+    squeakGain.gain.exponentialRampToValueAtTime(0.06, when + 0.02);
+    squeakGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.08);
+    squeak.connect(squeakGain).connect(out);
+    squeak.start(when);
+    squeak.stop(when + 0.1);
+
+    const pop = when + 0.1;
+    const body = ctx.createOscillator();
+    body.type = 'sine';
+    body.frequency.setValueAtTime(720, pop);
+    body.frequency.exponentialRampToValueAtTime(190, pop + 0.07);
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, pop);
+    bodyGain.gain.exponentialRampToValueAtTime(0.75, pop + 0.004);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, pop + 0.11);
+    body.connect(bodyGain).connect(out);
+    body.start(pop);
+    body.stop(pop + 0.13);
+
+    if (!noise) return;
+    const click = ctx.createBufferSource();
+    click.buffer = noise;
+    const clickTone = ctx.createBiquadFilter();
+    clickTone.type = 'bandpass';
+    clickTone.frequency.value = 2400;
+    clickTone.Q.value = 0.9;
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.5, pop);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, pop + 0.025);
+    click.connect(clickTone).connect(clickGain).connect(out);
+    click.start(pop);
+    click.stop(pop + 0.04);
+
+    if (!fizz) return;
+    const hiss = ctx.createBufferSource();
+    hiss.buffer = noise;
+    hiss.loop = true;
+    const hissTone = ctx.createBiquadFilter();
+    hissTone.type = 'highpass';
+    hissTone.frequency.value = 5000;
+    const hissGain = ctx.createGain();
+    hissGain.gain.setValueAtTime(0.0001, pop + 0.05);
+    hissGain.gain.exponentialRampToValueAtTime(0.12, pop + 0.15);
+    hissGain.gain.exponentialRampToValueAtTime(0.0001, pop + 0.9);
+    hiss.connect(hissTone).connect(hissGain).connect(out);
+    hiss.start(pop + 0.05);
+    hiss.stop(pop + 0.95);
+}
+
+export function playCorkPop(fizz = false) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    scheduleCorkPop(ctx, ctx.destination, ctx.currentTime + 0.02, fizz);
+}
+
+// A coin landing on the pile: a short metallic clink (inharmonic partials, a fast decay).
+function scheduleCoin(ctx: BaseAudioContext, out: AudioNode, when: number, pitch = 1) {
+    [[2637, 0.22], [3951, 0.12], [5588, 0.07]].forEach(([freq, level], i) => {
+        const tone = ctx.createOscillator();
+        tone.type = 'sine';
+        tone.frequency.setValueAtTime(freq * pitch * (1 + i * 0.013), when);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, when);
+        gain.gain.exponentialRampToValueAtTime(level, when + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.28 - i * 0.06);
+        tone.connect(gain).connect(out);
+        tone.start(when);
+        tone.stop(when + 0.3);
+    });
+}
+
+// Coins added to the purse: a few clinks, a little apart and slightly different.
+export function playCoins(count = 3) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    for (let i = 0; i < count; i++) scheduleCoin(ctx, ctx.destination, ctx.currentTime + 0.02 + i * 0.075, 0.94 + ((i * 7) % 5) * 0.03);
+}
+
+// A keepsake works: a bright rising fanfare of bell tones (a major arpeggio, each note ringing on).
+export function playChime() {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.02;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const when = start + i * 0.09;
+        [[1, 0.16], [2.01, 0.05]].forEach(([partial, level]) => {
+            const tone = ctx.createOscillator();
+            tone.type = 'sine';
+            tone.frequency.setValueAtTime(freq * partial, when);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, when);
+            gain.gain.exponentialRampToValueAtTime(level, when + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.9);
+            tone.connect(gain).connect(ctx.destination);
+            tone.start(when);
+            tone.stop(when + 0.95);
+        });
+    });
+}
+
+// The ship's bell (9 Nov, the Salty Swallow setting sail): struck `strikes` times, a bronze bell's
+// partials (not quite in tune with each other) ringing away. Synthesized, under the game sounds switch.
+export function playShipBell(strikes = 2, gap = 0.62) {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    const out = ctx.createGain();
+    out.gain.value = 0.5;
+    out.connect(ctx.destination);
+    const base = 587;
+    const partials: [number, number, number][] = [[0.5, 0.35, 3.2], [1, 0.5, 2.6], [1.19, 0.18, 1.6], [1.56, 0.12, 1.2], [2.0, 0.22, 1.4], [2.74, 0.1, 0.8], [3.76, 0.06, 0.5]];
+    for (let k = 0; k < strikes; k++) {
+        const when = ctx.currentTime + 0.03 + k * gap;
+        for (const [ratio, level, decay] of partials) {
+            const tone = ctx.createOscillator();
+            tone.type = 'sine';
+            tone.frequency.setValueAtTime(base * ratio, when);
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, when);
+            gain.gain.exponentialRampToValueAtTime(level, when + 0.004);
+            gain.gain.exponentialRampToValueAtTime(0.0001, when + decay);
+            tone.connect(gain).connect(out);
+            tone.start(when);
+            tone.stop(when + decay + 0.05);
+        }
+    }
+}
+
+// Aboard the Salty Swallow, the sea changes (9 Nov): a wave rising and washing past (noise through a
+// low-pass that opens and closes), and when she heels a deep boom against the hull and the timbers
+// creaking. Synthesized, under the game sounds switch.
+let seaNoise: AudioBuffer | null = null;
+export function playSeaSwell(kind: 'heel' | 'calm') {
+    if (muted) return;
+    const ctx = audio();
+    if (!ctx) return;
+    if (!seaNoise) {
+        seaNoise = ctx.createBuffer(1, Math.round(ctx.sampleRate * 2.6), ctx.sampleRate);
+        const d = seaNoise.getChannelData(0);
+        let brown = 0;
+        for (let i = 0; i < d.length; i++) { brown = (brown + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = brown * 3.5; }
+    }
+    const heel = kind === 'heel';
+    const t = ctx.currentTime + 0.02;
+    const out = ctx.createGain();
+    out.gain.value = heel ? 0.9 : 0.6;
+    out.connect(ctx.destination);
+    // The wave.
+    const wash = ctx.createBufferSource();
+    wash.buffer = seaNoise;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(180, t);
+    filter.frequency.exponentialRampToValueAtTime(heel ? 2400 : 1400, t + 0.55);
+    filter.frequency.exponentialRampToValueAtTime(260, t + 2.3);
+    const washGain = ctx.createGain();
+    washGain.gain.setValueAtTime(0.0001, t);
+    washGain.gain.exponentialRampToValueAtTime(heel ? 1 : 0.7, t + 0.45);
+    washGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+    wash.connect(filter).connect(washGain).connect(out);
+    wash.start(t);
+    wash.stop(t + 2.6);
+    if (!heel) return;
+    // The boom against the hull, as the screen shakes.
+    const boomAt = t + 0.28;
+    const boom = ctx.createOscillator();
+    boom.type = 'sine';
+    boom.frequency.setValueAtTime(70, boomAt);
+    boom.frequency.exponentialRampToValueAtTime(34, boomAt + 0.6);
+    const boomGain = ctx.createGain();
+    boomGain.gain.setValueAtTime(0.0001, boomAt);
+    boomGain.gain.exponentialRampToValueAtTime(0.9, boomAt + 0.02);
+    boomGain.gain.exponentialRampToValueAtTime(0.0001, boomAt + 0.8);
+    boom.connect(boomGain).connect(out);
+    boom.start(boomAt);
+    boom.stop(boomAt + 0.85);
+    // The timbers creaking as she leans.
+    const creakAt = t + 0.45;
+    const creak = ctx.createOscillator();
+    creak.type = 'sawtooth';
+    creak.frequency.setValueAtTime(150, creakAt);
+    creak.frequency.linearRampToValueAtTime(118, creakAt + 0.9);
+    const wobble = ctx.createOscillator();
+    wobble.frequency.value = 23;
+    const wobbleDepth = ctx.createGain();
+    wobbleDepth.gain.value = 9;
+    wobble.connect(wobbleDepth).connect(creak.frequency);
+    const creakFilter = ctx.createBiquadFilter();
+    creakFilter.type = 'bandpass';
+    creakFilter.frequency.value = 600;
+    creakFilter.Q.value = 3;
+    const creakGain = ctx.createGain();
+    creakGain.gain.setValueAtTime(0.0001, creakAt);
+    creakGain.gain.exponentialRampToValueAtTime(0.12, creakAt + 0.15);
+    creakGain.gain.exponentialRampToValueAtTime(0.0001, creakAt + 0.95);
+    creak.connect(creakFilter).connect(creakGain).connect(out);
+    creak.start(creakAt); wobble.start(creakAt);
+    creak.stop(creakAt + 1); wobble.stop(creakAt + 1);
+}
+
+// Development only: renders the cork pop offline to raw samples, for listening outside the game.
+export async function renderCorkPop(fizz = false, sampleRate = 22050) {
+    const ctx = new OfflineAudioContext(1, Math.ceil(1.2 * sampleRate), sampleRate);
+    audio(); // makes the shared noise buffer
+    scheduleCorkPop(ctx, ctx.destination, 0.02, fizz);
+    return (await ctx.startRendering()).getChannelData(0);
+}
+
+// Music (the background tune and the tavern's ambience) and game sounds (dice, taps, cork
+// pops, cheers) switch on and off separately. Remembered on this device. The old
+// `tavernMuted = "1"` still silences both (tests rely on it) until either is switched.
+function readSetting(key: string) {
+    try { return localStorage.getItem('tavernMuted') === '1' || localStorage.getItem(key) === '1'; } catch { return false; }
+}
+function saveSettings() {
+    try {
+        localStorage.removeItem('tavernMuted');
+        localStorage.setItem('tavernMusicOff', musicOff ? '1' : '0');
+        localStorage.setItem('tavernSoundsOff', muted ? '1' : '0');
+    } catch { /* storage unavailable */ }
+}
+
+let musicOff = readSetting('tavernMusicOff');
+let muted = readSetting('tavernSoundsOff'); // game sounds
+music.muted = musicOff;
+ambience.muted = musicOff;
+Object.values(sceneAmbience).forEach(el => { el.muted = musicOff; });
+allTunes().forEach(el => { el.muted = musicOff; });
+
+export function playSound(name: SoundName, playbackRate = 1) {
+    if (muted) return;
+    const el = sfx[name], lead = LEAD[name] ?? 0, buffer = buffers.get(name);
+    if (buffer && audioContext && audioContext.state === 'running') {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
+        const level = audioContext.createGain();
+        level.gain.value = el.volume;
+        source.connect(level).connect(audioContext.destination);
+        source.start(0, lead);
+        return;
+    }
+    el.currentTime = lead;
+    el.playbackRate = playbackRate;
+    el.play().catch(() => {});
+}
+
+export const ABILITY_SOUNDS: Record<string, SoundName> = {
+    'Reach Around': 'reachAround',
+    'Starry Form': 'starryForm',
+    'Penitent Stare': 'penitentStare',
+    'Heightened Dice': 'unlimitedPower',
+    'Quickened Dice': 'unlimitedPower',
+    'Empowered Dice': 'unlimitedPower',
+    'Twinned Dice': 'unlimitedPower',
+    'The Ace of Spades': 'gunshot',
+    'Back of the Head': 'sylvesterPunch',
+    'Inkfire Blast': 'inkfire',
+    'Vexing Rapier': 'flourish',
+    'Divine Smite': 'smite',
+    'Astral Flood': 'astralFlood',
+    'Mind Whip': 'mindWhip',
+    'You are Cursed!': 'cursed',
+    'Sympathy for the Devil': 'sympathy',
+    'Smooth Talker': 'smoothTalkMinus', // (his Thonic demand plays smoothTalkThonic: game.ts)
+    'The Cloak': 'theCloak',
+    'All In': 'allIn',
+    'Disguise Self': 'marthaAbility' // the user's clip (4 Nov); her switch of faces comes with the trick she copies
+};
+// A face put on (Martha's copied trick, or your mask): her switch sound, then the trick's own
+// sound this long after it starts.
+export const SWITCH_LEAD_MS = 750;
+
+// Browsers only allow audio after the player has interacted with the page.
+// Resolves true once the music is playing (or is switched off, so there's nothing to start), false if the browser refused.
+export function startMusic(): Promise<boolean> {
+    audio(); // the impact sounds need the audio context unlocked by a tap, like the music
+    if (musicOff) return Promise.resolve(true);
+    const [now, volume] = TUNES[tuneNow];
+    if (!now.paused) return Promise.resolve(true);
+    now.volume = volume;
+    ambience.volume = crowdVolume(); // (quiet aboard the ship)
+    ambience.play().catch(() => {});
+    return now.play().then(() => true, () => false);
+}
+
+// The tavern's tune (and its crowd) faded out and paused while the intro film plays its own music; the returned
+// function brings them back (18 Nov: the start screen now plays the Ghoul and Gourd's tune from the first tap).
+export function holdMusic() {
+    const [song] = TUNES[tuneNow];
+    fade(song, 0, 600, () => song.pause());
+    fade(ambience, 0, 600, () => ambience.pause());
+    return () => {
+        if (musicOff) return;
+        const [now, volume] = TUNES[tuneNow];
+        if (now.paused) { now.volume = 0; now.play().catch(() => {}); }
+        fade(now, volume, 1200);
+        if (ambience.paused) { ambience.volume = 0; ambience.play().catch(() => {}); }
+        fade(ambience, crowdVolume(), 1200);
+    };
+}
+
+// The music playing now (the tavern's tune, a place's, Brodor's or Jaguar's) and its full volume.
+function tune(): [HTMLAudioElement, number] {
+    return TUNES[tuneNow];
+}
+
+// The music for where you are, crossfading from what was playing (each new one from its start).
+export function setMusicFor(next: Tune) {
+    if (next === tuneNow) return;
+    const [from] = TUNES[tuneNow];
+    const [to, volume] = TUNES[next];
+    tuneNow = next;
+    fade(ambience, crowdVolume(), 1800); // (the crowd: quiet aboard, back ashore)
+    if (musicOff) return;
+    if (allTunes().some(el => !el.paused)) { // (the music has started: after the first tap)
+        to.currentTime = 0;
+        to.volume = 0;
+        to.play().catch(() => {});
+        fade(to, volume, 1800);
+        fade(from, 0, 1800, () => from.pause());
+    }
+}
+
+// Volume fades (one at a time per element; a new one takes over from wherever the last got to).
+const fades = new WeakMap<HTMLAudioElement, number>();
+function fade(el: HTMLAudioElement, to: number, ms: number, then?: () => void) {
+    clearInterval(fades.get(el));
+    const from = el.volume, start = performance.now();
+    const id = window.setInterval(() => {
+        const p = Math.min(1, (performance.now() - start) / ms);
+        el.volume = from + (to - from) * p;
+        if (p >= 1) { clearInterval(id); fades.delete(el); then?.(); }
+    }, 40);
+    fades.set(el, id);
+}
+
+// Starts a scene's ambience (with the music switch on) and fades the tavern's music down under
+// it; the returned function fades it out and the music back up.
+// Looped through Web Audio when it's running, which repeats seamlessly (an <audio> element leaves a
+// small gap at the join; Thom's is a perfect loop); an <audio> element otherwise.
+const sceneBuffers = new Map<string, Promise<AudioBuffer>>();
+const playingScenes = new Set<GainNode>();
+// A clip that fades in and out at its ends (the Squall's wind) loops over its middle, each pass
+// crossfaded into the next: [from, to, crossfade] in seconds.
+const CROSSFADE_LOOPS: Partial<Record<SceneAmbience, [number, number, number]>> = { squall: [2.2, 45.6, 2] };
+const FADE_IN = Float32Array.from({ length: 64 }, (_, i) => Math.sin((i / 63) * Math.PI / 2));
+const FADE_OUT = FADE_IN.slice().reverse();
+function crossfadeLoop(ctx: AudioContext, buffer: AudioBuffer, out: AudioNode, [from, to, cross]: [number, number, number]) {
+    const sources: AudioBufferSourceNode[] = [];
+    let timer = 0, stopped = false;
+    const pass = (at: number) => {
+        if (stopped) return;
+        const source = ctx.createBufferSource(), level = ctx.createGain();
+        source.buffer = buffer;
+        source.connect(level).connect(out);
+        const end = at + (to - from);
+        level.gain.setValueCurveAtTime(FADE_IN, at, cross); // (equal power: a straight crossfade of noise dips 3 dB at the join)
+        level.gain.setValueCurveAtTime(FADE_OUT, end - cross, cross);
+        source.start(at, from, to - from);
+        sources.push(source);
+        source.onended = () => { sources.splice(sources.indexOf(source), 1); };
+        const next = end - cross;
+        timer = window.setTimeout(() => pass(next), Math.max(0, (next - ctx.currentTime - 1) * 1000));
+    };
+    pass(ctx.currentTime + 0.02);
+    return () => { stopped = true; clearTimeout(timer); sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); };
+}
+function startSceneLoop(ctx: AudioContext, name: SceneAmbience) {
+    const url = sceneAmbience[name].src;
+    if (!sceneBuffers.has(url)) sceneBuffers.set(url, fetch(url).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)));
+    const level = ctx.createGain();
+    level.gain.value = 0;
+    level.connect(ctx.destination);
+    playingScenes.add(level);
+    let source: AudioBufferSourceNode | null = null, stopped = false, stopLoop: (() => void) | null = null;
+    sceneBuffers.get(url)!.then(buffer => {
+        if (stopped) return;
+        const cross = CROSSFADE_LOOPS[name];
+        if (cross) {
+            stopLoop = crossfadeLoop(ctx, buffer, level, cross);
+            level.gain.setTargetAtTime(SCENE_VOLUME[name], ctx.currentTime, 0.25);
+            return;
+        }
+        source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(level);
+        source.start();
+        level.gain.setTargetAtTime(SCENE_VOLUME[name], ctx.currentTime, 0.25);
+    }).catch(() => {});
+    return () => {
+        stopped = true;
+        level.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+        setTimeout(() => { source?.stop(); stopLoop?.(); level.disconnect(); playingScenes.delete(level); }, 1500);
+    };
+}
+
+export function startSceneAmbience(name: SceneAmbience) {
+    if (musicOff) return () => {};
+    const duck = SCENE_DUCK[name] ?? 0.25;
+    const [song, full] = tune();
+    if (audioContext && audioContext.state === 'running') {
+        const stop = startSceneLoop(audioContext, name);
+        fade(song, full * duck, 700);
+        fade(ambience, crowdVolume() * duck, 700);
+        return () => {
+            stop();
+            if (song === tune()[0]) fade(song, full, 1000);
+            fade(ambience, crowdVolume(), 1000);
+        };
+    }
+    const el = sceneAmbience[name];
+    el.currentTime = 0;
+    el.volume = 0;
+    el.play().catch(() => {});
+    fade(el, SCENE_VOLUME[name], 700);
+    fade(song, full * duck, 700);
+    fade(ambience, crowdVolume() * duck, 700);
+    return () => {
+        fade(el, 0, 700, () => el.pause());
+        if (song === tune()[0]) fade(song, full, 1000);
+        fade(ambience, crowdVolume(), 1000);
+    };
+}
+
+// A scene's own loop lowered while a sound says what happened there (18 Nov, the user's: Yvesil's good and bad omens
+// should be heard: her theme, a loud loop, played over them), then back up.
+export function duckScenes(ms: number, to = 0.25) {
+    if (audioContext) {
+        const now = audioContext.currentTime;
+        playingScenes.forEach(level => {
+            const full = level.gain.value;
+            level.gain.cancelScheduledValues(now);
+            level.gain.setTargetAtTime(full * to, now, 0.08);
+            level.gain.setTargetAtTime(full, now + ms / 1000, 0.4);
+        });
+    }
+    (Object.keys(sceneAmbience) as (keyof typeof sceneAmbience)[]).forEach(name => {
+        const el = sceneAmbience[name];
+        if (el.paused) return;
+        fade(el, SCENE_VOLUME[name] * to, 250, () => { window.setTimeout(() => { if (!el.paused) fade(el, SCENE_VOLUME[name], 900); }, ms); });
+    });
+}
+
+export function setMusicOff(value: boolean) {
+    musicOff = value;
+    music.muted = value;
+    ambience.muted = value;
+    Object.values(sceneAmbience).forEach(el => { el.muted = value; if (value) el.pause(); });
+    if (value && audioContext) playingScenes.forEach(level => level.gain.setTargetAtTime(0, audioContext!.currentTime, 0.1));
+    saveSettings();
+    allTunes().forEach(el => { el.muted = value; });
+    if (value) { allTunes().forEach(el => el.pause()); ambience.pause(); } else startMusic();
+}
+
+export function isMusicOff() {
+    return musicOff;
+}
+
+export function setSoundsOff(value: boolean) {
+    muted = value;
+    saveSettings();
+    if (!value) audio();
+}
+
+export function areSoundsOff() {
+    return muted;
+}
+
+// ---- The intro film's sound (the user's, 5 Nov; under the music switch) ----
+// The music as it is; the rain and the tavern laid under it, the tavern muffled as if through the
+// door until the film reaches it, when it opens up. Scheduled in one go from the film's start.
+const RAIN_SKIP = 0.3;
+const FILM_CLIPS = { music: 'IntroMusic.mp3', rain: 'IntroRain.mp3', tavern: 'IntroTavernAmbience.mp3' };
+type FilmClip = keyof typeof FILM_CLIPS;
+const filmBytes = new Map<FilmClip, Promise<ArrayBuffer>>();
+const filmBuffers = new Map<FilmClip, AudioBuffer>();
+export function fetchFilmSound() {
+    (Object.keys(FILM_CLIPS) as FilmClip[]).forEach(name => {
+        if (!filmBytes.has(name)) filmBytes.set(name, fetch(`/${FILM_CLIPS[name]}`).then(r => r.arrayBuffer()));
+    });
+}
+export async function loadFilmSound() {
+    if (musicOff) return;
+    fetchFilmSound();
+    const ctx = audio();
+    if (!ctx) return;
+    await Promise.all((Object.keys(FILM_CLIPS) as FilmClip[]).map(async name => {
+        if (filmBuffers.has(name)) return;
+        // (decodeAudioData takes the bytes away, so it gets a copy.)
+        try { filmBuffers.set(name, await ctx.decodeAudioData((await filmBytes.get(name)!).slice(0))); } catch { /* the film plays on without it */ }
+    }));
+}
+// lead: when the music comes in, by the film's clock; elapsed: how far the film has got. Returns a
+// function that fades it all out.
+export function playFilmSound(lead: number, elapsed: number) {
+    const ctx = audio();
+    if (!ctx || musicOff) return () => {};
+    const start = ctx.currentTime + 0.02 - elapsed + lead; // the music's 0, on the audio clock
+    const at = (t: number) => Math.max(ctx.currentTime, start + t);
+    const sources: AudioBufferSourceNode[] = [];
+    const master = ctx.createGain();
+    master.connect(ctx.destination);
+    const play = (name: FilmClip, from: number, levels: [number, number][], options: { skip?: number; into?: AudioNode } = {}) => {
+        const buffer = filmBuffers.get(name);
+        if (!buffer) return;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const level = ctx.createGain();
+        level.gain.setValueAtTime(levels[0][1], at(levels[0][0]));
+        levels.slice(1).forEach(([t, v]) => level.gain.linearRampToValueAtTime(v, at(t)));
+        source.connect(level).connect(options.into ?? master);
+        const offset = Math.max(0, ctx.currentTime - (start + from));
+        source.start(at(from), (options.skip ?? 0) + offset);
+        sources.push(source);
+    };
+    play('music', 0, [[0, 0.8], [40, 0.8]]);
+    // The street: rain as the town appears, faint indoors, full at the door. The clip is shorter than
+    // that and opens with 0.15 s of silence, which stuttered where it looped (the user, 5 Nov): so two
+    // passes, past the silence, crossfaded while it's faint; the door scene has one unbroken stretch.
+    play('rain', 6, [[6, 0], [7, 0.9], [11.6, 0.9], [12.2, 0.3], [15.5, 0.3], [17.5, 0]], { skip: RAIN_SKIP });
+    play('rain', 15.5, [[15.5, 0], [17.5, 0.25], [24.3, 0.2], [25.2, 1.1], [29, 1.1], [30, 0]], { skip: RAIN_SKIP });
+    // The tavern: behind the door until it opens.
+    const door = ctx.createBiquadFilter();
+    door.type = 'lowpass';
+    door.frequency.setValueAtTime(520, at(6));
+    door.frequency.setValueAtTime(520, at(27.6));
+    door.frequency.exponentialRampToValueAtTime(9000, at(29));
+    door.connect(master);
+    play('tavern', 6, [[6, 0], [7, 0.3], [11.6, 0.3], [12.2, 0.1], [24.3, 0.1], [25.5, 0.8], [27.6, 0.9], [29, 1.2], [29.6, 1.2], [31, 0]], { into: door });
+    let stopped = false;
+    return () => {
+        if (stopped) return;
+        stopped = true;
+        // The tail of the music and the tavern carry on a moment over whatever comes next.
+        master.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+        setTimeout(() => { sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); master.disconnect(); }, 1800);
+    };
+}
+
+// The trailer's sound (9 Nov): the intro's music alone, its 0 at `lead` on the trailer's clock.
+// segments: [when, from, length?] in music seconds, each a piece of the track (since 11 Nov one bar is
+// played twice, so the trailer runs longer than the track): joined on a hit with a short crossfade.
+// Since 11 Nov it plays the user's trailer track (loaded with the cold open's sounds), else the intro's music.
+export function playTrailerMusic(lead: number, elapsed: number, segments: [number, number, number?][] = [[0, 0]]) {
+    const ctx = audio();
+    const buffer = oldBuffers.get('track') ?? filmBuffers.get('music');
+    if (!ctx || musicOff || !buffer) return () => {};
+    const start = ctx.currentTime + 0.02 - elapsed + lead;
+    const level = ctx.createGain();
+    level.gain.value = 0.85;
+    level.connect(ctx.destination);
+    const XF = 0.03; // the crossfade at each join
+    const sources = segments.map(([when, from, length]) => {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const fade = ctx.createGain();
+        source.connect(fade).connect(level);
+        const at = start + when;
+        const skip = Math.max(0, ctx.currentTime - at); // (already under way: start part-way in)
+        const begin = Math.max(ctx.currentTime, at);
+        if (when > 0) { fade.gain.setValueAtTime(0, begin); fade.gain.linearRampToValueAtTime(1, begin + XF); }
+        if (length !== undefined) {
+            const end = at + length;
+            if (end <= ctx.currentTime) return source;
+            fade.gain.setValueAtTime(1, Math.max(begin, end - XF));
+            fade.gain.linearRampToValueAtTime(0, end);
+            source.start(begin, from + skip, Math.max(0, length - skip));
+        } else source.start(begin, from + skip);
+        return source;
+    });
+    return () => {
+        level.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+        setTimeout(() => { sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); level.disconnect(); }, 1500);
+    };
+}
+
+// The trailer's cold open (11 Nov, the user's): the old game's tavern tune, thin as an old phone's
+// speaker, with its click and its roll; it stops dead at `until` (seconds from now), as the new die falls.
+// (track: the trailer's own music, the user's TrailerMusic.mp3, 11 Nov; played by playTrailerMusic.)
+const OLD_CLIPS = { tune: 'BackgroundMusic.mp3', click: 'click.mp3', roll: 'roll.mp3', track: 'TrailerMusic.mp3' } as const;
+const oldBuffers = new Map<keyof typeof OLD_CLIPS, AudioBuffer>();
+export async function loadTrailerOld() {
+    const ctx = audio();
+    if (!ctx || musicOff) return;
+    await Promise.all((Object.keys(OLD_CLIPS) as (keyof typeof OLD_CLIPS)[]).map(async name => {
+        if (oldBuffers.has(name)) return;
+        try { oldBuffers.set(name, await ctx.decodeAudioData(await (await fetch(`/${OLD_CLIPS[name]}`)).arrayBuffer())); } catch { /* the trailer plays on without it */ }
+    }));
+}
+export function playTrailerOld(until: number, taps: { at: number; clip: 'click' | 'roll' }[]) {
+    const ctx = audio();
+    if (!ctx || musicOff) return () => {};
+    const t0 = ctx.currentTime + 0.02;
+    const out = ctx.createGain();
+    out.connect(ctx.destination);
+    const sources: AudioBufferSourceNode[] = [];
+    const tune = oldBuffers.get('tune');
+    if (tune) {
+        const source = ctx.createBufferSource();
+        source.buffer = tune;
+        // A small speaker: no bass, no air.
+        const low = ctx.createBiquadFilter(); low.type = 'highpass'; low.frequency.value = 420;
+        const high = ctx.createBiquadFilter(); high.type = 'lowpass'; high.frequency.value = 2600;
+        const level = ctx.createGain();
+        level.gain.setValueAtTime(0, t0);
+        level.gain.linearRampToValueAtTime(0.6, t0 + 0.4);
+        level.gain.setValueAtTime(0.6, t0 + until - 0.04);
+        level.gain.linearRampToValueAtTime(0, t0 + until);
+        source.connect(low).connect(high).connect(level).connect(out);
+        source.start(t0, 1);
+        source.stop(t0 + until + 0.05);
+        sources.push(source);
+    }
+    taps.forEach(({ at, clip }) => {
+        const buffer = oldBuffers.get(clip);
+        if (!buffer) return;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const level = ctx.createGain();
+        level.gain.value = 0.7;
+        source.connect(level).connect(out);
+        source.start(t0 + at);
+        sources.push(source);
+    });
+    return () => {
+        out.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+        setTimeout(() => { sources.forEach(s => { try { s.stop(); } catch { /* not started */ } }); out.disconnect(); }, 400);
+    };
+}
+
+// The first tap wakes Web Audio (for the film, which starts before the tavern's music does).
+export function unlockAudio() {
+    audio();
+}

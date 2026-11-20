@@ -1,0 +1,195 @@
+// Screenshots of the 3D table for before/after comparisons (not a test). Drives a headless Chrome
+// over the DevTools protocol against the dev client (vite on :5173, proxying the dev test server
+// on :3002 with its controls on :3003), sound off, and saves PNGs.
+//
+//   node test/shots.mjs <out-dir> [look=classic|next] [fight=1] [roll=1] [sizes=384x780@2.625,844x390@2.625,1280x800@1]
+//
+// Each size gets a fresh page that joins a Tavern Crawl, then a fight against opponent `fight`
+// (0 McGrath ... 13 Jaguar); roll=1 throws once, so the dice lie on the felt. seed=42 (the
+// default) makes the server's draws repeat from the fight on: the same throw every time. Files:
+// <out-dir>/<look>-<fight>[-roll][-<moment>]-<w>x<h>.png. moment=devil|ink|smite|flood|keepsake|shield|perfect|perfect4|grace|bard
+// plays that moment (as its banner would) and shoots it at its brightest.
+import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// (Split at the first "=" only: scene=between?spots=thom,shrine&stage=bard keeps its own.)
+const args = Object.fromEntries(process.argv.slice(3).map(a => [a.slice(0, a.indexOf('=')), a.slice(a.indexOf('=') + 1)]));
+const outDir = process.argv[2] ?? 'previews';
+const look = args.look ?? 'classic';
+const fight = args.fight ?? '1';
+const roll = args.roll === '1';
+const seed = args.seed ?? '42';
+const moment = args.moment;
+// dice=<id>: every die wears that opponent's set (preview.dice), to judge a set's look.
+const diceSet = args.dice;
+const MOMENTS = {
+    devil: `preview.ability('Duke Morrigan', 'Sympathy for the Devil')`,
+    ink: `preview.ability('Vaelin Inkhand', 'Inkfire Brand')`,
+    smite: `preview.ability('The Ridgeler', 'Divine Smite')`,
+    flood: `preview.ability('Brodor', 'Astral Flood')`,
+    heightened: `preview.ability('Áéd', 'Heightened Dice')`, // (Áéd's metamagic, 11 Nov)
+    twinned: `preview.ability('Áéd', 'Twinned Dice')`,
+    keepsake: `preview.ability('Keepsake', 'Trap Card', { keepsake: 'luckySeat' })`,
+    shield: `preview.ability('Keepsake', 'Shield', { keepsake: 'bentCopper' })`,
+    perfect: `table.celebrateAt = performance.now()`,
+    perfect4: `preview.celebrate('perfect4')`,
+    points: `preview.callout('17 points')`,
+    // (a multiplayer table: the callout over the first other player's card, or over your own chip)
+    ross: `preview.callout('', '#ffb74d', 'earlyRoss', store.get().state.playerOrder.find(i => i !== store.get().myId))`,
+    biteme: `preview.callout('', '#4fc3f7', 'didntBite', store.get().myId)`,
+    react: `(() => { const s = store.get(); const o = s.state.playerOrder.filter(i => i !== s.myId); preview.react(o[0], '🍻'); preview.react(o[1] ?? o[0], '💔'); preview.react(s.myId, '🃏'); })()`,
+    grace: `preview.ability('Shrine to the Lady', "The Lady's Grace", { text: 'The Lady saves you from the dust', extra: '♥ saved', blessing: 'ladysGrace' })`,
+    bard: `preview.ability('The Bard', 'Inspiring Song', { blessing: 'inspiringSong', text: 'Throw again' })`,
+    floodwave: `preview.floodWave()`,
+    dock: `preview.sail('dock')`, // (Skipper Bren on the quay)
+    sail: `preview.sail()`,
+    searogue: `preview.sea('rogue', 'calm', 60000)`, // (the sea die landing on Heavy seas, the dial held)
+    seaport: `preview.sea('port', 'port', 60000)`, // (a held list to port: its wave breaking to the left)
+    seastarboard: `preview.sea('starboard', 'calm', 60000)`, // (a change to starboard: its wave breaking to the right)
+    seacalm: `preview.sea('calm', 'calm', 60000)`, // (calm seas holding: a swell in place)
+    // (a friends' table's round result: everyone at the table, one losing a heart, one dust)
+    roundcard: `(() => { const s = store.get().state; preview.roundResult(s.playerOrder.map((id, i) => ({ id, name: s.players[id].name, score: [21, 18, 14, 0, 12, 9][i % 6], busted: i === 3, lost: i === 2 || i === 3, tied: false }))); })()`,
+    seainfo: `setTimeout(() => document.querySelector('.plaque-button')?.click(), 1500)`, // (the sea's explainer, with the leg's dial)
+    card: `document.querySelector('.plate-info').click()` // (the opponent's card, from the i on the nameplate)
+};
+const sizes = (args.sizes ?? '384x780@2.625,844x390@2.625,1280x800@1').split(',').map(s => {
+    const [wh, dpr] = s.split('@');
+    const [w, h] = wh.split('x').map(Number);
+    return { w, h, dpr: Number(dpr ?? 1) };
+});
+const CLIENT = args.client ?? 'http://localhost:5173/next/';
+const CONTROLS = args.controls ?? 'http://localhost:3003';
+const CHROME = args.chrome ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+mkdirSync(outDir, { recursive: true });
+const port = 9333 + Math.floor(Math.random() * 400);
+const chrome = spawn(CHROME, [
+    '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'shots-'))}`,
+    '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio', '--hide-scrollbars', 'about:blank'
+], { stdio: 'ignore' });
+
+async function connect() {
+    for (let i = 0; i < 50; i++) {
+        try { return await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); } catch { await wait(200); }
+    }
+    throw new Error('Chrome did not start');
+}
+
+function session(url) {
+    const ws = new WebSocket(url);
+    let id = 0;
+    const pending = new Map();
+    ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.id && pending.has(msg.id)) {
+            const { resolve, reject } = pending.get(msg.id);
+            pending.delete(msg.id);
+            msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result);
+        }
+    };
+    const ready = new Promise(r => { ws.onopen = r; });
+    const send = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
+        const n = ++id;
+        pending.set(n, { resolve, reject });
+        setTimeout(() => pending.has(n) && (pending.delete(n), reject(new Error(`${method} timed out`))), 30000);
+        ws.send(JSON.stringify({ id: n, method, params, sessionId }));
+    });
+    return { ready, send, close: () => ws.close() };
+}
+
+try {
+    const { webSocketDebuggerUrl } = await connect();
+    const cdp = session(webSocketDebuggerUrl);
+    await cdp.ready;
+    for (const { w, h, dpr } of sizes) {
+        const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
+        const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+        const s = (m, p) => cdp.send(m, p, sessionId);
+        const evaluate = async expr => (await s('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })).result.value;
+        await s('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: w < 768 });
+        await s('Page.enable');
+        await s('Page.addScriptToEvaluateOnNewDocument', {
+            source: `try { localStorage.tavernMuted = '1'; localStorage.tavernWinSeen = 'x'; localStorage.tavernIntroAuto = '1'; localStorage.tavernLook = ${JSON.stringify(look)}; } catch {}
+                HTMLMediaElement.prototype.play = () => Promise.resolve();`
+        });
+        await s('Page.navigate', { url: CLIENT });
+        // Wait for the game to load, join, and wait until the table is there.
+        await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game) { clearInterval(t); r(); } }, 100); })`);
+        await wait(1000);
+        // table=<code>: a classic multiplayer table instead of a Tavern Crawl (seat others there first).
+        await evaluate(`window.__game.actions.join('Tester', ${args.table ? `"Martha's Mask"` : `'Rokr'`}, '${args.table ?? 'TAVERN'}')`);
+        await evaluate(`new Promise(r => { const t = setInterval(() => { if (window.__game.store.get().state${args.table ? '' : '?.tavernRun'}) { clearInterval(t); r(); } }, 100); })`);
+        await wait(1500);
+        await fetch(`${CONTROLS}/seed?n=${seed}`);
+        if (!args.table) await fetch(`${CONTROLS}/fight?n=${fight}`);
+        // pre=purse?n=37|shelf?ids=healing,fizzy: dev controls called once the fight is set (a fuller strip).
+        for (const c of (args.pre ? args.pre.split('|') : [])) await fetch(`${CONTROLS}/${c}`);
+        await wait(6000); // the entrance and the intro card settle
+        if (roll) {
+            // faces=1,6,1,6,5,3: the throw lands on these (the dev controls' /faces).
+            if (args.faces) await fetch(`${CONTROLS}/faces?f=${args.faces}`);
+            await evaluate(`window.__game.actions.roll()`);
+            // The throw lands and any moment it raises (an ability, its banner) has come and gone,
+            // then a little longer for fades: shots of the same throw then match whatever the
+            // page's speed (a fresh dev server is slow at first).
+            await wait(1500);
+            await evaluate(`new Promise(r => { const t = setInterval(() => {
+                const s = window.__game.store.get();
+                const quiet = !s.ability || performance.now() - s.ability.at > 4000; // its banner shows 3.6 s
+                if (s.isMyTurn && !s.rolling && quiet && !s.modal && !window.__game.table.roll) { clearInterval(t); r(); }
+            }, 100); })`);
+            await wait(4000);
+        }
+        // scene=<control>: a scene between fights from the dev controls (e.g. shop?purse=200,
+        // between?pickpocket=1, between?stage=bard); pick=<spot> then goes to that spot (elfKid, thom).
+        if (args.scene) {
+            await fetch(`${CONTROLS}/${args.scene}`);
+            await wait(2500);
+            // (The fight's summary comes first: past it.)
+            // (stay=1: shoot the summary itself.)
+            for (let i = 0; i < 12 && !args.stay; i++) { if (!await evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Next'); b?.click(); return !!b; })()`) && i > 2) break; await wait(500); }
+            await wait(1200);
+            if (args.pick) { await evaluate(`window.__game.actions.chooseSpot('${args.pick}')`); await wait(500); }
+            await wait(3500); // the character rises, the speech bubble pops
+        }
+        if (diceSet) {
+            await evaluate(`window.__game.preview.dice('${diceSet}')`);
+            await wait(1500); // the sheet loads
+        }
+        if (moment) {
+            // (hold: a moment's own timers that would hide it, a second and more, never fire.)
+            if (args.hold) await evaluate(`(() => { const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms > 1000 ? 1e9 : ms, ...a); })()`);
+            await evaluate(`(({ preview, table, store }) => { ${MOMENTS[moment]}; })(window.__game)`);
+            await wait((args.hold ? 50 : 700) + Number(args.after ?? 0)); // near its brightest (after=<ms>: later) (a slow page needs the time to draw the moment)
+            // hold=<ms>: every animation stopped at that point of the moment (a still for slow pages).
+            if (args.hold) { await evaluate(`(() => { const s = window.__game.store.get(); const at = Math.max(s.ability?.at ?? 0, s.celebration?.at ?? 0, s.floodWaveAt ?? 0, Number(s.callout?.key) || 0); performance.now = () => at + ${Number(args.hold)}; document.getAnimations().forEach(a => { a.pause(); a.currentTime = ${Number(args.hold)}; }); })()`); await wait(1500); }
+        }
+        // frames=<n>,<ms>: n stills of the table's own motion (the bust, the light), the page clock set
+        // forward <ms> each time from 8 s on (after the entrance), for a short animation.
+        if (args.frames) {
+            const [n, step] = args.frames.split(',').map(Number);
+            await evaluate('window.__realNow = window.__realNow || performance.now.bind(performance); window.__t0 = window.__realNow()');
+            for (let i = 0; i < n; i++) {
+                await evaluate(`performance.now = () => window.__t0 + 8000 + ${i * step}`);
+                await wait(350);
+                const { data } = await s('Page.captureScreenshot', { format: 'jpeg', quality: 85 });
+                writeFileSync(join(outDir, `frame-${String(i).padStart(3, '0')}.jpg`), Buffer.from(data, 'base64'));
+            }
+            console.log(`${n} frames in ${outDir}`);
+            await cdp.send('Target.closeTarget', { targetId });
+            continue;
+        }
+        const { data } = await s('Page.captureScreenshot', { format: 'png' });
+        const file = join(outDir, `${args.name ?? `${look}-${fight}${roll ? '-roll' : ''}${moment ? `-${moment}` : ''}${diceSet ? `-${diceSet}` : ''}`}-${w}x${h}.png`);
+        writeFileSync(file, Buffer.from(data, 'base64'));
+        console.log(file);
+        await cdp.send('Target.closeTarget', { targetId });
+    }
+    cdp.close();
+} finally {
+    await fetch(`${CONTROLS}/seed`).catch(() => {});
+    chrome.kill();
+}

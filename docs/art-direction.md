@@ -1,0 +1,413 @@
+# Art direction: the candlelit storybook tavern
+
+A warm, hand-painted fantasy tavern, as if a well-loved board game had come to life.
+Chunky shapes, soft painted textures, exaggerated proportions, gentle humour. Cosy rather
+than gritty: the player should feel they've pulled up a chair by the fire, not walked
+into a dungeon.
+
+**Why this style**
+
+- **It suits the cast.** An orc who "never bites", a gunslinging Hangman, Brodor's
+  Sunglasses and a Trap Card are jokes, and a playful painted style lets them land.
+  Photo-realism would fight them.
+- **It suits AI image tools.** Painted textures and character busts come out
+  consistent across many generations; photoreal materials drift and look uncanny.
+- **It suits phones.** Painted detail lives in the textures, not in geometry or
+  lighting, so it stays cheap to render.
+
+## Palette
+
+| Role | Colour | Hex |
+|---|---|---|
+| Room shadow | Smoky umber | `#120a05` |
+| Table wood | Honey oak | `#7a4a22` |
+| Rail wood | Dark walnut | `#3a210f` |
+| Felt | Bottle green | `#1f5a34` |
+| Brass (slots, trim) | Warm brass | `#c9973a` |
+| Dice | Aged ivory | `#f3e6c8` |
+| Pips | Ink black | `#231a14` |
+| The 1 pip | Wax-seal red | `#a3201c` |
+| The 6 pips | Felt green | `#2e7d32` |
+| Candlelight | Ember orange | `#ff9e40` |
+| Magic (Rokr's blur) | Midnight blue + star gold | `#1c3d6e` / `#ffd54f` |
+
+Light comes from candles and a fireplace: warm key light, deep warm shadows, a little
+cool blue only for magic. No pure white and no pure black anywhere.
+
+## Shape language
+
+- Rounded, slightly oversized forms: dice with soft bevels, fat rails, chunky brass.
+- Wear and history: nicks in the wood, a burn ring from a tankard, worn felt where
+  dice usually land.
+- Characters are busts with big readable silhouettes and one strong prop each
+  (Hangman's revolver, Jaguar's cloak, Rokr's star chart).
+
+## Asset list for the 3D table
+
+Textures are square, seamless where marked, painted with **flat even lighting and no
+baked shadows** (the game lights them). Generate at 2048 and downscale to 1024 for phones.
+
+| Asset | Size | Notes |
+|---|---|---|
+| Felt | 1024², seamless | Bottle-green baize, faint worn patches |
+| Table wood | 1024², seamless | Honey oak planks, nicks, one tankard ring |
+| Rail wood | 1024², seamless | Dark walnut with fine grain |
+| Brass slot plates | 512², transparent PNG | Two plates engraved "2" and "4", one plain |
+| Dice faces | 6 × 256², or one 3×2 sheet | Aged ivory, inked pips; the 1 in wax-seal red, the 6 in green |
+| Backdrop | 2048×1024 | Blurred tavern interior behind the table: fireplace, shelves, lanterns |
+| Character busts | 512², transparent PNG | Every opponent, Thom, the characters between fights, plus player avatars, in one matching style (see Status) |
+| UI parchment | 1024², seamless | For panels and dialogs |
+
+## Prompt pack
+
+Use the same **style line** at the end of every prompt so the set stays consistent.
+
+> **Style line:** *hand-painted stylized fantasy game art, warm storybook look, soft
+> brush texture, rich but muted colours, chunky proportions*
+
+**The Shrine to the Lady aboard the Salty Swallow (10 Nov; a scene, not cut out, like `art/shrine.jpg`)**
+> A small shrine to the Lady, goddess of sailors, built into a corner of a wooden ship's gun deck at night, below decks on a pirate sailing ship. A hooded statue of the Lady, carved from pale weathered wood like a ship's figurehead and streaked with salt, a few barnacles and a little green sea-moss, in flowing robes, arms open in welcome, a gentle face; at her feet a carved crescent moon and curling waves. She stands in a niche between two heavy curved ship's ribs, a coil of old rigging and a fishing net hanging beside her. Before her a narrow wooden ledge with a raised rim so nothing slides off in a swell, crowded with candles, some in glass storm lanterns, wax dripping down the ledge, all lighting her warmly from below. Sailors' offerings on the ledge: a few coins, sea shells, a knotted rope, a small model ship, a brass compass, a sprig of dried seaweed. Behind, softly out of focus: a black iron cannon on its carriage, a hammock, swinging lanterns, a round porthole showing a moonlit sea, two sailors in the dim light. Warm candlelight against the cool blue night through the porthole. Square composition, the statue centred. *+ style line*
+> (For the same statue carried aboard: "weathered stone with patches of green moss" in place of "pale weathered wood".)
+
+**Felt (seamless)**
+> Top-down seamless tileable texture of bottle-green billiard baize felt, faint worn
+> patches, fine fibre texture, flat even lighting, no shadows, no objects. *+ style line*
+
+**Table wood (seamless)**
+> Top-down seamless tileable texture of honey oak tavern table planks, small nicks and
+> scratches, one faint tankard ring stain, flat even lighting, no shadows. *+ style line*
+
+**Rail wood (seamless)**
+> Seamless tileable texture of dark polished walnut wood grain, fine straight grain,
+> flat even lighting, no shadows. *+ style line*
+
+**UI parchment (seamless)**
+> Top-down seamless tileable texture of aged parchment paper, warm cream and light tan,
+> faint fibres, soft uneven mottling, a few very faint tea stains, evenly light across the
+> whole image so dark text stays readable, flat even lighting, no shadows, no text, no
+> writing, no torn or burnt edges, no border. *+ style line*
+
+**Brass slot plates**
+> 1 *+ style line*
+
+**Dice faces**
+> A 3 by 2 sprite sheet of six square die faces on aged ivory, showing 1 to 6 pips in
+> standard layouts, pips painted in ink black except the single pip of the 1 in wax-seal
+> red and the six pips of the 6 in green, viewed straight on, flat lighting, no shadows.
+> *+ style line*
+
+**An opponent's dice** (3 Nov; `art/dice-<name>.jpg`, one per opponent)
+> A 3 by 2 sprite sheet of six square die faces, evenly spaced on a plain flat background,
+> each face filling its square, row one showing 1, 2, 3 and row two showing 4, 5, 6 pips in
+> standard die layouts. The faces are [MATERIAL AND COLOUR], with [DETAILS / WEAR]. Pips are
+> [PIP COLOUR], except the single pip of the 1 in bright red and the six pips of the 6 in
+> bright green. Every face the same material, viewed straight on, flat even lighting, no
+> shadows, no perspective, no text, no border around the sheet. *+ style line*
+>
+> Keep strong contrast between pips and face; the red 1 must stand out from the face (on a
+> red die, ring it). About 1264 x 848.
+>
+> (17 Nov, what made Brodor's readable: "The pips are large solid filled discs of [dark colour], each about a
+> fifth of the face's width, with no rims, studs, rings or highlights. No emblems or decorations on any face.
+> Flat even lighting, no glare." And a background unlike the dice, e.g. light grey behind gold.)
+
+**Becalmed** (18 Nov, the user asked for its art; no sound or music, the user's call; ideas in `docs/voyage-brainstorm.md`, "Becalmed's look")
+- `art/becalmed-sail.jpg`, the slack sail (**not painted**; 18 Nov, the user: hung over the top of the screen it would cover
+  the opponent's bust. Claude's suggestion: only in the sea die's Becalmed moment, as one full painting, a prompt given in
+  the chat of 18 Nov: the ship's slack sails from the deck, a glassy sea and a still amber sky). The first prompt:
+> The underside of a great weathered canvas sail on a pirate ship, hanging slack and motionless from a heavy wooden
+> yard across the very top of the picture, seen from below, filling the top half of a wide image edge to edge, its
+> lower edge drooping in soft heavy folds with patches and old stitching, loose ropes and a reef line hanging limp
+> from it, warm evening light glowing through the canvas from above, everything still. The bottom half of the picture
+> is plain: on a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean
+> edges, no text, no lettering. *+ style line*
+- `art/becalmed-lantern-lit.jpg` and `art/becalmed-lantern-out.jpg`, the three lanterns that count a becalmed hand's
+  throws (one goes out at each throw), square item icons (**painted by the user 18 Nov**; on the sea's plaque the same day, then taken out: "too confusing", the user):
+> One small brass ship's lantern with a wire cage and glass panes, a warm candle flame burning inside, a carrying ring
+> on top. One object only, centred and filling the frame, bold clear silhouette that reads at a small size, thick dark
+> outline. On a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean
+> edges, no text, no lettering. Square image. *+ style line*
+>
+> (The same lantern for the second, its flame put out: the glass dark, a thin curl of grey smoke rising from the top.)
+
+**Vaelin Inkhand's dice, repainted** (17 Nov, the user's: "inky black but with pips that are legible"; `art/dice-vaelin.jpg`, the old ink-stained ivory one kept as `dice-vaelin-v1.jpg`; **painted by the user 17 Nov and in the game**: the 1's ring redrawn crisp, `RING_ONE`)
+> A 3 by 2 sprite sheet of six square die faces, evenly spaced on a plain flat light grey background, each face
+> filling its square, row one showing 1, 2, 3 and row two showing 4, 5, 6 pips in standard die layouts. The faces are
+> deep inky black, like a pool of wet ink, with a soft glossy sheen and the faintest hint of deep violet in the black,
+> smooth and even, slightly rounded corners. The pips are large solid filled discs of bright bone white, each about a
+> fifth of the face's width, crisp edged, with no rims, studs, rings or highlights, except the single pip of the 1,
+> which is bright scarlet red with a thin bone-white ring around it, and the six pips of the 6, which are bright
+> vivid green. No emblems, splatters or decorations on any face. Every face the same material, viewed straight on,
+> flat even lighting, no glare, no shadows, no perspective, no text, no border around the sheet. About 1264 x 848.
+> *+ style line*
+
+**The Yawning Portal's doors** (17 Nov, for the arrival scene; `art/portal-doors.jpg`; **painted by the user 17 Nov**, in the walk to the Portal)
+> The great double doors of a grand fantasy tavern seen straight on from the street at night, filling the whole
+> picture edge to edge: two tall arched oak doors meeting in the middle, banded with black iron, a heavy brass ring
+> on each, a carved stone arch above with a sign reading nothing, a faint cold blue-green light leaking through the
+> crack between them and under them, wet cobbles at the bottom, warm lantern light on either side. Both doors must
+> be the same size, meeting exactly at the centre line, so each half can swing open. Wide, about 1584 x 896.
+> *+ style line*
+
+**Backdrop**
+> Wide interior view of a cosy fantasy tavern at night seen from a seat at a gaming
+> table, roaring stone fireplace, shelves of bottles, hanging lanterns, out of focus,
+> warm candlelight, empty foreground. *+ style line*
+
+**Character bust (template)**
+> Head-and-shoulders portrait of [CHARACTER], three-quarter view, looking at the viewer
+> with [EXPRESSION], holding [PROP], warm rim light from a fireplace, on a plain flat
+> solid magenta background, no checkerboard. *+ style line*
+
+| Character | Description | Expression | Prop |
+|---|---|---|---|
+| The Molar | Big friendly orc tavern keeper with one huge gold tooth | wide toothy grin | a dice cup |
+| Klarg | Hulking bugbear paladin in dented armour | sly smirk | one stolen die held up |
+| Rokr | Hooded star-reader with violet glowing eyes in a fur-trimmed cloak (as painted) | serene, knowing | a glowing star chart |
+| The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | his revolver, The Ace of Spades |
+| Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
+| Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
+| Sperm McGrath | Grizzled grey-haired bouncer, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
+| Frak | Portly half-elf sorcerer with pointed ears, balding with sideburns, purple rune-stitched vest over blue sleeves | sly smirk | a smoking cigar |
+| Danhausen | Wiry showman in white face paint with black markings, small curled horns, a high-collared black cape, white gloves | huge manic grin | a small purple gourd |
+| Duke Morrigan | Elegant purple-skinned tiefling with big curled ram's horns, a purple high-collared coat over a yellow shirt | sly smile | none (head and shoulders) |
+| Martha/Mystery | Red-haired tavern regular in an apron over a brown jumper | knowing half-smile | an ornate brass vape, purple smoke curling round her |
+| Martha in disguise (x3) | Martha as above, holding up another opponent's face as a mask with cut-out eye holes: Frak, Danhausen or Duke Morrigan | sly, knowing | the mask, held in both hands beside her face |
+| Brodor | Huge bearded wrestler in a straw cowboy hat and gold sunglasses, a fringed yellow tank top | big laughing grin | a Slim Jim |
+
+Thom's prompt also adds *no text, no lettering*: the shop screen prints "Thom's Thonics" itself.
+
+**Reaction tokens (multiplayer, five item icons; asked for 3 Nov)**
+> A single [SUBJECT], one object only, centred and filling the frame, bold clear silhouette that
+> reads at a small size, thick dark outline, no text, no lettering, on a plain flat solid magenta
+> background, no checkerboard, no shadow on the background. *+ style line*
+
+| File | Reaction | Subject |
+|---|---|---|
+| `art/reaction-cheers.jpg` | Cheers | wooden tavern tankard raised in a toast, frothy foam spilling over the rim, a splash of ale flying off |
+| `art/reaction-ha.jpg` | Ha! | grinning jester's face, wide toothy grin, red-and-gold jester's cap with jingling bells |
+| `art/reaction-ooh.jpg` | Ooh | cartoon face with its jaw dropped wide open in amazement, eyebrows shot up, wide eyes |
+| `art/reaction-smug.jpg` | Smug | a fan of playing cards held up, one sly winking eye peeking over the top of the cards |
+| `art/reaction-woe.jpg` | Woe | a red heart cracked down the middle, a jagged split, a small tear-drop falling from it |
+
+Done 3 Nov: the user painted all five (Ha! is Frak's grinning face with his cigar). They show
+~22 px in the reaction coins and ~56 px as one rises from a nameplate, so the silhouette
+matters more than detail. Cut out like the Thonics (`cutOutFlat` with `icon: 320`) into
+`client/public/art/reactions/<id>.webp`; then add each id to `PAINTED_REACTIONS` in Hud.tsx.
+
+### The Salty Swallow (painted by the user, 9 Nov; the prompts stay here for repaints)
+
+Everything here is on a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean edges, no text, no lettering. *+ style line*
+
+**Spot busts** (waist up, facing us, arms close to the body so they cut out cleanly)
+
+- `art/bust-yvesil.jpg`, Yvesil: A half-orc druid of the sea in their forties, green-grey weathered skin, small lower tusks, calm knowing eyes, braided dark hair threaded with shells and kelp. One arm ends in a stump below the elbow, wrapped in tarred rope and sailcloth, clearly visible in front of the chest. The other hand holds a gnarled driftwood staff crusted with barnacles. Sea-worn robes in deep teal hung with shells and knotted cord. Cool moonlight from one side, a faint blue-green glow of seawater around the staff.
+- `art/bust-jorvash.jpg`, Jorvash: An elderly, impeccably dignified upper-class manservant, tall and thin, silver hair perfectly combed, neat white moustache, one raised eyebrow, quietly unimpressed expression. Immaculate black tailcoat, crisp white shirt and waistcoat, white gloves. One gloved hand holds up a small silver tray with a bottle of dark red wine and a glass of black water that gleams faintly. Warm lantern light from one side.
+
+**Ability paintings** (a character in a dramatic moment, centred, the whole figure inside the frame)
+
+- `art/ability-starry-form.jpg`, Starry Form: Rokr, a hooded figure with violet glowing eyes in a dark fur-trimmed cloak, one hand raised, his body dissolving into a swirl of twinkling blue-white stars and joined constellation lines, six dice hanging in the swirl with their faces hidden by stars.
+- `art/ability-penitent-stare.jpg`, Penitent Stare: The Hangman, a gaunt gunslinger in a wide-brimmed black hat, leaning in and staring straight at us, his eyes burning with fierce orange hellfire, flames licking from the eye sockets, ghostly chains drifting around him, his face lit from within. Menacing, judging.
+- `art/ability-ace-of-spades.jpg`, The Ace of Spades: The Hangman, a gaunt gunslinger in a wide-brimmed black hat, firing a long ornate revolver straight at us, a bright muzzle flash, a spade symbol engraved on the revolver's barrel, gun smoke curling away. No playing cards.
+- `art/ability-all-in.jpg`, All In: Jaguar Cantona, a handsome smiling rogue with curly black hair and a flowing cloak, shoving a great heap of gold coins and dice forward with both arms, coins spilling, a daring grin.
+
+**Item icons** (one object only, centred and filling the frame, bold clear silhouette that reads at a small size, thick dark outline)
+
+- `art/keepsake-gildedDie.jpg`, the Gilded Die (17 Nov): a single six-sided die covered in shining gold leaf, the leaf a little worn at the corners so old ivory shows through, black pips, tilted to show three faces, two gold coins leaning against it.
+- `art/keepsake-brensCompass.jpg`, Bren's Compass (17 Nov): an old brass ship's compass with its hinged lid open, a cream face with a painted compass rose, a red-tipped needle caught mid-swing, a short knotted rope lanyard looped from its ring.
+- `art/keepsake-notaroRed.jpg`, Notaro Red: a dusty old bottle of deep red wine with a wax seal and a blank faded label, beside a filled glass.
+- `art/keepsake-ebonShield.jpg`, Water of the Ebon Shield: a small round black crystal flask of glossy black water that gleams, a tiny silver shield emblem on its front.
+- `art/keepsake-fairWinds.jpg`, Fair Winds: a billowing white sail full of wind on a small wooden mast, soft golden swirls of breeze around it.
+- `art/keepsake-followingSea.jpg`, Following Sea: a single rolling blue-green wave with a white crest, carrying a tiny wooden boat on its back.
+- `art/keepsake-albatross.jpg`, The Albatross: a large grim white albatross with spread wings, a dead weight of rope hanging from its neck, stormy grey shading.
+- `art/keepsake-blackSpot.jpg`, The Black Spot: a torn scrap of old parchment with one big inked black circle in the middle.
+
+**At sea (painted by the user, 9 Nov: the Swallow has set sail)** (no magenta: full paintings, like the other backdrops)
+
+- `art/salty-swallow-at-sea.jpg`, the gun deck under way (replaces the docked backdrop for the ship's four fights; 1584×672 or wider, the same view as the docked one so the table and busts sit as before): *Wide interior view of a pirate ship's gun deck at night while the ship is at sea, seen from a seat at a gaming table: open gun ports and round portholes showing a dark rolling ocean with moonlit wave crests and spray, lanterns swinging on their hooks, a hammock swaying, ropes and barrels lashed down, a little seawater glistening on the deck boards, cool blue moonlight through the ports mixing with warm lantern light, out of focus, empty foreground. + style line*
+- `art/salty-swallow-sets-sail.jpg`, for the "sets sail" scene before Klarg (1600×900, wide; the scene crops its middle on a phone): *The pirate ship the Salty Swallow leaving a lantern-lit harbour at dusk, seen from the dock: sails unfurling and filling with wind, crew hauling lines, the last mooring rope dropping into the water, gulls, a low moon over the open sea beyond the harbour mouth, the ship heeling slightly as it catches the wind, warm harbour lights behind, cool sea ahead. Dramatic, adventurous. + style line*
+
+**Skipper Bren (painted, 9 Nov)** (flat solid magenta background, like the other spot busts)
+
+- `art/bust-bren.jpg`, Skipper Bren, master of the Salty Swallow, who welcomes you aboard on the docks: *A weathered sea captain in their fifties standing on a harbour dock at dusk, waist up, facing us with a warm, knowing half-smile, salt-and-pepper beard and braided hair under a battered tricorn hat with a gull feather, a long dark-blue captain's coat with tarnished brass buttons over a faded red sash, a brass spyglass tucked under one arm, the other hand raised in welcome, warm lantern light from one side and cool sea light from the other, arms close to the body. On a flat solid magenta background, no checkerboard, no glow or shadow on the background, crisp clean edges, no text, no lettering. + style line*
+  Done (9 Nov): cut out with `cutOutFlat('bust-bren.jpg', 'bren', ...)` into `client/public/art/bren.webp`, standing on the quay in `DockScene`. The user also painted the ship at the quay (`art/salty-swallow-quay.jpg`, the scene's backdrop), the sea die (`art/dice-sea.jpg` → `sea-die.webp`) and the dial with its needle (`art/sea-dial.jpg`, `art/sea-dial-needle.jpg`).
+
+When these come in: the backdrop goes in `SALTY_SWALLOW` in `client/src/Backdrop.tsx` (and the docked one could stay for the first scene), the sailing painting replaces the gun deck in `SetSail` (Hud.tsx); in the meantime the scene rocks the docked deck.
+
+### Áéd, the dragon sorcerer (11 Nov; his bust painted by the user, `art/bust-aed.jpg`)
+
+**His ability painting (wanted; Unlimited Power, one painting for all four tricks, or one per trick)** (since 13 Nov on a
+flat solid **lime green** background: his violet magic and heart sit too close to magenta to cut cleanly, as with Martha's vape)
+
+- `art/ability-unlimited-power.jpg` (13 Nov, matched to his bust): *Áéd, a smug, handsome dragon sorcerer in his thirties
+  with short spiky brown hair and a confident half-smile, in a high-collared deep violet coat embroidered with gold dragons
+  and faint gold star-chart lines, amethyst clasps down the front, silver bracers carved with runes. He holds up a glowing
+  violet crystal heart in one hand; his other hand is raised with fingers spread, as if conducting, and four ivory dice
+  float in an arc before him, each wrapped in its own ribbon of violet-and-gold magic: one splitting into two ghostly
+  copies, one blurred with speed as it spins, one burning with violet fire, one beside a glowing mirror copy of itself.
+  Violet magic light on his face from below, wisps of violet smoke curling from his wrists. Waist up, dynamic pose, the
+  whole figure and all four dice inside the frame, centred. On a flat solid lime green background, no checkerboard, no glow
+  or shadow on the background, crisp clean edges, no text, no lettering. + style line*
+- Per trick, if wanted (same prompt, the four dice swapped for one): **Heightened Dice** (a die splitting into two, the
+  worse face glowing), **Quickened Dice** (dice blurring with speed lines in a violet swirl), **Empowered Dice** (one die
+  wreathed in violet fire), **Twinned Dice** (a die and its glowing mirror copy side by side).
+
+### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
+
+A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the
+middle third (phones crop the sides), and attach `art/ghoul-gourd-outside.jpg` as a style reference if
+the tool allows. The Yawning Portal and Salty Swallow shots reuse their backdrops, the door shot ends on
+Sperm's bust.
+
+**The town at night (essential, wide 16:9), `art/intro-town.jpg`**
+> Wide establishing view looking down a narrow cobbled street through a crooked medieval fantasy town at
+> night, steep timber-framed houses leaning over the road on both sides, warm amber light glowing in small
+> leaded windows, iron lanterns on brackets, chimney smoke drifting across a deep blue night sky, wet
+> cobblestones reflecting the lantern light, a few small distant cloaked figures, the street leading the eye
+> to a warm glow at its far end in the centre of the picture, deep shadows at the edges, moody and inviting,
+> no text, no lettering, no signs with writing. *+ style line*
+
+**Foreground frame (recommended, wide 16:9), `art/intro-foreground.jpg`**: cut out and slid past the town
+at a different speed, for depth.
+> Very dark near-silhouette foreground elements only, framing the edges of a wide picture: heavy timber roof
+> eaves across the top corners, a wooden beam and stone wall corner down the left edge, a wrought iron lantern
+> on a bracket hanging at the upper right, a stack of old barrels in the lower right corner. The entire centre
+> of the picture is completely empty flat solid magenta background, no checkerboard, no gradient, no glow, no
+> light spilling onto the background, crisp clean edges, no text. *+ style line*
+
+**The door (recommended, wide 16:9), `art/intro-door.jpg`**
+> Close view of the front of a timber-framed medieval fantasy tavern at night, a heavy arched oak door with
+> black iron strap hinges set in a worn stone arch, standing slightly ajar in the centre of the picture with
+> warm golden firelight spilling out across wet cobblestones, a weathered wooden hanging sign above showing a
+> painted skull-faced ghoul holding a gourd, no words on the sign, small leaded windows glowing on either side,
+> room left clear in front of the door for a figure to stand, rain-wet stone, moody and inviting, no people, no
+> text, no lettering. *+ style line*
+
+**Sound (optional).** Music, `IntroMusic.mp3` (Udio): *Dark fantasy tavern cinematic score, instrumental, about
+25 seconds. Opens almost silent with a lone low fiddle and distant muffled drum. Slowly builds with hurdy-gurdy,
+low strings and war drums. Rises to a big dramatic swell in the last five seconds, then ends on one heavy final
+hit. Folk instruments, ominous but adventurous, no vocals.* Street, `IntroStreet.mp3`: *Steady light rain on
+cobblestones and wooden roofs at night, a medieval town, with faint muffled tavern singing and laughter from
+behind a distant door, a creaking hanging sign, no music, 25 seconds.*
+
+**Narrator (optional; on screen as text for now).** A gravelly, older, unhurried storyteller, with a hint
+of a smile. A clip per line, `IntroLine1.mp3` to `IntroLine5.mp3`, the user's words: "Every town has a game." / "In this one, some
+play for gold, others play for glory." / "Few get past the Portal. Fewer still come back from the ship." / "Find a 2.
+Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
+
+## Status
+
+| Asset | Status | File |
+|---|---|---|
+| Table wood | Done | Since 28 Oct the tabletop is `art/table-wide.jpg` → `textures/table-wide.webp`, laid once across the table (mirrored past its sides since 3 Nov); before it `art/table-planks.jpg` → `textures/table-planks.webp`, and the first version `art/table-wood-v1.webp` |
+| Rail wood | Done | `art/rail-walnut.jpg` → `textures/rail-walnut.webp` (the slot rail and the tray's rails: a wooden box again since 3 Nov, no brass on it) |
+| UI parchment | Done | `art/parchment.jpg` → `art/parchment.webp` (dialogs; covers each panel, not tiled) |
+| Felt | Done | `client/public/textures/felt.webp` |
+| Dice faces | Done | `client/public/textures/dice-faces.jpg` (face positions in `client/src/textures.ts`) |
+| Opponents' dice (the Ghoul and Gourd) | Done, 3 Nov; switched off 4 Nov, **on again since 5 Nov** with clean pips (`OPPONENT_DICE_ON` in `client/src/textures.ts`) | `art/dice-mcgrath.jpg` (made, but McGrath throws your ivory dice since 3 Nov), `dice-frak.jpg`, `dice-danhausen.jpg`, `dice-duke.jpg` (its 1 ringed in gold, `RING_ONE`), `dice-martha.jpg` → `textures/dice/<id>.webp` and `<id>-cut.webp` (`diceSheets()`: faces redrawn even, lifted lighter; pips as painted). Every opponent has a set since 13 Nov (the Yawning Portal's and the ship's from the user's sheets). Since 17 Nov (the user: "as good as the Yawning Portal dice") the ship's five keep a softer trace of their painted texture with clean round pips redrawn like the Portal's (`TEXTURED` with `cleanPips` in process-art.mjs), Jaguar's pips bigger and dark (`PIP_MIN_R`, `PIP_COLOUR`), and Frak's 6s yellow (`SIX_COLOUR`). Brodor's repainted the same day from the prompt below with readability spelled out (plain gold, big solid black pips, no emblems: his first had gold ring pips and sunglasses on the 6, `dice-brodor-v1.jpg`); Sylvester's stone lifted paler with near-black pips in processing. Before/after: `previews/dice-eval/sheet.jpg`, `sheet-after.jpg` |
+| Multiplayer reactions (five item icons) | Done, 3 Nov | `art/reaction-cheers.jpg`, `reaction-ha.jpg`, `reaction-ooh.jpg`, `reaction-smug.jpg`, `reaction-woe.jpg` (flat magenta, `cutOutFlat` with `icon: 320`; the tankard keeps its ale drops and has `holes` in its handle) → `client/public/art/reactions/<id>.webp` |
+| Brass slot plates | Done | `art/slot-plates.jpg` → `plate-2/4/blank.webp` |
+| Backdrop | Done | `art/tavern-backdrop.jpg` → `tavern.webp` |
+| Backdrop: the Yawning Portal | Done (26 Oct) | `art/yawning-portal-backdrop.jpg` → `yawning-portal.webp` (1584×672), the hall with its well; the Portal's five fights and its scenes |
+| Ability paintings (Mind Whip, You are Cursed!, Sympathy for the Devil, Disguise Self; since 26 Oct evening also Back of the Head, Inkfire Brand, Flourish, Astral Flood, Reach Around, Written in the Stars; since 27 Oct Jaguar's Smooth Talk and The Cloak; since 28 Oct the Ridgeler's Divine Smite; since 9 Nov Starry Form, Penitent Stare, The Ace of Spades and All In) | Done (26 Oct - 9 Nov) | `art/ability-<id>.jpg` → `ability-<id>.webp` (900 tall, cut out); `ABILITY_ART` in `client/src/Hud.tsx`. Back of the Head keeps its flying die (`minPiece`) and a little of its streaks (`trails`); Inkfire's black flame goes see-through at its tips (`smokeBox`, `smokeMinBlue`); Flourish's cream swirls are see-through (`trails`) with `holes` inside the loops; Astral Flood's aura fades at its edge (`soften`) with `holes` between the ribbons. Smooth Talk (27 Oct) keeps its gold sparkle swirls and the potion's red glow see-through (two `trails`, `tolerance: 30`, tiny sparkles kept by a low `minPiece`); The Cloak keeps its smoky wisps and the cloak's thin edge see-through (`trails`), `holes` between the folds and the arm, and fades out where the painting crops the cloak (`fade`, new 27 Oct: { left, right, top, bottom } px). Divine Smite (28 Oct) keeps the hammer's gold flame bright and see-through (`glow`, new 28 Oct: inside its boxes the flame keeps its own warm colours and turns see-through by how bright it is; leftover pink there goes), `holes` between his raised arm, head, spikes and the handle, and fades where the painting crops him (`fade`). Every ability now has one (Dead Eye's is unneeded while it's dormant) |
+| Backdrop: outside the Ghoul and Gourd | Done | `art/ghoul-gourd-outside.jpg` → `ghoul-gourd-outside.webp` (1376×768), Sperm McGrath's fight; `SCENES` in `client/src/Backdrop.tsx` |
+| Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
+| Jaguar Cantona, second painting | Done (27 Oct) | `art/bust-jaguar.jpg` (flat magenta, `cutOutFlat` with `holes` in two hair gaps and `fade: { right: 140 }`: his teal-and-gold cloak runs off the painting's right edge, so it fades out instead of ending in a straight line) → `jaguar.webp` (969×720); the first painting (a checkerboard) kept as `art/bust-jaguar-v1.jpg`. Same pose and head size as the first, so no `seat`; round frames at zoom 2 |
+| Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
+| Frak (half-elf sorcerer) | Done; smoke cut out 23 Oct | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `noSmoke`: the painted cigar smoke is taken out, over the background and over his vest, because the game draws its own moving smoke from the tip; `ONLY=frak npm --prefix client run art` redoes just him) → `frak.webp` |
+| Danhausen | Done | `art/bust-danhausen.jpg` (flat magenta, `cutOutFlat`) → `danhausen.webp`; `seat: 1.6` behind the table (he shows more body) |
+| Duke Morrigan | Done | `art/bust-duke.jpg` (flat magenta, `cutOutFlat` with a low `tolerance` so his purple coat and skin stay, and `holes` for the background inside his curled horn) → `duke.webp` |
+| Martha/Mystery | Done | `art/bust-martha.jpg` (flat magenta, `cutOutFlat` with `smokeBox` + `smokeColour: 'own'`: her vape smoke stays purple and see-through) → `martha.webp`; `seat: 1.15` |
+| Martha's disguises | Done, 21 Oct | `art/bust-martha-frak.jpg`, `bust-martha-danhausen.jpg`, `bust-martha-duke.jpg` (flat magenta, `cutOutFlat` with `holes` seeds for the mask's eye holes and the gap under her wrist; the Duke's with `tolerance: 30` so the purple mask stays) → `martha-frak.webp`, `martha-danhausen.webp`, `martha-duke.webp`; `PORTRAITS` 'Martha as Frak' / 'Martha as Danhausen' / 'Martha as Duke Morrigan', `seat: 1.15` like her own bust |
+| Brodor | Done, 21 Oct; new painting 26 Oct | `art/bust-brodor.jpg` (fists in gold gloves and ribbons; flat raspberry, `cutOutFlat` with `holes` between the ribbons) → `brodor.webp` (696x720); `seat: 1.3`, round frame centred on [52, 31] at zoom 1.7. The first painting (with the Slim Jim) is kept as `art/bust-brodor-v1.webp` |
+| Player avatars Devil, Vaelin | Not planned for now | Still the classic game's portraits |
+| Klarg's hand (Reach Around) | Wanted, optional | A furry bugbear hand reaching down, transparent; for now the stolen die just flies off to his side of the table |
+| Mystery Flavour (Martha's Elf Bar, a keepsake) | Done, 4 Nov | `art/keepsake-mysteryFlavour.jpg` (lime green background, `cutOutFlat` with `green: true`, `icon: 320` and `holes` in the smoke's curl) → `keepsakes/mysteryFlavour.webp` |
+| The intro cinematic | Done, 5 Nov (no narrator yet) | `art/intro-town.jpg`, `intro-foreground.jpg`, `intro-door.jpg`; `public/IntroMusic.mp3`, `IntroRain.mp3`, `IntroTavernAmbience.mp3` |
+| Keepsake pictures (eight item icons) | Done, 29 Oct | `art/keepsake-bentCopper.jpg` (the Shield), `keepsake-velvetCushion.jpg`, `keepsake-luckySeat.jpg` (the Trap Card), `keepsake-loyaltyCard.jpg`, `keepsake-potionBelt.jpg`, `keepsake-loadedDie.jpg`, `keepsake-marthasMask.jpg`, `keepsake-brodorsSunglasses.jpg` (flat magenta / crimson, `cutOutFlat` with `icon: 320` like the Thonics; the Loyalty Card with `holes` seeds for its nine punched holes (the tenth is painted filled in, so it stays parchment); Martha's mask keeps its light pink sticker outline as a border) → `client/public/art/keepsakes/<id>.webp`, 320x320. Shown ~26 px on the strip, ~40 px on Thom's back shelf, ~84 px in the gold burst |
+| Keepsake pictures, two more (the Gilded Die, Bren's Compass) | Done, 17 Nov | `art/keepsake-gildedDie.jpg` (a gold-leafed die and two coins), `keepsake-brensCompass.jpg` (an open brass compass on a knotted rope: a `holes` seed in its ring) (flat magenta, `cutOutFlat` with `icon: 320`) → `client/public/art/keepsakes/<id>.webp`, 320x320. In the game since 17 Nov |
+| Keepsake pictures, three more (the Miser's Purse, the Bottomless Flask, the Gambler's Charm) | Done, 30 Oct | `art/keepsake-misersPurse.jpg` (a leather coin sack tied with a dark cord), `keepsake-bottomlessFlask.jpg` (a pewter hip flask pouring a golden swirl: the curl's middle seeded with `holes`; the open cap is painted metal inside, so it stays), `keepsake-gamblersCharm.jpg` (a braided cord, a brass four-sided die and a four-leaf clover: `holes` seeds for the cord's loop knot, the ring and the gaps between the wires, the die and the clover) (flat magenta, `cutOutFlat` with `icon: 320`, like the keepsakes) → `client/public/art/keepsakes/<id>.webp`, 320x320. In the game since 30 Oct |
+| Blessing and song icons (the Bard's two songs, the Lady's Grace, Sworn to Kram) | Done, 29 Oct | `art/keepsake-inspiringSong.jpg` (a lute, a ribbon and floating notes: `minPiece: 0.001` keeps the separate notes), `keepsake-cuttingWords.jpg` (quill and dagger), `keepsake-ladysGrace.jpg` (a candle with a cyan flame: `glow` with `colour: 'light'` keeps the flame and a soft see-through pale glow; the handle's loop seeded with `holes`), `keepsake-kram.jpg` (a black disc with a red K) (flat magenta, `cutOutFlat` with `icon: 320`, like the keepsakes) → `client/public/art/keepsakes/<id>.webp`, 320x320. For the strip's 🎶 / 🗡️ / 🔱 and the Lady's Grace, still emoji in the game until wired up |
+| Thom bust (Thom's Thonics shop) | Done | `art/bust-thom.jpg` (flat magenta, cut out by `cutOutFlat`) → `thom.webp`; the shop is a full-screen scene with him in it |
+| Thom's Thonics (six bottles, item icons) | Done, 28 Oct | `art/thonic-healing.jpg`, `thonic-lastGasp.jpg`, `thonic-fizzy.jpg`, `thonic-secondThoughts.jpg`, `thonic-steady.jpg`, `thonic-clearEye.jpg` (flat magenta, `cutOutFlat` with `icon: 320`: trimmed tight and centred on a 320x320 transparent square, 8 px in from the edges; Second Thoughts with `tolerance: 40` so its violet wax stays) → `client/public/art/thonics/<id>.webp`. Shown ~28 px on the shelf, ~40 px in Thom's cart, ~200 px as one is drunk. The next item icons (Elf Bars, keepsakes) can use `icon` too |
+| The Ace of Spades (the Hangman's revolver) | Done, 9 Nov | `art/ability-ace-of-spades.jpg`, the Hangman firing it, his ability screen |
+| Spots between fights | Done | Hooded Stranger `art/bust-stranger.jpg` → `stranger.webp`, Dice Den hustler `art/bust-dicer.jpg` → `dicer.webp`, Pickpocket `art/bust-pickpocket.jpg` → `pickpocket.webp` (flat magenta, `cutOutFlat`); Shrine to the Lady (goddess of sailors) `art/shrine.jpg` → `shrine.webp`, a scene, not cut out. Aboard the Salty Swallow (10 Nov): `art/shrine-ship.jpg` → `shrine-ship.webp`, the same statue below decks, from the prompt in the pack. Framing in a round frame: `SPOT_PORTRAITS` in `client/src/portraits.ts` |
+| The Wild Magic Hot Tub (a spot) | Done | `art/hot-tub.jpg` → `hot-tub.webp` (raspberry background, `cutOutFlat`); a wide painting, sized by width in its scene |
+| Darren Snakehands (the Ghoul and Gourd's barman, an event) | Done | `art/bust-darren.jpg` → `darren.webp` |
+| The Bard (a spot between fights at the Yawning Portal) | Done | `art/bust-bard.jpg` → `bard.webp` (cut out from a flat magenta background) |
+| Johnny Elf Bar (one of Frak's street urchins, sells Elf Bars; a spot between fights in every place) | Done, 28 Oct | `art/bust-elf-kid.jpg` → `elf-kid.webp` (477x720; flat raspberry, `cutOutFlat` with `tolerance: 30` so the pink liquid in the vape's vial stays, and one `holes` seed for the sliver of background between his sleeve and waistcoat); `SPOT_PORTRAITS.elfKid`, round frame on the face [50, 27] at zoom 1.25 |
+| Johnny Elf Bar's Elf Bars (four vapes, item icons) | Done, 28 Oct | `art/elfbar-lemonLevitation.jpg`, `elfbar-watermelonHindsight.jpg`, `elfbar-cottonCandyCloud.jpg`, `elfbar-purpleHaze.jpg` (flat crimson / plum, `cutOutFlat` with `icon: 320` like the Thonics; `holes` seeds clear the background boxed in by the brass frame, round the mouthpiece and between the vapour's strands; Purple Haze with `redOverBlue: 15`, so its violet smoke, which has as much blue as red, isn't taken for the crimson background) → `client/public/art/elfbars/<id>.webp`, 320x320 |
+| The Cult of Kram (a random event at the Yawning Portal; a man and a woman) | Done | `art/bust-kram.jpg` → `kram.webp` (one enclosed pocket by her cheek seeded with `holes`) |
+| The Yawning Portal's new opponents | Done for four, 20 Oct | The Ridgeler `bust-ridgeler.jpg` (a smoke box keeps the hammer's glow clean), Vaelin Inkhand `bust-vaelin-inkhand.jpg` (a smoke box for his black flame), Stason Jatham `bust-stason.jpg`, Sylvester Stonefist `bust-sylvester.jpg`; registered in `PORTRAITS`, in the game since 21 Oct. Brodor: see his own row |
+| The Salty Swallow's crew (Yvesil, Jorvash) | Done, 9 Nov | `art/bust-yvesil.jpg`, `bust-jorvash.jpg` → `yvesil.webp`, `jorvash.webp` (`holes` for trapped magenta); `SPOT_PORTRAITS` |
+| The ship's item icons (Notaro Red, the Water of the Ebon Shield, the four omens) | Done, 9 Nov | `art/keepsake-notaroRed.jpg`, `keepsake-ebonShield.jpg`, `keepsake-fairWinds.jpg`, `keepsake-followingSea.jpg`, `keepsake-albatross.jpg`, `keepsake-blackSpot.jpg` → `keepsakes/<id>.webp` (`icon: 320`, `SHIP_ICON_HOLES`) |
+| Starry Form's dice (Rokr's hidden dice) | Done, 9 Nov | `art/dice-starry.jpg` → `textures/dice/starry.webp` (cut from inside its painted rim; its stars glow and twinkle) |
+| Backdrop: the Salty Swallow | Done (26 Oct) | `art/salty-swallow-backdrop.jpg` → `salty-swallow.webp` (1584×672), the gun deck docked; the intro film's ship shot |
+| Backdrop: the Salty Swallow at sea | Done (9 Nov) | `art/salty-swallow-at-sea.jpg` → `salty-swallow-at-sea.webp` (1584×672); the ship's four fights and its scenes between fights (`SALTY_SWALLOW` in Backdrop.tsx) |
+| The Salty Swallow sets sail | Done (9 Nov) | `art/salty-swallow-sets-sail.jpg` → `salty-swallow-sets-sail.webp` (1584×672); the sailing scene before Klarg (`SetSail`), the trailer's "One ship." |
+| Skipper Bren and the quay | Done (9 Nov) | `art/bust-bren.jpg` → `bren.webp` (cut out); `art/salty-swallow-quay.jpg` → `salty-swallow-quay.webp` (1167×912), behind Bren's welcome (`DockScene`) |
+| Áéd's bust | Done (11 Nov) | `art/bust-aed.jpg` → `aed.webp` (`redOverBlue: 22`, so his violet heart and wisps stay); round frame `PORTRAITS['Áéd']` |
+| Áéd's ability painting | Done (13 Nov) | `art/ability-unlimited-power.jpg` → `ability-unlimited-power.webp` (`cutOutFlat`'s `green: 'all'`, new 13 Nov: the green taken out everywhere, as his see-through magic encloses pockets of it), shown for Unlimited Power and each of his four tricks; his sound `UnlimitedPower.mp3` (2.5 s) plays for each trick; until then his tricks show their banner only |
+| The flying snake (Brodor's letter) | Done (10 Nov) | `art/flying-snake.jpg` → `flying-snake.webp` (`holes` behind its neck and in its tail's curl); brings Brodor's invitation (`.courier-snake`) |
+| The trailer's old-game stills | Done (11 Nov) | `client/public/art/trailer/old-start.webp`, `old-table`, `old-rolled`, `old-kept`: the real old page (`main`) at 384×780, captured headless; not from `art/` |
+| The sea die and its dial | Done (9 Nov) | `art/dice-sea.jpg` → `sea-die.webp` (six faces in a strip, `seaDie()`); `art/sea-dial.jpg` and `art/sea-dial-needle.jpg` → `sea-dial.webp`, `sea-dial-needle.webp` (`SeaDial`: `DIAL`, `NEEDLE` hold the hub and pivot) |
+
+## Sounds and music still missing (checked against the code, 11 Nov; Jaguar's and the music per place came 17 Nov; brought up to date 20 Nov)
+
+Every clip the user makes goes in `public/` and is wired in `client/src/sounds.ts`. What has none yet:
+
+**Abilities:** every one has a sound since 17 Nov. Jaguar's came then (the user's, uploaded to `art/audio/`): Smooth
+Talk has two, `SmoothTalkThonic.mp3` as he drinks your Thonic and `SmoothTalkMinus.mp3` as he talks points off your
+hand; `TheCloak.mp3` (brought up 8 dB, a quiet recording) and `AllIn.mp3`.
+
+**Made up by the game for now** (synthesized in sounds.ts; a real clip could replace each):
+
+| Sound | Where | Now |
+|---|---|---|
+| The sea changing | the sea die's news, a heel or a calm (`playSeaSwell`), the sailing scene, Bren's quay | a filtered wave, a boom, a creak |
+| The ship's bell | the sailing scene (`playShipBell`) | two synthesized strikes |
+| The keepsake chime | Trap Card, Velvet Cushion, Loaded Die, Gambler's Charm, Bottomless Flask, Miser's Purse, the Lady's Favour, Kram, Yvesil's and Jorvash's pick, the Bard's pick (`playChime`) | one shared chime |
+| Coins | Darren's lads catching the lot (`playCoins`) | synthesized clinks |
+
+**The user's clips added 18-20 Nov:** `Victory.mp3` as a won crawl's end screen opens, `HomeScreen.mp3` on the start screen
+(from the first tap; tried at once where the browser allows), `BardAmbient.mp3` in the Bard's scene (in place of
+`ThreeStrings.mp3`), `ThiefCaught.wav` as the thief is spotted. The celebration logo has the perfect 24's cheer.
+
+**Scenes between fights with no loop of their own** (`startSceneAmbience`; they have the tavern's music only): Johnny Elf Bar, Jorvash, Darren Snakehands, the Hooded Stranger, the thief. (Thom, the hot tub, the Shrine, the Bard, the Cult of Kram and Yvesil have the user's loops.)
+
+**The arrival at the Yawning Portal** (17 Nov): silent so far. If wanted: a heavy door opening, the well's hum, ink or chalk as the Ghoul and Gourd's names are struck.
+
+**The ship's crowd:** the tavern's crowd ambience (`Ambience.mp3`) plays aboard too; a ship's own (creaking timbers, rigging, waves on the hull) if wanted.
+
+**Weather:** Becalmed has no sound (the Squall has the wind, the Fog bank the foghorn, the Rogue wave its own clip).
+
+**Music (since 17 Nov, the user's tracks):** the tavern tune at the Ghoul and Gourd, `YawningPortalTheme.mp3` at the
+Yawning Portal, `SaltySwallowTheme.mp3` aboard, `MarthaTheme.mp3`, `BrodorTheme.mp3` and Jaguar's during their fights
+(`PlaceMusic` in Hud, `setMusicFor` in sounds.ts; the originals stay in `art/audio/`). Every boss has a theme. The tavern's crowd ambience (`Ambience.mp3`) still plays under every place,
+the ship's too.
+
+**Waiting on the user's word:** `Whoa.mp3` is off until reworked (`WHOA_ON`); Dirty 20! has none, if wanted (Astral Flood's wave has the old `AstralFlood.mp3` since 17 Nov, its banner the user's new `AstralFloodBanner.mp3`); a narrator for the intro film, if wanted (`IntroLine1.mp3` to 5).
+
+## Processing art
+
+Originals live in `art/` and are never edited. `npm run art` (in `client/`) turns them
+into game files in `client/public/art`: it removes painted checkerboard "transparency",
+trims and resizes busts, and splits the slot plates. Per-image fixes (firelight corners,
+patches boxed in by a hand) are listed at the bottom of `client/scripts/process-art.mjs`.
+
+**Ask for a flat background.** Most AI tools can't make real transparency and paint a
+checkerboard instead, which takes per-image cleanup. Ending character and plate prompts
+with *"on a plain flat solid magenta background, no checkerboard"* makes cut-outs
+automatic. For a subject that is itself pink or purple, ask for flat bright green instead
+(`cutOutFlat`'s `green` option, Mystery Flavour's).
+
+## Process
+
+1. **Generate the felt, table wood and dice first** and drop them into the prototype.
+   They're most of what's on screen, so they set the look.
+2. **Check it on a phone in candlelight** before making anything else. Adjust the
+   style line until three different prompts come out looking like one game.
+3. **Then the backdrop and characters**, reusing the same style line and a reference
+   image from step 1 if the tool supports it.
+4. **Keep the source images** in an `art/` folder outside `public/`, and export
+   compressed copies for the game, so originals can be reprocessed later.

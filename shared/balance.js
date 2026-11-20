@@ -1,0 +1,214 @@
+// The Tavern Crawl's numbers, in one place: prices, gold, hearts and the events between fights.
+// The server plays by them and the balance simulator (balance/) reads them, so a change here
+// changes both. Chosen by simulation (19 Oct): see balance/README.md for how and why.
+'use strict';
+
+module.exports = {
+    // Hearts at the start of every fight (3, the user's call, 20 Oct; the Lady's Favour adds one).
+    playerHearts: 3,
+    // The player's hearts in particular fights (the rest: playerHearts). None for now: 3 everywhere
+    // (the user, 5 Nov; the Ghoul and Gourd's first four were on 2 from 3 Nov). The Lady's Favour,
+    // the Stranger's price and Pruney Fingers count from these.
+    fightHearts: {},
+    // The opponents' lives, in the order you meet them (20 Oct, the user's, for now; balancing
+    // later): the Ghoul and Gourd (McGrath the bouncer, who is the Molar renamed and keeps the id
+    // 'molar', then the high-roller table), the Yawning Portal (five more, Brodor the boss), then
+    // aboard the Salty Swallow (Klarg's four).
+    opponentLives: {
+        molar: 1, frak: 2, danhausen: 3, duke: 3, martha: 3, // McGrath 1, Frak 2, the rest 3 (the user, 5 Nov)
+        sylvester: 3, vaelin: 3, stason: 3, ridgeler: 3, brodor: 4,
+        klarg: 3, rokr: 3, aed: 3, hangman: 3, jaguar: 4 // (Áéd, after Rokr since 11 Nov: 3, a first guess)
+    },
+    // How many times each opponent's ability can be used in a fight (from a random round 1-3).
+    // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
+    // The Yawning Portal's five: 1 each (first guesses, 20 Oct; Inkfire at 2 cost Vaelin's fight 19 points).
+    // Stason's Flourish 2 since 3 Nov (the user's call).
+    abilityUses: {
+        mindWhip: 1, cursed: 2, devil: 1, disguises: 2,
+        suckerPunch: 1, inkfire: 1, flourish: 2, divineSmite: 1, astralFlood: 1,
+        reachAround: 2, constellationBlur: 2, deadeye24: 1, smoothTalk: 1,
+        // The Salty Swallow as the final tier (25 Oct; balance/experiments/final-ship.js): Rokr's
+        // Written in the Stars (turns a fight), the Hangman's Dead Eye, Jaguar's Smooth Talker
+        // (Thonics he talks off your shelf, in his first phase).
+        writtenInStars: 3, deadEye: 1, jaguarPhases: 2,
+        // 6 Nov, the user's: the Hangman's Penitent Stare in place of Dead Eye.
+        penitentStare: 1
+    },
+    // Áéd, the dragon sorcerer (11 Nov, the user's): metamagic. Since 11 Nov (the user's: "simplify it to 3
+    // uses") three uses a fight (his gems), each any of his four tricks; he casts one when the strategy brain
+    // says it raises his chance of winning the round by at least minGain. Heightened: your next throw at
+    // disadvantage (each die twice, you keep the worse), once a round, when he's lost a heart or from the
+    // second round. First guesses, not yet simulated. (points: the uses; costs: a use each.)
+    // 13 Nov (the user's): six uses a fight, each of the four tricks at least once (eachOnce).
+    metamagic: {
+        points: 6,
+        eachOnce: true,
+        costs: { heightened: 1, quickened: 1, empowered: 1, twinned: 1 },
+        minGain: { quickened: 0.12, empowered: 0.06, twinned: 0.06 }
+    },
+    // How the final tier's abilities play (each set by simulation, 25 Oct): a sensible player,
+    // fresh, wins Klarg 27%, Rokr 26%, the Hangman 26%, Jaguar 14% (the Yawning Portal ~40%,
+    // Brodor 23%; the ship as it was 36, 41, 35, 24).
+    // The Salty Swallow's sea (9 Nov, the user's): from a fight's second round, each round begins with a
+    // roll of the sea die, and its face (1-6) on this leg's dial is the round's weather: port (every die
+    // lands one lower, no 6s), calm, or starboard (one higher, no 1s). Both sides. The first round is
+    // calm. Klarg's leg is the calmest, Jaguar's the roughest. First guesses.
+    // The sea die's dial per leg (the user, 10 Nov): a 1 is always listing to port and a 6 always listing
+    // to starboard, on every leg; legs differ only in faces 2-5 (calm and the storms). First guesses.
+    voyage: {
+        // Áéd's leg (11 Nov): calm, with a Squall on face 3 (the user's: "give him a storm on one face"; the face a first guess).
+        aed: ['port', 'calm', 'squall', 'calm', 'calm', 'starboard'],
+        klarg: ['port', 'calm', 'calm', 'calm', 'calm', 'starboard'],
+        rokr: ['port', 'becalmed', 'becalmed', 'calm', 'calm', 'starboard'],
+        hangman: ['port', 'squall', 'rogue', 'fog', 'calm', 'starboard'],
+        // Jaguar's follows his phase (10 Nov, the user's): the eye of the storm while he talks, the storm
+        // wall at his Cloak, every wave at once for All In.
+        jaguar: {
+            talk: ['port', 'calm', 'calm', 'fog', 'fog', 'starboard'],
+            cloak: ['port', 'squall', 'squall', 'rogue', 'rogue', 'starboard'],
+            allIn: ['port', 'rogue', 'rogue', 'rogue', 'rogue', 'starboard']
+        }
+    },
+    finalShip: {
+        klargWaits: true,        // Klarg steals when a 2 or 4 you still need shows (else: on your first throw)
+        starFaces: 2,            // Rokr: faces marked before each throw of the turn
+        deadEyeRerolls: true,    // the Hangman's shot die rolls again (false: it goes to a 1)
+        talkThreeWhenEmpty: 3,   // Jaguar with your shelf empty talks this much off your finished hand
+        cloakThrowsSecond: true  // at Jaguar's 2 lives he hides his dice and throws after you
+    },
+    // The Duke's Sympathy for the Devil (and the mask's): the other side can't score above this.
+    // null: no cap, the three 6s are the whole of it (the user's call, 21 Oct; it was 18).
+    devilCap: null,
+    // The Duke saves his Devil when he doesn't need it (the user's call, 4 Nov): playing second, he
+    // uses it only if his chance of beating your score without it is below this. (He always goes
+    // for it with a 2, a 4 and a 6 kept and three dice to throw: a Perfect 24.)
+    devilWhenBelow: 0.7,
+    // When the abilities that judge their moment use it (17 Nov, the user's: "fire at the most opportune moment").
+    abilityTiming: {
+        punchMinGain: 0.1,       // Sylvester's Back of the Head: the gain in his chance of the round it must bring
+        flourishWhenBelow: 0.7,  // Stason's Vexing Rapier going second: only when his chance without it is under this
+        mindWhipPoorShare: 0.5   // Frak's Mind Whip: the share of your throw that must be 1s and 3s
+    },
+
+    // MONEY: since 23 Oct (the user's calls) every amount here is in whole gold, nearer D&D's
+    // prices: beating Jaguar pays 36 gold (10 for the first win, 2 more each fight), a Healing Thonic costs 11. The old numbers were these
+    // x10 (halves rounded against you).
+    // Gold during a run goes into the purse as it is won; it is spent between fights.
+    gold: {
+        // Beating an opponent (since 28 Oct, the user's call): 10 gold for the first, 2 more for each
+        // one after (McGrath 10, Frak 12 ... Jaguar 36). Until then it was 10 x their place (Jaguar 140).
+        winFirst: 10,
+        winStep: 2,
+        perHeartLeft: 2,    // for each heart still standing when you win a fight
+        perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct); it still restores a heart
+        consolation: 0      // (the consolation for a lost run is in points now: points.reachedPerPlace)
+    },
+    // Each time you buy the same thing again in a run (a Thonic of the same kind, a candle at the
+    // Shrine, a soak), it costs this much more of its first price: x1, x1.5, x2, ... (since 23 Oct,
+    // the user's call; rounded up to the gold piece). Keepsakes are bought once.
+    priceRise: 0.5,
+    // Every price also follows the place (17 Nov, the user's; docs/economy-brainstorm.md): income is about x1.5 at
+    // the Yawning Portal and x2 aboard, so prices are too: Thonics, Elf Bars, keepsakes, the Shrine, the hot tub, the
+    // Bard, Yvesil, Jorvash, the Gilded Die. Between fights the place is the next fight's.
+    placePrice: { ghoulAndGourd: 1, yawningPortal: 1.5, saltySwallow: 2 },
+
+    // THE LEADERBOARD ranks runs by points (since 23 Oct, the user's call; it was the purse).
+    // Points come from what the run did, plus the gold left in the purse at the end.
+    points: {
+        perPlace: 100,        // each opponent beaten: 100 x their place (McGrath 100 ... Jaguar 1,400)
+        perHeartLeft: 25,     // each heart still standing when a fight is won
+        perPerfect24: 50,     // each perfect hand: a 24, or a cursed round's Perfect ...4? (18 Nov, the user's; it was 0)
+        champion: 2000,       // beating Jaguar, the crawl won (18 Nov, the user's), so a finished run tops any that fell
+        reachedPerPlace: 25,  // a run that ends: 25 x the place of the opponent you fell to
+        perGold: 1            // the purse at the end: 1 point a gold piece
+    },
+
+    // Thom's Thonics: what each costs, how many fit on the shelf, how many are on his cart.
+    // Priced a little under what each adds to the final purse when bought before the middle
+    // fights, so the right Thonic at the right time pays for itself and a late one doesn't.
+    thonicPrices: { healing: 11, lastGasp: 13, fizzy: 2, secondThoughts: 3, steady: 9, clearEye: 6 }, // (rising, priceRise)
+    // Elf Bars (28 Oct, the user's): from Johnny Elf Bar, a spot in every place. Each has
+    // elfBarPuffs puffs, at most one a fight. First guesses, to set by play (rising, priceRise).
+    elfBarPrices: { purpleHaze: 12, cottonCandyCloud: 9, lemonLevitation: 8, watermelonHindsight: 14 },
+    elfBarPuffs: 3,
+    shelfSize: 2,
+    shopSize: 3, // Healing, plus two others at random
+
+    // Between fights, one event: now and then a pickpocket or the Hooded Stranger, else two spots catch your eye.
+    interlude: {
+        pickpocketChance: 25,   // percent of walks across the room
+        pickpocketShare: 0.5,   // of the purse, if they get away (half since 21 Oct, the user's call; it was a quarter)
+        pickpocketCatch: 4,     // roll this or higher on one die to catch them
+        pickpocketMaxPerPlace: 2, // a thief strikes at most this often at any one place (the user's call, 4 Nov)
+        shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
+        shrinePrice: 10,        // a candle for the Lady (rising, priceRise)
+        hotTubPrice: 5,         // a soak (rising, priceRise)
+        favourHearts: 1,        // the Lady's Favour: the next fight starts with this many extra hearts
+        diceDenBets: [5, 10],   // the Dice Den: two dice each against the gambler, higher total doubles the bet
+        strangerChance: 20,     // percent of walks the Hooded Stranger finds you (if the thief didn't)
+        strangerOffers: 2,      // keepsakes the Hooded Stranger shows you
+        strangerHearts: 2,      // ...and you start the next fight on this many hearts if you take one (a heart short)
+        // The Wild Magic Hot Tub (a spot, free): a soak, and one wild surge at random, by these
+        // weights. Each dice surge works on one of your dice (hotTubDie) for the next fight.
+        //   noOnes  Bubbly Die: never rolls a 1        twin    Double Bubble: rolls twice, keeps the better
+        //   lucky   Lucky Splash: only rolls 4, 5 or 6  scalding  Scalding Die: always lands on a 6
+        //   soggy   Soggy Die: never rolls a 6         pruney  Pruney Fingers: the next fight a heart short
+        // Next-fight win chance (simulated, 20 Oct): noOnes +2, twin +3, lucky +5, scalding +8,
+        // soggy -8, pruney -20 points; a soak averages about +1 (balance/experiments/hot-tub.js).
+        hotTubSurges: { noOnes: 3, twin: 3, lucky: 3, scalding: 1, soggy: 1, pruney: 1 },
+        hotTubDie: 1,
+        // Darren Snakehands, the Ghoul and Gourd's barman (a random event there, if no thief or
+        // Stranger found you): his snake-arms knock into you; roll one die. Up to darrenSmash a
+        // Thonic on your shelf smashes (an empty shelf: pay for the glass); up to darrenGift he says
+        // sorry with a free Thonic; higher, the snakes catch everything: a Thonic and gold.
+        darrenChance: 15,
+        darrenSmash: 2,
+        darrenGift: 4,
+        darrenGlass: 2,
+        darrenCatchGold: 5,
+        darrenFullShelfGold: 3, // a free Thonic with a full shelf comes as gold instead
+        // The Yawning Portal's own (28 Oct, the user's): the Bard, a spot, sells a song for the next
+        // fight (Cutting Words: the opponent's first hand that counts scores this much less;
+        // Inspiring Song: your first throw of the fight may be thrown again). The Cult of Kram, an
+        // event (if no thief, Stranger or Darren found you): swear fealty, and your dice never land
+        // on 1 for the next kramFights fights. First guesses, to set by play.
+        bardPrice: 8,           // rising, priceRise
+        // The Salty Swallow's own (6 Nov, the user's; first guesses).
+        yvesilPrice: 8,         // an omen from Yvesil the oracle (rising)
+        omenGoodChance: 67,     // percent of her omens that are good
+        jorvashPrice: 8,        // a refreshment from Jorvash the manservant (rising)
+        notaroRed: 2,           // Notaro Red: your first hand that counts next fight scores this much more
+        ebonShieldHearts: 1,    // (unused since 17 Nov: the Water of the Ebon Shield now keeps the sea off you next fight)
+        blackSpot: 1,           // The Black Spot: all your hands next fight score this much less
+        stareEachHeart: 2,      // the Hangman's Penitent Stare: points off your hand per heart you've taken
+        cuttingWords: 3,
+        kramChance: 15,
+        kramFights: 2,
+        kramPriceRise: 0.1,     // while sworn to Kram (his emblem worn), every spot's prices this much higher (17 Nov, the user's)
+        kramKlargExtra: 1       // ...and a run that swore has Klarg reach around this many times more a fight
+    },
+
+    // Keepsakes (only from the Hooded Stranger) that carry numbers. Each set by simulation on
+    // 19 Oct to add ~100-170 gold to a run from Klarg on (balance/experiments/new-keepsakes.js).
+    // Keepsakes for sale on Thom's back shelf (since 21 Oct, the user's call: something worth
+    // saving gold for). Two at random each visit, from those you don't have. Each priced a little
+    // under what it adds to a run's gold when bought around fight 3, when a purse first reaches a
+    // few hundred (balance/experiments/keepsake-when.js; bought later, each is worth less).
+    thomKeepsakes: 2,
+    // (30 Oct: the Miser's Purse, Gambler's Charm and Bottomless Flask, first guesses, and the
+    // reworked Loaded Die's, to set by play and simulation.)
+    // 17 Nov (the user's: a little dearer, two affordable by the end of the Ghoul and Gourd), and x placePrice:
+    // the Shield 54 at the Yawning Portal, the Gilded Die 30 there, Bren's Compass 30 aboard (sold only there).
+    keepsakePrices: { bentCopper: 36, velvetCushion: 20, luckySeat: 20, loyaltyCard: 16, potionBelt: 18, loadedDie: 16, misersPurse: 16, gamblersCharm: 20, bottomlessFlask: 16, gildedDie: 20, brensCompass: 15 },
+    maxKeepsakes: 5,        // carried at once (the user's call, 30 Oct)
+
+    keepsakes: {
+        loadedDieLow: 4,        // the Loaded Die: once your 2 and 4 are kept, it rolls this or higher
+        beltSlots: 1,           // the Potion Belt: extra shelf slots...
+        beltThonic: 'healing',  // ...and the Thonic it comes with
+        miserEvery: 5,          // the Miser's Purse: a win adds 1 gold for every this many in the purse (18 Nov, the user's; it was 10)
+        flaskChance: 50,        // the Bottomless Flask: percent the first Thonic each fight stays
+        gildedStep: 3,          // the Gilded Die: a throw again costs 3, 6, 9 gold in a fight (x placePrice)...
+        gildedMax: 3            // ...at most this many a fight
+    }
+};

@@ -1,0 +1,498 @@
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { Bloom, EffectComposer, Noise, ToneMapping, Vignette } from '@react-three/postprocessing';
+import { BlendFunction, Effect, ToneMappingMode } from 'postprocessing';
+import { flame, lookNext, shareFlame } from './look';
+import { Dice } from './Dice';
+import { Throw } from './Throw';
+import { table } from './game';
+import { REQUIRED_SLOT_X, SLOT_ROW_Z, TABLE_FAR_EDGE_Z, TRAY, screenInsets, slotPosition } from './layout';
+import { artTexture, paintedTexture } from './textures';
+import { layoutBackdrop, setRailAnchor } from './Backdrop';
+import { Room } from './Room';
+import { TableDressing } from './TableDressing';
+import { DustMotes } from './Air';
+import { MomentLights } from './MomentLight';
+import { cameraMoves, shake } from './cameraMoves';
+import { noteFrame, renderDpr, settings, tuneStore, tuning } from './tuning';
+
+const NEAR_EDGE_Z = SLOT_ROW_Z + 0.75; // front of the slot rail
+const farPoint = new THREE.Vector3(0, 0, TABLE_FAR_EDGE_Z);
+const nearPoint = new THREE.Vector3(0, 0, NEAR_EDGE_Z);
+const projected = new THREE.Vector3();
+const railEnd = new THREE.Vector3(TRAY.maxX + 0.45, 0, SLOT_ROW_Z);
+const feltMiddle = new THREE.Vector3((TRAY.minX + TRAY.maxX) / 2, 0, (TRAY.minZ + TRAY.maxZ) / 2);
+const leanAim = new THREE.Vector3();
+const PORTRAIT_HALF_WIDTH = 4.45; // (was 4.05, when the rails could crop)
+
+// Frames the table on any screen shape. It solves for the camera distance and aim so the
+// table's far edge sits a set way down the screen (the tavern backdrop fills the space
+// above it) and the slot rail stays clear of the controls at the bottom. Portrait phones
+// get a more top-down view so the dice stay big.
+function CameraRig() {
+    const { camera, size, scene } = useThree();
+    const drift = useRef(0);
+    const lookAt = useRef(new THREE.Vector3(0, 0, 0.7));
+
+    useFrame((_, delta) => {
+        const cam = camera as THREE.PerspectiveCamera;
+        const portrait = size.width / size.height < 0.9;
+        // Desktops and tablets on their side keep the table centred with a dock of controls
+        // under it (as phones do; matches the CSS `min-height: 501px`).
+        const docked = !portrait && size.height > 500;
+        // Phones on their side keep a column on the right free for the Roll button, so it can
+        // sit right beside the table. The camera renders as if the screen were that much wider
+        // and shows its right-hand part, which shifts the table left without distorting it.
+        const reserve = portrait || docked ? 0 : Math.min(250, size.width * 0.24);
+        cam.aspect = (size.width + reserve) / size.height;
+        if (reserve > 0) cam.setViewOffset(size.width + reserve, size.height, reserve, 0, size.width, size.height);
+        else cam.clearViewOffset();
+        cam.updateProjectionMatrix();
+        const aspect = (size.width - reserve) / size.height; // the part the table must fit in
+        // (20 Nov, the user's: every screen sees the tray at the computer's slanted angle; upright phones looked down
+        // more steeply, 0.22, until then.)
+        const direction = new THREE.Vector3(0, 1, 0.5).normalize();
+        // On phones and docked screens the controls sit under the table, so the table must end
+        // above them (their real height, measured by the HUD); phones on their side have them
+        // in the corners. (Ignore implausible measurements, e.g. before the page has laid out.)
+        const measured = (screenInsets.bottom + 10) / size.height;
+        const controls = (portrait || docked) && measured > 0.05 && measured < 0.6 ? measured : 0.24;
+        const bottom = portrait ? Math.min(0.8, 1 - controls) : docked ? Math.min(0.9, 1 - controls) : 0.94;
+        // Keep a sensible amount of table if the controls are very tall: give up tavern first.
+        // A multiplayer table has no one sitting across, only the rivals bar at the top (3 Nov): the
+        // table's far edge goes just under it, and the table grows into the space.
+        const rivals = screenInsets.top / size.height;
+        const top = rivals > 0.03 && rivals < 0.5
+            // (with a small gap: since 3 Nov nothing is said over the table there, the callouts flash
+            // on the nameplates)
+            ? Math.min(portrait ? 0.32 : 0.33, rivals + (portrait ? 12 : 22) / size.height)
+            : portrait ? Math.min(0.32, Math.max(0.12, bottom - 0.42)) : 0.33;
+
+        // On narrow screens the table is as wide as the screen allows, dice still big enough to tap.
+        // Upright phones show the whole tray, its rails too (3 Nov, the user: the rails ran off both
+        // edges once they were back): PORTRAIT_HALF_WIDTH is the half width the camera keeps in view.
+        const vHalf = THREE.MathUtils.degToRad(cam.fov / 2);
+        const hHalf = Math.atan(Math.tan(vHalf) * aspect);
+        const minDistance = (portrait ? PORTRAIT_HALF_WIDTH : 4.6) / Math.tan(hHalf);
+
+        const place = (distance: number) => {
+            cam.position.copy(direction).multiplyScalar(distance).add(lookAt.current);
+            cam.lookAt(lookAt.current);
+            cam.updateMatrixWorld();
+        };
+        const screenY = (p: THREE.Vector3) => (1 - projected.copy(p).project(cam).y) / 2;
+
+        // The solve carries over between frames, so a bad value would stick: start again if
+        // anything has gone non-finite, and keep both values within sane limits.
+        if (!Number.isFinite(lookAt.current.z) || !Number.isFinite(cam.position.lengthSq())) {
+            lookAt.current.set(0, 0, 0.7);
+            cam.position.set(0, 10, 8);
+        }
+        let distance = THREE.MathUtils.clamp(cam.position.distanceTo(lookAt.current) || minDistance, minDistance, minDistance * 4);
+        // Moves the aim along the table so the given point lands at screen height `target`.
+        const shiftAim = (aim: THREE.Vector3, point: THREE.Vector3, target: number, span: number) => {
+            aim.z = THREE.MathUtils.clamp(
+                aim.z + (screenY(point) - target) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span),
+                TABLE_FAR_EDGE_Z, NEAR_EDGE_Z + 3
+            );
+        };
+        for (let i = 0; i < 6; i++) {
+            place(distance);
+            const far = screenY(farPoint), near = screenY(nearPoint);
+            const span = near - far;
+            if (!(span > 0.01)) break;
+            const wanted = distance * (span / (bottom - top));
+            distance = THREE.MathUtils.clamp(wanted, minDistance, minDistance * 4);
+            if (wanted >= minDistance) {
+                // It fits: centre the table in its space.
+                lookAt.current.z = THREE.MathUtils.clamp(
+                    lookAt.current.z + ((far + near) / 2 - (top + bottom) / 2) * ((NEAR_EDGE_Z - TABLE_FAR_EDGE_Z) / span),
+                    TABLE_FAR_EDGE_Z, NEAR_EDGE_Z + 3
+                );
+            } else {
+                // Narrow phones: the table can't shrink any further (the dice must stay big
+                // enough to tap), so it's taller than its space. Never let the slot rail slide
+                // under the controls: pin it just above them and let the tavern give way.
+                shiftAim(lookAt.current, nearPoint, bottom, span);
+            }
+        }
+
+        // Lean in slowly while dice are in the air during a suspense roll, keeping the slot
+        // rail where it is (zooming about the middle would push it under the controls). The new
+        // look leans in on a perfect hand too, and shakes on a few big moments (cameraMoves.ts).
+        const suspense = table.roll && table.roll.speed < 1 ? 1 : 0;
+        drift.current += (suspense - drift.current) * Math.min(1, delta * 2);
+        const focal = size.height / 2 / Math.tan(vHalf);
+        const moves = lookNext ? cameraMoves(performance.now(), focal) : { push: 0 };
+        const lean = Math.max(drift.current * 0.12, moves.push);
+        if (lean > 0.0001) {
+            const nearY = screenY(nearPoint), span = nearY - screenY(farPoint);
+            const aim = leanAim.copy(lookAt.current);
+            const leaned = distance * (1 - lean);
+            for (let i = 0; i < 3 && span > 0.01; i++) {
+                cam.position.copy(direction).multiplyScalar(leaned).add(aim);
+                cam.lookAt(aim);
+                cam.updateMatrixWorld();
+                shiftAim(aim, nearPoint, nearY, span);
+            }
+            cam.position.copy(direction).multiplyScalar(leaned).add(aim);
+            cam.lookAt(aim);
+            cam.updateMatrixWorld();
+        } else {
+            place(distance);
+        }
+
+        layoutBackdrop(screenY(farPoint) * size.height, size.width, lean > 0.0001);
+        projected.copy(railEnd).project(cam);
+        const railX = (projected.x + 1) / 2 * size.width, railY = (1 - projected.y) / 2 * size.height;
+        projected.copy(farPoint).project(cam);
+        const tableX = (projected.x + 1) / 2 * size.width;
+        projected.copy(feltMiddle).project(cam);
+        setRailAnchor(railX, railY, tableX, (1 - projected.y) / 2 * size.height);
+        // A shake turns the camera after everything is laid out, so the page's controls stay put.
+        if (shake.pitch || shake.yaw) {
+            cam.rotateY(shake.yaw);
+            cam.rotateX(shake.pitch);
+            cam.updateMatrixWorld();
+        }
+
+        // Fog only darkens the far end of the table, whatever the camera distance.
+        if (scene.fog instanceof THREE.Fog) {
+            scene.fog.near = distance * 1.15;
+            scene.fog.far = distance * 2.6;
+        }
+    });
+    return null;
+}
+
+// A soft, uneven darkening in the middle of the felt (an oval, a little to the right where the
+// throws mostly end), drawn over it.
+function wornPatch() {
+    const w = 256, h = 150;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.translate(w * 0.56, h * 0.5);
+    ctx.scale(1.7, 1);
+    const shade = ctx.createRadialGradient(0, 0, 0, 0, 0, h * 0.48);
+    shade.addColorStop(0, 'rgba(8,14,6,0.32)');
+    shade.addColorStop(0.6, 'rgba(8,14,6,0.16)');
+    shade.addColorStop(1, 'rgba(8,14,6,0)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(-w, -h, w * 2, h * 2);
+    return new THREE.CanvasTexture(canvas);
+}
+
+// The tabletop (28 Oct, the user's wide painting): laid once over the table instead of tiled, so
+// no plank or nick repeats. It spans TABLE_ART_WIDTH across the middle from the far edge back;
+// past its sides and its near edge it mirrors (until 3 Nov its edge pixels were stretched out
+// sideways, which looked smeared on a wide desktop screen, the user saw). Its seven planks come out about a die wide each.
+const TABLE_ART_WIDTH = 15.7, TABLE_ART_ASPECT = 1584 / 672;
+const TABLE_DEPTH = 24 - TABLE_FAR_EDGE_Z; // the tabletop plane's depth (its width is 40)
+function tabletopTexture() {
+    const texture = paintedTexture('table-wide.webp', 1);
+    texture.wrapS = THREE.MirroredRepeatWrapping;
+    texture.wrapT = THREE.MirroredRepeatWrapping;
+    const height = TABLE_ART_WIDTH / TABLE_ART_ASPECT;
+    // The plane's u runs 0..1 over x -20..20, its v 1..0 from the far edge to the near end.
+    texture.repeat.set(40 / TABLE_ART_WIDTH, TABLE_DEPTH / height);
+    texture.offset.set(-(20 - TABLE_ART_WIDTH / 2) / TABLE_ART_WIDTH, 1 - TABLE_DEPTH / height);
+    return texture;
+}
+
+const FELT_TUCK = 0.2; // how far the felt reaches under the rails
+function Tray() {
+    // Painted textures (docs/art-direction.md). Each tiles at roughly real-world scale:
+    // the felt image covers ~3 units, and the plank image (four rows of planks) ~3.8
+    // units deep, so a plank is about one die wide.
+    // (The felt runs FELT_TUCK under the rails, 20 Nov, the user's: their rounded bottom edges left a strip of the
+    // tabletop showing between the felt and the rails. Its tiling is scaled to match, so the weave stays the same size.)
+    const felt = useMemo(() => paintedTexture('felt.webp', 2.4 * (1 + (2 * FELT_TUCK) / (TRAY.maxX - TRAY.minX)), 1.4 * (1 + (2 * FELT_TUCK) / (TRAY.maxZ - TRAY.minZ))), []);
+    const tabletop = useMemo(tabletopTexture, []);
+    const rails = useMemo(() => paintedTexture('rail-walnut.webp', 2, 0.35), []);
+    const slotRail = useMemo(() => paintedTexture('rail-walnut.webp', 1.6, 0.3), []);
+    const feltWear = useMemo(() => (lookNext ? wornPatch() : null), []);
+    const width = TRAY.maxX - TRAY.minX;
+    const depth = TRAY.maxZ - TRAY.minZ;
+    const cx = (TRAY.minX + TRAY.maxX) / 2;
+    const cz = (TRAY.minZ + TRAY.maxZ) / 2;
+    const rail = 0.35;
+    const h = 0.55;
+
+    const railBoxes: [number, number, number, number][] = [
+        [cx, TRAY.minZ - rail / 2, width + rail * 2, rail],
+        [cx, TRAY.maxZ + rail / 2, width + rail * 2, rail],
+        [TRAY.minX - rail / 2, cz, rail, depth],
+        [TRAY.maxX + rail / 2, cz, rail, depth]
+    ];
+
+    return (
+        <group>
+            {/* Tabletop, ending just beyond the tray so the tavern shows behind it */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, (TABLE_FAR_EDGE_Z + 24) / 2]} receiveShadow>
+                <planeGeometry args={[40, 24 - TABLE_FAR_EDGE_Z]} />
+                {lookNext
+                    ? <meshPhysicalMaterial map={tabletop} roughness={0.7} clearcoat={0.35} clearcoatRoughness={0.45} />
+                    : <meshStandardMaterial map={tabletop} roughness={0.85} />}
+            </mesh>
+            {/* Worn, lighter lip along the far edge */}
+            <mesh position={[0, 0.02, TABLE_FAR_EDGE_Z + 0.06]}>
+                <boxGeometry args={[40, 0.06, 0.12]} />
+                <meshStandardMaterial map={tabletop} color="#d9b48a" roughness={0.6} />
+            </mesh>
+            {/* Felt */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.001, cz]} receiveShadow>
+                <planeGeometry args={[width + 2 * FELT_TUCK, depth + 2 * FELT_TUCK]} />
+                {/* The look preview: a velvety sheen that shows at low angles. */}
+                {lookNext
+                    ? <meshPhysicalMaterial map={felt} roughness={0.95} sheen={1} sheenRoughness={0.55} sheenColor="#7fb88c" />
+                    : <meshStandardMaterial map={felt} roughness={1} />}
+            </mesh>
+            {/* The look preview (step C): the felt worn darker where the dice mostly land. */}
+            {feltWear && (
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.002, cz]} renderOrder={1}>
+                    <planeGeometry args={[width, depth]} />
+                    <meshBasicMaterial map={feltWear} transparent depthWrite={false} toneMapped={false} />
+                </mesh>
+            )}
+            {/* Rails (the new look: wooden rails and their dressing, TableDressing.tsx) */}
+            {lookNext && <TableDressing railMap={rails} />}
+            {!lookNext && railBoxes.map(([x, z, w, d], i) => (
+                <mesh key={i} position={[x, h / 2, z]} castShadow receiveShadow>
+                    <boxGeometry args={[w, h, d]} />
+                    <meshStandardMaterial map={rails} roughness={0.5} />
+                </mesh>
+            ))}
+            {/* Slot rail in front of the tray */}
+            <mesh position={[0, 0.004, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                <planeGeometry args={[width + 0.9, 1.25]} />
+                {lookNext
+                    ? <meshPhysicalMaterial map={slotRail} color="#e8d6c4" roughness={0.55} clearcoat={0.5} clearcoatRoughness={0.3} />
+                    : <meshStandardMaterial map={slotRail} color="#e8d6c4" roughness={0.6} />}
+            </mesh>
+            <Slots />
+        </group>
+    );
+}
+
+function Slots() {
+    // The look preview (step C): real brass. Polished metal is mostly reflection, so the plates
+    // see the reflected room about twice as strongly as the rest of the scene does.
+    const brass = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+    const { scene } = useThree();
+    useFrame(() => {
+        if (!lookNext || !scene.environment) return;
+        brass.current.forEach(m => {
+            if (m && m.envMap !== scene.environment) { m.envMap = scene.environment; m.envMapIntensity = 0.3; m.needsUpdate = true; }
+        });
+    });
+    const two = useMemo(() => artTexture('plate-2.webp'), []);
+    const four = useMemo(() => artTexture('plate-4.webp'), []);
+    const plain = useMemo(() => artTexture('plate-blank.webp'), []);
+    const scoring = [2, 3, 4, 5].map(slot => slotPosition(slot, 4));
+
+    return (
+        <group>
+            {REQUIRED_SLOT_X.map((x, i) => (
+                <mesh key={i} position={[x, 0.008, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[1.05, 1.05]} />
+                    <meshStandardMaterial ref={m => { brass.current[i] = m; }} map={i === 0 ? two : four} transparent roughness={lookNext ? 0.26 : 0.45} metalness={lookNext ? 0.9 : 0.3} />
+                </mesh>
+            ))}
+            {scoring.map((p, i) => (
+                <mesh key={i} position={[p.x, 0.008, SLOT_ROW_Z]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[1.0, 1.0]} />
+                    <meshStandardMaterial ref={m => { brass.current[2 + i] = m; }} map={plain} transparent opacity={0.85} roughness={lookNext ? 0.26 : 0.45} metalness={lookNext ? 0.9 : 0.3} />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+// Candle light that flickers, plus a red flash for the devil and gold for a perfect 24.
+function Lights() {
+    const candle = useRef<THREE.PointLight>(null);
+    const flash = useRef<THREE.PointLight>(null);
+
+    useFrame(() => {
+        const t = performance.now() / 1000;
+        if (candle.current) candle.current.intensity = 26 + Math.sin(t * 7.3) * 2.5 + Math.sin(t * 13.1) * 1.5;
+
+        if (flash.current) {
+            const devil = Math.max(0, 1 - (performance.now() - table.devilAt) / 1200);
+            const gold = Math.max(0, 1 - (performance.now() - table.celebrateAt) / 2000);
+            if (devil > gold) flash.current.color.set('#ff1a1a');
+            else flash.current.color.set('#ffd54f');
+            flash.current.intensity = Math.max(devil, gold) * 60;
+        }
+    });
+
+    return (
+        <>
+            <hemisphereLight args={['#ffe0b2', '#2a160a', 0.55]} />
+            <directionalLight
+                position={[-4, 9, 5]}
+                intensity={1.6}
+                color="#ffe6c4"
+                castShadow
+                shadow-mapSize={[1024, 1024]}
+                shadow-camera-left={-6}
+                shadow-camera-right={6}
+                shadow-camera-top={6}
+                shadow-camera-bottom={-6}
+                shadow-bias={-0.0005}
+            />
+            <pointLight ref={candle} position={[3.5, 3, -3.5]} color="#ff9e40" distance={14} decay={1.6} />
+            <pointLight ref={flash} position={[0, 3, 0]} distance={12} decay={1.4} intensity={0} />
+        </>
+    );
+}
+
+// The look preview's light rig (option 1, step B): one flame drives the candle, a warm key
+// from the fireplace side (left in the tavern painting) and the tavern and opponent behind (Room); a cool,
+// dim fill keeps shadows from going black; a rim from behind outlines the dice; a small room
+// made in code gives dice, brass and varnish something to reflect.
+function NextLights() {
+    const candle = useRef<THREE.PointLight>(null);
+    const fire = useRef<THREE.DirectionalLight>(null);
+    const fill = useRef<THREE.HemisphereLight>(null);
+    const { gl, scene } = useThree();
+
+    useEffect(() => {
+        const pmrem = new THREE.PMREMGenerator(gl);
+        const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+        scene.environment = env;
+        scene.environmentIntensity = 0.16;
+        return () => { scene.environment = null; env.dispose(); pmrem.dispose(); };
+    }, [gl, scene]);
+
+    useFrame(() => {
+        const now = performance.now();
+        const f = flame(now / 1000);
+        // (Eased back from 24, with a paler flame: strong warm light turned the dice amber.)
+        if (candle.current) candle.current.intensity = 17 * f;
+        if (fill.current) fill.current.intensity = 0.3 / Math.max(0.25, tuning.shadows); // deeper shadows: less fill
+        if (fire.current) fire.current.intensity = 1.7 * (0.85 + 0.15 * f);
+        shareFlame(f, now);
+    });
+
+    return (
+        <>
+            <hemisphereLight ref={fill} args={['#ffd8a8', '#1a1f2e', 0.3]} />
+            <directionalLight
+                ref={fire}
+                position={[-6, 7, 2]}
+                color="#ffb373"
+                castShadow
+                shadow-mapSize={[settings().shadowMap, settings().shadowMap]}
+                shadow-camera-left={-6}
+                shadow-camera-right={6}
+                shadow-camera-top={6}
+                shadow-camera-bottom={-6}
+                shadow-bias={-0.0004}
+                shadow-normalBias={0.02}
+            />
+            {/* A rim from behind and above: a thin bright edge on each die. */}
+            <directionalLight position={[2, 6, -9]} intensity={0.35} color="#fff0dc" />
+            <pointLight ref={candle} position={[3.5, 3, -3.5]} color="#ffa660" distance={16} decay={1.5} />
+            {/* The big moments' light (the Devil, a perfect 24, abilities, keepsakes): step F. */}
+            <MomentLights />
+        </>
+    );
+}
+
+// The look preview's colour grade (step D), from the game's palette: a touch more colour and
+// contrast; shadows lean bottle green, highlights honey; and nothing is pure black or white, the
+// darkest dark is an ember brown and the brightest light a warm cream. Works on display values.
+const gradeShader = /* glsl */`
+uniform vec3 floorColor, ceilColor, shadowTint, highlightTint;
+uniform float saturation, contrast, warmth;
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+    vec3 c = pow(max(inputColor.rgb, 0.0), vec3(1.0 / 2.2));
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    c = mix(vec3(l), c, saturation);
+    c = (c - 0.5) * contrast + 0.5;
+    c *= mix(vec3(1.0), shadowTint, 1.0 - smoothstep(0.0, 0.5, l));
+    c *= mix(vec3(1.0), highlightTint, smoothstep(0.5, 1.0, l));
+    c *= vec3(1.0 + 0.08 * (warmth - 1.0), 1.0, 1.0 - 0.1 * (warmth - 1.0)); // the tuning panel's warmth
+    // Only the very darkest darks lift to ember, and only white is held to cream: lifting every
+    // shade flattened the room, and capping every bright colour dimmed the fire.
+    c = clamp(c, 0.0, 1.0);
+    c += floorColor * pow(1.0 - l, 14.0);
+    c = mix(c, min(c, ceilColor), smoothstep(0.85, 0.98, min(c.r, min(c.g, c.b)))); // (near-white only: flames keep their yellow)
+    outputColor = vec4(pow(c, vec3(2.2)), inputColor.a);
+}`;
+class GradeEffect extends Effect {
+    constructor() {
+        const srgb = (hex: string) => new THREE.Color(hex).convertLinearToSRGB();
+        super('Grade', gradeShader, {
+            uniforms: new Map<string, THREE.Uniform>([
+                ['floorColor', new THREE.Uniform(srgb('#140b06'))], // ember black
+                ['ceilColor', new THREE.Uniform(srgb('#fbf0da'))],  // warm cream
+                ['shadowTint', new THREE.Uniform(new THREE.Vector3(0.97, 1.02, 0.98))],   // bottle green
+                ['highlightTint', new THREE.Uniform(new THREE.Vector3(1.02, 1.0, 0.98))],  // honey
+                ['saturation', new THREE.Uniform(1.08)],
+                ['contrast', new THREE.Uniform(1.1)],
+                ['warmth', new THREE.Uniform(1)]
+            ])
+        });
+    }
+}
+
+// The look preview's finish over the whole 3D picture, the tavern and opponent included (option 1,
+// step D): a soft glow on only what is bright (candle flames, the tavern's lanterns, brass
+// highlights, magic), the filmic tone curve, the grade, a soft vignette and the faintest grain.
+// Edges stay smooth through the multisampling.
+// (Its strengths follow the tuning panel; the quality level drops grain, glow and edge smoothing on
+// devices that need it: tuning.ts.)
+function Finish() {
+    const grade = useMemo(() => new GradeEffect(), []);
+    useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
+    const q = settings();
+    grade.uniforms.get('warmth')!.value = tuning.warmth;
+    const effects = [
+        q.bloom && tuning.glow > 0 && <Bloom key="bloom" mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.2} intensity={0.5 * tuning.glow} radius={0.45} />,
+        <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
+        <primitive key="grade" object={grade} />,
+        <Vignette key="vignette" offset={0.42} darkness={0.42 * tuning.vignette} />,
+        q.grain && tuning.grain > 0 && <Noise key="grain" premultiply blendFunction={BlendFunction.OVERLAY} opacity={0.08 * tuning.grain} />
+    ].filter(Boolean) as JSX.Element[];
+    return <EffectComposer key={`${q.multisampling}-${effects.length}`} multisampling={q.multisampling}>{effects}</EffectComposer>;
+}
+
+// The frame rate (for the panel, and Auto quality's step down), and the screen's sharpness for
+// the quality level.
+function QualityWatch() {
+    const { setDpr } = useThree();
+    const version = useSyncExternalStore(tuneStore.subscribe, tuneStore.version);
+    useEffect(() => {
+        setDpr(renderDpr());
+        // (A computer's pixel budget depends on the window's size.)
+        const resized = () => setDpr(renderDpr());
+        window.addEventListener('resize', resized);
+        return () => window.removeEventListener('resize', resized);
+    }, [version, setDpr]);
+    useFrame((_, delta) => noteFrame(delta));
+    return null;
+}
+
+export function TableScene() {
+    return (
+        <>
+            <fog attach="fog" args={['#120a05', 14, 30]} />
+            <CameraRig />
+            {/* After the camera rig: it hangs the tavern and the opponent where the camera puts them this frame. */}
+            <Room />
+            {lookNext ? <NextLights /> : <Lights />}
+            <Tray />
+            <Dice />
+            {lookNext && <Throw />}
+            {lookNext && <DustMotes />}
+            {lookNext && <Finish />}
+            {lookNext && <QualityWatch />}
+        </>
+    );
+}

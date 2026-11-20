@@ -1,0 +1,10 @@
+node_modules/
+.claude/
+previews/
+leaderboard.json
+met.json
+league.json
+used-saves.json
+.env
+.env.*
+.neon

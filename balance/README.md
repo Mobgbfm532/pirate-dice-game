@@ -1,0 +1,303 @@
+# Balancing the Tavern Crawl (step 4)
+
+The numbers live in `shared/balance.js` (the server and the simulator both read them).
+
+**Since 23 Oct (the user's calls):** all money is a tenth of what it was, in whole gold (the
+amounts below are in the old gold: divide by 10); Thonics, the Shrine and the hot tub cost half
+their first price more each time one is bought (`priceRise`, which the simulator plays by too);
+the score is points, not gold (`points`). With that the simulated sensible player finishes the
+14-fight tournament 0.3% of the time and reaches the ship 2.3%
+(`node balance/experiments/tournament.js`); it never wears Martha's mask or plans its shopping,
+so it understates a good player. The simulated player's value tables (`experiments/runs.js`)
+are in the old gold and divided by 10 where they're used.
+
+- `sim.js`: a fast offline copy of a Tavern Crawl (fights, gold, Thonics, events, keepsakes)
+  on the real dice rules and opponents' play. ~2,500 fights a second. The player is
+  "sensible" (best play, the same solver the opponents use, and sensible moments to drink each
+  Thonic) or "casual" (the Molar's simple habits).
+- `check-server.js`: plays real fights on the real server over sockets, to check the
+  simulator: `node balance/check-server.js <opponent 0-4> <fights>`.
+- `experiments/`: the measurements below (`node balance/experiments/<name>.js`).
+
+## The result (19 Oct)
+
+Whole runs, 20,000 each (`experiments/runs.js`):
+
+| | finish the run | average gold (median) | runs ending at Molar / Klarg / Rokr / Hangman / Jaguar |
+|---|---|---|---|
+| before, sensible | 4.5% | 383 (200) | 26 / 40 / 14 / 8 / 7 % |
+| before, casual | 1.8% | 235 (175) | 31 / 45 / 13 / 7 / 3 % |
+| **now, sensible** | **21.7%** | **853 (694)** | 14 / 19 / 15 / 14 / 16 % |
+| **now, casual** | **13.1%** | **555 (380)** | 19 / 24 / 20 / 13 / 10 % |
+
+Targets: a good run finishes about 1 in 5; each opponent harder than the last; no single
+wall; buying the right Thonic at the right time pays for itself in score.
+
+## What changed and why
+
+| | before | now | why |
+|---|---|---|---|
+| Player hearts | 3 | **4** | with 3, a near-perfect player beat Klarg 36% of the time |
+| Opponents' lives | 2, 3, 3, 3, 4 | **2, 2, 3, 3, 4** | a steady climb: fight wins 86 / 72 / 59 / 55 / 42% (sensible, no items) |
+| Healing | 120 | **110** | adds ~155 gold before the middle fights |
+| Last Gasp | 250 | **130** | worth about the same as Healing (it waits until needed) |
+| Fizzy | 80 | **20** | adds ~20 |
+| Second Thoughts | 180 | **30** | adds ~30 |
+| Steady | 150, dust = 0 | **90, dice score as they lie** | "dust = 0" almost always still lost the round (worth ~3 gold) |
+| Clear-Eye | 100, blocks one round | **60, cancels the next ability** | blocking a round only postponed the ability (worth ~0) |
+| Shrine | Healing or 100 gold | **the Lady's blessing at random** (the user's design, later on 19 Oct): Favour, the next fight on 5 hearts, or Grace, the next dust forgiven | each worth ~100 gold mid-run (`experiments/shrine.js`); whole runs 20.3% sensible, 11.4% casual |
+| Stranger's price | next fight on 2 hearts | **a heart short (3 of 4)** | 2 short made every keepsake a bad deal |
+
+Prices sit a little under what each Thonic adds to the final purse when bought before the
+middle fights, so the right one pays for itself and a late one doesn't.
+
+## Checked: the simulator matches the server
+
+Fight win % for a sensible player, no Thonics:
+
+| | Molar | Klarg | Rokr | Hangman | Jaguar |
+|---|---|---|---|---|---|
+| old numbers, sim | 74.8 | 35.5 | 41.2 | 36.0 | 26.0 |
+| old numbers, server | 74.8 ± 4.3 | 33.3 ± 5.3 | 38.8 ± 2.8 | 32.0 ± 4.6 | 24.0 ± 3.4 |
+| **new numbers, sim** | 85.8 | 71.3 | 58.8 | 53.6 | 41.1 |
+| **new numbers, server** | 87.6 ± 2.9 | 72.8 ± 3.9 | 55.6 ± 4.4 | 52.0 ± 4.4 | 39.6 ± 4.3 |
+
+## Findings along the way
+
+- **Abilities matter:** one use of Klarg's steal, the Hangman's shot or Jaguar's Smooth Talk
+  costs the player about 10 points of fight win chance (Rokr's blur about 5)
+  (`experiments/abilities.js`). The opponents only felt alike because lives evened them out.
+- **Casual play is only ~5 points worse** than best play per fight: dice luck dominates.
+- **Healing is best saved for the last heart;** drunk at the first lost heart it is worth
+  about half as much.
+- **Keepsakes** (gold added, from Klarg on): Shield 272, Steady Hand 162, Velvet Cushion 149,
+  Trap Card 120, Brodor's Sunglasses ~20 (perfect 24s are rare). A heart short costs ~129.
+  The Sunglasses are a trap as they stand; a stronger effect is a possible later change.
+- **The Dice Den** is even odds: no gain for the score, only excitement. **The pickpocket**
+  costs ~3% of the purse per walk on average, and since 18 Oct he is that walk's only event
+  (no spot after him): a sensible player's whole-run wins went from ~20% to ~17%.
+- **Opponents' rolled 24s restore a life too** (18 Oct, the user's call; it used to be the
+  player's alone; the Hangman's Ace of Spades 24 doesn't heal him): whole-run wins for a
+  sensible player ~17% -> ~15.5%, casual ~9.5% -> ~8%. (Had the Ace healed too: ~13%, with the
+  Hangman ending ~20% of runs.) The shelf going from 3 to 2 Thonics costs only ~0.5 points.
+- **The Hooded Stranger as a random event** (19 Oct, decided in the design doc): 20% of the
+  walks the thief leaves (`strangerChance`), instead of one of four spots. Whole-run wins
+  ~15.5% -> ~17% (sensible), ~8% (casual): with three spots, Thom is on offer more often.
+  15% and 25% gave about the same; 20% means about half the runs meet him once.
+- **New keepsakes** (19 Oct, the user's picks; `experiments/new-keepsakes.js`, from Klarg on):
+  the Loaded Die (one die rolls 4-6) +105 (never-a-1 was +40, 3-6 +80); the Potion Belt +175,
+  but only for the Healing it comes with: an extra slot alone is worth ~0, as players rarely
+  fill 2; Thom's Loyalty Card (Thom always on offer, first Thonic free) +25 (25% off was +5,
+  half price +20): Thonics cost about what they're worth, so cheaper ones change little.
+  Steady Hand Wrap and Brodor's Sunglasses left. Whole runs: unchanged, ~16.6% sensible.
+
+## Nine fights (19 Oct, Phase two)
+
+The Ghoul and Gourd (McGrath 2, Frak 2, Danhausen 3, Duke 3, Martha 4) then the Yawning
+Portal (Klarg 3, Rokr 3, Hangman 3, Jaguar 4): the user's starting lives. The sim knows the
+new abilities (Fog, Curse, Devil, Martha's random disguise) and Martha's mask (the sensible
+player wears the Devil the first round they can each fight). runs.js's values are per fight
+still to come: a fight with five or more after it counts like Klarg's did.
+
+- Per fight, fresh on 4 hearts, no Thonics (mask from Klarg on), sensible / casual: McGrath
+  85/80, Frak 78/75, Danhausen 65/31 (a casual player doesn't adapt to the Curse; a person
+  reading the banner would), Duke 56/48, Martha 42/28, Klarg 62/53, Rokr 66/60, Hangman
+  64/56, Jaguar 49/41%.
+- Whole runs, sensible: qualify ~23%, win the final 6.5-6.8% (casual ~1%). Options:
+  Martha 3 → 8.8%; Martha and Jaguar 3 → 10.8%; Danhausen 2, Duke 2, Martha 3 → 12.8%.
+- The older experiments (keepsakes.js, thonic-gold.js, ...) count opponents 1-4 as Klarg to
+  Jaguar; with nine fights their `startAt` means Frak to Martha. Re-run them with 5-8 for the
+  Yawning Portal.
+
+## Possible next tuning
+
+- The Molar still ends about 1 run in 7 for a sensible player (1 in 5 casual). If that feels
+  harsh for the teacher, give him 1 life (then ~95%, but a much shorter first fight).
+- Re-run `experiments/runs.js` after any change to `shared/balance.js`.
+
+## The 14-fight tournament (20 Oct, simulator only)
+
+`experiments/tournament.js` plays the design doc's 14 fights (`sim.TOURNAMENT`, passed as
+`opts.order`): the Ghoul and Gourd with Frak's Mind Whip (Martha copies it), the Yawning
+Portal's five (lives 3, 3, 3, 3, 4, the user's), then Klarg's four aboard the Salty Swallow
+(3, 3, 3, 4). Uses a fight: Mind Whip 1 (the user's); Sucker Punch, Inkfire, Flourish,
+Divine Smite and Astral Flood 1 each (first guesses; Inkfire at 2 cost 19 points).
+
+How the new abilities are played (the server will need the same choices): Mind Whip makes
+you keep your worst die on your first throw (a 1, else the lowest you don't need) and that is
+the throw's only keep; Sucker Punch knocks a random kept die loose from a finished, valid hand;
+Inkfire burns the 6 for your round (your dice land 1-5); Flourish rolls each of Stason's dice
+twice for his turn (a needed 2 or 4, else the higher); Divine Smite is declared as a round
+begins; Astral Flood heals Brodor once he's lost a life. Brodor drops his Sunglasses (a 23
+heals).
+
+Fight win %, fresh on 4 hearts, no items (sensible, with the ability / without): McGrath 86,
+Frak 73 / 80, Danhausen 65, Duke 43 / 66, Martha 34 / 49, Sylvester 58 / 63, Vaelin 54 / 64,
+Stason 57 / 65, Ridgeler 55 / 65, Brodor 37 / 49, Klarg 53, Rokr 59, Hangman 53, Jaguar 38.
+
+Whole runs (20,000, sensible): finish 2.0%, reach the Yawning Portal 16%, the ship 4.6%,
+average gold 1,128. Casual: 0.1%. 84% of runs end in the Ghoul and Gourd.
+
+### Aiming for 1 in 6 (the user's aim, 20 Oct)
+
+`experiments/tournament-lives.js` screens hearts and lives (20,000 runs each, sensible):
+4 hearts as today 2.5%; 5 hearts 10%; 6 hearts 23%; 5 hearts with Martha, Brodor and Jaguar on
+3 lives 14%. **The proposal:** 5 hearts a fight (the Stranger's price 4), Danhausen 2, Duke 2,
+Martha 3, Jaguar 3, the Yawning Portal's five as the user set them (3, 3, 3, 3, 4): **16%**
+(casual 4%); half reach the Yawning Portal, a quarter the ship. Fight wins fresh on 5 hearts:
+McGrath 92, Frak 84, Danhausen 88, Duke 77, Martha 62, Sylvester 71, Vaelin 71, Stason 72,
+Ridgeler 69, Brodor 50, Klarg 69, Rokr 70, Hangman 67, Jaguar 69. Brodor is the one wall.
+Not in `shared/balance.js` yet: 5 hearts would make today's nine-fight game too easy, so it
+goes in with the 14-fight build.
+
+### 3 hearts a fight (the user's call, later on 20 Oct)
+
+The player stays on 3 hearts (the Stranger's price 2). Today's lives then finish 0.2%; all 2s
+4%; 1s and 2s are needed. **The proposal (T):** the Ghoul and Gourd 1, 1, 1, 1, Martha 2; the
+Yawning Portal Sylvester 1, Vaelin 1, Stason 2, Ridgeler 2, Brodor 2; the ship Klarg 1, Rokr 2,
+Hangman 2, Jaguar 2. Sensible **17%** (casual 4%); 44% reach the Yawning Portal, 26% the ship.
+Fight wins fresh on 3 hearts (with the ability / without): McGrath 90, Frak 79 / 88,
+Danhausen 86 / 87, Duke 76 / 88, Martha 49 / 68, Sylvester 81 / 87, Vaelin 79 / 88, Stason 58 /
+67, Ridgeler 56 / 69, Brodor 52 / 68, Klarg 77, Rokr 59, Hangman 54, Jaguar 56. A 1-life fight
+still lasts ~2 rounds (ties, both dusting), so abilities still fire; Danhausen's Curse then
+costs almost nothing. Others tried: all 1 with bosses 2, 26%; 1 1 1 1 2 | 1 1 1 2 2 | 1 1 2 2,
+21%; 1 1 2 2 2 | 1 1 1 1 2 | 1 1 1 2, 15%; 1 1 1 2 2 | 1 1 2 2 2 | 1 1 2 2, 14%.
+
+### For now (the user's, 20 Oct; balancing later)
+
+In `shared/balance.js` (and so in today's game): 3 hearts a fight (4 after the Lady's Favour;
+the Stranger's price 2), McGrath 2, Frak 2, Danhausen 3, Duke 3, Martha 3, Klarg 3, Rokr 3,
+Hangman 3, Jaguar 4; the Yawning Portal's five (not in the game yet) 3, 3, 3, 3, 4. Over 14
+fights a sensible player finishes 0.3% and reaches the Yawning Portal 6.7%.
+
+## 21 Oct: easier, and gold worth spending
+
+The user found the game too hard. Changes (finishing the nine fights, sensible, 10,000 runs):
+
+| Change | Finish |
+|---|---|
+| 3 hearts, the user's lives (start of the day) | 0.7% |
+| The spots follow a random event; the Duke's Devil without the 18 cap; Mind Whip keeps a random die | 1.9% |
+| The whole Ghoul and Gourd plays simply (in a cursed round the simple habits chase low dice) | 3.2% |
+| The Duke waiting on his Devil keeps only his 2 and 4 (it hardly fired before); fight win vs him 39% → 50% | 3.5% |
+| Keepsakes on Thom's back shelf; the Shrine 100 and the hot tub 50 gold; the thief takes half | 3.9% |
+
+`experiments/easier.js` compares other levers against the game of the moment (no more hearts):
+every opponent a life fewer ~14%; the Shield from the start ~7% (~14% with the simple Ghoul and
+Gourd); every opponent plays simply ~6%; no abilities ~5%; you always roll second ~4%; a free
+Healing, a shelf of 3, half-price Thonics or a 24 healing 2 hearts barely move it (2-2.5%).
+
+**Keepsake prices** (`experiments/keepsake-when.js`): what a keepsake adds to a run's gold depends
+on when it's bought, since most runs end in the Ghoul and Gourd: the Shield ~310 before fight 3,
+~175 before fight 4, ~40 before Klarg (held from the start ~730, `prices.js`). Prices sit a little
+under the fight-3 worth, when a purse first reaches a few hundred: Shield 300, Trap Card and
+Velvet Cushion 150, Loyalty Card and Potion Belt 125, Loaded Die 75 (worth ~40; the user may lower
+it). The sensible player buys only clear bargains (~1 run in 8); real players will buy more.
+
+**The Shrine and the hot tub** (`experiments/prices.js`): a Shrine visit is worth ~110 gold over
+the other spot; the hot tub comes out below the alternatives (a gamble), so it stays cheap.
+
+## 21 Oct: the 14-fight tournament in the game
+
+The server now plays the design doc's fourteen fights (`TAVERN_ENCOUNTERS`), with the five new
+abilities played as `sim.js` plays them (one use each) and Brodor's Sunglasses as his drop.
+`experiments/tournament.js` (10,000 runs, 4,000 fights each, the numbers of the moment: 3 hearts,
+lives 2 | 2, 3, 3, 3 | 3, 3, 3, 3, 4 | 3, 3, 3, 4):
+
+- Fight wins fresh on 3 hearts, sensible, with the ability (without): McGrath 73, Frak 70 (74),
+  Danhausen 59 (57), Duke 49 (56), Martha 47 (55), Sylvester 43 (51), Vaelin 37 (51), Stason 41
+  (50), Ridgeler 42 (49), Brodor 23 (36), Klarg 35 (50), Rokr 40 (51), Hangman 35 (48), Jaguar 25 (34).
+- Whole runs, sensible: finish 1.1%, reach the Yawning Portal 27%, the ship 4.5%, average gold 898.
+  Casual: 0.0%, 5% reach the Yawning Portal.
+
+McGrath on 1 life (the user, 21 Oct; same settings): a sensible player beats him 89% (was 73%);
+whole runs finish 1.4%, reach the Yawning Portal 34%, the ship 5.5%, average gold 1,108; runs
+ending at McGrath 10% (was 26%), Frak 19%, Danhausen 16%.
+
+## The Salty Swallow as the final tier (25 Oct)
+
+`node balance/experiments/final-ship.js [fights]` (sim: `TOURNAMENT_FINAL`, `FINAL_SHIP`). Win % for a
+sensible player, fresh hearts, no items (8,000 fights each): the Yawning Portal 38-43, Brodor 23.
+
+| Fight | No ability | As it was | Reworked |
+|---|---|---|---|
+| Klarg (2 steals, waits for a needed 2 or 4, keeps the die) | 49 | 35 | 27 |
+| Rokr (Written in the Stars, 3 turns, 2 faces every throw) | 51 | 40 | 26 |
+| the Hangman (Dead Eye once, the die rolls again; his Ace) | 50 | 35 | 27 |
+| Jaguar (Smooth Talk x2, the Cloak, All In) | 35 | 25 | 15 |
+
+Tried on the way: Klarg's two steals on your first throw 21% (each steal ~12 points: five dice cap
+the hand at 18), his second only once hurt or at his last life ~21-23%; Dead Eye to a 1, twice 11%,
+once 20%; rerolled twice 20%; Rokr's stars 2 turns 34%; Jaguar's Smooth Talk every round 11% (it
+fired every round, and an empty shelf cost 3 each time), The Cloak hidden only ~0 points, All In ~1-2.
+Whole runs barely change (few runs reach the ship): sensible finish 0.3% → 0.1%.
+
+### The Ghoul and Gourd on 2 hearts a side (the user's call, 3 Nov)
+
+Set by hand, not simulated: you start on 2 hearts against McGrath, Frak, Danhausen and the Duke and
+on 3 against Martha (`fightHearts` in `shared/balance.js`), and the opponents have 1, 2, 2, 2, 3 lives
+there; the Yawning Portal is back on 3, 3, 3, 3, 4. Stason's Flourish has 2 uses, and Brodor's Astral
+Flood now also takes one of your hearts (never your last). **The simulator doesn't know `fightHearts`
+or the Astral Flood change yet** (it starts every fight on `playerHearts`): teach it before trusting its
+numbers for the Ghoul and Gourd.
+
+### The Ghoul and Gourd on 3 hearts (the user's call, 5 Nov), and what else changed since
+
+Set by hand, not simulated. You start every Ghoul and Gourd fight on 3 hearts (`fightHearts` is empty now), against
+McGrath 1, Frak 2, Danhausen 3, the Duke 3, Martha 3. This replaces the 2-heart fights above, so the simulator
+starting every fight on `playerHearts` is right again, and its lives come from `shared/balance.js`.
+
+Also changed by hand since, none of it in the simulator yet, so its numbers overstate or understate these:
+
+- Martha drops Mystery Flavour, not her mask, so the simulated player no longer wears a mask.
+- The Duke saves his Devil unless it helps (`devilPlan`; `devilWhenBelow` 0.7, about your 18 and up, using
+  `Strategy.chanceAfterKeep`): always for a 2, 4 and 6 with three dice left, never if you dusted, always when first to play.
+  His chance of beating a score without it, with a 2 and a 4 kept and four dice to throw: 13: 99%, 16: 88%, 18: 68%,
+  20: 39%, 22: 14%. These are for best play, and he plays simply, so his real chances are lower.
+- A thief strikes at most twice at any one place (`pickpocketMaxPerPlace`).
+- Keeping your last die waits for End Turn, so a slip can be undone; Back of the Head comes at End Turn.
+
+To play-test first. Then teach the simulator these and the Elf Bars, the Bard, the Cult, the new keepsakes and Astral
+Flood taking a heart before trusting its numbers.
+
+## 18 Nov: an expert on the real game
+
+`node balance/expert-crawl.js [crawls] [lanes]` plays whole crawls on the real server, sped up (everything in the
+game today: every opponent and ability, the sea, the spots and events, prices by place, keepsakes, Thonics). The
+expert keeps dice with the opponents' own best-play brain against the score to beat, drinks Healing when hurt,
+Clear-Eye as a fight with abilities begins, Fizzy on 1s and Steady when a hand is in trouble, uses the Gilded Die and
+the Inspiring Song, and between fights goes where it pays and buys keepsakes in order of worth. Options:
+`NUMBERS='{"playerHearts":4}'` changes shared/balance.js for the run only; `LIVES_LESS=1` takes a life off every
+opponent (never below 1). Stuck crawls (no throw for 30 s, or past 10 minutes) are left out; in the "both" run 51 were,
+mostly long runs deep into the ship, so its finishing figures there are a little low.
+
+400 crawls each (fights won, of those who faced them):
+
+| | Today (3 hearts) | 4 hearts | Opponents a life fewer | Both |
+|---|---|---|---|---|
+| Finish the crawl | 0% | 1% | 1% | 3% |
+| Reach the Yawning Portal | 21% | 32% | 38% | 56% |
+| Reach the ship | 1% | 4% | 5% | 16% |
+| McGrath / Frak / Danhausen | 90 / 77 / 73 | 93 / 88 / 77 | 91 / 89 / 82 | 96 / 96 / 88 |
+| The Duke / Martha | 62 / 66 | 71 / 71 | 72 / 78 | 80 / 87 |
+| Sylvester ... the Ridgeler | 52-77 | 60-77 | 65-84 | 81-91 |
+| **Brodor** | 50 | 48 | 48 | 54 |
+| **Klarg** | (5 fights) | 27 | 38 | 43 |
+| Rokr, Áéd, the Hangman, Jaguar | too few | 50-100 (few) | 50-100 (few) | 61-100 |
+| Points, median | 826 | 964 | 970 | 2,147 |
+
+What it says:
+- **Even played well, the crawl is very hard:** an expert gets through the Ghoul and Gourd only one time in five, and has
+  never finished it in 400 tries on today's numbers. Each fight is close to a coin toss with a lean, and fifteen of them
+  in a row multiply down.
+- **Brodor and Klarg are the walls, whatever else changes:** about 50% and 27-43% even with both easings, against 80-90% for
+  the opponents around them. Astral Flood (a heart healed and one of yours taken) and Klarg's two steals of the 2 or 4
+  you need are each worth far more than the other abilities.
+- **4 hearts or a life off each opponent** each help about as much; together they let an expert finish about 1 run in 30.
+- Once past Klarg, the rest of the ship is beaten more often than not (few runs got there to measure).
+
+**The user's verdict (18 Nov):** "a good player clears this no problem", with far better results in play than these;
+nothing changes, the results are kept for now. (A test of 4 hearts, Brodor on 3 lives and Klarg one steal a fight moved
+Brodor 48 → 53% and Klarg 27 → 35%, on too few fights to trust: `previews/expert/tuned.txt`, gitignored.) Possible
+reasons the expert does worse than the user: it keeps blind under Starry Form and in fog, never drinks Second Thoughts or
+Elf Bars, and shops simply.

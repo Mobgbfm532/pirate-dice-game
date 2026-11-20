@@ -1,0 +1,111 @@
+// The look preview's tuning (option 1, step G, 23 Oct): the feel set by eye on the phone, and
+// how much the device can draw. Each tuning value is a multiplier on the game's own number (1 =
+// as built); a value the user settles on is copied out of the panel and becomes the default here.
+// Saved on the device (localStorage.tavernTune, tavernQuality). The panel (Hud's TuningPanel)
+// shows only with ?tune=1 in the address, for that visit: it's for the test site, not something
+// players come across.
+
+export interface Tuning {
+    warmth: number;   // the grade's warmth
+    glow: number;     // the bloom on what's bright
+    grain: number;    // film grain
+    vignette: number; // the darkening at the edges
+    shadows: number;  // how deep shadows go (the fill light, inversely)
+    dust: number;     // dust over the table
+    air: number;      // embers and smoke on the paintings
+    flicker: number;  // how far the flame wavers
+    moments: number;  // the big moments' light
+}
+export const TUNE_DEFAULTS: Tuning = { warmth: 1, glow: 1, grain: 1, vignette: 1, shadows: 1, dust: 1, air: 1, flicker: 1, moments: 1 };
+export const TUNE_LABELS: Record<keyof Tuning, string> = {
+    warmth: 'Warmth', glow: 'Glow', grain: 'Grain', vignette: 'Vignette', shadows: 'Shadow depth',
+    dust: 'Dust', air: 'Embers, smoke', flicker: 'Flame flicker', moments: 'Moment lights'
+};
+
+// Quality: what the device draws. Auto starts high and steps down if frames come too slowly.
+export type Quality = 'high' | 'medium' | 'low';
+export interface QualitySettings { dpr: number; bloom: boolean; grain: boolean; multisampling: number; shadowMap: number; particles: number }
+export const QUALITY: Record<Quality, QualitySettings> = {
+    high: { dpr: 2, bloom: true, grain: true, multisampling: 4, shadowMap: 2048, particles: 1 },
+    medium: { dpr: 1.5, bloom: true, grain: false, multisampling: 2, shadowMap: 2048, particles: 0.5 },
+    low: { dpr: 1, bloom: false, grain: false, multisampling: 0, shadowMap: 1024, particles: 0.25 }
+};
+
+const read = <T,>(key: string, fallback: T): T => {
+    try { const v = localStorage.getItem(key); return v ? { ...fallback, ...JSON.parse(v) } : fallback; } catch { return fallback; }
+};
+const write = (key: string, value: unknown) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* not saved */ } };
+
+// Read every frame by the scene, so it's a plain object; changes notify the panel and the finish.
+export const tuning: Tuning = read('tavernTune', { ...TUNE_DEFAULTS });
+export const quality = read<{ level: Quality; auto: boolean }>('tavernQuality', { level: 'high', auto: true });
+// A computer with a mouse (as opposed to a phone or tablet).
+export const desktop = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+// A computer with built-in Intel graphics starts on Low when Auto (the user's laptop, an Iris Xe on
+// battery, measured 3 Nov at 1920x1080: High 7-32 frames a second, Medium 14-19, Low 25-51).
+const integrated = (() => {
+    if (!desktop || typeof document === 'undefined') return false;
+    try {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        const info = gl?.getExtension('WEBGL_debug_renderer_info');
+        const name = info ? String(gl!.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+        gl?.getExtension('WEBGL_lose_context')?.loseContext();
+        return /intel/i.test(name);
+    } catch { return false; }
+})();
+if (integrated && quality.auto && quality.level !== 'low') quality.level = 'low';
+
+const listeners = new Set<() => void>();
+let version = 0;
+const changed = () => { version++; listeners.forEach(l => l()); };
+export const tuneStore = {
+    subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; },
+    version: () => version
+};
+export function setTune(key: keyof Tuning, value: number) { tuning[key] = value; write('tavernTune', tuning); changed(); }
+export function resetTune() { Object.assign(tuning, TUNE_DEFAULTS); write('tavernTune', tuning); changed(); }
+export function setQuality(level: Quality, auto = quality.auto) { quality.level = level; quality.auto = auto; write('tavernQuality', quality); changed(); }
+// On a computer the edges are smoothed at most twice over (four times over cost more than it gave:
+// it draws at more than 1x already).
+export const settings = (): QualitySettings => {
+    const q = QUALITY[quality.level];
+    return desktop ? { ...q, multisampling: Math.min(q.multisampling, 2) } : q;
+};
+// How many pixels to draw per screen point. Phones report 2-3 and get up to the level's dpr; a
+// computer with a mouse usually reports 1, and its dice looked soft (the user, 24 Oct), so it
+// draws at the level's dpr anyway (High twice over), and Auto steps down if that is too slow.
+// A big desktop window at twice over is a lot of pixels (1920x1080: 8.3 million a frame, with the
+// glow and smoothing on top; the user saw ~20 frames a second, 3 Nov), so a computer draws at most
+// DESKTOP_PIXELS a frame: High on 1920x1080 is about 1.3x, a bigger window less, never under 1x.
+// (3 Nov: 3.7 million was still too many for built-in graphics: 2.6 million on High, 2.1 on Medium.)
+const DESKTOP_PIXELS: Record<Quality, number> = { high: 2.6e6, medium: 2.1e6, low: 0 };
+export const renderDpr = () => desktop
+    ? Math.max(1, Math.min(settings().dpr, Math.sqrt(DESKTOP_PIXELS[quality.level] / Math.max(1, window.innerWidth * window.innerHeight))))
+    : Math.min(window.devicePixelRatio || 1, settings().dpr);
+
+// Frames: the panel's frame rate, and Auto's step down (after a settling time, when frames have
+// stayed slower than ~45 a second for a few seconds; it never steps back up by itself).
+let average = 1 / 60, slowFor = 0, running = 0;
+export function noteFrame(delta: number) {
+    if (!(delta > 0) || delta > 0.25) return; // a hidden tab or a hitch: not the device's pace
+    average += (delta - average) * 0.05;
+    running += delta;
+    // (A computer judges sooner: a slow desktop was stuck on High for over 10 s.)
+    if (!quality.auto || running < (desktop ? 4 : 6)) return;
+    slowFor = average > 1 / 45 ? slowFor + delta : 0;
+    if (slowFor > (desktop ? 2.5 : 4) && quality.level !== 'low') {
+        setQuality(quality.level === 'high' ? 'medium' : 'low', true);
+        slowFor = 0;
+        running = 3; // a moment to settle at the new level before judging again
+    }
+}
+export const framesPerSecond = () => Math.round(1 / average);
+
+// The panel: hidden (the user, 4 Nov), and only there on a visit whose address has ?tune=1. Not
+// remembered any more, and a device's old remembered "on" is cleared.
+export const tunePanel = (() => {
+    try {
+        localStorage.removeItem('tavernTunePanel');
+        return new URLSearchParams(location.search).get('tune') === '1';
+    } catch { return false; }
+})();

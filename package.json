@@ -1,17 +1,32 @@
 {
   "name": "pirate-dice-game",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "2, 4, 24: a multiplayer tavern dice game",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "build": "npm --prefix client ci --include=dev && npm --prefix client run build:deploy",
+    "test": "node --test \"test/*.test.js\"",
+    "build:client": "npm --prefix client install && npm --prefix client run build",
+    "dev:client": "npm --prefix client run dev",
+    "dev:test-server": "node test/dev-server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
+    "@neon/config": "^1.10.0",
+    "@neon/env": "^1.6.8",
     "express": "^5.2.1",
+    "pg": "^8.23.1",
     "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.14",
+    "socket.io-client": "^4.8.3"
   }
 }

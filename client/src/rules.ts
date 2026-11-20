@@ -1,0 +1,136 @@
+// Typed access to shared/rules.js, the same rules file the server runs.
+// It is a UMD script, so importing it for its side effect sets self.GameRules.
+import '../../shared/rules.js';
+
+export type DieStatus = 'active' | 'lockedThisTurn' | 'permanentlyLocked' | 'stolen';
+export type Suspense = 'none' | 'survival' | 'perfect';
+
+export interface Die {
+    id: number;
+    value: number; // 0 = not rolled yet, or hidden by Rokr's blur
+    status: DieStatus;
+    hidden?: boolean;
+    mind?: boolean; // the die Frak's Mind Whip made you keep this throw (can't be tapped back)
+    mustRoll?: boolean; // Sylvester knocked it loose: it has to be rolled before it can be kept
+    bound?: boolean; // Rokr's stars: it landed on a marked face and can't be kept this throw
+    washed?: boolean; // Heavy seas: a rogue wave took it over the rail (out of play, status 'stolen')
+}
+
+export interface TurnOutcome {
+    busted: boolean;
+    score: number;
+    suspense: Suspense;
+    rollCount: number;
+}
+
+// Rules.viewTurn(): what the server lets players see of the current turn.
+export interface TurnView {
+    key: string;
+    playerId: string;
+    dice: Die[];
+    rollCount: number;
+    locksThisRoll: number;
+    hasRolled: boolean;
+    blurActive: boolean;
+    suspense: Suspense;
+    callout: string | null;
+    finalized: boolean;
+    outcome: TurnOutcome | null;
+    canRoll: boolean;
+    steady?: boolean; // a Steady Thonic was drunk: dust this turn counts as 0
+    // Rokr's Written in the Stars (this turn): the faces marked for the next throw, and this throw's.
+    stars?: { next: number[] | null; now: number[] | null } | null;
+    cloaked?: boolean; // Jaguar's Cloak: his dice hidden until his hand is done
+    mustKeep?: number; // a Squall (10 Nov): dice to keep from each throw (never more than were thrown)
+    maxThrows?: number; // Becalmed (10 Nov): a hand's throws, after which the dice stay as they lie
+}
+
+// How many dice must be kept from this throw before the next (the server's Rules.keepsNeeded).
+export function keepsNeeded(turn: TurnView): number {
+    const thrown = turn.locksThisRoll + turn.dice.filter(d => d.status === 'active').length;
+    return Math.max(1, Math.min(turn.mustKeep ?? 1, thrown));
+}
+
+interface GameRulesApi {
+    PERFECT_SCORE: number;
+    ABILITY_NAMES: Record<string, string>;
+    getAbilityMaxUses(abilityId: string): number;
+    scoreDice(dice: Die[]): { has2: boolean; has4: boolean; score: number };
+    formatGold(amount: number): string;
+}
+
+export const Rules = (globalThis as unknown as { GameRules: GameRulesApi }).GameRules;
+
+// A Tavern Crawl's money, in whole gold: "11 gold".
+export const coins = (amount?: number) => Rules.formatGold(amount ?? 0);
+
+export const isLocked = (d: Die) => d.status === 'lockedThisTurn' || d.status === 'permanentlyLocked';
+
+// Where each locked die sits. Dice are placed in the order they were locked, so a die
+// never shifts once it is down: the first 2 and first 4 take the "required" slots and
+// every other die takes the next free scoring slot. Hidden dice always go to scoring slots.
+export function assignSlots(dice: Die[], lockOrder: Map<number, number>): Map<number, number> {
+    const slots = new Map<number, number>();
+    let has2 = false, has4 = false, nextScoring = 2;
+    const order = (d: Die) => lockOrder.get(d.id) ?? Infinity;
+    dice.filter(isLocked).sort((a, b) => order(a) - order(b) || a.id - b.id).forEach(d => {
+        if (!d.hidden && d.value === 2 && !has2) { has2 = true; slots.set(d.id, 0); }
+        else if (!d.hidden && d.value === 4 && !has4) { has4 = true; slots.set(d.id, 1); }
+        else slots.set(d.id, nextScoring++);
+    });
+    // More than four in the scoring slots (hidden dice, whose faces aren't known, or a dust hand with no
+    // 2 or 4): squeezed into four they overlapped (14 Nov, the user's). The last kept move to the 2's and
+    // the 4's slots while those are empty, the rest close up behind.
+    const scoring = [...slots.entries()].filter(([, s]) => s >= 2).sort((a, b) => a[1] - b[1]);
+    const free = [0, 1].filter(s => ![...slots.values()].includes(s));
+    scoring.splice(4, free.length).forEach(([id]) => slots.set(id, free.shift()!));
+    scoring.forEach(([id], i) => slots.set(id, 2 + i));
+    return slots;
+}
+
+const CALLOUT_TEXT: Record<string, (mine: boolean, botTurn: boolean, outcome: TurnOutcome | null) => [string, string]> = {
+    earlyRoss: () => ['The Early Ross!', '#ffb74d'],
+    didntBite: (mine, bot) => [bot ? 'The Molar NEVER bites' : mine ? "You didn't bite!" : "They didn't bite!", '#4fc3f7'],
+    odds: () => ['What are the odds? (1/36)', '#ce93d8'],
+    trouble: mine => [mine ? 'Ooh, you might be in trouble here' : 'Ooh, they might be in trouble here', '#e57373'],
+    phew: () => ['Phew!', '#81c784'],
+    knocking: mine => [mine ? "You're knocking at the door" : "They're knocking at the door", '#ffd54f'],
+    doorOpen: () => ['The door is open!', '#b2ff59'],
+    dust: () => ['DUST! Missing a 2 or a 4', '#e57373'],
+    blessed: () => ['Blessed by the dice gods!', '#ffd54f'],
+    perfect: () => ['Perfect 24!', '#ffd54f'],
+    result: (_m, _b, outcome) => [`${outcome ? outcome.score : 0} points`, '#81c784']
+};
+
+export function calloutText(callout: string | null, mine: boolean, botTurn: boolean, outcome: TurnOutcome | null) {
+    if (!callout || !CALLOUT_TEXT[callout]) return null;
+    const [text, color] = CALLOUT_TEXT[callout](mine, botTurn, outcome);
+    return { text, color };
+}
+
+// A multiplayer hand that finishes on exactly 20 (its nameplate flashes "Dirty 20!"; the user's, 4 Nov).
+export function dirtyTwenty(outcome: { busted: boolean; score: number }): boolean {
+    return !outcome.busted && outcome.score === 20;
+}
+
+// A perfect hand, for its celebration: a 24, or in a cursed round (the lowest valid hand wins)
+// four 1s with the 2 and 4, which scores 4. A dust hand is never perfect, nor a cursed 24.
+export function perfectHand(outcome: { busted: boolean; score: number }, cursed: boolean): 'perfect24' | 'perfect4' | null {
+    if (outcome.busted) return null;
+    if (cursed) return outcome.score === 4 ? 'perfect4' : null;
+    return outcome.score === 24 ? 'perfect24' : null;
+}
+
+// One throw from a cursed round's perfect hand: the 2, the 4 and three 1s kept, one die to throw.
+// (That throw plays in slow motion, as the server's suspense rolls do; the server doesn't know the
+// Curse. Since 26 Oct, the user's.)
+export function onePerfect4Away(dice: Die[]): boolean {
+    if (dice.filter(d => d.status === 'active').length !== 1) return false;
+    const rest = dice.filter(d => d.status !== 'active' && d.status !== 'stolen').map(d => d.value);
+    for (const need of [2, 4]) {
+        const i = rest.indexOf(need);
+        if (i < 0) return false;
+        rest.splice(i, 1);
+    }
+    return rest.length === 3 && rest.every(v => v === 1);
+}
