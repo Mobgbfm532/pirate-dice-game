@@ -176,6 +176,23 @@ function pinFaces(faces) {
         return face || before(a, b, ...rest);
     };
 }
+// NATURAL_FIRST=1 (env, 20 Nov): your first throw of every round in a Tavern Crawl lands 2, 4, 6, 6, 6, 6, to see the
+// celebration logo; opponents and later throws as usual. (The faces are drawn after the throw is counted: rollCount 1.)
+if (process.env.NATURAL_FIRST) {
+    const NATURAL = [2, 4, 6, 6, 6, 6];
+    let drawn = 0, lastKey = null;
+    const plain = crypto.randomInt;
+    crypto.randomInt = (a, b, ...rest) => {
+        if (a === 1 && b === 7) {
+            const room = Object.values(server.rooms).find(r => r.mode === 'tavern-crawl' && r.turn && r.turn.playerId !== 'BOT_MOLAR' && r.turn.rollCount === 1 && !r.turn.hasRolled);
+            if (room) {
+                if (room.turn.key !== lastKey) { lastKey = room.turn.key; drawn = 0; }
+                if (drawn < NATURAL.length) return NATURAL[drawn++];
+            }
+        }
+        return plain(a, b, ...rest);
+    };
+}
 function seedRandom(seed) {
     if (seed === null) { crypto.randomInt = realRandomInt; return; }
     let s = Number(seed) >>> 0;
