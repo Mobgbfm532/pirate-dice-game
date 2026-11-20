@@ -4383,13 +4383,24 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
     background-size: 300% 200%; background-position: 100% 100%; background-repeat: no-repeat;
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 3px 6px rgba(0, 0, 0, 0.5);
 }
+/* (21 Nov: six pips placed one by one, centred; the tiled pattern sat to the left.) */
 .dice-face.ivory {
-    background: radial-gradient(circle, #1c7a3c 0 5px, transparent 5.5px) 25% 25% / 50% 33.3%,
+    background: radial-gradient(circle at 30% 22%, #1c7a3c 0 5px, transparent 5.5px),
+        radial-gradient(circle at 70% 22%, #1c7a3c 0 5px, transparent 5.5px),
+        radial-gradient(circle at 30% 50%, #1c7a3c 0 5px, transparent 5.5px),
+        radial-gradient(circle at 70% 50%, #1c7a3c 0 5px, transparent 5.5px),
+        radial-gradient(circle at 30% 78%, #1c7a3c 0 5px, transparent 5.5px),
+        radial-gradient(circle at 70% 78%, #1c7a3c 0 5px, transparent 5.5px),
         #fcf4e8;
-    background-repeat: repeat;
+    background-repeat: no-repeat;
 }
 .dice-face.unknown { display: grid; place-items: center; background: #0f0a06; color: #c9973a; font: 700 1.5rem/1 Almendra, serif; }
-.dice-name { min-width: 0; overflow-wrap: anywhere; }
+/* Names wrap only between words (21 Nov: "Martha/Myster y" broke mid-word); a long one shrinks a touch instead. */
+.dice-name { min-width: 0; overflow-wrap: normal; word-break: normal; hyphens: none; font-size: 0.74rem; }
+/* Your dice, in the friends' panel under the tokens (21 Nov). */
+.dice-choice { margin: 0; text-align: center; font-size: 0.9rem; color: #6d4c2a; }
+.dice-choice .link-button { font: inherit; color: inherit; padding: 4px 2px; min-height: 32px; }
+.dice-choice strong { font-family: 'Almendra', Georgia, serif; font-weight: 400; color: #7a2418; }
 
 /* -- The celebration logo (20 Nov, the user's painting "2 FOUR 2 TWENTY-FOUR"): a perfect 24 at a friends' table, a crawl
    round's first throw landing 2, 4, 6, 6, 6, 6. It roars in from the left on a trail of fire over the felt, lands with a

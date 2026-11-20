@@ -400,7 +400,7 @@ one too, or saves only last until the server restarts, which on the free tier is
     Inkfire Blast's "6s"; the user's `Victory.mp3` as a won crawl's fanfare (`crawlVictory`); a finale after Jaguar
     brainstormed (`docs/finale-brainstorm.md`), and the Can Garda, a last set of opponents planned for later.
   - 20 Nov (the user's): **your dice**: a Tavern Crawl opponent's painted set for your own dice, once you've beaten them in
-    any run ("Your dice" on the start screen, in Options on a phone; `DicePicker` in Hud, `localStorage.tavernDice`, sent as
+    any run ("Your dice" in the start screen's Play with friends panel under the tokens, invites too, since 21 Nov; it was under the Tavern Crawl and in a phone's Options; the Ivory die's pips centred and names wrapping only between words, 21 Nov; `DicePicker` in Hud, `localStorage.tavernDice`, sent as
     `dice` on `joinTavern`; the server keeps wins as "beat:<id>" beside who you've met, counts everyone before the furthest
     opponent met as beaten, and allows the set in `settleDice` (`beatenBy`, `beatenList` event); Dice.tsx throws it on your
     turns, at every table); the Hangman's Ace of Spades from 18 (`ACE_FROM`; 16 before), "he shoots a die into a 6", and it

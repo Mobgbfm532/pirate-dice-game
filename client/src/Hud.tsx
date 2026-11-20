@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
@@ -96,6 +96,7 @@ function JoinScreen() {
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [forgetArmed, setForgetArmed] = useState(false);
     const [diceOpen, setDiceOpen] = useState(false); // Your dice (20 Nov)
+    const [dicePick, setDicePick] = useState(readDiceChoice);
     // The name: a box the first time, then a line ("Playing as Ada ✎") tapped to change it.
     const [editingName, setEditingName] = useState<'first' | 'tap' | null>(prefs.name.trim() ? null : 'first');
 
@@ -181,6 +182,12 @@ function JoinScreen() {
                                 <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
                             ))}
                         </div>
+                        {/* Your dice (21 Nov, the user's: here only, as the set shows at a friends' table; invites too). */}
+                        <p className="dice-choice">Your dice:{' '}
+                            <button className="link-button" onClick={() => { setDiceOpen(true); playSound('click'); }}>
+                                <strong>{diceLabel(dicePick)}</strong> <span aria-hidden="true">✎</span>
+                            </button>
+                        </p>
                         {invite ? (
                             <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>
                         ) : (
@@ -255,8 +262,6 @@ function JoinScreen() {
                                                 onClick={() => { saveIntroChoice(!playIntro); setChoice(!playIntro); playSound('click'); }}>
                                                 Intro before a crawl: {playIntro ? 'on' : 'off'}
                                             </button>
-                                            <span aria-hidden="true">·</span>
-                                            <button className="link-button" onClick={() => { setDiceOpen(true); playSound('click'); }}>Your dice</button>
                                         </div>
                                     )}
                                 </section>
@@ -283,7 +288,6 @@ function JoinScreen() {
                                         <span>Play the intro before a crawl</span>
                                         <i className={`switch${playIntro ? ' on' : ''}`} aria-hidden="true" />
                                     </button>
-                                    <button className="secondary" onClick={() => { setOptionsOpen(false); setDiceOpen(true); playSound('click'); }}>Your dice</button>
                                     {continuing && <button className="secondary" onClick={() => { setOptionsOpen(false); setFilm('watch'); }}>Watch the intro</button>}
                                     {continuing && (
                                         <button className={`forget-save${forgetArmed ? ' armed' : ''}`}
@@ -300,7 +304,7 @@ function JoinScreen() {
                     </>
                 );
             })()}
-            {diceOpen && <DicePicker name={name} onClose={() => setDiceOpen(false)} />}
+            {diceOpen && <DicePicker name={name} onClose={() => { setDiceOpen(false); setDicePick(readDiceChoice()); }} />}
             {/* While the browser keeps it silent: a quiet note that a tap brings the music (any tap does). */}
             {silent && !film && <button type="button" className="music-hint" aria-label="Tap for music"><span aria-hidden="true">♪</span> Tap for music</button>}
             <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
@@ -311,6 +315,9 @@ function JoinScreen() {
 
 // Your dice (20 Nov, the user's): throw the dice of a Tavern Crawl opponent you've beaten, in any run; the rest are
 // "???" until you have. (McGrath throws the ivory dice, so he has no set of his own.) The server checks the choice.
+// A name in the picker wraps only between words, or after the slash in "Martha/Mystery" (never mid-word).
+const breakable = (who: string): React.ReactNode[] => who.split('/').map((part, i) => i ? <Fragment key={i}>/<wbr />{part}</Fragment> : part);
+const diceLabel = (id: string | null) => (id && DICE_RIVALS.find(([d]) => d === id)?.[1]) || 'Ivory';
 const DICE_RIVALS: [string, string][] = [
     ['frak', 'Frak'], ['danhausen', 'Danhausen'], ['duke', 'Duke Morrigan'], ['martha', 'Martha/Mystery'],
     ['sylvester', 'Sylvester Stonefist'], ['vaelin', 'Vaelin Inkhand'], ['stason', 'Stason Jatham'], ['ridgeler', 'The Ridgeler'], ['brodor', 'Brodor'],
@@ -338,7 +345,7 @@ function DicePicker({ name, onClose }: { name: string; onClose: () => void }) {
                         return won ? (
                             <button key={id} className={`dice-pick${pick === id ? ' selected' : ''}`} onClick={() => choose(id)} aria-pressed={pick === id}>
                                 <span className="dice-face" style={faces(id)} aria-hidden="true" />
-                                <span className="dice-name">{who}</span>
+                                <span className="dice-name">{breakable(who)}</span>
                             </button>
                         ) : (
                             <span key={id} className="dice-pick locked" aria-label="Not beaten yet">
