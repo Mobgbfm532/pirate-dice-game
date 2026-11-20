@@ -51,3 +51,9 @@ table (`--logo-w`), the player's name above it when it isn't you; the yay; 2.8 s
 friends' table, and in a Tavern Crawl as a round's first throw lands 2, 4, 6, 6, 6, 6 (anyone's, not in a cursed round; in place of
 the three 6s moment; the finished 24 then isn't celebrated again). An ordinary crawl 24 keeps "Perfect 24!". No sound of its own
 yet. Dev: `preview.celebrate('logo', who)`, `/faces?f=2,4,6,6,6,6`.
+
+**Also the home page's title (20 Nov, the user's: "a flaming logo that moves slightly"):** the start screen's "2, 4, 24" words gave way to the
+logo (`.title-logo` in the `.join-title`, sized in em so the old font sizes still size it; 5.2em on upright phones, 3.55em on a phone
+on its side, never wider than its column). It roars in once from the left, then sways and breathes (`title-sway`, 7 s), its
+firelight flickers behind it (`title-glow`), a sheen cut to the logo's shape crosses the gold every 6.5 s (`title-sheen`, a mask of
+the same picture), and 14 embers rise off it. All off with reduced motion. The loading screen and the trailer keep the words.

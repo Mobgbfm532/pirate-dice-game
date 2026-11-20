@@ -410,6 +410,8 @@ one too, or saves only last until the server restarts, which on the free tier is
     table, and a crawl round's first throw landing 2, 4, 6, 6, 6, 6 (`docs/logo-brainstorm.md`; `kind: 'logo'`).
     And a cursed round's Perfect ...4? restores a heart like a 24 (either side; `perfect4` in performEndTurn), with the 24's sounds:
     the cheer and the heart's pop (`healingHand`).
+    The start screen's title is the logo too, swaying in its firelight with a sheen and embers (`.title-logo`; the loading
+    screen and the trailer keep the words; the page was already 14 px wider than a 1280 px window, before the logo).
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the

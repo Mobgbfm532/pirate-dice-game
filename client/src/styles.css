@@ -4435,3 +4435,66 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 @media (prefers-reduced-motion: reduce) {
     .celebration-logo, .logo-streak { animation-name: aftermath-fade; }
 }
+
+/* -- The home page's title is the logo (20 Nov, the user's: "a flaming logo that moves slightly"). Sized in em, so the
+   .join-title font sizes above keep setting its size on every screen. It roars in once from the left, then: the whole
+   sign sways and breathes a little, its firelight flickers behind it, a sheen runs over the gold now and then, and
+   embers rise off the fire trail. Small layers only, no filters on anything that moves but the logo's own shadow. -- */
+.join-title { text-shadow: none; animation: none; }
+.title-logo {
+    position: relative; display: block; width: min(4.3em, 92vw); aspect-ratio: 1357 / 585; margin: -0.05em auto 0;
+    animation: title-roar 1.1s cubic-bezier(0.2, 0.8, 0.25, 1) 0.1s both;
+}
+.title-flicker { position: absolute; inset: 0; animation: title-sway 7s ease-in-out 1.3s infinite; transform-origin: 45% 60%; }
+.title-flicker img { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0.05em 0.06em rgba(0, 0, 0, 0.75)); }
+/* A band of light crossing the gold, cut to the logo's own shape. */
+.title-sheen {
+    position: absolute; inset: 0; pointer-events: none;
+    -webkit-mask: url('/art/logo-celebration.webp') center / 100% 100% no-repeat; mask: url('/art/logo-celebration.webp') center / 100% 100% no-repeat;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 246, 200, 0.55) 48%, rgba(255, 255, 240, 0.75) 50%, rgba(255, 246, 200, 0.55) 52%, transparent 62%) -150% 0 / 250% 100% no-repeat;
+    animation: title-sheen 6.5s ease-in-out 2s infinite;
+}
+.title-glow {
+    position: absolute; left: 8%; right: -4%; top: 4%; bottom: 0; border-radius: 50%;
+    background: radial-gradient(ellipse at 55% 55%, rgba(255, 150, 40, 0.5), rgba(255, 90, 20, 0.2) 45%, transparent 70%);
+    animation: title-glow 2.3s ease-in-out infinite;
+}
+.title-embers span {
+    position: absolute; width: 0.045em; height: 0.045em; min-width: 3px; min-height: 3px; border-radius: 50%;
+    background: radial-gradient(circle, #fff3c0, #ffb347 50%, rgba(255, 120, 30, 0));
+    opacity: 0; animation: title-ember 2.6s ease-out infinite;
+}
+@keyframes title-roar {
+    0% { opacity: 0; transform: translateX(-45vw) skewX(-12deg); }
+    60% { opacity: 1; transform: translateX(3%) skewX(5deg); }
+    80% { transform: translateX(-1%) skewX(-1deg); }
+    100% { opacity: 1; transform: none; }
+}
+@keyframes title-sway {
+    0%, 100% { transform: rotate(-0.6deg) translateY(0) scale(1); }
+    25% { transform: rotate(0.3deg) translateY(-0.02em) scale(1.012); }
+    50% { transform: rotate(0.8deg) translateY(0.01em) scale(1.004); }
+    75% { transform: rotate(-0.2deg) translateY(-0.015em) scale(1.015); }
+}
+@keyframes title-sheen { 0%, 55% { background-position: -150% 0; } 85%, 100% { background-position: 250% 0; } }
+@keyframes title-glow {
+    0%, 100% { opacity: 0.75; transform: scale(1); }
+    18% { opacity: 1; transform: scale(1.04); }
+    31% { opacity: 0.8; }
+    47% { opacity: 0.95; transform: scale(1.02); }
+    63% { opacity: 0.7; transform: scale(0.99); }
+    80% { opacity: 0.9; transform: scale(1.03); }
+}
+@keyframes title-ember {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .title-logo, .title-flicker, .title-sheen, .title-glow, .title-embers span { animation: none; }
+}
+/* (Upright phones: the logo wider than the old words were, as there's room under the die.) */
+@media (orientation: portrait) and (max-width: 600px) { .title-logo { width: min(5.2em, 88vw); } }
+/* (A phone on its side: the title beside the panel, no wider than the old words, or the row runs off the screen.) */
+@media (orientation: landscape) and (max-height: 500px) { .title-logo { width: min(3.55em, 30vw); } }
+.title-logo { max-width: 100%; } /* (never wider than the title's own column) */

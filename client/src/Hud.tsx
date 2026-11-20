@@ -139,7 +139,22 @@ function JoinScreen() {
             {/* The title over the painting, not on the parchment (12 Nov, docs/landing-page-brainstorm.md). */}
             <header className="join-hero">
                 {roomForDie && <button ref={dieSlot} className="lobby-die-slot" aria-label="Throw the die" onClick={() => rethrow.current()} />}
-                <h1 className="join-title">2, 4, 24</h1>
+                {/* The title is the user's logo since 20 Nov (the name stays 2, 4, 24): it roars in once, then sways
+                    gently in its own firelight, a sheen running over the gold, embers rising off its trail. */}
+                <h1 className="join-title" aria-label="2, 4, 24">
+                    <span className="title-logo" aria-hidden="true">
+                        <span className="title-glow" />
+                        <span className="title-flicker">
+                            <img src={`${import.meta.env.BASE_URL}art/logo-celebration.webp`} alt="" draggable={false} />
+                            <span className="title-sheen" />
+                        </span>
+                        <span className="title-embers">
+                            {Array.from({ length: 14 }, (_, i) => (
+                                <span key={i} style={{ left: `${30 + (i * 37) % 66}%`, top: `${20 + (i * 53) % 60}%`, '--dx': `${10 + (i * 13) % 28}px`, '--dy': `${-30 - (i * 17) % 40}px`, animationDelay: `${(i * 0.37) % 3}s`, animationDuration: `${2.2 + (i % 4) * 0.45}s` } as React.CSSProperties} />
+                            ))}
+                        </span>
+                    </span>
+                </h1>
                 <p className="join-tagline">Keep the 2. Keep the 4. <span>Become a legend.</span></p>
             </header>
             {/* Play with friends: its own door on a wide screen, a sheet behind one button on an upright phone. */}
