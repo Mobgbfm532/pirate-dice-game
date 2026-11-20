@@ -17,7 +17,7 @@ day they happen, with what's been built marked as it lands.
    `SAVE_SECRET` (without it a restart loses every saved crawl), and a `DATABASE_URL` (without it the leaderboard
    lives in a file the free plan wipes at every sleep). The same Neon database as the test site (with its test
    scores), or a clean one?
-2. **The new game at `/`:** decided (17 Nov), but not yet: built when the user says so (Next steps 12).
+2. **The new game at `/`:** done 20 Nov, the user's word: `/` sends you on to `/next/`, the classic page is at `/classic`.
 3. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
    server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
 

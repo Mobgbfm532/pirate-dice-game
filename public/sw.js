@@ -1,12 +1,13 @@
 // The classic page's service worker (it registers /sw.js, so it covers the whole site, /next too).
+// 20 Nov: `/` now sends visitors on to the new game (/next/); the classic page is at /classic, kept here.
 // 17 Nov: until now it answered every request and kept a copy of each response, so a phone that had
 // played the classic game stored everything the new game fetched (tracks of up to 10 MB each), and it
 // tried to store the live connection's requests too. Now it keeps only the classic page's own few
 // files, for playing offline, and leaves every other request alone: the new game (/next), its sounds
 // and pictures, the server's connection (/socket.io) and anything that isn't a plain GET.
-const CACHE_NAME = '2424-cache-v64'; // (a new name: activating it deletes the old, overgrown cache)
+const CACHE_NAME = '2424-cache-v65'; // (a new name: activating it deletes the old, overgrown cache)
 const urlsToCache = [
-  '/',
+  '/classic',
   '/index.html',
   '/shared/rules.js',
   '/manifest.json',

@@ -2,7 +2,7 @@
   "name": "2,4,24",
   "short_name": "2,4,24",
   "description": "The best dice game ever made",
-  "start_url": "/",
+  "start_url": "/next/",
   "display": "fullscreen",
   "background_color": "#1a1210",
   "theme_color": "#3e2723",

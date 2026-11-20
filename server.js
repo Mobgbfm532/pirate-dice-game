@@ -46,7 +46,10 @@ const AVATARS = ["Martha's Mask", "Loaded Die", "Brodor's Sunglasses", "Shield o
 // (The 3D client's five since 3 Nov, the user's: Cheers, Ha!, Ooh, Smug, Woe.)
 const PLAYER_REACTIONS = ['😀', '😂', '😮', '😎', '😭', '🧔 Early Ross', '🍻', '🃏', '😏', '💔'];
 
-app.use(express.static(path.join(__dirname, 'public')));
+// 20 Nov (the user's): the new game is the main address. `/` sends a visitor on to /next/ (with any
+// ?table= invite), and the classic page lives at /classic; `index: false` keeps the static files from
+// answering `/` with the classic page first.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.use('/shared', express.static(path.join(__dirname, 'shared')));
 // The 3D client prototype (client/), once built with `npm run build:client`.
 // (16 Nov: its code and styles carry a fingerprint of their contents in their names, so a browser may
@@ -55,6 +58,10 @@ app.use('/next/assets', express.static(path.join(__dirname, 'client', 'dist', 'a
 app.use('/next', express.static(path.join(__dirname, 'client', 'dist')));
 
 app.get('/', (req, res) => {
+    const query = req.originalUrl.indexOf('?');
+    res.redirect(302, '/next/' + (query >= 0 ? req.originalUrl.slice(query) : ''));
+});
+app.get(['/classic', '/index.html'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
