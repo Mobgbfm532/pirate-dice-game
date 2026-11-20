@@ -255,7 +255,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '👊',
         lives: BALANCE.opponentLives.sylvester,
         ability: 'suckerPunch',
-        blurb: "Sylvester Stonefist, a Master Monk - if you can imagine that.",
+        blurb: "Sylvester Stonefist, a Master Monk – if you can imagine that.",
         powers: [{ name: "Back of the Head", text: "As you keep your last die, he knocks your best die loose and you roll it again." }]
     },
     {
@@ -265,7 +265,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🖋️',
         lives: BALANCE.opponentLives.vaelin,
         ability: 'inkfire',
-        blurb: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster.", // (the user's, 13 Nov)
+        blurb: "Vaelin Inkhand, honourable son of Brazenthrone and unwilling apprentice to Halaster.", // (the user's, 13 Nov)
         powers: [{ name: "Inkfire Blast", text: "For a round, the 6s burn on your dice." }]
     },
     {
@@ -298,7 +298,7 @@ const TAVERN_ENCOUNTERS = [
         boss: true, // beating him wins his Sunglasses, and word comes of the Salty Swallow
         drops: 'brodorsSunglasses',
         blurb: "Brodor, Goblin-mania champion, will send you to the Mezzanine.", // (the user's, 13 Nov)
-        powers: [{ name: "Astral Flood", text: "Once he has lost a life, he floods the table with light, heals one and takes one of yours." }]
+        powers: [{ name: "Astral Flood", text: "Once he has lost a heart, he floods the table with light, heals one and takes one of yours." }]
     },
     {
         id: 'klarg',
@@ -350,7 +350,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'penitentStare',
         abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
         blurb: "The Hangman seals your fate with the Ace of Spades.", // (the user's, 13 Nov)
-        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart." }]
+        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a heart, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "On his last heart, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart." }]
     },
     {
         id: 'jaguar',
@@ -360,7 +360,7 @@ const TAVERN_ENCOUNTERS = [
         lives: BALANCE.opponentLives.jaguar,
         ability: 'jaguarPhases',
         blurb: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm.", // (the user's, 13 Nov)
-        powers: [{ name: "Smooth Talker", text: "Twice a fight: after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him." }, { name: "The Cloak", text: "At two lives he throws after you, his dice hidden." }, { name: "All In", text: "At his last life, whoever loses the round loses two hearts." }]
+        powers: [{ name: "Smooth Talker", text: "Twice a fight: after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him." }, { name: "The Cloak", text: "On two hearts he throws after you, his dice hidden." }, { name: "All In", text: "On his last heart, whoever loses the round loses two hearts." }]
     }
 ];
 
@@ -370,18 +370,18 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'bentCopper',
         name: 'Shield of Fuckery', // (the user's name, 17 Nov; it was the Shield)
-        text: 'Once per encounter, the first life you would lose is ignored.',
+        text: 'Once a fight, the first heart you would lose is kept.',
         from: 'yawningPortal'
     },
     {
         id: 'luckySeat',
         name: 'Trap Card',
-        text: 'Once per encounter, your first tied round counts as safe for you and a loss for the opponent.'
+        text: 'Once a fight, your first tied round counts as safe for you and a loss for the opponent.'
     },
     {
         id: 'velvetCushion',
         name: 'Velvet Cushion',
-        text: 'Once per encounter, losing by exactly 1 point becomes a tie instead.'
+        text: 'Once a fight, losing by exactly 1 point becomes a tie instead.'
     },
     {
         id: 'loadedDie',
@@ -397,7 +397,7 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'loyaltyCard',
         name: "Thom's Loyalty Card",
-        text: "Thom's Cart is always available, and your first Thonic each visit is free."
+        text: "Thom's cart is always one of the spots, and your first Thonic each visit is free."
     },
     // 30 Oct, the user's picks.
     {
@@ -480,7 +480,7 @@ const THONICS = {
     // Elf Bars (28 Oct, the user's): magic vapes from Johnny Elf Bar, one of Frak's street
     // urchins. They sit on the shelf like Thonics, but each has ELF_BAR_PUFFS puffs, at most one
     // a fight (run.puffs, run.puffed); the last puff empties it. No side effects (the user's call).
-    purpleHaze: { id: 'purpleHaze', name: 'Purple Haze Elf Bar', text: 'After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it.', price: BALANCE.elfBarPrices.purpleHaze, drink: true, elf: true },
+    purpleHaze: { id: 'purpleHaze', name: 'Purple Haze Elf Bar', text: 'After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes the one you need.', price: BALANCE.elfBarPrices.purpleHaze, drink: true, elf: true },
     cottonCandyCloud: { id: 'cottonCandyCloud', name: 'Cotton Candy Cloud Elf Bar', text: "On your turn, while your opponent is still to throw: they play this round without seeing your score.", price: BALANCE.elfBarPrices.cottonCandyCloud, drink: true, elf: true },
     lemonLevitation: { id: 'lemonLevitation', name: 'Lemon Levitation Elf Bar', text: 'After a throw: throw again without keeping a die.', price: BALANCE.elfBarPrices.lemonLevitation, drink: true, elf: true },
     watermelonHindsight: { id: 'watermelonHindsight', name: 'Watermelon Hindsight Elf Bar', text: 'Undo your last throw: those dice are thrown again.', price: BALANCE.elfBarPrices.watermelonHindsight, drink: true, elf: true }
@@ -743,7 +743,7 @@ function seaShift(room) {
 const seaWarded = (room, turn) => room.mode === 'tavern-crawl' && !!room.tavernRun.seaWard && !!turn && turn.playerId !== BOT_ID;
 // What the fog hides from you: nothing under the Water of the Ebon Shield.
 const fogForYou = room => seaFog(room) && !room.tavernRun.seaWard;
-const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight'; // (the user's words, 17 Nov)
+const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight.'; // (the user's words, 17 Nov)
 // A plain throw of one die, leaning with the sea.
 function seaRoll(shift) {
     return shift ? () => Math.min(6, Math.max(1, rollFace() + shift)) : rollFace;
@@ -1036,7 +1036,7 @@ function sendAutoSave(roomCode) {
         if (!save) return;
     }
     if (save === (run.autoSave || null)) return;
-    if (run.autoSave) openedSaves.add(saveInfo(run.autoSave).id);
+    if (run.autoSave) markSaveUsed(saveInfo(run.autoSave).id);
     run.autoSave = save;
     if (!save) { io.to(humanId).emit('autoSave', null); return; }
     let info = saveInfo(save);
@@ -1586,7 +1586,7 @@ function performEndTurn(roomCode) {
             let was = room.players[currentId].score;
             room.players[currentId].score = 24;
             fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman shoots a die into a 6. Perfect 24.', after: `The Hangman shoots a die into a 6: his ${was} becomes a perfect 24, and he wins back a heart.` });
-            if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
+            if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires the Ace of Spades.', color: "#ffd54f" });
         }
         // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
         // points (not in a cursed round, where a lower score would help them).
@@ -1652,7 +1652,7 @@ function performEndTurn(roomCode) {
     if ((perfect4 || (natural && (room.players[currentId].score === 24 || shades))) && room.players[currentId].lives < maxLives) {
         room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + 1);
         if (shades) emitKeepsakeActivated(roomCode, room, BRODORS_SUNGLASSES.id, 'A 23 restores a heart.');
-        io.to(roomCode).emit('displayMessage', { text: '+1 Life Restored!', color: "#aed581" });
+        io.to(roomCode).emit('displayMessage', { text: '+1 heart restored!', color: "#aed581" });
     }
 
     advanceTurn(roomCode);
@@ -2172,7 +2172,7 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
     // (18 Nov, the user's: "Lost a life: name", not "Dust: name", which it said even for a valid lower hand.)
     let count = lifeLosers.length === 1 ? lost[lifeLosers[0]] : 0;
     let resultLines = [
-        dustNames.length ? `${count > 1 ? `Lost ${count} lives` : lifeLosers.length > 1 ? 'Lost lives' : 'Lost a life'}: ${dustNames.join(', ')}.` : null,
+        dustNames.length ? `${count > 1 ? `Lost ${count} hearts` : lifeLosers.length > 1 ? 'Lost hearts' : 'Lost a heart'}: ${dustNames.join(', ')}.` : null,
         safeNames.length ? `Safe: ${safeNames.join(', ')}.` : null
     ].filter(Boolean).join('\n');
 
@@ -2182,14 +2182,14 @@ function emitRoundLifeResult(roomCode, room, lifeLosers, tiedPlayers = [], ends 
         let names = tiedPlayers
             .map(id => room.players[id] ? room.players[id].name : 'A player')
             .join(' and ');
-        message = `${resultLines}\n${names} tied.\nNo lives lost.`;
+        message = `${resultLines}\n${names} tied.\nNo hearts lost.`;
     } else {
-        message = `${resultLines}\nSafe for another round.\nNo lives lost.`;
+        message = `${resultLines}\nSafe for another round.\nNo hearts lost.`;
     }
     if (results) {
         let tied = results.filter(r => r.tied).map(r => r.name).join(' and ');
-        message = results.map(r => `${r.name}: ${r.busted ? 'dust' : r.score}${r.lost ? ' (loses a life)' : ''}`).join('\n')
-            + (tied ? `\n${tied} tied: sudden death.` : lifeLosers.length ? '' : '\nNo lives lost.');
+        message = results.map(r => `${r.name}: ${r.busted ? 'dust' : r.score}${r.lost ? ' (loses a heart)' : ''}`).join('\n')
+            + (tied ? `\n${tied} tied: sudden death.` : lifeLosers.length ? '' : '\nNo hearts lost.');
     }
     if (reveal) message = `${reveal.name}: ${reveal.busted ? 'dust' : reveal.score}.\n${message}`;
     sendMoment(roomCode, 'roundResult', results ? { message, ends, results } : { message, ends, ...(reveal ? { reveal: { score: reveal.score, busted: reveal.busted } } : {}) });
@@ -2205,6 +2205,7 @@ const TAVERN_START_ENCOUNTER = Math.max(0, Math.min(TAVERN_ENCOUNTERS.length - 1
 
 function createTavernRun() {
     return {
+        runId: crypto.randomUUID(), // (one live table per run: a save of it can't open a second copy while it's played, 20 Nov)
         encounterIndex: TAVERN_START_ENCOUNTER,
         keepsakes: [],
         pendingKeepsakeChoices: null,
@@ -2410,6 +2411,21 @@ function resetTavernEncounter(roomCode, keepHumanLives = true, quiet = false) {
     room.tavernRun.abilityRound = getRandomAbilityRound(encounter);
     room.tavernRun.encounterKeepsakeUses = {};
     room.tavernRun.clearEyeArmed = false;
+    // A round save being resumed (20 Nov): the fight as it stood at that round's start.
+    let resume = room.tavernRun.resumeRound;
+    room.tavernRun.resumeRound = null;
+    if (resume && humanId && room.players[humanId]) {
+        let state = resume.state || {};
+        FIGHT_STATE.forEach(k => { if (state[k] !== undefined) room.tavernRun[k] = JSON.parse(JSON.stringify(state[k])); });
+        if (Number.isInteger(resume.max) && resume.max > 0) room.startingLives = resume.max;
+        room.players[humanId].lives = Math.max(1, Math.min(Number(resume.hearts) || 1, 9));
+        room.players[BOT_ID].lives = Math.max(1, Math.min(Number(resume.theirs) || 1, encounter.lives));
+        room.tavernRun.encounterRound = resume.n;
+        room.roundNumber = resume.n;
+        room.isTieBreaker = !!resume.tie;
+        room.roundPlayers = resume.n % 2 === 1 ? [humanId, BOT_ID] : [BOT_ID, humanId];
+        room.tavernRun.fightSave = sealRoundSave(room, room.players[humanId].name, resume.n, resume.tie);
+    }
     room.tavernRun.started = true;
     meet(room, encounter.id);
     if (quiet) return;
@@ -2482,7 +2498,7 @@ function beginTavernRound(roomCode, room) {
             let shielded = !!human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper;
             // (after: the line the aftermath ribbon shows once the moment has gone, 18 Nov, the user's)
             let after = shielded ? 'Brodor heals a heart. Your Shield of Fuckery holds yours.' : human && human.lives > 1 ? 'Brodor heals a heart and takes one of yours.' : 'Brodor heals a heart.';
-            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a life and takes one of yours.', after });
+            sendMoment(roomCode, 'signatureMove', { name: encounter.name, ability: Rules.ABILITY_NAMES.astralFlood, text: 'He floods the table with light: he heals a heart and takes one of yours.', after });
             if (human && hasKeepsake(room, 'bentCopper') && !run.encounterKeepsakeUses.bentCopper) {
                 run.encounterKeepsakeUses.bentCopper = true;
                 emitKeepsakeActivated(roomCode, room, 'bentCopper', 'The Shield of Fuckery protects a life.');
@@ -2586,12 +2602,20 @@ const SAVE_SECRET = process.env.SAVE_SECRET || crypto.randomBytes(32).toString('
 if (!process.env.SAVE_SECRET && !process.env.GAME_TIME_SCALE) console.log('SAVE_SECRET is not set: saved Tavern Crawl runs last only until the server restarts.');
 const SAVE_VERSION = 2; // 2: gold a tenth of before, rising prices (23 Oct)
 const openedSaves = new Set();
+// (Kept in the database too since 20 Nov: a server restart, every sleep and deploy on Render, used to forget them, so an
+// old save copied out of a browser could be opened again.)
+function markSaveUsed(id) {
+    if (!id || openedSaves.has(id)) return;
+    openedSaves.add(id);
+    store.addUsedSave(id).catch(error => console.warn('Could not save a used save:', error.message));
+}
+store.loadUsedSaves().then(ids => ids.forEach(id => openedSaves.add(id))).catch(error => console.warn('Could not load the used saves:', error.message));
 const keepsakeById = id => BOSS_DROPS[id] || TAVERN_KEEPSAKES.find(k => k.id === id);
 
 function sealSave(room, name, extra = {}) {
     let run = room.tavernRun;
     let data = {
-        v: SAVE_VERSION, id: crypto.randomUUID(), at: Date.now(), name,
+        v: SAVE_VERSION, id: crypto.randomUUID(), runId: run.runId, at: Date.now(), name,
         encounterIndex: run.encounterIndex, keepsakes: run.keepsakes.map(k => k.id), purse: run.purse,
         shelf: run.shelf, stats: run.stats, ladysGrace: !!run.ladysGrace, lastWin: run.lastWin, bought: run.bought || {}, thomMet: !!run.thomMet,
         kramFights: (run.kramFights || 0) + (run.kram ? 1 : 0), krammed: !!run.krammed, puffs: run.puffs || {}, refusedDrops: run.refusedDrops || [],
@@ -2616,6 +2640,20 @@ function sealFightSave(room, name, more = {}) {
     });
 }
 
+// A save at the start of the fight's next round (20 Nov, the user's: no save scumming). Sealed at each round's end, it
+// carries the fight as it stands: both sides' hearts, the round, the abilities and keepsakes spent, the songs, omens and
+// Elf Bars of this fight. Continue picks the fight up at that round, so quitting can redo only the round under way.
+const FIGHT_STATE = ['abilityRound', 'abilityUsed', 'clearEyeArmed', 'cuttingWords', 'encounterKeepsakeUses', 'heightenedRound', 'jaguarPhase',
+    'klargHand', 'kram', 'mysteryFlavour', 'notaro', 'omen', 'puffed', 'seaWard', 'song', 'sorcery', 'talkNext', 'tubSurge', 'sea', 'seaFace'];
+function sealRoundSave(room, name, nextRound, tie) {
+    let run = room.tavernRun;
+    let state = {};
+    FIGHT_STATE.forEach(k => { if (run[k] !== undefined) state[k] = run[k]; });
+    if (state.song && state.song !== 'ready') state.song = null; // (a turn's key means nothing at a new table)
+    let human = room.players[getHumanPlayerId(room)], bot = room.players[BOT_ID];
+    return sealSave(room, name, { fight: true, round: { n: nextRound, tie: !!tie, hearts: human ? human.lives : 1, theirs: bot ? bot.lives : 1, max: room.startingLives, state: JSON.parse(JSON.stringify(state)) } });
+}
+
 // What a save says, for the start screen's line (already sealed: no check needed to read it).
 function saveInfo(save) {
     try { return JSON.parse(Buffer.from(save.split('.')[0], 'base64url').toString()); } catch { return {}; }
@@ -2632,12 +2670,13 @@ function openSave(text) {
     try { data = JSON.parse(Buffer.from(body, 'base64url').toString()); } catch { return null; }
     if (!data || data.v !== SAVE_VERSION || openedSaves.has(data.id)) return null;
     if (!Number.isInteger(data.encounterIndex) || data.encounterIndex < 0 || data.encounterIndex >= TAVERN_ENCOUNTERS.length) return null;
-    openedSaves.add(data.id);
+    markSaveUsed(data.id);
     return data;
 }
 
 function restoreRun(room, data) {
     let run = room.tavernRun;
+    if (typeof data.runId === 'string') run.runId = data.runId;
     run.encounterIndex = data.encounterIndex;
     run.keepsakes = (data.keepsakes || []).map(id => OLD_DROPS[id] || id).map(keepsakeById).filter(Boolean);
     run.purse = Math.max(0, Number(data.purse) || 0);
@@ -2661,6 +2700,8 @@ function restoreRun(room, data) {
         run.nextOmen = OMENS[data.nextOmen] ? data.nextOmen : null;
         run.nextNotaro = !!data.nextNotaro;
         run.nextSeaWard = !!data.nextSeaWard;
+        // (A round save: resetTavernEncounter picks the fight up at that round.)
+        run.resumeRound = data.round && Number.isInteger(data.round.n) && data.round.n > 1 ? data.round : null;
     }
 }
 
@@ -3029,7 +3070,7 @@ function evaluateTavernRound(roomCode) {
         room.tavernRun.runComplete = true;
         io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
         emitState(roomCode);
-        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached encounter ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
+        io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached fight ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
         return;
     }
 
@@ -3083,6 +3124,10 @@ function evaluateTavernRound(roomCode) {
         io.to(roomCode).emit('offerShop', won); // the fight is won (the name is historical)
         return;
     }
+
+    // The fight goes on: its save moves on to the next round's start (20 Nov, no save scumming), sent at once.
+    room.tavernRun.fightSave = sealRoundSave(room, human.name, room.tavernRun.encounterRound + 1, tiedPlayers.length > 1);
+    sendAutoSave(roomCode);
 
     // The next round waits a moment, so what this round did (its result, the keepsakes that
     // fired) shows before the next round's ability (the user's call, 21 Oct: one thing at a time).
@@ -3152,7 +3197,7 @@ io.on('connection', (socket) => {
         let room = rooms[roomCode];
         if (room.cleanupTimer) { clearTimeout(room.cleanupTimer); room.cleanupTimer = null; }
         let finalName = asText(data.name).trim();
-        if (finalName === "") finalName = "Mysterious Traveler";
+        if (finalName === "") finalName = "Mysterious Traveller";
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
         let avatar = data.avatar === 'Shield' ? 'Shield of Fuckery' : AVATARS.includes(data.avatar) ? data.avatar : AVATARS[0];
         let token = asText(data.token).substring(0, 64);
@@ -3169,6 +3214,26 @@ io.on('connection', (socket) => {
             socket.emit('crawlTaken');
             scheduleEmptyTableCleanup(roomCode); // (the join cleared its timer)
             return;
+        }
+
+        // One live table per run (20 Nov, no save scumming): a save of a run still played at another table (a second tab)
+        // doesn't open; one whose table is left with nobody at it retires that table, so only this copy carries on.
+        if (room.mode === 'tavern-crawl' && !existingPlayerId && typeof data.resume === 'string' && !room.tavernRun.started) {
+            let peek = saveInfo(data.resume);
+            let runId = !openedSaves.has(peek.id) && peek.runId; // (a used save just fails to open, below)
+            let other = runId && Object.entries(rooms).find(([code, r]) => code !== roomCode && r.mode === 'tavern-crawl' && r.tavernRun && r.tavernRun.runId === runId && !r.tavernRun.runComplete);
+            if (other && anyHumanConnected(other[1])) {
+                socket.leave(roomCode);
+                socket.roomCode = null;
+                socket.emit('crawlLive');
+                scheduleEmptyTableCleanup(roomCode);
+                return;
+            }
+            if (other) {
+                if (other[1].cleanupTimer) clearTimeout(other[1].cleanupTimer);
+                other[1].turnEpoch++;
+                delete rooms[other[0]];
+            }
         }
 
         if (existingPlayerId && existingPlayerId !== BOT_ID) {
@@ -3252,7 +3317,7 @@ io.on('connection', (socket) => {
             room.roundPlayers = [];
         }
         // (The browser says so when it came back by itself, its table gone: see sendAutoSave.)
-        if (resumed) socket.emit('crawlResumed', { fight: !!resumed.fight, next: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name });
+        if (resumed) socket.emit('crawlResumed', { fight: !!resumed.fight, next: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name, round: resumed.round && resumed.round.n > 1 ? resumed.round.n : null });
 
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
         // Who this name has met before (the "?" portraits); the state goes out again once it's in.
@@ -3849,7 +3914,7 @@ io.on('connection', (socket) => {
         } else if (thonicId === 'steady') {
             if (turn.steady) return;
             turn.steady = true;
-            text = 'Dust this turn counts as 0';
+            text = 'A dust hand this turn scores as it lies';
         } else {
             return;
         }

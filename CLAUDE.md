@@ -412,6 +412,10 @@ one too, or saves only last until the server restarts, which on the free tier is
     the cheer and the heart's pop (`healingHand`).
     The start screen's title is the logo too, swaying in its firelight with a sheen and embers (`.title-logo`; the loading
     screen and the trailer keep the words; the page was already 14 px wider than a 1280 px window, before the logo).
+    Also 20 Nov (the user's "Fix both"): the game's text read through and fixed (hearts, not lives, in round results and cards;
+    "Once a fight"; British spellings; Brodor's and Martha's lines; the Hall of Legends' points line); and **no save scumming**
+    (`docs/save-scumming.md`): a fight's save moves on each round (`sealRoundSave`, `FIGHT_STATE`, `run.resumeRound`), one live
+    table per run (`runId`, `crawlLive`), used saves kept in the database (`used_saves`, `markSaveUsed`).
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the

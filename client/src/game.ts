@@ -1000,8 +1000,22 @@ socket.on('autoSave', (data: { save: string; name: string; next: string; place: 
 // The run was opened from a save. When you tapped Continue that's no news; when this tab came back to a
 // table that was gone, say what happened.
 let continuing = false;
-socket.on('crawlResumed', (data: { fight: boolean; next: string }) => {
-    if (!continuing) showToast('Your crawl was brought back', data.fight ? `The table was lost while you were away. The fight against ${data.next} starts again.` : 'The table was lost while you were away. You are back where you left off.', 'info', 6000);
+// The save Continue was pressed with: put back if the server says that run is still being played elsewhere (20 Nov).
+let resumingFrom: SavedRun | null = null;
+socket.on('crawlLive', () => {
+    if (resumingFrom) writeSavedRun(resumingFrom);
+    try { sessionStorage.setItem('tavernNotice', 'That crawl is still open in another tab or window. Carry on there, or close it and Continue here.'); } catch { /* no notice */ }
+    actions.leave();
+});
+// (A notice left for after the page reloads.)
+try {
+    const notice = sessionStorage.getItem('tavernNotice');
+    if (notice) { sessionStorage.removeItem('tavernNotice'); setTimeout(() => showToast('Already playing', notice, 'info', 7000), 600); }
+} catch { /* none */ }
+socket.on('crawlResumed', (data: { fight: boolean; next: string; round?: number | null }) => {
+    // (Since 20 Nov a fight picks up at the round it had reached, not its start.)
+    const fight = data.round ? `The fight against ${data.next} picks up at round ${data.round}.` : `The fight against ${data.next} starts again.`;
+    if (!continuing) showToast('Your crawl was brought back', data.fight ? `The table was lost while you were away. ${fight}` : 'The table was lost while you were away. You are back where you left off.', 'info', 6000);
     continuing = false;
 });
 
@@ -1273,6 +1287,7 @@ export const actions = {
     },
     // A saved Tavern Crawl carries on at a fresh table (the save is used up).
     resume(saved: SavedRun, avatar: string) {
+        resumingFrom = saved;
         writeSavedRun(null);
         continuing = true;
         const roomCode = newCrawlCode();

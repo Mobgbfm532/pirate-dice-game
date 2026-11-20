@@ -346,7 +346,7 @@ type TurnInfo = { title: string; detail?: string; tone: 'mine' | 'theirs' | 'wai
 
 function turnInfo(snap: Snapshot, state: GameState): TurnInfo {
     const tavern = state.mode === 'tavern-crawl';
-    if (snap.waiting) return { title: 'Waiting for travelers', detail: 'to join…', tone: 'waiting' };
+    if (snap.waiting) return { title: 'Waiting for travellers', detail: 'to join…', tone: 'waiting' };
     if (tavern && state.tavernRun?.pendingKeepsakeChoices) return { title: 'Choose a keepsake', tone: 'mine' };
     const me = snap.myId ? state.players[snap.myId] : null;
     const id = state.currentTurnId;
@@ -691,7 +691,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
         const half = Math.ceil(others.length / 2);
         return (
             <div ref={bar} className="rivals seats">
-                {others.length === 0 && <span className="rivals-empty">Waiting for travelers to join…</span>}
+                {others.length === 0 && <span className="rivals-empty">Waiting for travellers to join…</span>}
                 <div className="seat-col left">{others.slice(0, half).map(card)}</div>
                 <div className="seat-col right">{others.slice(half).map(card)}</div>
             </div>
@@ -699,7 +699,7 @@ function Rivals({ snap, state }: { snap: Snapshot; state: GameState }) {
     }
     return (
         <div ref={bar} className={`rivals count-${Math.min(others.length, 6)} ${others.length > 6 ? 'many' : ''}`}>
-            {others.length === 0 && <span className="rivals-empty">Waiting for travelers to join…</span>}
+            {others.length === 0 && <span className="rivals-empty">Waiting for travellers to join…</span>}
             {others.map(card)}
         </div>
     );
@@ -736,7 +736,7 @@ function OpponentPlate({ state, onInfo }: { state: GameState; onInfo: () => void
 const SEA_EFFECT: Record<SeaState['id'], string> = { calm: 'a steady deck', starboard: 'every die +1 (no 1s)', port: 'every die −1 (no 6s)', rogue: 'a wave takes a loose die at the second throw', squall: 'keep two dice from every throw', fog: "neither sees the other's hand", becalmed: 'three throws, then dice stay' };
 const SEA_NEXT: Record<SeaState['id'], string> = { calm: 'calm', starboard: 'starboard', port: 'port', rogue: 'heavy seas', squall: 'squall', fog: 'fog', becalmed: 'becalmed' };
 // Jorvash's Water of the Ebon Shield: the sea die can't touch you this fight (the user's words, 17 Nov).
-const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight';
+const EBON_SHIELD_HOLDS = 'Your Ebon Shield holds: you are unaffected in this fight.';
 function SeaPlaque({ sea, next, ward }: { sea: SeaState; next: SeaState | null; ward?: boolean }) {
     return (
         <div className={`round-plaque round-sea sea-${sea.id}`} title={`${sea.name}. ${sea.text}${next ? ` Next round: ${next.name}.` : ''}`}>
@@ -770,7 +770,7 @@ function HintLine({ badge, plaque, tip, sea, next, powers, face, faces, phase, w
 
 // The sea's explainer: what this round's does, the forecast, and how the sea works.
 const SEA_EXPLAIN: Record<SeaState['id'], string> = {
-    starboard: 'The ship leans to starboard: every die thrown lands one higher. A 1 becomes a 2, a 5 a 6, and a 6 stays a 6, so there are no 1s and 6s come twice as often.',
+    starboard: 'The ship leans to starboard: every die thrown lands one higher. A 1 becomes a 2, a 5 a 6, and a 6 stays a 6, so there are no 1s, and 6s come twice as often.',
     port: 'The ship leans to port: every die thrown lands one lower. A 6 becomes a 5, a 2 a 1, and a 1 stays a 1, so there are no 6s, and no hand can reach 24 this round.',
     calm: 'A steady deck: the dice land as they fall.',
     squall: 'A squall: rain and wind lash the deck, and every hand must keep two dice from each throw instead of one (or every die left, if only one or two were thrown). Hands are rushed: a 2 or a 4 is easy to miss. Your opponent keeps two as well.',
@@ -889,7 +889,7 @@ function TurnControls({ snap }: { snap: Snapshot }) {
         : snap.isMyTurn && turn.hasRolled && !turn.finalized && !snap.rolling && !turn.canRoll && turn.locksThisRoll < keepsNeeded(turn)
             ? (keepsNeeded(turn) >= 2 ? (turn.locksThisRoll === 0 ? 'Squall: keep two dice, then roll again' : 'Squall: keep one more die')
                 // (Becalmed: how many throws the hand has left.)
-                : turn.maxThrows && turn.maxThrows - turn.rollCount === 1 ? 'Keep some: your last throw, and they stay as they lie'
+                : turn.maxThrows && turn.maxThrows - turn.rollCount === 1 ? "Last throw: whatever you don't keep stays as it lies"
                 : turn.maxThrows ? `Becalmed: ${turn.maxThrows - turn.rollCount} throws left`
                 : '')
             : '';
@@ -1037,7 +1037,7 @@ function MaskKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
 // flavour could be puffed now; a tap opens its panel, with "Puff" when it can be.
 const ELF_BAR_NAMES: Record<string, string> = { purpleHaze: 'Purple Haze', cottonCandyCloud: 'Cotton Candy Cloud', lemonLevitation: 'Lemon Levitation', watermelonHindsight: 'Watermelon Hindsight' };
 const ELF_BAR_TEXT: Record<string, string> = {
-    purpleHaze: 'after a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it',
+    purpleHaze: 'after a throw showing a 1, while you still need a 2 or a 4: that 1 becomes the one you need',
     cottonCandyCloud: "on your turn, while your opponent is still to throw: they play this round without seeing your score",
     lemonLevitation: 'after a throw: throw again without keeping a die',
     watermelonHindsight: 'undo your last throw: those dice are thrown again'
@@ -1177,7 +1177,7 @@ function GameMenu({ state, myId, start, onClose, musicOff, onMusic, soundsOff, o
                 ) : (
                     <div className="menu-save">
                         <strong>Save your crawl?</strong>
-                        <p>You'll leave the table. Next time, <em>Continue</em> on the start screen begins the fight against <b>{who}</b> from the start, with what you had {between ? 'now' : 'when it began'}.</p>
+                        <p>You'll leave the table. Next time, <em>Continue</em> on the start screen {between ? <>begins the fight against <b>{who}</b>, with what you have now</> : <>picks up the fight against <b>{who}</b> at the start of this round</>}.</p>
                         <div className="menu-save-buttons">
                             <button className="primary" disabled={saving || !canSave} onClick={() => { setSaving(true); actions.saveFight(); }}>{saving ? 'Saving…' : 'Save and leave'}</button>
                             <button className="secondary" onClick={() => (start === 'save' ? onClose() : setAsking(false))}>Cancel</button>
@@ -2009,7 +2009,7 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                         </button>
                                         {swapFor === k.id && (
                                             <div className="swap-pick">
-                                                <p className="fine">Pockets full. Leave which behind for <strong>{k.name}</strong>?</p>
+                                                <p className="fine">Pockets full: which will you leave behind for <strong>{k.name}</strong>?</p>
                                                 <div className="drop-swap">
                                                     {run.keepsakes.map(own => (
                                                         <button key={own.id} className="keepsake-ware swap" onClick={() => { setSwapFor(null); actions.buyKeepsake(k.id, own.id); }}>
@@ -2134,14 +2134,14 @@ const INVITATIONS: Record<string, { title: string; line: (place: string) => stri
         title: 'You qualify for the Yawning Portal',
         courier: 'snake',
         line: () => 'Upon beating Martha/Mystery, you receive an invitation by flying snake. As champion of the Ghoul and Gourd you may progress to the Yawning Portal.',
-        after: `Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You can always come back here for refills, it's not addictive."`,
+        after: `Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You can always come back here for refills – it's not addictive."`,
         gift: 'is yours. One puff a fight, and each fight is a different flavour at random.'
     },
     Brodor: {
         title: 'Word from the docks',
         courier: 'snake',
         line: () => `Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"`,
-        after: "Word has spread, the Salty Swallow is soon to set sail - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence",
+        after: "Word has spread: the Salty Swallow is soon to set sail – and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence.",
         gift: 'are yours: a finished 23 restores a heart, like a 24.'
     }
 };
@@ -2203,7 +2203,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
                     )}
                     {claim === 'open' && swapping && (
                         <>
-                            <p className="mask-text">Leave which behind for <strong>{drop.name}</strong>?</p>
+                            <p className="mask-text">Which will you leave behind for <strong>{drop.name}</strong>?</p>
                             <div className="drop-swap">
                                 {run.keepsakes.map(k => (
                                     <button key={k.id} className="keepsake-ware swap" onClick={() => actions.claimDrop(true, k.id)}>
@@ -2933,7 +2933,7 @@ function DockScene() {
             </div>
             <div className="dock-counter">
                 <div className="dock-plate"><strong>Skipper Bren</strong><span>Master of the Salty Swallow</span></div>
-                <p>At sea the weather turns every round. From each fight's second round the <b>sea die</b> is rolled first, and its dial tells you what the sea brings: a list to port or starboard, a squall, a rogue wave, a fog bank, a dead calm. It plays your dice and your opponent's alike.</p>
+                <p>At sea the weather turns every round. From each fight's second round the <b>sea die</b> is rolled first, and its dial tells you what the sea brings: a list to port or starboard, a squall, a rogue wave, a fog bank, a dead calm. It works on your dice and your opponent's alike.</p>
                 <button className="primary" onClick={() => { playSound('click'); actions.boardShip(); }}>Climb aboard</button>
             </div>
         </div>,
@@ -3272,7 +3272,7 @@ function RoundResultCard({ rows, myId }: { rows: RoundResultRow[]; myId: string 
                         <span className="place">{r.busted ? '✗' : ++place}</span>
                         <span className="who">{r.name}</span>
                         <span className={`score ${r.busted ? 'dust' : ''}`}>{r.busted ? 'Dust' : r.score}</span>
-                        <span className="heart-lost" aria-label={r.lost ? 'loses a life' : undefined}>
+                        <span className="heart-lost" aria-label={r.lost ? 'loses a heart' : undefined}>
                             {/* (The same heart as everywhere, cracking as one does when it's lost, once its line is in.) */}
                             {r.lost ? <span className="hearts" aria-hidden="true"><span className="heart breaking" style={{ animationDelay: `${0.75 + i * 0.22}s` }}>♥</span></span> : r.tied ? 'tied' : ''}
                         </span>
@@ -3280,7 +3280,7 @@ function RoundResultCard({ rows, myId }: { rows: RoundResultRow[]; myId: string 
                 ))}
             </ol>
             {tied.length > 1 && <p className="round-card-note">Sudden death: {tied.join(' and ')}</p>}
-            {nobodyLost && <p className="round-card-note">No lives lost</p>}
+            {nobodyLost && <p className="round-card-note">No hearts lost</p>}
         </div>
     );
 }
@@ -3337,7 +3337,7 @@ function HallOfLegends({ me, onClose }: { me: string; onClose: () => void }) {
                                 ))}
                             </ol>
                         )}
-                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, a little for how far a lost run got, and the gold you end with.</p>
+                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, 50 for each perfect hand, 2,000 for winning the crawl, a little for how far a lost run got, and the gold you end with.</p>
                     </div>
                 ) : <LeagueTable rows={league.rows} room={league.room} me={me} />}
             </div>
@@ -3556,7 +3556,20 @@ export function Hud() {
 
     // The trailer (?trailer in the address): the game's own Perfect 24 and three 6s play over the table under it.
     if (trailerWanted) return <><Trailer /><Celebration snap={snap} /><DevilSixes snap={snap} /></>;
-    if (!snap.joined) return <JoinScreen />;
+    // (The start screen shows notices too, 20 Nov: a Continue refused as that crawl is open elsewhere.)
+    if (!snap.joined) return (
+        <>
+            <JoinScreen />
+            <div className="toasts join-toasts">
+                {snap.toasts.filter(t => t.tone !== 'result').map(t => (
+                    <div key={t.id} className={`toast ${t.tone}`}>
+                        {t.title && <strong>{t.title}</strong>}
+                        <span>{t.text}</span>
+                    </div>
+                ))}
+            </div>
+        </>
+    );
     const state = snap.state;
     const botAcross = acrossTheTable()?.isBot ?? false;
     // A bot opponent has its nameplate; everyone else gets a chip.

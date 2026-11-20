@@ -366,7 +366,7 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
                     {HITS.map(t => <Timed key={t} clock={clock} from={hitWindow(t)[0]} to={hitWindow(t)[1]}><i className="film-flash" style={vars({ '--at': `${T(t - 0.04)}s` })} /></Timed>)}
 
                     <Timed clock={clock} from={WINDOWS.lineGame[0]} to={WINDOWS.lineGame[1]}><Line place="under" at={[1.5]} out={5.1} text="Every town has a game." /></Timed>
-                    <Timed clock={clock} from={WINDOWS.lineTown[0]} to={WINDOWS.lineTown[1]}><Line at={[6.7, 8.1, 9.6]} out={11.3} text="In this one, some play for gold, *others* play for glory." /></Timed>
+                    <Timed clock={clock} from={WINDOWS.lineTown[0]} to={WINDOWS.lineTown[1]}><Line at={[6.7, 8.1, 9.6]} out={11.3} text="In this one, some play for gold; *others* play for glory." /></Timed>
                     <Timed clock={clock} from={WINDOWS.linePortal[0]} to={WINDOWS.linePortal[1]}><Line at={[12.3]} out={14.4} text="Few get past the Portal." /></Timed>
                     <Timed clock={clock} from={WINDOWS.lineShip[0]} to={WINDOWS.lineShip[1]}><Line at={[15]} out={16.9} text="Fewer still get past the Ship." /></Timed>
                     <Timed clock={clock} from={WINDOWS.lesson[0]} to={WINDOWS.lesson[1]}><p className="film-line top lesson" style={vars({ '--start': `${THROW_AT[0]}s`, '--end': `${T(24.5)}s` })}>

@@ -18,7 +18,7 @@ Yvesil's pronouns aren't settled: the scene text below says "her" (Yvesil is a h
 
 **Yvesil**, "Oracle of the Salty Swallow". Card: "Shall I read your next fight?" / "A good omen, or a bad one". Scene: "Cross her palm, and she reads your fight with [next]. It may not be what you want to hear." Good: "The sea smiles on you." Bad: "Ah. I am sorry." Walking away: "The sea will tell you itself, then." Omens: Fair Winds, Following Sea, The Albatross, The Black Spot (the user's picks).
 
-**Jorvash**, "Manservant of the Salty Swallow". Card: "Something to fortify you?" / "A refreshment for the next fight". Scene: "One of these before you face [next]?" After: "Very good." / "As you wish." Refreshments (the user's names): Notaro Red, "Your first hand that counts next fight scores 2 more."; Water of the Ebon Shield, "The sea die can't touch you next fight: your dice never list, and no squall, wave, fog or calm holds you back." (since 17 Nov; it was an extra heart). As that fight begins, and under the sea die's news on every roll: "Your Ebon Shield holds: you are unaffected in this fight" (the user's words); on the plaque under Roll, "· 💧 not you".
+**Jorvash**, "Manservant of the Salty Swallow". Card: "Something to fortify you?" / "A refreshment for the next fight". Scene: "One of these before you face [next]?" After: "Very good." / "As you wish." Refreshments (the user's names): Notaro Red, "Your first hand that counts next fight scores 2 more."; Water of the Ebon Shield, "The sea die can't touch you next fight: your dice never list, and no squall, wave, fog or calm holds you back." (since 17 Nov; it was an extra heart). As that fight begins, and under the sea die's news on every roll: "Your Ebon Shield holds: you are unaffected in this fight." (the user's words); on the plaque under Roll, "· 💧 not you".
 
 **Thom, aboard** (the user's words, one at random each fight): "Vim, vigour, vitality! ...and keep your voice down. I'm not on the manifest." / "There's my number one customer!" / "You're putting my kid through Dwemercore!"
 
@@ -59,17 +59,17 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 **Martha/Mystery**: Disguise Self (boss)
 - Entrance card: "Martha? Mystery? Who knows? Twice a fight she takes the face of Frak, Danhausen or the Duke, and plays their trick."
 - Ability screens: "Disguise Self", then the trick she copies ("Mind Whip", "You are Cursed!" or "Sympathy for the Devil").
-- Invitation after beating her (since 18 Nov, the user's words; brought by the flying snake, like Brodor's): title "You qualify for the Yawning Portal"; "Upon beating Martha/Mystery, you receive an invitation by flying snake. As champion of the Ghoul and Gourd you may progress to the Yawning Portal." then "Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You can always come back here for refills, it's not addictive."" Taken: "Mystery Flavour is yours. One puff a fight, and each fight is a different flavour at random." Her keepsake, Mystery Flavour: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random." (Until 4 Nov she gave her mask.)
+- Invitation after beating her (since 18 Nov, the user's words; brought by the flying snake, like Brodor's): title "You qualify for the Yawning Portal"; "Upon beating Martha/Mystery, you receive an invitation by flying snake. As champion of the Ghoul and Gourd you may progress to the Yawning Portal." then "Martha/Mystery blows a ring of violet smoke and presses her own Elf Bar into your hand. "You can always come back here for refills – it's not addictive."" Taken: "Mystery Flavour is yours. One puff a fight, and each fight is a different flavour at random." Her keepsake, Mystery Flavour: "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random." (Until 4 Nov she gave her mask.)
 - Since 30 Oct a boss's keepsake is yours to take or leave: "Take it" / "Leave it". With five keepsakes already: "Your pockets are full: taking it means leaving one of yours behind." then "Leave which behind for [keepsake]?" Left: "You leave [keepsake] behind." The same for Brodor's Sunglasses.
 
 ### The Yawning Portal
 
 **Sylvester Stonefist**: Back of the Head
-- Entrance card: "Sylvester Stonefist, a Master Monk - if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
+- Entrance card: "Sylvester Stonefist, a Master Monk – if you can imagine that. Back of the Head: as you keep your last die, he knocks your best die loose and you roll it again."
 
 **Vaelin Inkhand**: Inkfire Blast (renamed from Inkfire Brand, 18 Nov, the user's)
 - Ability moment (the server's line, not shown on screen since 28 Oct): "The 6s burn on your dice. This round your dice that land on one roll again."
-- Entrance card: "Vaelin Inkhand, honorable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Blast: For a round, the 6s burn on your dice."
+- Entrance card: "Vaelin Inkhand, honourable son of Brazenthrone and unwilling apprentice to Halaster. Inkfire Blast: For a round, the 6s burn on your dice."
 - Badge: "Inkfire round: your dice can't land on 6"
 
 **Stason Jatham**: Vexing Rapier
@@ -81,7 +81,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 
 **Brodor**: Astral Flood (boss)
 - Entrance card: "Brodor, Goblin-mania champion, will send you to the Mezzanine. Astral Flood: once he has lost a life, he floods the table with light, heals one and takes one of yours."
-- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" Then: "Word has spread, the Salty Swallow is soon to set sail - and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence" His sunglasses "are yours: a finished 23 restores a heart, like a 24."
+- Invitation after beating him: title "Word from the docks"; "Brodor flips you his sunglasses. "UH-HUH, YEAH! I want you to have these sunglasses. You'll need them when you're soaring high with the griffins! OOH YEAH!"" Then: "Word has spread: the Salty Swallow is soon to set sail – and its crew are some of the finest players in the realm. The Five Gallon Jugs request your presence." His sunglasses "are yours: a finished 23 restores a heart, like a 24."
 
 ### Aboard the Salty Swallow
 
@@ -145,7 +145,7 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 - On the choice of spots: ""Psst! Wanna touch the sky?"" / "Elf Bars: magic vapes, three puffs each"
 - "Psst! Wanna touch the sky?" After a purchase: "Nice one! You'll be back."
 - Counter: "Each Elf Bar sits on your shelf with 3 puffs, one a fight."
-- Elf Bars: Purple Haze "After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes it." · Cotton Candy Cloud "On your turn, while your opponent is still to throw: they play this round without seeing your score." · Lemon Levitation "After a throw: throw again without keeping a die." · Watermelon Hindsight "Undo your last throw: those dice are thrown again."
+- Elf Bars: Purple Haze "After a throw showing a 1, while you still need a 2 or a 4: that 1 becomes the one you need." · Cotton Candy Cloud "On your turn, while your opponent is still to throw: they play this round without seeing your score." · Lemon Levitation "After a throw: throw again without keeping a die." · Watermelon Hindsight "Undo your last throw: those dice are thrown again."
 - When puffed: "Elf Bar / [flavour] / A 1 becomes your [2 or 4]", "This round your opponent can't see your score", "Throw again without keeping a die", "Your last throw, thrown again"
 - Where: `server.js` (`THONICS`, the puffs in `drinkThonic`), `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`)
 
@@ -160,12 +160,12 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 
 Where: `server.js` (`TAVERN_KEEPSAKES`, `MYSTERY_FLAVOUR`, `BRODORS_SUNGLASSES`); the line as one works in `emitKeepsakeActivated` calls.
 
-- **Shield:** "Once per encounter, the first life you would lose is ignored." (offered from the Yawning Portal on) When it works: "Shield protects a life."
-- **Trap Card:** "Once per encounter, your first tied round counts as safe for you and a loss for the opponent."
-- **Velvet Cushion:** "Once per encounter, losing by exactly 1 point becomes a tie instead."
+- **Shield:** "Once a fight, the first heart you would lose is kept." (offered from the Yawning Portal on) When it works: "Shield protects a life."
+- **Trap Card:** "Once a fight, your first tied round counts as safe for you and a loss for the opponent."
+- **Velvet Cushion:** "Once a fight, losing by exactly 1 point becomes a tie instead."
 - **Loaded Die:** "One of your dice lands only on a 2 or a 4 until you've kept both; after that, only on 4, 5 or 6." (offered from the Yawning Portal on)
 - **Potion Belt:** "Your shelf holds one more Thonic. Comes with a Healing Thonic."
-- **Thom's Loyalty Card:** "Thom's Cart is always available, and your first Thonic each visit is free."
+- **Thom's Loyalty Card:** "Thom's cart is always one of the spots, and your first Thonic each visit is free."
 - **Miser's Purse:** "Each win pays 1 more gold for every 5 in your purse." On the fight summary: "Miser's Purse · 1 for every 5 in your purse".
 - **Gambler's Charm:** "When only one die is left to throw, it is thrown twice and you keep the better."
 - **Bottomless Flask:** "The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf." When it works: "Your [Thonic] fills up again."

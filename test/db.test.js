@@ -44,3 +44,11 @@ test('a league counts games and wins per table, by name whatever its case', asyn
     assert.deepEqual(rows.map(r => [r.name.trim().toLowerCase(), r.wins, r.games]), [['ann', 1, 3], ['bo', 1, 3], ['cy', 0, 1]]);
     assert.equal((await store.loadLeague('NONE')).length, 0);
 });
+
+test('a used save is kept once, so a restart still knows it (20 Nov)', async () => {
+    const store = freshStore();
+    await store.addUsedSave('a1');
+    await store.addUsedSave('b2');
+    await store.addUsedSave('a1');
+    assert.deepEqual((await store.loadUsedSaves()).sort(), ['a1', 'b2']);
+});

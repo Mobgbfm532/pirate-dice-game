@@ -670,7 +670,7 @@ test('the Water of the Ebon Shield: your throws ignore the list and the Squall',
     room2.tavernRun.nextSeaWard = true;
     const said = waitFor(hero2, 'keepsakeActivated', k => k.id === 'ebonShield', 4000);
     server.resetTavernEncounter(codeOf(hero2));
-    assert.equal((await said).text, 'Your Ebon Shield holds: you are unaffected in this fight');
+    assert.equal((await said).text, 'Your Ebon Shield holds: you are unaffected in this fight.');
     assert.equal(room2.tavernRun.seaWard, true);
 });
 
@@ -1021,7 +1021,7 @@ test('a multiplayer round ends with everyone\'s score, best first, and who lost 
     await playHand(second, room, [2, 4, 1, 1, 1, 1]); // 4
     const { results, message } = await result;
     assert.deepEqual(results.map(r => [r.id, r.score, r.busted, r.lost]), [[first.id, 22, false, false], [second.id, 4, false, true]]);
-    assert.match(message, /loses a life/);
+    assert.match(message, /loses a heart/);
     ann.disconnect();
     bo.disconnect();
 });
@@ -2411,7 +2411,7 @@ test("the Duke saves his Devil when he doesn't need it: your 13 against his 2, 4
     const result = waitFor(hero, 'roundResult', () => true, 6000);
     await playHand(hero, room, [2, 4, 3, 3, 3, 4]); // 13
     assert.deepEqual(await hand, [1, 2, 4, 5, 5, 5], 'he kept the lot: 16 beats 13');
-    assert.match((await result).message, /Lost a life: Thirteen/, 'you lose the life');
+    assert.match((await result).message, /Lost a heart: Thirteen/, 'you lose the heart');
     assert.ok(!room.tavernRun.abilityUsed.devil, 'his Devil saved for a round that needs it');
 });
 
@@ -2537,6 +2537,7 @@ test('a saved run carries on at the invitation to the Yawning Portal', async () 
     room.tavernRun.shelf = ['healing'];
     room.tavernRun.keepsakes = [{ id: 'marthasMask', name: "Martha's Mask", text: '' }, { id: 'bentCopper', name: 'Shield', text: '' }];
     room.tavernRun.stats.encountersDefeated = 5;
+    room.tavernRun.runId = undefined; // (as if that table had been left: one live table per run, 20 Nov)
     const save = server.sealSave(room, 'Traveller');
     const back = await join('Someone', 'TVRN-SV1', { resume: save });
     const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).interlude);
@@ -2567,6 +2568,7 @@ test("the menu's Save: back to the start of the fight against that opponent (14 
     const saved = await waitFor(hero, 'fightSaved');
     assert.equal(saved.next, 'Klarg');
     assert.equal(saved.purse, 40);
+    room.tavernRun.runId = 'left'; // (the browser leaves the table after saving; here it stays to save again below)
     const back = await join('Someone', 'TVRN-SV4', { resume: saved.save });
     const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).enemy && runOf(s).enemy.name === 'Klarg');
     const run = runOf(state);
@@ -2845,7 +2847,7 @@ test("the Ridgeler's Divine Smite: if he wins the round, you lose two hearts", a
     const result = waitFor(hero, 'roundResult', () => true, 8000);
     const hammer = waitFor(hero, 'signatureMove', m => m.ability === 'Divine Smite' && m.hit, 8000);
     await playHand(hero, room, [2, 4, 1, 1, 1, 1]); // 4: he beats it
-    assert.match((await result).message, /Lost 2 lives/);
+    assert.match((await result).message, /Lost 2 hearts/);
     await hammer; // the hammer lands: its moment again, the sound and the screen shake
     assert.equal(room.players[hero.id].lives, 1);
 });
@@ -2952,6 +2954,7 @@ test('a run saved after the Yawning Portal carries on at the Salty Swallow', asy
     room.tavernRun.encounterIndex = fightOf('klarg');
     room.tavernRun.purse = 2500;
     room.tavernRun.keepsakes = [{ id: 'mysteryFlavour', name: 'Mystery Flavour', text: '' }, { id: 'brodorsSunglasses', name: "Brodor's Sunglasses", text: '' }];
+    room.tavernRun.runId = undefined; // (as if that table had been left)
     const save = server.sealSave(room, 'Sailor');
     const back = await join('Someone', 'TVRN-SV3', { resume: save });
     const state = await nextState(back, s => s.players[back.id] && runOf(s) && runOf(s).interlude);
@@ -3697,4 +3700,45 @@ test("a cursed round's Perfect ...4? restores a heart, like a 24 (20 Nov)", asyn
     await playHand(hero, room, [2, 4, 1, 1, 1, 1]);
     await ended;
     assert.equal(room.players[hero.id].lives, 3);
+});
+
+const saveData = save => JSON.parse(Buffer.from(save.split('.')[0], 'base64url').toString());
+
+test("a fight picks up at the round it reached, so quitting redoes only that round (20 Nov, no save scumming)", async () => {
+    const { hero, roomCode, room } = await tavernTable('Rounder');
+    room.tavernRun.encounterIndex = fightOf('stason');
+    server.resetTavernEncounter(roomCode);
+    await sleep(30);
+    room.players[hero.id].lives = 2;
+    opponentAlwaysDusts(hero, room);
+    const saved = waitFor(hero, 'autoSave', d => d && saveData(d.save).round, 6000);
+    await playHand(hero, room, [2, 4, 6, 6, 5, 5]);
+    const save = (await saved).save;
+    assert.equal(saveData(save).round.n, 2);
+    assert.equal(room.players.BOT_MOLAR.lives, 2);
+    hero.disconnect();
+    delete server.rooms[roomCode];
+    const back = await join('Rounder', 'TVRN-RS1', { resume: save });
+    const told = await waitFor(back, 'crawlResumed');
+    assert.equal(told.round, 2);
+    const r = server.rooms['TVRN-RS1'];
+    assert.equal(r.tavernRun.encounterRound, 2);
+    assert.equal(r.players.BOT_MOLAR.lives, 2, 'he is still a heart down');
+    assert.equal(r.players[back.id].lives, 2, 'your hearts as they were');
+    assert.equal(r.roundPlayers[0], 'BOT_MOLAR', 'round 2: he throws first');
+});
+
+test("a save of a run still being played at another table does not open a second copy (20 Nov)", async () => {
+    const code = 'TVRN-LV1';
+    const hero = await join('Twice', code);
+    const first = await waitFor(hero, 'autoSave');
+    const other = await join('Twice', 'TVRN-LV2', { resume: first.save });
+    await waitFor(other, 'crawlLive');
+    assert.ok(server.rooms[code], 'the first table plays on');
+    // Once nobody sits at that table, the save opens, and the old table is retired.
+    hero.disconnect();
+    await sleep(80);
+    const back = await join('Twice', 'TVRN-LV3', { resume: first.save });
+    await waitFor(back, 'crawlResumed');
+    assert.equal(server.rooms[code], undefined, 'the old table is gone');
 });

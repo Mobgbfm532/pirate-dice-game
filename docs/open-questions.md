@@ -22,6 +22,7 @@ day they happen, with what's been built marked as it lands.
    server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
 
 ### Questions waiting on the user's word
+- (Built 20 Nov: save scumming closed, `docs/save-scumming.md`; the grammar list fixed, all but "Alright", kept as speech.)
 - **The celebration logo** (`docs/logo-brainstorm.md`): built 20 Nov; a sound of its own for it, if wanted.
 - **Becalmed's look** (`docs/voyage-brainstorm.md`, "Becalmed's look"): the three lanterns were tried and taken out (18 Nov,
   the user: "too confusing"). Open: the slack sail would cover the opponent's bust over the table (the user, 18 Nov);

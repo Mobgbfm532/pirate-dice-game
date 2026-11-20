@@ -13,6 +13,8 @@ const path = require('path');
 const LEADERBOARD_PATH = path.join(__dirname, 'leaderboard.json');
 const MET_PATH = path.join(__dirname, 'met.json');
 const LEAGUE_PATH = path.join(__dirname, 'league.json');
+// Saved Tavern Crawl runs already opened (20 Nov, no save scumming): a save opens once, even after a restart.
+const USED_SAVES_PATH = path.join(__dirname, 'used-saves.json');
 const readonly = () => !!process.env.LEADERBOARD_READONLY;
 
 // A player's key: their name as typed, trimmed and in lower case ("Ann" and "ann " are the same).
@@ -40,6 +42,7 @@ function writeJson(file, value) {
 function fileStore() {
     let met = readJson(MET_PATH, {});
     let league = readJson(LEAGUE_PATH, {}); // room -> player key -> { name, wins, games }
+    let used = readJson(USED_SAVES_PATH, []);
     return {
         kind: 'files',
         ready: Promise.resolve(),
@@ -64,7 +67,9 @@ function fileStore() {
                 if (winner !== null && key === playerKey(winner)) row.wins++;
             });
             writeJson(LEAGUE_PATH, league);
-        }
+        },
+        async loadUsedSaves() { return used.slice(); },
+        async addUsedSave(id) { used.push(id); writeJson(USED_SAVES_PATH, used); }
     };
 }
 
@@ -99,6 +104,10 @@ function postgresStore(url, Pool = require('pg').Pool) {
             games INTEGER NOT NULL DEFAULT 0,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
             PRIMARY KEY (room, player)
+        );
+        CREATE TABLE IF NOT EXISTS used_saves (
+            id TEXT PRIMARY KEY,
+            at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
     `);
     ready.catch(error => console.warn('Could not set up the database:', error.message));
@@ -138,6 +147,13 @@ function postgresStore(url, Pool = require('pg').Pool) {
                     ON CONFLICT (room, player) DO UPDATE SET name = EXCLUDED.name, wins = league.wins + EXCLUDED.wins, games = league.games + 1, updated_at = now()`,
                     [room, playerKey(name), name, won]);
             }
+        },
+        async loadUsedSaves() {
+            let { rows } = await query('SELECT id FROM used_saves');
+            return rows.map(r => r.id);
+        },
+        async addUsedSave(id) {
+            await query('INSERT INTO used_saves (id) VALUES ($1) ON CONFLICT DO NOTHING', [id]);
         }
     };
 }
