@@ -574,6 +574,9 @@ async function unpinkMagenta(file, bg = [251, 1, 244]) {
         for (let k = 0; k < 3; k++) data[i + k] = Math.max(0, Math.min(255, Math.round(bg[k] + (data[i + k] - bg[k]) / a)));
         data[i + 3] = Math.round(data[i + 3] * Math.min(1, a));
     }
+    // Flecks where the magenta mixed into the dark outline stay too dark to fade: the logo has no blue or purple of its
+    // own, so any blue over its green is pulled back to it, turning them brown (20 Nov).
+    for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 0 && data[i + 2] > data[i + 1]) data[i + 2] = data[i + 1];
     writeFileSync(file, await sharp(data, { raw: info }).webp({ quality: 90, alphaQuality: 90 }).toBuffer());
 }
 

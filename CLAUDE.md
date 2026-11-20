@@ -423,6 +423,10 @@ one too, or saves only last until the server restarts, which on the free tier is
     And the tray: the felt reaches `FELT_TUCK` (0.2) under the rails, as their rounded bottom edges showed a strip of tabletop
     along the felt's edge; every screen sees the tray at the computer's slanted angle (the user's, 20 Nov: the camera's
     `direction` in TableScene is 0.5 everywhere; upright phones looked down more steeply, 0.22, until then). `previews/tray/slanted/`.
+    The start screen's music on phones (the user heard none): a touch only allows sound as the finger lifts, and it listened
+    only for the finger going down; it now tries on pointerdown, pointerup, touchend, click and keydown until the music really
+    plays (`startMusic` resolves true/false). The logo's purple flecks (magenta mixed into its outline) turned brown in
+    `unpinkMagenta`.
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the

@@ -567,15 +567,16 @@ export const ABILITY_SOUNDS: Record<string, SoundName> = {
 export const SWITCH_LEAD_MS = 750;
 
 // Browsers only allow audio after the player has interacted with the page.
-export function startMusic() {
+// Resolves true once the music is playing (or is switched off, so there's nothing to start), false if the browser refused.
+export function startMusic(): Promise<boolean> {
     audio(); // the impact sounds need the audio context unlocked by a tap, like the music
-    if (musicOff) return;
+    if (musicOff) return Promise.resolve(true);
     const [now, volume] = TUNES[tuneNow];
-    if (!now.paused) return;
+    if (!now.paused) return Promise.resolve(true);
     now.volume = volume;
-    now.play().catch(() => {});
     ambience.volume = crowdVolume(); // (quiet aboard the ship)
     ambience.play().catch(() => {});
+    return now.play().then(() => true, () => false);
 }
 
 // The tavern's tune (and its crowd) faded out and paused while the intro film plays its own music; the returned

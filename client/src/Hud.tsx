@@ -119,11 +119,15 @@ function JoinScreen() {
     // The Ghoul and Gourd's tune on the start screen (18 Nov, the user's): from the first tap or key press, as a
     // browser plays no sound before one. (It was silent until you sat down at a table.) The intro film has its own
     // music, so the tune fades out while it plays and comes back after.
+    // (20 Nov, the user heard nothing on a phone: a touch only counts as a tap for sound as the finger lifts, so the
+    // finger going down was refused. It now tries on every kind of tap until the music is really playing.)
     useEffect(() => {
-        const start = () => startMusic();
-        window.addEventListener('pointerdown', start, { once: true });
-        window.addEventListener('keydown', start, { once: true });
-        return () => { window.removeEventListener('pointerdown', start); window.removeEventListener('keydown', start); };
+        const events = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
+        let done = false;
+        const stop = () => events.forEach(e => window.removeEventListener(e, start));
+        const start = () => { if (!done) startMusic().then(ok => { if (ok && !done) { done = true; stop(); } }); };
+        events.forEach(e => window.addEventListener(e, start));
+        return () => { done = true; stop(); };
     }, []);
     useEffect(() => (film ? holdMusic() : undefined), [film]);
     if (film) return <IntroFilm onDone={() => {
