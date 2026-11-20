@@ -22,6 +22,9 @@ day they happen, with what's been built marked as it lands.
    server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
 
 ### Questions waiting on the user's word
+- **The start screen, better still** (20 Nov, Claude's review): a music button on the start screen (music switched off in
+  a game leaves it silent with no way back there); on big windows (1920x1080) the panel and its links are small for the
+  space, so scale them up; on a phone on its side the logo is small. Which, if any?
 - (Built 20 Nov: save scumming closed, `docs/save-scumming.md`; the grammar list fixed, all but "Alright", kept as speech.)
 - **The celebration logo** (`docs/logo-brainstorm.md`): built 20 Nov; a sound of its own for it, if wanted.
 - **Becalmed's look** (`docs/voyage-brainstorm.md`, "Becalmed's look"): the three lanterns were tried and taken out (18 Nov,
