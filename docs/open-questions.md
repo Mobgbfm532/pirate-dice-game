@@ -91,6 +91,8 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 21 Nov: "Your dice" moved to the start screen's Play with friends panel only (invite links too; the user's), as the set shows
+  at friends' tables; the picker's Ivory die centred and its names wrapping only between words.
 - 20 Nov: **the new game is live** at https://two-4-24.onrender.com. The user set the live Render service's build
   command, `SAVE_SECRET` and `DATABASE_URL` (the same Neon database as the test site) and merged PR #1; PR #2 made the
   main address open the new game (`/` sends you on to `/next/`, invites too) with the classic page at `/classic`. MOB's
