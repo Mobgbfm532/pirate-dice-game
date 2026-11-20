@@ -51,7 +51,9 @@ function CameraRig() {
         else cam.clearViewOffset();
         cam.updateProjectionMatrix();
         const aspect = (size.width - reserve) / size.height; // the part the table must fit in
-        const direction = new THREE.Vector3(0, 1, portrait ? 0.22 : 0.5).normalize();
+        // (20 Nov, the user's: computers and tablets look down at the tray as steeply as phones do; phones on their
+        // side keep the lower view, as their short screens have no room for a deeper-looking tray.)
+        const direction = new THREE.Vector3(0, 1, portrait || docked ? 0.22 : 0.5).normalize();
         // On phones and docked screens the controls sit under the table, so the table must end
         // above them (their real height, measured by the HUD); phones on their side have them
         // in the corners. (Ignore implausible measurements, e.g. before the page has laid out.)
@@ -201,11 +203,14 @@ function tabletopTexture() {
     return texture;
 }
 
+const FELT_TUCK = 0.2; // how far the felt reaches under the rails
 function Tray() {
     // Painted textures (docs/art-direction.md). Each tiles at roughly real-world scale:
     // the felt image covers ~3 units, and the plank image (four rows of planks) ~3.8
     // units deep, so a plank is about one die wide.
-    const felt = useMemo(() => paintedTexture('felt.webp', 2.4, 1.4), []);
+    // (The felt runs FELT_TUCK under the rails, 20 Nov, the user's: their rounded bottom edges left a strip of the
+    // tabletop showing between the felt and the rails. Its tiling is scaled to match, so the weave stays the same size.)
+    const felt = useMemo(() => paintedTexture('felt.webp', 2.4 * (1 + (2 * FELT_TUCK) / (TRAY.maxX - TRAY.minX)), 1.4 * (1 + (2 * FELT_TUCK) / (TRAY.maxZ - TRAY.minZ))), []);
     const tabletop = useMemo(tabletopTexture, []);
     const rails = useMemo(() => paintedTexture('rail-walnut.webp', 2, 0.35), []);
     const slotRail = useMemo(() => paintedTexture('rail-walnut.webp', 1.6, 0.3), []);
@@ -240,7 +245,7 @@ function Tray() {
             </mesh>
             {/* Felt */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.001, cz]} receiveShadow>
-                <planeGeometry args={[width, depth]} />
+                <planeGeometry args={[width + 2 * FELT_TUCK, depth + 2 * FELT_TUCK]} />
                 {/* The look preview: a velvety sheen that shows at low angles. */}
                 {lookNext
                     ? <meshPhysicalMaterial map={felt} roughness={0.95} sheen={1} sheenRoughness={0.55} sheenColor="#7fb88c" />
