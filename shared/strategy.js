@@ -232,10 +232,10 @@ function firstMoverValue(score, low = false, shift = 0, minKeep = 1, throws = 0)
 }
 
 // The finish value for what the bot knows. toBeat: the player's score, null if they dusted,
-// undefined if they haven't played yet. aceAt16: the Hangman can turn 16+ into 24. low: a
+// undefined if they haven't played yet. aceAt16: the Hangman can turn 18+ into 24 (16+ until 20 Nov; the name stays). low: a
 // cursed round. cap: the bot's score counts as no more than this (the Devil's round).
 function finishFor(toBeat, { aceAt16 = false, low = false, cap = null, shift = 0, minKeep = 1, throws = 0 } = {}) {
-    const lift = s => Math.min(aceAt16 && !low && s >= 16 && s < 24 ? 24 : s, cap ?? MAX_S);
+    const lift = s => Math.min(aceAt16 && !low && s >= 18 && s < 24 ? 24 : s, cap ?? MAX_S);
     if (toBeat === null) return (s, valid) => (valid ? 1 : 0);
     if (toBeat === undefined) return (s, valid) => (valid ? firstMoverValue(Math.min(lift(s), MAX_S), low, shift, minKeep, throws) : 0);
     return (s, valid) => {

@@ -208,7 +208,7 @@ function botTurn(f, run, toBeat, canUse) {
     // A rolled 24 restores a life for the opponent too, up to their lives for the fight (the
     // Ace of Spades' 24 doesn't).
     if (score === 24 && !busted && f.bot < f.botMax) f.bot++;
-    if (!low && hasAce && f.bot <= 1 && !busted && score >= 16 && score < 24 && f.fire('deadeye24')) score = 24;
+    if (!low && hasAce && f.bot <= 1 && !busted && score >= 18 && score < 24 && f.fire('deadeye24')) score = 24;
     // Jaguar's phase one: a Steady he talked off your shelf counts his dust as it lies.
     if (busted && f.botSteady) { f.botSteady = false; busted = false; score = Rules.scoreDice(turn.dice).score; }
     return { busted, score };

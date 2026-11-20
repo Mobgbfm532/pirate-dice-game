@@ -22,6 +22,7 @@ export interface Player {
     id: string;
     name: string;
     avatar: string;
+    dice?: string; // your own dice: a beaten Tavern Crawl opponent's set (20 Nov), as the server allows it
     lives: number;
     score: number | null;
     busted: boolean;
@@ -572,7 +573,7 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
 socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; ghosts?: Ghost[] }) => {
     enqueue(done => setTimeout(() => {
         const turn = data.turn;
-        if (!snapshot.turn || snapshot.turn.key !== turn.key) resetTrayForNewTurn();
+        if (!snapshot.turn || snapshot.turn.key !== turn.key) { resetTrayForNewTurn(); if (snapshot.revealed) update({ revealed: null }); }
 
         // The dice this roll threw: the ones that were active just before it. (A die Klarg
         // stole earlier in the turn stays out of play; one he takes now was thrown first.)
@@ -677,7 +678,7 @@ function writeSeat(seat: Seat | null) {
 }
 
 function takeSeat(seat: Seat) {
-    socket.emit('joinTavern', { name: seat.name, avatar: seat.avatar, roomCode: seat.roomCode, token: getSessionToken(), startingLives: seat.lives, resume: seat.resume });
+    socket.emit('joinTavern', { name: seat.name, avatar: seat.avatar, roomCode: seat.roomCode, token: getSessionToken(), startingLives: seat.lives, resume: seat.resume, dice: readDiceChoice() ?? undefined });
 }
 
 function roomLabel(code: string) {
@@ -801,6 +802,8 @@ const ABILITY_MOMENTS = new Set(['Reach Around', 'Starry Form', 'Penitent Stare'
     // Áéd's metamagic (11 Nov)
     'Heightened Dice', 'Quickened Dice', 'Empowered Dice', 'Twinned Dice']);
 
+const AED_TRICKS = new Set(['Heightened Dice', 'Quickened Dice', 'Empowered Dice', 'Twinned Dice']);
+
 // The Yawning Portal's hard hitters: the whole screen shakes with their moment.
 const SHAKING_ABILITIES = new Set(['Back of the Head', 'Inkfire Blast', 'Divine Smite']);
 
@@ -821,7 +824,8 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
         // The screen shakes as these land (5 Nov, the user's), and as the Ridgeler's hammer comes down.
         if (!data.cancelled && (data.hit || SHAKING_ABILITIES.has(data.ability))) shakeScreen(250, !!data.hit);
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
-        if (data.after && !data.cancelled) showAftermath(data, flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_SHOW_MS);
+        // (Never for Áéd's tricks: his own banners say it, 20 Nov, the user's.)
+        if (data.after && !data.cancelled && !AED_TRICKS.has(data.ability)) showAftermath(data, flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_SHOW_MS);
         else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
         // His hand comes for the die as the banner leaves (its last 0.15 s are it rising away).
         if (steal && !data.cancelled) {
@@ -1033,7 +1037,8 @@ socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; 
 // After the round's last roll has played out. Not when the round ended a Tavern Crawl fight or
 // the run (ends): the fight summary (or the run-over screen) comes up instead.
 socket.on('roundResult', (data: { message: string; ends?: boolean; results?: RoundResultRow[]; reveal?: { score: number; busted: boolean } }) => {
-    if (data.ends) return;
+    // (The fight's last round shows its summary instead; a hand that was hidden still says what it was, 20 Nov.)
+    if (data.ends) { if (data.reveal) showToast('Round result', data.message, 'result', RESULT_SHOW_MS); return; }
     // A multiplayer table: a card with everyone's score (the user's call, 4 Nov).
     if (data.results) {
         const results = data.results;
@@ -1051,7 +1056,8 @@ socket.on('roundResult', (data: { message: string; ends?: boolean; results?: Rou
         if (data.reveal) {
             const at = performance.now();
             update({ revealed: { ...data.reveal, at } });
-            setTimeout(() => { if (snapshot.revealed?.at === at) update({ revealed: null }); }, RESULT_SHOW_MS + 400);
+            // (It stays until the next hand's first throw, 20 Nov, the user's: what you scored against.)
+            setTimeout(() => { if (snapshot.revealed?.at === at) update({ revealed: null }); }, 20000);
         }
     }, RESULT_GAP_MS, () => 0, RESULT_SHOW_MS);
 });
@@ -1134,6 +1140,18 @@ export function handComplete(turn: TurnView) {
 
 export function canPutBack(turn: TurnView, status: string) {
     return turn.hasRolled && (status === 'permanentlyLocked' || ((turn.finalized || handComplete(turn)) && status === 'lockedThisTurn'));
+}
+
+// Your dice (20 Nov, the user's): one of the Tavern Crawl opponents' painted sets, once you've beaten them; the
+// server checks (settleDice). Kept per device; null is the ivory dice.
+export function readDiceChoice(): string | null { try { return localStorage.getItem('tavernDice'); } catch { return null; } }
+export function saveDiceChoice(id: string | null) { try { if (id) localStorage.setItem('tavernDice', id); else localStorage.removeItem('tavernDice'); } catch { /* not kept */ } }
+// Which opponents a name has beaten, in any run (their ids), for the start screen's dice picker.
+export function beatenList(name: string): Promise<string[]> {
+    return new Promise(resolve => {
+        const done = setTimeout(() => resolve([]), 6000);
+        socket.emit('beatenList', { name }, (ids: unknown) => { clearTimeout(done); resolve(Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : []); });
+    });
 }
 
 export const actions = {

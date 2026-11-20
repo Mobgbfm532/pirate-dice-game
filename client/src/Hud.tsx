@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, startMusic, holdMusic, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
@@ -95,6 +95,7 @@ function JoinScreen() {
     // crawl were four 22 px text links; forgetting takes a second tap.
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [forgetArmed, setForgetArmed] = useState(false);
+    const [diceOpen, setDiceOpen] = useState(false); // Your dice (20 Nov)
     // The name: a box the first time, then a line ("Playing as Ada ✎") tapped to change it.
     const [editingName, setEditingName] = useState<'first' | 'tap' | null>(prefs.name.trim() ? null : 'first');
 
@@ -230,6 +231,8 @@ function JoinScreen() {
                                                 onClick={() => { saveIntroChoice(!playIntro); setChoice(!playIntro); playSound('click'); }}>
                                                 Intro before a crawl: {playIntro ? 'on' : 'off'}
                                             </button>
+                                            <span aria-hidden="true">·</span>
+                                            <button className="link-button" onClick={() => { setDiceOpen(true); playSound('click'); }}>Your dice</button>
                                         </div>
                                     )}
                                 </section>
@@ -256,6 +259,7 @@ function JoinScreen() {
                                         <span>Play the intro before a crawl</span>
                                         <i className={`switch${playIntro ? ' on' : ''}`} aria-hidden="true" />
                                     </button>
+                                    <button className="secondary" onClick={() => { setOptionsOpen(false); setDiceOpen(true); playSound('click'); }}>Your dice</button>
                                     {continuing && <button className="secondary" onClick={() => { setOptionsOpen(false); setFilm('watch'); }}>Watch the intro</button>}
                                     {continuing && (
                                         <button className={`forget-save${forgetArmed ? ' armed' : ''}`}
@@ -272,8 +276,53 @@ function JoinScreen() {
                     </>
                 );
             })()}
+            {diceOpen && <DicePicker name={name} onClose={() => setDiceOpen(false)} />}
             <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
             {legendsOpen && <HallOfLegends me={name} onClose={() => setLegendsOpen(false)} />}
+        </div>
+    );
+}
+
+// Your dice (20 Nov, the user's): throw the dice of a Tavern Crawl opponent you've beaten, in any run; the rest are
+// "???" until you have. (McGrath throws the ivory dice, so he has no set of his own.) The server checks the choice.
+const DICE_RIVALS: [string, string][] = [
+    ['frak', 'Frak'], ['danhausen', 'Danhausen'], ['duke', 'Duke Morrigan'], ['martha', 'Martha/Mystery'],
+    ['sylvester', 'Sylvester Stonefist'], ['vaelin', 'Vaelin Inkhand'], ['stason', 'Stason Jatham'], ['ridgeler', 'The Ridgeler'], ['brodor', 'Brodor'],
+    ['klarg', 'Klarg'], ['rokr', 'Røkr'], ['aed', 'Áéd'], ['hangman', 'The Hangman'], ['jaguar', 'Jaguar Cantona']
+];
+function DicePicker({ name, onClose }: { name: string; onClose: () => void }) {
+    const [beaten, setBeaten] = useState<Set<string> | null>(null);
+    const [pick, setPick] = useState(readDiceChoice);
+    useEffect(() => { let live = true; beatenList(name).then(ids => { if (live) setBeaten(new Set(ids)); }); return () => { live = false; }; }, [name]);
+    const choose = (id: string | null) => { saveDiceChoice(id); setPick(id); playSound('click'); };
+    const faces = (id: string) => ({ backgroundImage: `url(${import.meta.env.BASE_URL}textures/dice/${id}.webp)` });
+    return (
+        <div className="sheet-backdrop" onClick={onClose}>
+            <section className="panel join friends-sheet dice-sheet" role="dialog" aria-label="Your dice" onClick={e => e.stopPropagation()}>
+                <button className="legends-close" onClick={onClose} aria-label="Close">✕</button>
+                <h2 className="options-title">Your dice</h2>
+                <p className="dice-sheet-line">Beat an opponent in a Tavern Crawl, and you may throw their dice.</p>
+                <div className="dice-grid">
+                    <button className={`dice-pick${pick ? '' : ' selected'}`} onClick={() => choose(null)} aria-pressed={!pick}>
+                        <span className="dice-face ivory" aria-hidden="true" />
+                        <span className="dice-name">Ivory</span>
+                    </button>
+                    {DICE_RIVALS.map(([id, who]) => {
+                        const won = !!beaten?.has(id);
+                        return won ? (
+                            <button key={id} className={`dice-pick${pick === id ? ' selected' : ''}`} onClick={() => choose(id)} aria-pressed={pick === id}>
+                                <span className="dice-face" style={faces(id)} aria-hidden="true" />
+                                <span className="dice-name">{who}</span>
+                            </button>
+                        ) : (
+                            <span key={id} className="dice-pick locked" aria-label="Not beaten yet">
+                                <span className="dice-face unknown" aria-hidden="true">?</span>
+                                <span className="dice-name">{beaten ? '???' : '…'}</span>
+                            </span>
+                        );
+                    })}
+                </div>
+            </section>
         </div>
     );
 }
@@ -1816,7 +1865,8 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 {/* An opponent's ability (or your mask) shows its name alone (the user's call, 28 Oct), and
                     so does a Thonic, and the Lady's Grace (no "Shrine to the Lady" over it, the user, 4 Nov);
                     keepsakes keep who and what. */}
-                {(!takeover && !moment.thonic && moment.name !== 'Shrine to the Lady' || keepsake) && <span className="who">{moment.name}</span>}
+                {/* (The Bard's songs: their name alone, no "The Bard" over it, the user's, 20 Nov.) */}
+                {(!takeover && !moment.thonic && moment.name !== 'Shrine to the Lady' && moment.name !== 'The Bard' || keepsake) && <span className="who">{moment.name}</span>}
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
                 {moment.ability === 'Smooth Talker' && fx && /talks you into (taking|scoring)/.test(moment.text ?? '') && <span className="minus">−3</span>}

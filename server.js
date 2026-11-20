@@ -156,7 +156,11 @@ function loadMet(roomCode, name) {
         let met = metOf(name);
         let before = met.size;
         ids.forEach(id => met.add(id));
-        if (met.size !== before && rooms[roomCode]) emitState(roomCode);
+        let room = rooms[roomCode];
+        let p = room && Object.values(room.players).find(q => q.id !== BOT_ID && playerKey(q.name) === playerKey(name));
+        let had = p && p.dice;
+        if (p) settleDice(roomCode, p);
+        if (room && (met.size !== before || (p && p.dice !== had))) emitState(roomCode);
     }).catch(error => console.warn('Could not load who has been met:', error.message));
 }
 // The player at this Tavern Crawl table meets an opponent (as they sit down).
@@ -167,6 +171,23 @@ function meet(room, who) {
     if (met.has(who)) return;
     met.add(who);
     store.addMet(human.name, who).catch(error => console.warn('Could not save who has been met:', error.message));
+}
+
+// The opponents a player has beaten, in any run (20 Nov, the user's: you may throw their dice once you have).
+// Kept as "beat:<id>" beside who you've met; before 20 Nov nothing was kept, so meeting an opponent counts every one
+// before them in the tournament as beaten too.
+function beatenBy(name) {
+    let met = metOf(name);
+    let furthest = Math.max(-1, ...TAVERN_ENCOUNTERS.map((e, i) => (met.has(e.id) ? i : -1)));
+    return new Set(TAVERN_ENCOUNTERS.filter((e, i) => i < furthest || met.has('beat:' + e.id)).map(e => e.id));
+}
+// The opponents whose dice can be thrown (their painted sets; McGrath throws the ivory ones).
+const DICE_SETS = new Set(['frak', 'danhausen', 'duke', 'martha', 'sylvester', 'vaelin', 'stason', 'ridgeler', 'brodor', 'klarg', 'rokr', 'aed', 'hangman', 'jaguar']);
+// A player's own dice: one of those sets, once its opponent is beaten (p.diceWanted, sent as they join).
+function settleDice(roomCode, p) {
+    if (!p || !p.diceWanted) { if (p) delete p.dice; return; }
+    let ok = DICE_SETS.has(p.diceWanted) && beatenBy(p.name).has(p.diceWanted);
+    if (ok) p.dice = p.diceWanted; else delete p.dice;
 }
 
 // The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
@@ -329,7 +350,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'penitentStare',
         abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
         blurb: "The Hangman seals your fate with the Ace of Spades.", // (the user's, 13 Nov)
-        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, one shot can turn his own 16 or higher into a perfect 24." }]
+        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a life, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "At one life, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart." }]
     },
     {
         id: 'jaguar',
@@ -1531,6 +1552,7 @@ function performEndTurn(roomCode) {
     }
     if (!room.turn.finalized) return;
     room.turn.ended = true;
+    let aceFired = false; // (the Hangman's Ace of Spades made this hand a 24)
 
     let currentId = room.roundPlayers[room.currentTurnIndex];
     let { score, busted } = room.turn.outcome;
@@ -1559,10 +1581,11 @@ function performEndTurn(roomCode) {
             score = BALANCE.devilCap;
             room.players[currentId].score = score;
         }
-        if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= 16 && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
+        if (currentId === BOT_ID && !cursed && room.players[currentId].lives <= 1 && !busted && score >= ACE_FROM && score < 24 && fireTavernAbility(roomCode, room, encounter, 'deadeye24')) {
+            aceFired = true; // (20 Nov, the user's: from 18, and it heals him like any 24)
             let was = room.players[currentId].score;
             room.players[currentId].score = 24;
-            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman fires The Ace of Spades. Perfect 24.', after: `The Hangman fires the Ace of Spades: his ${was} becomes a perfect 24.` });
+            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman shoots a die into a 6. Perfect 24.', after: `The Hangman shoots a die into a 6: his ${was} becomes a perfect 24, and he wins back a heart.` });
             if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires The Ace of Spades.', color: "#ffd54f" });
         }
         // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
@@ -1618,9 +1641,9 @@ function performEndTurn(roomCode) {
 
     // A 24 restores a life, up to what the player started with (a Tavern Crawl opponent: up to
     // their own lives for the fight). An opponent's 24 must be rolled: the Hangman's Ace of
-    // Spades makes one that doesn't heal him (`score` is the hand before the Ace).
+    // Spades makes one too, and since 20 Nov it heals him (the user's).
     let maxLives = room.mode === 'tavern-crawl' && currentId === BOT_ID ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].lives : room.startingLives;
-    let natural = currentId !== BOT_ID || score === 24;
+    let natural = currentId !== BOT_ID || score === 24 || aceFired;
     // Brodor's Sunglasses: your finished 23 heals too.
     let shades = currentId !== BOT_ID && room.players[currentId].score === 23 && !busted && hasKeepsake(room, BRODORS_SUNGLASSES.id);
     if (natural && (room.players[currentId].score === 24 || shades) && room.players[currentId].lives < maxLives) {
@@ -1807,7 +1830,7 @@ function tavernRoundLost(turn, toBeat, aceAt16, { low = false, cap = null } = {}
     if (toBeat === undefined || low) return false;
     let best = Rules.bestPossibleScore(turn.dice);
     if (best === null) return true;
-    if (aceAt16 && best >= 16) best = 24;
+    if (aceAt16 && best >= ACE_FROM) best = 24;
     if (cap !== null) best = Math.min(best, cap);
     return toBeat !== null && best < toBeat;
 }
@@ -2114,6 +2137,8 @@ function canUseTavernAbility(room, encounter, abilityId) {
 const abilitiesOf = encounter => encounter.abilities || (encounter.ability ? [encounter.ability] : []);
 // How the final tier's abilities play (shared/balance.js; set by simulation, 25 Oct).
 const FINAL_SHIP = BALANCE.finalShip || {};
+// The Hangman's Ace of Spades turns his own hand of this or more into a perfect 24 (16 until 20 Nov, the user's: 18).
+const ACE_FROM = 18;
 // Two different faces at random (Rokr's stars).
 const twoFaces = () => shuffled([1, 2, 3, 4, 5, 6]).slice(0, FINAL_SHIP.starFaces || 2).sort((a, b) => a - b);
 // The kept dice that score: all but one 2 and one 4.
@@ -2913,6 +2938,8 @@ function evaluateTavernRound(roomCode) {
     // Was his hand hidden this round (a fog bank, Jaguar's Cloak)? The result then says what he got (14 Nov, the user's).
     let hidden = fogForYou(room) || room.tavernRun.jaguarPhase === 'cloak';
     sendFogHeld(roomCode, room);
+    // With both hands done, his dice show on the table (20 Nov, the user's: what you scored against after a fog bank).
+    if (room.turn && room.turn.fogged) { room.turn.fogged = false; emitTurn(roomCode); }
     if (!cursed) stareTurnsRound(roomCode, room, human, enemy);
     smoothTalkAtEnd(roomCode, room, human, enemy, cursed);
     let reveal = hidden ? { score: enemy.busted ? 0 : enemy.score, busted: !!enemy.busted } : null;
@@ -3012,6 +3039,7 @@ function evaluateTavernRound(roomCode) {
         stats.miserGold = (stats.miserGold || 0) + miserGold;
         room.tavernRun.purse += miserGold;
         stats.encountersDefeated++;
+        meet(room, 'beat:' + TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id); // (beaten, in any run: their dice are yours to choose, 20 Nov)
         stats.winGold += winGold;
         stats.heartGold += heartGold;
         stats.heartsSpared = (stats.heartsSpared || 0) + Math.max(0, human.lives);
@@ -3125,6 +3153,8 @@ io.on('connection', (socket) => {
         if (finalName.length > 15) finalName = finalName.substring(0, 15);
         let avatar = data.avatar === 'Shield' ? 'Shield of Fuckery' : AVATARS.includes(data.avatar) ? data.avatar : AVATARS[0];
         let token = asText(data.token).substring(0, 64);
+        // Your dice (20 Nov): a beaten opponent's set, checked against who you've beaten (settleDice).
+        let diceWanted = DICE_SETS.has(asText(data.dice)) ? asText(data.dice) : null;
 
         let existingPlayerId = token && Object.keys(room.players).find(id => room.players[id].token === token);
 
@@ -3143,6 +3173,7 @@ io.on('connection', (socket) => {
             p.id = socket.id;
             p.avatar = avatar;
             p.name = finalName;
+            p.diceWanted = diceWanted;
             p.connected = true;
 
             room.players[socket.id] = p;
@@ -3165,7 +3196,7 @@ io.on('connection', (socket) => {
             // until the next game (no hearts, `waiting`), and are dealt in with everyone as it starts.
             let late = gameUnderway(room);
             room.players[socket.id] = {
-                id: socket.id, token, name: finalName, avatar, lives: late ? 0 : room.startingLives, score: null, busted: false, connected: true, ...(late ? { waiting: true } : {})
+                id: socket.id, token, name: finalName, avatar, diceWanted, lives: late ? 0 : room.startingLives, score: null, busted: false, connected: true, ...(late ? { waiting: true } : {})
             };
             room.playerOrder.push(socket.id);
 
@@ -3222,10 +3253,20 @@ io.on('connection', (socket) => {
 
         if (room.isMusicPlaying) socket.emit('playGlobalMusic');
         // Who this name has met before (the "?" portraits); the state goes out again once it's in.
-        if (room.mode === 'tavern-crawl') loadMet(roomCode, room.players[socket.id].name);
+        settleDice(roomCode, room.players[socket.id]);
+        loadMet(roomCode, room.players[socket.id].name); // (every table since 20 Nov: your dice need who you've beaten)
 
         emitState(roomCode);
         resumeBot(roomCode);
+    });
+
+    // The start screen asks which opponents a name has beaten (20 Nov): their dice are the ones it may choose.
+    socket.on('beatenList', (data, ack) => {
+        if (typeof ack !== 'function') return;
+        let name = asText(data && data.name).trim().substring(0, 15);
+        if (!name) { ack([]); return; }
+        let answer = () => ack([...beatenBy(name)].filter(id => DICE_SETS.has(id)));
+        store.loadMet(name).then(ids => { let met = metOf(name); ids.forEach(id => met.add(id)); answer(); }).catch(answer);
     });
 
     socket.on('playAgain', () => {
@@ -3889,4 +3930,4 @@ if (require.main === module) {
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

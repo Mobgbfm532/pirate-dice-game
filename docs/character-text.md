@@ -93,7 +93,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - (Written in the Stars, dormant since 6 Nov.) Badge: "Next throw binds [faces]", then "Bound: [faces]. Next: [faces]"
 
 **The Hangman**: Dead Eye, and The Ace of Spades (his revolver)
-- Entrance card: "The Hangman seals your fate with the Ace of Spades. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, one shot can turn his own 16 or higher into a perfect 24."
+- Entrance card: "The Hangman seals your fate with the Ace of Spades. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart."
 
 **Jaguar Cantona**: Smooth Talker, then The Cloak, then All In
 - Entrance card: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm. Smooth Talker: twice a fight, after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him. At two lives, The Cloak. At his last, All In."
@@ -133,7 +133,7 @@ Where: `client/src/Hud.tsx` (`SPOTS`, `SCENES`, `sceneLine`, `thomLine`, and the
 - "A song for your next fight, friend?" Bought one: "Go! Let them hear it!" Walked away: "Another time, then."
 - Counter: "Pay the Bard, and his song goes with you to the fight with [next opponent]."
 - Songs: "Cutting Words: Your opponent's first hand that counts next fight scores 3 less." · "Inspiring Song: Your first throw of the next fight: throw it again if you don't like it."
-- When they work: "The Bard / Cutting Words / [opponent]'s [score] becomes [score]." and "The Bard / Inspiring Song / The Bard plays. Your first throw, thrown again."
+- When they work: "Cutting Words" and "Inspiring Song" (no "The Bard" over them since 20 Nov)
 - Where: `server.js` (`BARD_SONGS`, the two moments), `client/src/Hud.tsx`
 
 **The Cult of Kram** (a Yawning Portal event; sign "The Cult of Kram", "Kram abhors an ugly 1")

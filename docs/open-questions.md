@@ -37,7 +37,7 @@ day they happen, with what's been built marked as it lands.
   him instead of the drinking moment. Which ideas, and the lines' words?
 - **The finale after Jaguar** (`docs/finale-brainstorm.md`, 18 Nov): which beats, Jaguar's line, the Can Garda's look and
   line, the art and sounds. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
-- **The Hangman's Ace** (18 Nov): it fires only on his own 16-23 on his last life; on any valid hand instead?
+- (Settled 20 Nov: Áéd keeps his own ability banners; the "what it did" ribbon never shows for his tricks.)
 - **Grammar** (18 Nov): the list of suspect lines put to the user (comma splice in Brodor's letter, "Once per
   encounter", "Thom's Cart", "honorable", "Alright", the dash in Sylvester's card).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?

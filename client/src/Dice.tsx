@@ -6,7 +6,7 @@ import { BOT_ID, STEAL_MS, WASH_MS, actions, canPutBack, store, table } from './
 import { assignSlots, isLocked, type Die } from './rules';
 import { paceFrame, readFrame } from './physics';
 import { DIE_SIZE, TRAY, TABLE_FAR_EDGE_Z, faceUpQuaternion, slotPosition, waitingPosition } from './layout';
-import { OPPONENT_DICE, STARRY_GLOW, artTexture, createDiceMaterials, opponentDiceMaterials } from './textures';
+import { OPPONENT_DICE, PAINTED_DICE, STARRY_GLOW, artTexture, createDiceMaterials, opponentDiceMaterials } from './textures';
 import { lookNext } from './look';
 import { playDiceImpacts } from './sounds';
 import { useWarmShaders } from './warmup';
@@ -269,10 +269,13 @@ export function Dice() {
     const run = snap.state?.tavernRun;
     const across = run ? (run.seated ?? run.enemy).id : null;
     const theirs = useMemo(() => (across && OPPONENT_DICE.has(across) ? opponentDiceMaterials(across, materials.faces) : null), [across, materials]);
-    const own = turn && turn.playerId === BOT_ID && theirs ? theirs : materials.faces;
+    // A player's own dice (20 Nov, the user's): a beaten opponent's set, chosen on the start screen (the server's say).
+    const chosen = turn && turn.playerId !== BOT_ID ? snap.state?.players[turn.playerId]?.dice ?? null : null;
+    const mine = useMemo(() => (chosen && PAINTED_DICE.has(chosen) ? opponentDiceMaterials(chosen, materials.faces) : null), [chosen, materials]);
+    const own = turn && turn.playerId === BOT_ID ? theirs ?? materials.faces : mine ?? materials.faces;
     // Every look a die can take, compiled before it's first needed (see warmup.ts).
-    const allLooks = useCallback(() => [materials.faces, materials.hidden, materials.loaded, materials.mind, materials.tub, materials.starry, theirs ?? []].flat(), [materials, theirs]);
-    useWarmShaders(geometry, allLooks, across ?? '');
+    const allLooks = useCallback(() => [materials.faces, materials.hidden, materials.loaded, materials.mind, materials.tub, materials.starry, theirs ?? [], mine ?? []].flat(), [materials, theirs, mine]);
+    useWarmShaders(geometry, allLooks, `${across ?? ''}|${(snap.myId && snap.state?.players[snap.myId]?.dice) || ''}`);
     const putBack = snap.putBackSlot !== null; // picking a kept die for Second Thoughts
     const gild = snap.gildPick; // picking a loose die for the Gilded Die (17 Nov)
     const canTouch = !!turn && snap.isMyTurn && !snap.rolling && turn.hasRolled && (!turn.finalized || putBack);

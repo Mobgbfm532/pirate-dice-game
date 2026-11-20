@@ -2256,7 +2256,7 @@ test('Clear-Eye is refused against The Molar (no ability) and after rolling', as
 });
 
 test('Clear-Eye stops the Hangman\'s Ace of Spades', async () => {
-    // The Hangman at one life turns 16+ into 24, unless Clear-Eye was drunk this round. (His Dead
+    // The Hangman at one life turns 18+ into 24, unless Clear-Eye was drunk this round. (His Dead
     // Eye already spent here, so the Clear-Eye waits for the Ace.)
     for (const clear of [true, false]) {
         const hang = await tavernAgainst(fightOf('hangman'), `Hang-${clear}`);
@@ -2273,7 +2273,7 @@ test('Clear-Eye stops the Hangman\'s Ace of Spades', async () => {
         await playHand(hang, hroom, [2, 4, 1, 1, 1, 1]); // the player scores 4
         await result;
         assert.equal(ace, !clear, clear ? 'no Ace this round' : 'the Ace without Clear-Eye');
-        assert.equal(hroom.players.BOT_MOLAR.lives, 1, 'no life back for the Ace of Spades');
+        assert.equal(hroom.players.BOT_MOLAR.lives, clear ? 1 : 2, 'the Ace of Spades wins him a heart back (20 Nov)');
     }
 });
 
@@ -3671,4 +3671,20 @@ test('points: 50 a perfect hand (a 24, or a cursed Perfect ...4?), 2,000 for win
     assert.ok(won.lines.some(l => /Crawl champion/.test(l)));
     run.stats.encountersDefeated = 14;
     assert.equal(server.getTavernScoreSummary(room, false).breakdown.champion, 0, 'not for a run that fell');
+});
+
+test("your dice (20 Nov): a beaten opponent's set, and only once they're beaten", async () => {
+    const met = server.metOf('DiceTester');
+    // Met Sylvester (the sixth): everyone before him counts as beaten, even before wins were kept.
+    met.add('sylvester');
+    let beaten = server.beatenBy('DiceTester');
+    assert.ok(beaten.has('brodor') === false && beaten.has('martha') && beaten.has('frak') && !beaten.has('sylvester'));
+    met.add('beat:jaguar');
+    assert.ok(server.beatenBy('dicetester').has('jaguar'), 'a win kept, any case of the name');
+    const p = { name: 'DiceTester', diceWanted: 'vaelin' };
+    server.settleDice('X', p);
+    assert.equal(p.dice, undefined, 'Vaelin not beaten: ivory');
+    p.diceWanted = 'martha';
+    server.settleDice('X', p);
+    assert.equal(p.dice, 'martha');
 });

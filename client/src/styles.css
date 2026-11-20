@@ -4360,3 +4360,33 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
     .stolen-bottle { display: none; }
 }
 @keyframes aftermath-fade { 0%, 100% { opacity: 0; transform: translate(-50%, 0); } 8%, 90% { opacity: 1; transform: translate(-50%, 0); } }
+
+/* -- Your dice (20 Nov, the user's): the start screen's picker. A beaten opponent's set shows its painted 6; the rest are
+   "???" until beaten. The sheet is the Options sheet's, centred on wider screens. -- */
+.dice-sheet { max-height: min(86vh, 640px); overflow-y: auto; }
+@media (min-width: 601px), (orientation: landscape) {
+    .sheet-backdrop:has(.dice-sheet) { display: grid; place-items: center; }
+    .dice-sheet { width: min(560px, 92vw); border-radius: 14px; }
+}
+.dice-sheet-line { margin: 0 0 10px; text-align: center; font-family: var(--read, Georgia, serif); font-style: italic; }
+.dice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.dice-pick {
+    display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 44px;
+    padding: 8px 4px 6px; border-radius: 10px; border: 2px solid transparent;
+    background: linear-gradient(#2a1a0e, #1a0f07) padding-box, var(--brass-rim, linear-gradient(#f6dc8e, #c9973a 45%, #7a5318)) border-box;
+    color: #f3e3c0; font: 600 0.78rem/1.15 var(--read, Georgia, serif); text-align: center; cursor: pointer;
+}
+.dice-pick.selected { box-shadow: 0 0 0 2px #ffd54f, 0 0 14px rgba(255, 213, 79, 0.65); }
+.dice-pick.locked { cursor: default; opacity: 0.7; background: linear-gradient(#1b130c, #120c07) padding-box, linear-gradient(#6a5530, #3b2c14) border-box; }
+.dice-face {
+    width: 48px; height: 48px; border-radius: 9px; flex: none;
+    background-size: 300% 200%; background-position: 100% 100%; background-repeat: no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+.dice-face.ivory {
+    background: radial-gradient(circle, #1c7a3c 0 5px, transparent 5.5px) 25% 25% / 50% 33.3%,
+        #fcf4e8;
+    background-repeat: repeat;
+}
+.dice-face.unknown { display: grid; place-items: center; background: #0f0a06; color: #c9973a; font: 700 1.5rem/1 Almendra, serif; }
+.dice-name { min-width: 0; overflow-wrap: anywhere; }
