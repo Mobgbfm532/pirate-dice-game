@@ -9,7 +9,7 @@ day they happen, with what's been built marked as it lands.
 
 ## Open
 
-(Tidied 17 Nov, again 18 Nov evening: what was done moved to "Settled" below; what's left is here, most pressing first.)
+(Tidied 17 Nov, again 18 Nov evening and 20 Nov evening: what was done moved to "Settled" below; what's left is here, most pressing first.)
 
 ### Going live
 1. **The live Render service's settings (the user's to do, before the merge, or the live game breaks):** the build
@@ -25,8 +25,9 @@ day they happen, with what's been built marked as it lands.
 - **The start screen, better still** (20 Nov, Claude's review): a music button on the start screen (music switched off in
   a game leaves it silent with no way back there); on big windows (1920x1080) the panel and its links are small for the
   space, so scale them up; on a phone on its side the logo is small. Which, if any?
-- (Built 20 Nov: save scumming closed, `docs/save-scumming.md`; the grammar list fixed, all but "Alright", kept as speech.)
-- **The celebration logo** (`docs/logo-brainstorm.md`): built 20 Nov; a sound of its own for it, if wanted.
+- **The ability ribbon's words** (`docs/ability-feedback-brainstorm.md`): built 18 Nov with Claude's draft lines (and Cutting Words'
+  since 20 Nov); rewrite any of them?
+- **The celebration logo** (`docs/logo-brainstorm.md`): built 20 Nov with the perfect 24's cheer (the user's); a sound of its own, if wanted.
 - **Becalmed's look** (`docs/voyage-brainstorm.md`, "Becalmed's look"): the three lanterns were tried and taken out (18 Nov,
   the user: "too confusing"). Open: the slack sail would cover the opponent's bust over the table (the user, 18 Nov);
   Claude suggests it only in the sea die's Becalmed moment, as a full painting, or not at all. And the glassy sea on the
@@ -37,14 +38,8 @@ day they happen, with what's been built marked as it lands.
 - **The voyage:** the dials are first guesses, never simulated. Is All In with a rogue wave two rounds in three
   too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Teach the opponents (and the simulator) that a wave is coming? The Cloak and All In
   are still working names (Smooth Talk became Smooth Talker, 18 Nov).
-- **What an ability did** (`docs/ability-feedback-brainstorm.md`, 18 Nov): an aftermath ribbon with a plain line
-  after Astral Flood, Smooth Talker, Penitent Stare, Divine Smite, the Ace; Jaguar's Thonic flying from your shelf to
-  him instead of the drinking moment. Which ideas, and the lines' words?
 - **The finale after Jaguar** (`docs/finale-brainstorm.md`, 18 Nov): which beats, Jaguar's line, the Can Garda's look and
   line, the art and sounds. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
-- (Settled 20 Nov: Áéd keeps his own ability banners; the "what it did" ribbon never shows for his tricks.)
-- **Grammar** (18 Nov): the list of suspect lines put to the user (comma splice in Brodor's letter, "Once per
-  encounter", "Thom's Cart", "honorable", "Alright", the dash in Sylvester's card).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
 - **The start screen:** clear enough on a phone? The computer's title on the left: good? (The tavern tune plays from
   the first tap since 18 Nov, the user's.) The Hall of Legends' place and name, and its text on points? The hearts button for a new

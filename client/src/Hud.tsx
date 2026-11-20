@@ -2619,7 +2619,7 @@ function PickpocketRoll({ interlude, purse, setRevealed, next }: { interlude: Ex
         const timer = setTimeout(() => {
             setRolling(false);
             setRevealed(true);
-            playSound(interlude.caught ? 'yay' : 'thiefLaugh'); // (the thief's laugh as they get away: the user's clip, 4 Nov)
+            playSound(interlude.caught ? 'thiefCaught' : 'thiefLaugh'); // (the user's clips: the thief's laugh as they get away, 4 Nov; caught, 20 Nov)
         }, DIE_ROLL_MS);
         return () => clearTimeout(timer);
     }, [rolled, interlude.roll, interlude.caught, setRevealed]);

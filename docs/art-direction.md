@@ -352,7 +352,7 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | The trailer's old-game stills | Done (11 Nov) | `client/public/art/trailer/old-start.webp`, `old-table`, `old-rolled`, `old-kept`: the real old page (`main`) at 384×780, captured headless; not from `art/` |
 | The sea die and its dial | Done (9 Nov) | `art/dice-sea.jpg` → `sea-die.webp` (six faces in a strip, `seaDie()`); `art/sea-dial.jpg` and `art/sea-dial-needle.jpg` → `sea-dial.webp`, `sea-dial-needle.webp` (`SeaDial`: `DIAL`, `NEEDLE` hold the hub and pivot) |
 
-## Sounds and music still missing (checked against the code, 11 Nov; Jaguar's and the music per place came 17 Nov)
+## Sounds and music still missing (checked against the code, 11 Nov; Jaguar's and the music per place came 17 Nov; brought up to date 20 Nov)
 
 Every clip the user makes goes in `public/` and is wired in `client/src/sounds.ts`. What has none yet:
 
@@ -367,7 +367,11 @@ hand; `TheCloak.mp3` (brought up 8 dB, a quiet recording) and `AllIn.mp3`.
 | The sea changing | the sea die's news, a heel or a calm (`playSeaSwell`), the sailing scene, Bren's quay | a filtered wave, a boom, a creak |
 | The ship's bell | the sailing scene (`playShipBell`) | two synthesized strikes |
 | The keepsake chime | Trap Card, Velvet Cushion, Loaded Die, Gambler's Charm, Bottomless Flask, Miser's Purse, the Lady's Favour, Kram, Yvesil's and Jorvash's pick, the Bard's pick (`playChime`) | one shared chime |
-| Coins | catching the thief (`playCoins`) | synthesized clinks |
+| Coins | Darren's lads catching the lot (`playCoins`) | synthesized clinks |
+
+**The user's clips added 18-20 Nov:** `Victory.mp3` as a won crawl's end screen opens, `HomeScreen.mp3` on the start screen
+(from the first tap; tried at once where the browser allows), `BardAmbient.mp3` in the Bard's scene (in place of
+`ThreeStrings.mp3`), `ThiefCaught.wav` as the thief is spotted. The celebration logo has the perfect 24's cheer.
 
 **Scenes between fights with no loop of their own** (`startSceneAmbience`; they have the tavern's music only): Johnny Elf Bar, Jorvash, Darren Snakehands, the Hooded Stranger, the thief. (Thom, the hot tub, the Shrine, the Bard, the Cult of Kram and Yvesil have the user's loops.)
 

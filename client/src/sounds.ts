@@ -60,6 +60,7 @@ const sfx = {
     // The user's, 4 Nov: a slow-motion last throw lands (with its yay or oh well), and the thief gets away.
     whoa: load('Whoa.mp3', 0.8),
     thiefLaugh: load('ThiefLaugh.mp3', 0.8),
+    thiefCaught: load('ThiefCaught.wav', 0.8), // the thief is spotted (the user's clip, 20 Nov; it was the yay)
     tavernVictory: load('TavernCrawlVictory.mp3', 0.8),
     // The fanfare as a whole crawl is won, on the run-over screen (the user's Victory.mp3, 18 Nov; a fight's win keeps tavernVictory).
     crawlVictory: load('Victory.mp3', 0.8),

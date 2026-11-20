@@ -199,7 +199,7 @@ const SEATS: Record<string, SeatEdit> = {
     'Stason Jatham': { size: 1, shift: [-3.5, 0] },
     'The Ridgeler': { size: 1, shift: [-8.5, -4.5] },
     // 14 Nov, the user's (Klarg's new bust).
-    'Áéd': { size: 1.6, shift: [-0.5, -4.5] },
+    'Áéd': { size: 1.6, shift: [12.5, -4.5] }, // (20 Nov, the user's)
     Klarg: { size: 1, shift: [-1.5, 0] }
 };
 Object.entries(SEATS).forEach(([key, { size, shift }]) => { PORTRAITS[key].seat = size; PORTRAITS[key].seatShift = shift; });
