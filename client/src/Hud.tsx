@@ -1521,6 +1521,21 @@ function Celebration({ snap }: { snap: Snapshot }) {
     const [visible] = useMoment(c?.at ?? 0, CELEBRATION_MS);
     if (!visible || !c) return null;
     const four = c.kind === 'perfect4';
+    // The 2 FOUR 2 TWENTY-FOUR logo (20 Nov, the user's painting): it roars in from the left on its fire trail,
+    // shudders as it lands, and the player's name under it when it isn't you.
+    if (c.kind === 'logo') return (
+        <div key={c.at} className="celebration logo-celebration" aria-live="polite" aria-label="Perfect 24!">
+            <div className="celebration-rays" aria-hidden="true" />
+            <div className="logo-streak" aria-hidden="true" />
+            <img className="celebration-logo" src={`${import.meta.env.BASE_URL}art/logo-celebration.webp`} alt="" draggable={false} />
+            {c.who && <span className="logo-who">{c.who}</span>}
+            <div className="celebration-sparks" aria-hidden="true">
+                {Array.from({ length: 16 }, (_, i) => (
+                    <span key={i} style={{ '--a': `${i * 22.5 + (i % 2) * 9}deg`, '--d': `${90 + (i * 37) % 70}px`, animationDelay: `${0.25 + (i % 4) * 0.06}s` } as React.CSSProperties} />
+                ))}
+            </div>
+        </div>
+    );
     return (
         <div key={c.at} className={`celebration ${four ? 'perfect4' : 'perfect24'}`} aria-live="polite">
             <div className="celebration-rays" aria-hidden="true" />
@@ -1546,6 +1561,8 @@ function Celebration({ snap }: { snap: Snapshot }) {
 // Since 24 Oct a living painting: her flames move, her pips pulse, her eyes glint.
 const DEVIL_EYES: [[number, number], [number, number]] = [[0.453, 0.274], [0.609, 0.291]];
 preloadPainting('devil-sixes');
+// The celebration logo (20 Nov), decoded ahead so it's there the moment the dice land.
+if (typeof Image !== 'undefined') { const logo = new Image(); logo.src = `${import.meta.env.BASE_URL}art/logo-celebration.webp`; logo.decode?.().catch(() => {}); }
 function DevilSixes({ snap }: { snap: Snapshot }) {
     const d = snap.devil;
     const [visible] = useMoment(d?.at ?? 0, DEVIL_MS);

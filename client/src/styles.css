@@ -4390,3 +4390,48 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 }
 .dice-face.unknown { display: grid; place-items: center; background: #0f0a06; color: #c9973a; font: 700 1.5rem/1 Almendra, serif; }
 .dice-name { min-width: 0; overflow-wrap: anywhere; }
+
+/* -- The celebration logo (20 Nov, the user's painting "2 FOUR 2 TWENTY-FOUR"): a perfect 24 at a friends' table, a crawl
+   round's first throw landing 2, 4, 6, 6, 6, 6. It roars in from the left on a trail of fire over the felt, lands with a
+   shudder, holds, and lifts away. No filter on the moving layers but the logo's own small shadow. -- */
+.logo-celebration { --logo-w: min(94vw, 620px, calc((var(--rail-right, 9999px) - var(--table-x, 0px)) * 2.15)); }
+.celebration-logo {
+    position: absolute; left: var(--table-x, 50%); top: var(--felt-y, 45%);
+    width: var(--logo-w); height: auto; translate: -50% -50%;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7));
+    animation: logo-roar 2.8s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+.logo-streak {
+    position: absolute; left: 0; right: 0; top: var(--felt-y, 45%); height: min(30vw, 190px); translate: 0 -50%;
+    background: linear-gradient(90deg, transparent, rgba(255, 140, 30, 0.0) 10%, rgba(255, 160, 40, 0.55) 55%, rgba(255, 220, 120, 0.8) 72%, transparent);
+    -webkit-mask: linear-gradient(transparent, #000 35%, #000 65%, transparent); mask: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+    animation: logo-streak 2.8s ease-out forwards;
+}
+/* (Above the logo, sized from it: below, it met the slot rail on narrow tables.) */
+.logo-who {
+    position: absolute; left: var(--table-x, 50%); top: calc(var(--felt-y, 45%) - var(--logo-w) * 0.215 - 4px);
+    translate: -50% -100%; white-space: nowrap;
+    font: 700 clamp(1rem, 4.6vw, 1.4rem) / 1 Almendra, serif; color: #fff1c8; letter-spacing: 0.5px;
+    text-shadow: 0 2px 0 #3a1e06, 0 0 12px rgba(255, 170, 60, 0.8);
+    animation: logo-name 2.8s ease-out forwards;
+}
+.logo-celebration .celebration-rays { width: min(110vw, 620px); }
+@keyframes logo-roar {
+    0% { opacity: 0; transform: translateX(-70vw) skewX(-14deg) scale(0.9); }
+    13% { opacity: 1; transform: translateX(4%) skewX(6deg) scale(1.06); }
+    18% { transform: translateX(-1.5%) skewX(-2deg) scale(0.98); }
+    23% { transform: translateX(0) skewX(0) scale(1); }
+    84% { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 0; transform: translateY(-14%) scale(1.06); }
+}
+@keyframes logo-streak {
+    0% { opacity: 0; transform: translateX(-100%); }
+    12% { opacity: 1; transform: translateX(0); }
+    40% { opacity: 0.6; }
+    100% { opacity: 0; transform: translateX(10%); }
+}
+@keyframes logo-name { 0%, 20% { opacity: 0; transform: translateY(8px); } 30%, 84% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .celebration-logo, .logo-streak { animation-name: aftermath-fade; }
+}

@@ -8,7 +8,7 @@
 // stops at the character's painted rim light, so grey or black clothing inside the
 // silhouette is kept. Originals in /art are never modified.
 import sharp from 'sharp';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -558,6 +558,23 @@ function glowToAlpha(img, mask, bg, { boxes, min = 0.06, solid = 0.97, colour = 
         alpha.set(p, light ? a * Math.min(1, (a - min) / min) * Math.min(1, (y1 - y) / 24) : a);
     }
     return alpha;
+}
+
+// (The celebration logo, 20 Nov.) Pinkish pixels (blue and red both well over green) become see-through by how close
+// they are to the magenta background, keeping their own colour; pure magenta goes entirely.
+async function unpinkMagenta(file, bg = [251, 1, 244]) {
+    sharp.cache(false); // (Windows: a file sharp still holds can't be written over)
+    const { data, info } = await sharp(readFileSync(file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        if (!(b > g + 30 && r > g + 30)) continue;
+        let a = 0;
+        for (let k = 0; k < 3; k++) { const v = data[i + k], c = bg[k]; a = Math.max(a, v > c ? (v - c) / (255 - c) : (c - v) / c); }
+        if (a < 0.08) { data[i + 3] = 0; continue; }
+        for (let k = 0; k < 3; k++) data[i + k] = Math.max(0, Math.min(255, Math.round(bg[k] + (data[i + k] - bg[k]) / a)));
+        data[i + 3] = Math.round(data[i + 3] * Math.min(1, a));
+    }
+    writeFileSync(file, await sharp(data, { raw: info }).webp({ quality: 90, alphaQuality: 90 }).toBuffer());
 }
 
 // Item icons (Thom's Thonics, 28 Oct; Elf Bars, keepsakes next): `icon: 320` fits the trimmed
@@ -1138,6 +1155,10 @@ await cutOutFlat('bust-martha-duke.jpg', 'martha-duke', { tolerance: 30, holes: 
 await cutOutFlat('bust-martha-danhausen.jpg', 'martha-danhausen', { holes: [[768, 572], [886, 606], [761, 833]] });
 await cutOutFlat('bust-brodor.jpg', 'brodor', { holes: [[891, 424], [968, 564], [888, 343], [134, 961], [890, 473], [55, 591], [806, 439], [952, 409], [901, 303], [839, 452], [998, 733], [982, 668], [25, 659], [22, 869], [128, 1011]] });
 await cutOutFlat('devil-sixes.jpg', 'devil-sixes', { maxHeight: 900 }); // three 6s: the devil's moment
+await cutOutFlat('logo-celebration.jpg', 'logo-celebration', { maxHeight: 768, minPiece: 0.00002 }); // the 2 FOUR 2 TWENTY-FOUR logo (20 Nov, the user's): a first-throw 24 in a crawl, a perfect 24 at a friends' table (a glow cut turned its gold green)
+// The magenta the flames enclose (no flood from the edge reaches it) and their pink fringes: every pinkish pixel is taken
+// apart as its own colour over the magenta (colour to alpha); the gold and orange, with little blue, are left alone.
+if (wanted('logo-celebration')) await unpinkMagenta(path.join(OUT, 'logo-celebration.webp'));
 await livingMask('devil-sixes');
 // Ability paintings (26 Oct): shown as the ability's moment plays (ABILITY_ART in Hud).
 await cutOutFlat('ability-mind-whip.jpg', 'ability-mind-whip', { maxHeight: 900, holes: [[216, 284], [192, 248], [384, 200], [318, 330], [270, 360], [294, 366], [336, 408], [324, 426], [312, 438]] }); // background inside the ribbon's loop

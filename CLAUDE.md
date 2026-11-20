@@ -406,6 +406,8 @@ one too, or saves only last until the server restarts, which on the free tier is
     turns, at every table); the Hangman's Ace of Spades from 18 (`ACE_FROM`; 16 before), "he shoots a die into a 6", and it
     wins him a heart back; after a fog bank his dice show once both hands are done and his score stays on his nameplate
     until the next hand (and is said even when the round ends the fight); the Bard's song moments without "The Bard".
+    Also 20 Nov: the user's **celebration logo** "2 FOUR 2 TWENTY-FOUR" (the name stays 2, 4, 24): a perfect 24 at a friends'
+    table, and a crawl round's first throw landing 2, 4, 6, 6, 6, 6 (`docs/logo-brainstorm.md`; `kind: 'logo'`).
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the

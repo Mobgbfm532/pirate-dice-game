@@ -238,7 +238,7 @@ export interface Snapshot {
     gildPick: boolean; // the Gilded Die is waiting for a loose die to be tapped (17 Nov)
     // A perfect hand's celebration (since 23 Oct): a 24, or in a cursed round (lowest wins) the
     // 2, the 4 and four 1s. who: the player's name when it isn't you.
-    celebration: { kind: 'perfect24' | 'perfect4'; at: number; who: string | null } | null;
+    celebration: { kind: CelebrationKind; at: number; who: string | null } | null;
     devil: { at: number; who: string | null } | null; // three 6s landed (who: when it isn't you)
     klargCaughtAt: number; // Klarg's paw got back to his side with your die (his nameplate shows it)
     // A hidden hand (a fog bank, Jaguar's Cloak) shown on his nameplate with the round's result (14 Nov, the user's).
@@ -494,6 +494,25 @@ function applyTurn(serverView: TurnView | null) {
 
 // How long a perfect hand's celebration holds the screen (Hud's Celebration); what comes next waits.
 export const CELEBRATION_MS = 2800;
+// 'logo' (20 Nov, the user's): the 2 FOUR 2 TWENTY-FOUR logo, for a perfect 24 at a friends' table and, in a Tavern
+// Crawl, for a round's first throw landing 2, 4, 6, 6, 6, 6 (shown as it lands; the finished 24 then isn't celebrated again).
+export type CelebrationKind = 'perfect24' | 'perfect4' | 'logo';
+let naturalKey: string | null = null; // the turn whose first throw was celebrated with the logo
+function naturalFirstThrow(turn: TurnView) {
+    if (snapshot.state?.mode !== 'tavern-crawl' || turn.rollCount !== 1 || snapshot.state.tavernRun?.roundEffect?.kind === 'curse') return false;
+    const values = turn.dice.filter(d => d.status === 'active' && !d.hidden).map(d => d.value).sort((a, b) => a - b);
+    return values.join(',') === '2,4,6,6,6,6';
+}
+function celebrate(kind: CelebrationKind, turn: TurnView | null) {
+    playSound('yay');
+    if (kind !== 'perfect4') table.celebrateAt = performance.now();
+    const who = turn && turn.playerId !== snapshot.myId ? snapshot.state?.players[turn.playerId]?.name ?? null : null;
+    update({ celebration: { kind, at: performance.now(), who } });
+    // A moment of its own: the round's result and the next throw wait for it.
+    const gone = performance.now() + CELEBRATION_MS;
+    momentFreeAt = Math.max(momentFreeAt, gone);
+    momentGoneAt = Math.max(momentGoneAt, gone);
+}
 // Three 6s land (since 23 Oct, the user's): fire up the screen, the devil with her three 6s and
 // "Devil's titties" (Hud's DevilSixes). Taps still reach the dice; what comes next waits.
 export const DEVIL_MS = 1500;
@@ -544,16 +563,8 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
     // The user's Whoa (4 Nov), on top of the rest: a Perfect ...4?, and any slow-motion last throw as it lands.
     if (WHOA_ON && (slowThrow || perfect === 'perfect4')) playSound('whoa');
     slowThrow = false;
-    if (perfect) {
-        playSound('yay');
-        if (perfect === 'perfect24') table.celebrateAt = performance.now();
-        const who = turn && turn.playerId !== snapshot.myId ? snapshot.state?.players[turn.playerId]?.name ?? null : null;
-        update({ celebration: { kind: perfect, at: performance.now(), who } });
-        // A moment of its own: the round's result and the next throw wait for it.
-        const gone = performance.now() + CELEBRATION_MS;
-        momentFreeAt = Math.max(momentFreeAt, gone);
-        momentGoneAt = Math.max(momentGoneAt, gone);
-    }
+    if (perfect && turn && turn.key === naturalKey) { /* its first throw had the logo already (20 Nov) */ }
+    else if (perfect) celebrate(perfect === 'perfect24' && multiplayerTable() ? 'logo' : perfect, turn);
     else if (busted) playSound(suspense === 'survival' ? 'aww' : 'bust');
     else if (cursed && score === 24) playSound('ohwell');
     else if (suspense === 'perfect') playSound('ohwell');
@@ -625,7 +636,9 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
                 }
             });
             table.roll = null;
-            if (data.devil) showDevil(turn);
+            // A crawl round's first throw landing a perfect 24 (20 Nov, the user's): the logo, in place of the three 6s.
+            if (naturalFirstThrow(turn)) { naturalKey = turn.key; celebrate('logo', turn); }
+            else if (data.devil) showDevil(turn);
             update({ rolling: false, ...(data.ghosts ? { ghosts: { dice: data.ghosts, at: performance.now() } } : {}) });
             applyTurn(turn);
             done();
@@ -1528,7 +1541,7 @@ export const preview = {
     // The line over the table after a throw (e.g. callout('17 points')); kind and playerId put a
     // multiplayer callout on that player's nameplate (callout('', '#4fc3f7', 'didntBite', id)).
     callout(text: string, color = '#9ccc65', kind = 'result', playerId = '') { update({ callout: { text, color, key: String(performance.now()), kind, playerId } }); },
-    celebrate(kind: 'perfect24' | 'perfect4', who: string | null = null) { if (kind === 'perfect24') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
+    celebrate(kind: CelebrationKind, who: string | null = null) { if (kind !== 'perfect4') table.celebrateAt = performance.now(); update({ celebration: { kind, at: performance.now(), who } }); },
     // (hold: keep it up that much longer, to look at a still of it)
     devil(who: string | null = null, hold = 0) { table.devilAt = performance.now(); update({ devil: { at: performance.now() + hold, who } }); },
     // Every die, yours too, shows an opponent's own dice (an id from OPPONENT_DICE), to look at a set
