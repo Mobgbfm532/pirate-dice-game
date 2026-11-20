@@ -55,7 +55,7 @@ on to the spots), `chooseSpot`, `buyKeepsake(id)` (Thom's back shelf), `shrinePi
 | `db.js` | What lasts between restarts (3 Nov): the leaderboard, which opponents each player has met, and the league (4 Nov). With `DATABASE_URL` (Neon Postgres) in the database (tables `leaderboard`, `met`, `league`, made on start); without it in `leaderboard.json` / `met.json` / `league.json` (gitignored; `LEADERBOARD_READONLY` leaves them alone). The server keeps them in memory and writes through without waiting. `test/db.test.js` checks the SQL on pg-mem. |
 | `shared/rules.js` | Pure rules (UMD: `require` on the server, `self.GameRules` in browsers): scoring, callouts, suspense, Klarg steal, Rokr blur (`viewTurn` hides values), Fizzy/Second Thoughts (`rerollOnes`, `putBackDie`), the Molar's simple play (`planBotLocks`). |
 | `shared/strategy.js` | Server only: the best-play brain for Tavern Crawl opponents from the Yawning Portal on (exact solution over all dice outcomes, `bestKeeps`). |
-| `public/` | The original classic page (`index.html`) at `/`, plus its art/audio. Thin client now; still works. |
+| `public/` | The original classic page (`index.html`), at `/classic` since 20 Nov (`/` sends you on to `/next/`), plus its art/audio. Thin client now; still works. |
 | `client/` | The 3D client (Vite + React + React Three Fiber + cannon-es), built to `client/dist`, served at **`/next`**. |
 | `test/` | `node --test`: rules and strategy unit tests, end-to-end server tests with socket.io-client; `dev-server.js` (not a test) for browser checks; `shots.mjs`, `shots-base.mjs`, `compare.mjs` (not tests): before/after screenshots; `film-shots.mjs` (not a test): the intro film's stills. `shots-base.mjs` serves a commit (default HEAD) frozen on :5174 (launch entry `shots-base`), so "before" can be shot while the working copy changes; `shots.mjs` shoots silently in headless Chrome (`node test/shots.mjs previews/x/before client=http://localhost:5174/next/ look=next fight=1 roll=1`; seeds the throw, waits for the table to settle); `compare.mjs previews/x` makes side-by-sides and change numbers. Needs the dev test server running. |
 | `art/` | Untouched AI originals. `client/scripts/process-art.mjs` (`npm --prefix client run art`) makes game files in `client/public/{art,textures}`. |
@@ -564,7 +564,12 @@ one too, or saves only last until the server restarts, which on the free tier is
     settings on High "look great" (no slider changes), and made the new look the default.
   - Before/after: `test/shots.mjs` + `test/shots-base.mjs` + `test/compare.mjs` and the
     `visual-shots` subagent; `previews/frozen.mjs` (gitignored) stops the page clock for moments.
-- **`main` = the live game, still the old version.** Nothing from Phase 1/2 is live yet.
+- **`main` = the live game: Phase 1 and 2 are live since 20 Nov** (PR #1 merged by the user). The live service is
+  https://two-4-24.onrender.com: the new game at `/next`; since 20 Nov (the user's word) `/` sends visitors on to `/next/` (an invite's
+  `?table=` too) and the classic page is at `/classic` (`index: false` on the public folder; the service worker keeps
+  `/classic`, cache v65; the manifest starts at `/next/`).
+  Its `DATABASE_URL` is the same Neon database as the test site (the Legends plaque shows the same board). Also 20 Nov,
+  the user's: MOB's and Rossatron's crawl leaderboard rows deleted from Neon (War Daddy's kept).
 - **Render:** the existing live service sits in "My project". The test service
   **`pirate-dice-next`** (branch `phase-2-3d-prototype`, auto-deploys on push, build
   `npm install && npm run build`, start `npm start`) is at
@@ -1121,7 +1126,7 @@ note, Cutting Words' minus, the tray (no gap at the felt, the slanted view on ph
     command to `npm install && npm run build`, a `SAVE_SECRET` and `DATABASE_URL`; the user merges (that deploys
     the live game); then delete the test service. Old saved runs won't open (money changed); the
     live leaderboard's old gold entries count as points.
-12. **Switch over** (the user's, 17 Nov: the new game at `/`, but not yet; on their word): serve it at `/` (keep the
+12. **Switch over** (**done 20 Nov**, the user's word: `/` redirects to `/next/`, the classic page at `/classic`; still left: retire the old client code when the user says) (the user's, 17 Nov: the new game at `/`, but not yet; on their word): serve it at `/` (keep the
     classic page reachable for a while; until then it skips Thom and the events, which the user
     accepted), update the PWA manifest/service worker (since 17 Nov `public/sw.js` keeps only the classic page's six
     files and leaves every other request alone: before, registered at `/`, it stored everything the new game fetched,
