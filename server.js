@@ -1595,7 +1595,8 @@ function performEndTurn(roomCode) {
             let off = INTERLUDE.cuttingWords ?? 3;
             let was = room.players[BOT_ID].score;
             score = room.players[BOT_ID].score = Math.max(0, was - off);
-            fogHeld(roomCode, room, 'keepsakeActivated', { id: 'cuttingWords', name: 'Cutting Words', text: `${encounter.name}'s ${was} becomes ${score}.`, who: 'The Bard' });
+            // (20 Nov, the user's: what it took off shows, like Smooth Talker's: the minus, the score's change and a ribbon after.)
+            fogHeld(roomCode, room, 'keepsakeActivated', { id: 'cuttingWords', name: 'Cutting Words', text: `${encounter.name}'s ${was} becomes ${score}.`, who: 'The Bard', minus: was - score, extra: `${was} → ${score}`, after: `Cutting Words: ${encounter.name}'s ${was} becomes ${score}.` });
         }
 
         // The Hangman's Dead Eye: he shoots your best scoring die (not the 2 and 4 you need) and it
@@ -3021,7 +3022,7 @@ function evaluateTavernRound(roomCode) {
     if (effect && effect.kind === 'smite' && losersThisRound.length === 1 && losersThisRound[0].id === humanId) {
         losersThisRound.push({ id: humanId, reason: 'Divine Smite.' });
         // The hammer comes down (3 Nov): the moment again, its sound, and the whole screen shakes.
-        sendMoment(roomCode, 'signatureMove', { name: enemy.name, ability: Rules.ABILITY_NAMES.divineSmite, text: 'The hammer falls: you lose two hearts.', hit: true, after: hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper ? 'Divine Smite: two hearts. Your Shield of Fuckery catches one.' : 'Divine Smite: you lose two hearts.' });
+        sendMoment(roomCode, 'signatureMove', { name: enemy.name, ability: Rules.ABILITY_NAMES.divineSmite, text: 'The hammer falls: you lose 2 hearts.', hit: true, after: hasKeepsake(room, 'bentCopper') && !room.tavernRun.encounterKeepsakeUses.bentCopper ? 'You lose 2 hearts. Your Shield of Fuckery catches one.' : 'You lose 2 hearts.' }); // (the user's words, 20 Nov)
     }
     // Jaguar's All In: the round's loser loses two hearts (each can still be caught as above).
     if (room.tavernRun.jaguarPhase === 'allIn') losersThisRound = losersThisRound.flatMap(loser => [loser, { ...loser, reason: 'All In.' }]);

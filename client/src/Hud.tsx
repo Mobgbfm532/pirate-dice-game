@@ -1902,6 +1902,8 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
                 <span className="what">{moment.ability}</span>
                 {takeover && keepsake && moment.text && <span className="line">{moment.text}</span>}
                 {moment.ability === 'Smooth Talker' && fx && /talks you into (taking|scoring)/.test(moment.text ?? '') && <span className="minus">−3</span>}
+                {/* (Cutting Words: what it took off, as Smooth Talker shows it, 20 Nov.) */}
+                {!!moment.minus && <span className="minus">−{moment.minus}</span>}
                 {moment.cancelled && <span className="cancelled-stamp">Cancelled</span>}
                 {moment.extra && <span className="plus">{moment.extra}</span>}
             </div>

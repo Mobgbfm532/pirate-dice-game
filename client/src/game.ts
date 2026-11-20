@@ -166,7 +166,7 @@ export interface TavernSummary {
 export interface Aftermath { text: string; ability: string; thonic?: string; from?: { x: number; y: number }; at: number }
 export const AFTERMATH_MS = 3600; // the ribbon's time on screen (with the bottle's flight before it: BOTTLE_FLIGHT_MS more)
 export const BOTTLE_FLIGHT_MS = 900;
-export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; blessing?: string; cancelled?: boolean; hit?: boolean; vapour?: string }
+export interface AbilityMoment { who?: string; name: string; ability: string; text: string; at: number; extra?: string; keepsake?: string; thonic?: string; blessing?: string; cancelled?: boolean; hit?: boolean; vapour?: string; minus?: number }
 
 // What the last fight paid out, shown when Thom's cart opens.
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
@@ -1049,14 +1049,17 @@ socket.on('blessingUsed', (data: { id: string; name: string; text: string }) => 
 
 // A keepsake works: its own moment with a fanfare (the user's call, 21 Oct; it was a toast).
 // (Also the Bard's songs as they work, with who: 'The Bard'.)
-socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string; flavour?: string }) => {
+socket.on('keepsakeActivated', (data: { id: string; name: string; text: string; who?: string; flavour?: string; minus?: number; extra?: string; after?: string }) => {
     enqueueMoment(() => {
         if (data.id === 'bentCopper') playSound('shield'); // the user's clip for the Shield (28 Oct)
         else if (data.who === 'The Bard') playSound('bardTune'); // either song as it works (the user's tune, 3 Nov)
         else if (data.who?.endsWith('Elf Bar')) playSound('vape'); // a puff (the user's clip, 4 Nov), Martha's Mystery Flavour too
         else playChime();
         // The Bard's songs play like a Thonic drunk (the user's call, 3 Nov): their icon, big, in a glow.
-        if (data.who === 'The Bard') update({ ability: { name: 'The Bard', ability: data.name, text: data.text, blessing: data.id, at: performance.now() } });
+        if (data.who === 'The Bard') {
+            update({ ability: { name: 'The Bard', ability: data.name, text: data.text, blessing: data.id, minus: data.minus, extra: data.extra, at: performance.now() } });
+            if (data.after) showAftermath({ ability: data.name, after: data.after }, MOMENT_SHOW_MS); // (Cutting Words, 20 Nov)
+        }
         // A puff (17 Nov, the user's): a cloud of vapour in the flavour's colour (Martha's: this fight's flavour).
         else update({ ability: { name: data.who ?? 'Keepsake', ability: data.name, text: data.text, keepsake: data.id, vapour: data.who?.endsWith('Elf Bar') ? (data.flavour ?? data.id) : undefined, at: performance.now() } });
     });

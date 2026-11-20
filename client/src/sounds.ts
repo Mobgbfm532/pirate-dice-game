@@ -119,9 +119,9 @@ const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
 // The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
 // scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
 // (The Lady's music a little louder than the hot tub's bubbling: the user, 28 Oct.)
-const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.5, kram: 0.8, yvesil: 1, squall: 0.22 }; // (the wind is a loud recording: about the music's level at 0.22) // (Yvesil's theme is a quiet recording)
+const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.41, kram: 0.8, yvesil: 1, squall: 0.22 }; // (the wind is a loud recording: about the music's level at 0.22) // (Yvesil's theme is a quiet recording)
 // (Thom's cart since 28 Oct: the user's loop; the Bard's lute and the Cult of Kram's chant too.)
-const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('ThreeStrings.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true), squall: load('Wind.mp3', 0, true) };
+const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('BardAmbient.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true), squall: load('Wind.mp3', 0, true) };
 // (The Squall's wind and rain, the user's, 10 Nov: loops for the whole round, the music only a little quieter under it.)
 const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall: 0.7 };
 // Jaguar's fight has its own music (the user's, 10 Nov): it takes over from the tavern tune as he sits
@@ -129,9 +129,14 @@ const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall
 // Since 17 Nov each place has its own music (the user's), and Brodor and Jaguar a theme of their own.
 // Volumes set from each recording's measured loudness, so each plays about as loud as the tavern tune
 // at 0.4 (-16.7 LUFS): Jaguar's -8.0, the Salty Swallow's -10.8, Brodor's -13.5, the Portal's -14.1.
-export type Tune = 'tavern' | 'martha' | 'portal' | 'brodor' | 'ship' | 'jaguar';
+export type Tune = 'home' | 'tavern' | 'martha' | 'portal' | 'brodor' | 'ship' | 'jaguar';
 const placeTune = (file: string): HTMLAudioElement => { const el = load(file, 0, true); el.preload = 'none'; return el; };
+// The start screen's own music (20 Nov, the user's HomeScreen.mp3: -25 dB against the tavern tune's -19, so about twice
+// the volume to sound as loud). It ends on 1.5 s of silence, skipped as it loops (homeTune below).
+const homeTune = placeTune('HomeScreen.mp3');
+homeTune.addEventListener('timeupdate', () => { if (homeTune.duration && homeTune.currentTime > homeTune.duration - 1.5) homeTune.currentTime = 0; });
 const TUNES: Record<Tune, [HTMLAudioElement, number]> = {
+    home: [homeTune, 0.8],
     tavern: [music, MUSIC_VOLUME],
     martha: [placeTune('MarthaTheme.mp3'), MUSIC_VOLUME], // (the user's, 17 Nov: as loud as the tavern tune, -16.7 LUFS)
     portal: [placeTune('YawningPortalTheme.mp3'), 0.3],
@@ -139,9 +144,9 @@ const TUNES: Record<Tune, [HTMLAudioElement, number]> = {
     ship: [placeTune('SaltySwallowTheme.mp3'), 0.2],
     jaguar: [placeTune('JaguarBossBattle.mp3'), 0.15] // (9.8 MB, fetched only then)
 };
-let tuneNow: Tune = 'tavern';
+let tuneNow: Tune = 'home'; // (the start screen's, until a table's tune takes over: PlaceMusic)
 // The tavern's crowd (Ambience.mp3) is a tavern's: aboard the ship it goes quiet (18 Nov, the user's).
-const ABOARD: Tune[] = ['ship', 'jaguar'];
+const ABOARD: Tune[] = ['ship', 'jaguar', 'home']; // (and none on the start screen, whose music stands alone, 20 Nov)
 const crowdVolume = () => (ABOARD.includes(tuneNow) ? 0 : AMBIENCE_VOLUME);
 const allTunes = () => Object.values(TUNES).map(([el]) => el); // (Yvesil's, the user's, 9 Nov: 5.8 MB, 3 min)
 Object.values(sceneAmbience).forEach(el => { el.preload = 'none'; }); // (fetched when a scene opens, not with the page: the hot tub's is 1.9 MB)
