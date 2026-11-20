@@ -353,7 +353,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 
 - **Phase 1 (done):** server-authoritative rules, security fixes, tests. Branch
   `phase-1-server-authority` (pushed).
-- **Phase 2 (in progress, branch `phase-2-3d-prototype`, all pushed, on the test site; see git log for the latest commit):**
+- **Phase 2 (live since 20 Nov: merged to `main` by the user, PRs #1 and #2; work goes on in branch `phase-2-3d-prototype`, pushed to the test site first; see git log for the latest commit):**
   the 3D table at `/next`: physics dice, all painted art, multiplayer with invites and
   reconnection, phone and desktop layouts, music / sound switches, synthesized dice sound, and the
   Tavern Crawl: the 15-fight tournament across three places, Thonics, events between fights,
@@ -575,8 +575,11 @@ one too, or saves only last until the server restarts, which on the free tier is
   `npm install && npm run build`, start `npm start`) is at
   https://pirate-dice-next.onrender.com/next and has every pushed commit (a deploy takes about a
   minute). Free tier: it sleeps after ~15 min idle (first visit then takes up to ~50 s). `SAVE_SECRET` and,
-  since 4 Nov, `DATABASE_URL` are set there, so the leaderboard, who you've met and the league live in Neon
-  (the live service will need its own of each).
+  since 4 Nov, `DATABASE_URL` are set there, so the leaderboard, who you've met and the league live in Neon.
+  Since 20 Nov the live service (`two-4-24`, branch `main`, the same build command, its own `SAVE_SECRET`, the same
+  `DATABASE_URL`) shares that database: a score set on the test site shows on the live Legends board. To go live,
+  push to the branch, try it on the test site, then a pull request to `main` that the user merges (no `gh` here: give
+  the user a prefilled GitHub compare link).
 
 ## Tavern Crawl now
 
@@ -1045,6 +1048,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
 
 ## Next steps (in order)
 
+**Live, 20 Nov late evening:** the user merged PR #1 (the whole new game) and PR #2 (`/` opens it; the classic page at
+`/classic`) into `main`: https://two-4-24.onrender.com, checked after each deploy (`/` → `/next/`, a crawl starts, the
+Legends board reads Neon). What's open about going live is in `docs/open-questions.md`, "Going live".
+
 **Where things stand, 20 Nov evening:** everything from 18-20 Nov is on the test site and waits to be seen on a phone: the
 ability ribbon and Jaguar's bottle, Røkr, the Victory fanfare, your dice from beaten opponents, the Hangman's Ace from 18,
 the fog bank's reveal, the celebration logo (a first-throw 24, a friends' table's 24) and the logo title, the Perfect ...4?'s
@@ -1054,7 +1061,7 @@ note, Cutting Words' minus, the tray (no gap at the felt, the slanted view on ph
 
 **Where things stand, 18 Nov evening** (everything is pushed and on the test site; the details of each item are in
 `docs/open-questions.md`, the one list of what's open; the user judged everything up to 17 Nov fine on a phone, 18 Nov):
-1. **Going live, the user's to do:** the live Render service's build command, `SAVE_SECRET` and `DATABASE_URL`
+1. **Going live (done 20 Nov; this item for the record):** the live Render service's build command, `SAVE_SECRET` and `DATABASE_URL`
    (the same Neon database as the test site, or a clean one?), then the merge (a PR from `phase-2-3d-prototype`);
    the new game at `/` later, on the user's word (step 12). Not yet tried: an iPhone, a save after a server restart,
    the leaderboard and league across a deploy.
@@ -1122,7 +1129,7 @@ note, Cutting Words' minus, the tray (no gap at the felt, the slanted view on ph
 10. **Check the database across a deploy:** `DATABASE_URL` has been on the Render test service since 4 Nov (the user
     added it), and Kram's row went in by script, but nobody has yet confirmed on the site that the leaderboard and
     the JUGS league survive a deploy.
-11. **Ship to `main`:** prepare a PR from `phase-2-3d-prototype`; set the live service's build
+11. **Ship to `main`** (**done 20 Nov**: PR #1, then PR #2 for the switch-over; the test service kept for now, open): prepare a PR from `phase-2-3d-prototype`; set the live service's build
     command to `npm install && npm run build`, a `SAVE_SECRET` and `DATABASE_URL`; the user merges (that deploys
     the live game); then delete the test service. Old saved runs won't open (money changed); the
     live leaderboard's old gold entries count as points.
