@@ -1776,11 +1776,15 @@ function scheduleEmptyTableCleanup(roomCode) {
     }, delay(room.mode === 'tavern-crawl' ? CRAWL_TABLE_GRACE_MS : EMPTY_TABLE_GRACE_MS));
 }
 
+const BOT_WATCHES_THROW_MS = 2300; // about how long a throw takes to land on screen, beyond the 0.5 s performRoll allows
 function runBotRoll(roomCode) {
     let room = rooms[roomCode];
     let key = room.turn.key;
     let animationMs = performRoll(roomCode);
-    if (animationMs) botLater(roomCode, key, animationMs + 1000, () => runBotDecision(roomCode));
+    // (20 Nov, the user's: an opponent's last die was sometimes never seen kept. The throw on screen lasts about 2.8 s, the
+    // server allowed 0.5, so its keeps and End Turn were already waiting as the dice landed, and all played at once. Now it
+    // watches its throw land first; the browser paces what it shows too: opponentPace in game.ts.)
+    if (animationMs) botLater(roomCode, key, animationMs + 1000 + BOT_WATCHES_THROW_MS, () => runBotDecision(roomCode));
     // A refused roll (dice still busy) must never leave the bot stuck: think again shortly.
     else if (!room.turn.finalized) botLater(roomCode, key, 1000, () => runBotDecision(roomCode));
 }

@@ -86,6 +86,22 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   throws simulated the first that lands flat with every die past the middle is used (`across`; it used to prefer the
   shortest, which favoured weak throws). In 45 test throws none fell short; a six-dice throw takes ~0.6 s to work out
   on the PC (was ~0.43), the slowest about as before, and settles sooner (~2.8 s). Dev: `__game.throwOnce`, `throwFeel`.
+  **No more hops at the end (20 Nov, the user's: "can take a while to settle ... it can look like the face is being
+  manipulated"):** a die that comes to rest cocked (leaning on another, or sat on top of one) used to be nudged with a
+  3-4.5 high hop and a hard spin, landing on another face; about half of all six-dice throws had one. Now the nudge slides
+  it off its neighbour with a small hop (`nudgeUp`, `nudgeSide`, `nudgeSpin`), and the throw chosen is one needing no nudge
+  whenever any try does (`nudges` in `simulateOnce`; a try that would need one stops early once a flat throw is in hand,
+  `giveUpIfCocked`). Over 40 throws: 21 nudged before, about 5-8 after; a throw ends ~0.4 s sooner; working it out
+  costs about the same on average (worst ~0.85 s on the PC). Measuring script: `.git/dicemeasure/measure.ts` (run with
+  `node node_modules/vite-node/vite-node.mjs` from `client/`; `lastThrow` in physics.ts is the chosen throw).
+  **An opponent's hand, paced (20 Nov, the user's: their last die "will not be locked before their turn ends"):** the server
+  let a bot think 1.5 s after a throw that takes ~2.8 s to land on screen, so its keeps and End Turn were waiting as the
+  dice landed and all played at once; and a last die thrown is kept by the rules as it lands, so it went straight to its slot
+  with the hand done. Now the bot watches its throw (`BOT_WATCHES_THROW_MS` 2300 in server.js), and the browser paces an
+  opponent's hand (`opponentPace`, `paceUntil` in game.ts): 0.7 s after a throw lands before the first keep, 0.45 s between
+  keeps, 1.1 s after a finished hand before anything else; a last die kept as it lands lies on the felt 0.7 s first.
+  Also 20 Nov: an ability with its own moment (`ABILITY_MOMENTS`) no longer also gets the old text pop-up, which flashed
+  up behind the moment as it left (Frak's and the rest); the aftermath ribbon stays only for the moves that send `after`.
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body
   tone, through a compressor); so is the Thonic cork pop (`playCorkPop`). Other SFX/music are
   the classic mp3s from `public/`. Music (+ ambience) and game sounds switch separately (two

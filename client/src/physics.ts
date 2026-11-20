@@ -130,7 +130,11 @@ const LEAN_PULL = 6.5;
 // Measured 18 Nov over 30 six-dice throws each: every short die was in the back row, run into by the front one; starting
 // it 1.5 higher (it arcs over) and the front row a little faster (out of its way) halves the short dice; a deader rail,
 // a harder back row or a harder throw overall didn't help as much. The rest is the choice of throw below.
-export const throwFeel = { speedMin: 10, speedMax: 13, wallRestitution: 0.3, wallFriction: 0.3, rearBoost: 0, rearLift: 1.5, frontBoost: 3 };
+export const throwFeel = { speedMin: 10, speedMax: 13, wallRestitution: 0.3, wallFriction: 0.3, rearBoost: 0, rearLift: 1.5, frontBoost: 3, nudgeUp: [1.5, 2.2], nudgeSide: 1.2, nudgeSpin: 4 };
+// (The nudge, 20 Nov, the user's "can take a little while to settle ... it can look like the face is being changed": a die
+// that came to rest cocked used to hop 3-4.5 high with a hard spin, and land on another face; now it slides off what it
+// leans on with a small hop. And the throw chosen below is one that needed no nudge at all whenever one of the tries did:
+// measured over 40 six-dice throws, 21 needed a nudge before, 5 after, and a throw ended about 0.4 s sooner on average.)
 
 function buildWorld(lean = 0) {
     const world = new CANNON.World({ gravity: new CANNON.Vec3(lean * LEAN_PULL, -24, 0) });
@@ -170,7 +174,7 @@ function buildWorld(lean = 0) {
 }
 
 // direction: 1 throws left to right across the tray's long side, -1 right to left.
-function simulateOnce(count: number, direction: 1 | -1, lean = 0) {
+function simulateOnce(count: number, direction: 1 | -1, lean = 0, giveUpIfCocked = false) {
     const { world, diceMaterial, floor, walls } = buildWorld(lean);
     const bodies: CANNON.Body[] = [];
 
@@ -237,12 +241,20 @@ function simulateOnce(count: number, direction: 1 | -1, lean = 0) {
         if (step > 30 && stillSteps * STEP >= 0.25) {
             const cocked = bodies.filter(b => !isFlat(b));
             if (cocked.length === 0 || nudges >= 3) break;
+            // (a better throw is already in hand: this one would need a nudge, so stop here)
+            if (giveUpIfCocked) { nudges++; break; }
             nudges++;
             stillSteps = 0;
             cocked.forEach(b => {
                 b.wakeUp();
-                b.velocity.set(rand(-1.5, 1.5) - b.position.x * 0.3, rand(3, 4.5), rand(-1.5, 1.5) - b.position.z * 0.3);
-                b.angularVelocity.set(rand(-8, 8), rand(-8, 8), rand(-8, 8));
+                const side = throwFeel.nudgeSide, spin = throwFeel.nudgeSpin;
+                // Slid off whatever it leans on (the nearest die, else back toward the middle), with a small hop.
+                const other = nearestDie(b, bodies);
+                let ax = -b.position.x, az = -b.position.z;
+                if (other) { ax = b.position.x - other.position.x; az = b.position.z - other.position.z; }
+                const len = Math.hypot(ax, az) || 1;
+                b.velocity.set(ax / len * side + rand(-0.3, 0.3), rand(throwFeel.nudgeUp[0], throwFeel.nudgeUp[1]), az / len * side + rand(-0.3, 0.3));
+                b.angularVelocity.set(rand(-spin, spin), rand(-spin, spin), rand(-spin, spin));
             });
         }
         world.step(STEP);
@@ -250,11 +262,17 @@ function simulateOnce(count: number, direction: 1 | -1, lean = 0) {
 
     // Across: every die ends past the tray's middle, on the far side from where it was thrown (18 Nov, the user's).
     const across = bodies.every(b => b.position.x * direction > (TRAY.minX + TRAY.maxX) / 2 * direction + 0.2);
-    return { recorded, bodies, impacts, flat: bodies.every(isFlat), across, frames: recorded.length / (count * FLOATS_PER_DIE) };
+    return { recorded, bodies, impacts, nudges, flat: bodies.every(isFlat), across, frames: recorded.length / (count * FLOATS_PER_DIE) };
 }
 
 // For the dev hook: one throw as simulated, before a throw is chosen (to measure the physics).
 export const throwOnce = (count: number, direction: 1 | -1, lean = 0, seed?: number) => { random = seed === undefined ? Math.random : seededRandom(seed); return simulateOnce(count, direction, lean); };
+
+function nearestDie(b: CANNON.Body, bodies: CANNON.Body[]) {
+    let best: CANNON.Body | null = null, d = DIE_HALF * 3;
+    bodies.forEach(o => { if (o !== b && o.position.distanceTo(b.position) < d) { d = o.position.distanceTo(b.position); best = o; } });
+    return best as CANNON.Body | null;
+}
 
 // Flat on the felt: one face pointing straight up and not resting on another die.
 function isFlat(b: CANNON.Body) {
@@ -263,25 +281,30 @@ function isFlat(b: CANNON.Body) {
     return topNormal.y > 0.97 && b.position.y < DIE_HALF + 0.05;
 }
 
+// The throw simulateRoll chose last (for the dev hook's measurements).
+export let lastThrow: ReturnType<typeof simulateOnce> | null = null;
+
 // Simulates a throw of the given dice that ends on `targetValues` (0 = keep whatever lands).
 export function simulateRoll(dieIds: number[], targetValues: number[], seed?: number, lean = 0): RollTrack {
     random = seed === undefined ? Math.random : seededRandom(seed);
     // Prefer a throw that ends flat, with every die across the tray's middle; otherwise keep the
     // best one seen (flat beats cocked, then across beats short, then shorter beats longer). Since 18 Nov (the
     // user's: dice that "barely roll across the dice tray") a throw must be across too: preferring the shortest
-    // had favoured throws whose dice hardly moved.
+    // had favoured throws whose dice hardly moved. Since 20 Nov, among those, one with no nudge (see throwFeel).
     const better = (a: ReturnType<typeof simulateOnce>, b: ReturnType<typeof simulateOnce>) =>
-        a.flat !== b.flat ? a.flat : a.across !== b.across ? a.across : a.frames < b.frames;
+        a.flat !== b.flat ? a.flat : a.across !== b.across ? a.across : a.nudges !== b.nudges ? a.nudges < b.nudges : a.frames < b.frames;
     // (Aboard a listing ship the dice are thrown toward the low side, so they end up there.)
     const toss = random() < 0.5 ? 1 : -1;
     const direction = lean > 0 ? 1 : lean < 0 ? -1 : toss;
     let result = simulateOnce(dieIds.length, direction, lean);
-    // (the first that lands flat and across will do: holding out for a quick one too made a throw cost a second or more)
-    for (let attempt = 0; attempt < 8 && !(result.flat && result.across); attempt++) {
-        const next = simulateOnce(dieIds.length, direction, lean);
+    // (the first that lands flat and across with no nudge will do: holding out for a quick one too made a throw cost a
+    // second or more; once a flat throw is in hand, a try that would need a nudge stops there, which keeps the cost down)
+    for (let attempt = 0; attempt < 8 && !(result.flat && result.across && result.nudges === 0); attempt++) {
+        const next = simulateOnce(dieIds.length, direction, lean, result.flat && result.across);
         if (better(next, result)) result = next;
     }
 
+    lastThrow = result;
     const offsets = result.bodies.map((b, i) => {
         const q = new THREE.Quaternion(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
         const landed = valueFacingUp(q);

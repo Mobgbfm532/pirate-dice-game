@@ -396,7 +396,7 @@ function enqueueMoment(show: () => void, gap = MOMENT_GAP_MS, earliest = () => 0
         momentFreeAt = now + gap;
         momentGoneAt = Math.max(momentGoneAt, now + shown);
         done();
-    }, Math.max(0, momentFreeAt - performance.now(), earliest() - performance.now())));
+    }, Math.max(0, momentFreeAt - performance.now(), earliest() - performance.now(), paceUntil - performance.now())));
 }
 
 // A classic table needs a second player before anyone can roll.
@@ -573,14 +573,27 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
 }
 
 socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; outcome?: TurnOutcome } | null }) => {
-    enqueue(done => {
+    enqueue(done => setTimeout(() => {
         // Sylvester knocked a kept die loose: the server's hand wins over taps still showing.
         if (data.event?.type === 'punched') pendingTaps.clear();
+        const theirs = !!data.turn && data.turn.playerId !== snapshot.myId;
         applyTurn(data.turn);
         playOutcomeSounds(data.event, data.turn);
+        // An opponent's keeps one at a time, the last one seen before the turn moves on.
+        if (theirs && data.event?.type === 'toggle') opponentPace(KEEP_GAP_MS);
+        if (theirs && data.event?.type === 'finalized') opponentPace(HAND_DONE_MS);
         done();
-    });
+    }, Math.max(0, paceUntil - performance.now())));
 });
+
+// Pacing an opponent's hand (20 Nov, the user's: "the final dice of an opponent will not be locked before their turn
+// ends ... it sometimes skips that part or is a lot quicker"): the server's keeps could arrive while their throw was
+// still tumbling, and then all showed at once as it landed, with the end of the turn right behind. Now a throw that
+// lands is looked at before the first keep, keeps come one at a time, and a finished hand stays a moment before
+// anything after it (the next turn, the round's result, the next throw).
+const LANDED_GAP_MS = 700, KEEP_GAP_MS = 450, HAND_DONE_MS = 1100;
+let paceUntil = 0;
+function opponentPace(ms: number) { paceUntil = Math.max(paceUntil, performance.now() + ms); }
 
 socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: string | null; suspense: string; devil: boolean; throwSeed?: number; rerolled?: number[]; ghosts?: Ghost[] }) => {
     enqueue(done => setTimeout(() => {
@@ -641,10 +654,24 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
             if (naturalFirstThrow(turn)) { naturalKey = turn.key; celebrate('logo', turn); }
             else if (data.devil) showDevil(turn);
             update({ rolling: false, ...(data.ghosts ? { ghosts: { dice: data.ghosts, at: performance.now() } } : {}) });
+            // A last die thrown (or a becalmed hand's last throw) is kept as it lands, by the rules. It lies where it landed
+            // a moment first, then goes to its slot (20 Nov, the user's: an opponent's last die was never seen kept).
+            // (Only an opponent's: a die of yours tapped in that moment would be let go by the server.)
+            const autoKept = new Set(turn.playerId === snapshot.myId ? [] : turn.dice.filter(d => thrownIds.has(d.id) && d.status === 'lockedThisTurn' && !d.hidden).map(d => d.id));
+            if (autoKept.size) {
+                applyTurn({ ...turn, finalized: false, outcome: null, canRoll: false, dice: turn.dice.map(d => autoKept.has(d.id) ? { ...d, status: 'active' as const } : d) });
+                setTimeout(() => {
+                    applyTurn(turn);
+                    if (turn.playerId !== snapshot.myId) opponentPace(HAND_DONE_MS);
+                    done();
+                }, LANDED_GAP_MS);
+                return;
+            }
             applyTurn(turn);
+            if (turn.playerId !== snapshot.myId) opponentPace(LANDED_GAP_MS);
             done();
         }, durationMs + 120);
-    }, Math.max(0, momentGoneAt - performance.now())));
+    }, Math.max(0, momentGoneAt - performance.now(), paceUntil - performance.now())));
 });
 
 // Play has come round to you: a banner, a swoosh, and a short buzz on phones.
@@ -840,7 +867,9 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
         if (ABILITY_MOMENTS.has(data.ability)) update({ ability: { ...data, at: performance.now() } });
         // (Never for Áéd's tricks: his own banners say it, 20 Nov, the user's.)
         if (data.after && !data.cancelled && !AED_TRICKS.has(data.ability)) showAftermath(data, flood ? MOMENT_SHOW_MS + FLOOD_WAVE_MS : MOMENT_SHOW_MS);
-        else showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
+        // (20 Nov, the user's: a move with its own moment says it there; the old pop-up of its text flashed up behind it as
+        // it left, like the aftermath ribbon, for Frak and the rest. Only a move with no moment of its own gets the pop-up.)
+        else if (!ABILITY_MOMENTS.has(data.ability)) showToast(`${data.name}: ${data.ability}`, data.text, 'signature', MOMENT_SHOW_MS);
         // His hand comes for the die as the banner leaves (its last 0.15 s are it rising away).
         if (steal && !data.cancelled) {
             const hand = performance.now() + MOMENT_SHOW_MS - 150;
