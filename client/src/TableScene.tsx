@@ -51,9 +51,9 @@ function CameraRig() {
         else cam.clearViewOffset();
         cam.updateProjectionMatrix();
         const aspect = (size.width - reserve) / size.height; // the part the table must fit in
-        // (20 Nov, the user's: computers and tablets look down at the tray as steeply as phones do; phones on their
-        // side keep the lower view, as their short screens have no room for a deeper-looking tray.)
-        const direction = new THREE.Vector3(0, 1, portrait || docked ? 0.22 : 0.5).normalize();
+        // (20 Nov, the user's: every screen sees the tray at the computer's slanted angle; upright phones looked down
+        // more steeply, 0.22, until then.)
+        const direction = new THREE.Vector3(0, 1, 0.5).normalize();
         // On phones and docked screens the controls sit under the table, so the table must end
         // above them (their real height, measured by the HUD); phones on their side have them
         // in the corners. (Ignore implausible measurements, e.g. before the page has laid out.)

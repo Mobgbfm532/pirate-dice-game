@@ -421,8 +421,8 @@ one too, or saves only last until the server restarts, which on the free tier is
     (volume 0.41; `ThreeStrings.mp3` before); the Smite's ribbon reads "You lose 2 hearts."; Cutting Words shows what it took
     off, as Smooth Talker does (`minus` and `extra` on its moment, "−3" and "20 → 17", then a ribbon).
     And the tray: the felt reaches `FELT_TUCK` (0.2) under the rails, as their rounded bottom edges showed a strip of tabletop
-    along the felt's edge; computers and tablets look down at the tray as steeply as phones (the camera's `direction` in
-    TableScene, 0.22 for portrait or docked; phones on their side keep 0.5); the tray is a little smaller there. `previews/tray/`.
+    along the felt's edge; every screen sees the tray at the computer's slanted angle (the user's, 20 Nov: the camera's
+    `direction` in TableScene is 0.5 everywhere; upright phones looked down more steeply, 0.22, until then). `previews/tray/slanted/`.
   - late that evening (the user's, `docs/economy-brainstorm.md`, `balance/experiments/economy.js`): the arrival at the Portal
     became a walk through the city; a run earns about 415 gold, so every price now follows the place (x1, x1.5, x2:
     `placePrice`), keepsakes are dearer (two affordable by the end of the Ghoul and Gourd), and two new keepsakes, the
