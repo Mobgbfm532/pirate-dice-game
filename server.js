@@ -1646,7 +1646,10 @@ function performEndTurn(roomCode) {
     let natural = currentId !== BOT_ID || score === 24 || aceFired;
     // Brodor's Sunglasses: your finished 23 heals too.
     let shades = currentId !== BOT_ID && room.players[currentId].score === 23 && !busted && hasKeepsake(room, BRODORS_SUNGLASSES.id);
-    if (natural && (room.players[currentId].score === 24 || shades) && room.players[currentId].lives < maxLives) {
+    // A cursed round's perfect hand, the Perfect ...4? (the 2, the 4 and four 1s), heals too (20 Nov, the user's), either side.
+    let roundCursed = room.mode === 'tavern-crawl' && !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
+    let perfect4 = roundCursed && !busted && room.players[currentId].score === 4;
+    if ((perfect4 || (natural && (room.players[currentId].score === 24 || shades))) && room.players[currentId].lives < maxLives) {
         room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + 1);
         if (shades) emitKeepsakeActivated(roomCode, room, BRODORS_SUNGLASSES.id, 'A 23 restores a heart.');
         io.to(roomCode).emit('displayMessage', { text: '+1 Life Restored!', color: "#aed581" });

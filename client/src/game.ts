@@ -559,7 +559,8 @@ function playOutcomeSounds(event: { type: string; outcome?: TurnOutcome } | null
     const cursed = snapshot.state?.tavernRun?.roundEffect?.kind === 'curse';
     const perfect = perfectHand(event.outcome, cursed);
     // A hand that can win a heart back (a 24; a 23 with Brodor's Sunglasses): the heart's sound, when it comes.
-    if (turn && !busted && score >= 23) healingHand = { playerId: turn.playerId, at: performance.now() };
+    // (And a cursed round's Perfect ...4?, since 20 Nov: it heals too, with the same sounds.)
+    if (turn && !busted && (score >= 23 || perfect === 'perfect4')) healingHand = { playerId: turn.playerId, at: performance.now() };
     // The user's Whoa (4 Nov), on top of the rest: a Perfect ...4?, and any slow-motion last throw as it lands.
     if (WHOA_ON && (slowThrow || perfect === 'perfect4')) playSound('whoa');
     slowThrow = false;

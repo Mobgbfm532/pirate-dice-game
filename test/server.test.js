@@ -3688,3 +3688,13 @@ test("your dice (20 Nov): a beaten opponent's set, and only once they're beaten"
     server.settleDice('X', p);
     assert.equal(p.dice, 'martha');
 });
+
+test("a cursed round's Perfect ...4? restores a heart, like a 24 (20 Nov)", async () => {
+    const { hero, room } = await tavernTable('Perfect4');
+    room.tavernRun.roundEffect = { kind: 'curse', by: 'opponent', ability: 'cursed', as: null };
+    room.players[hero.id].lives = 2;
+    const ended = nextState(hero, s => s.currentTurnId !== hero.id);
+    await playHand(hero, room, [2, 4, 1, 1, 1, 1]);
+    await ended;
+    assert.equal(room.players[hero.id].lives, 3);
+});
