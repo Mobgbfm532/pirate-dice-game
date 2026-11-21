@@ -1475,9 +1475,12 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
         <div className={`modal-backdrop${summary.won ? ' on-dock' : ''}`} style={dock}>
             <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
                 <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
-                <p className="subtitle">
-                    {summary.won ? 'Champion of the Tavern Crawl, home to Waterdeep at dawn.' : summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
-                </p>
+                {/* (No subtitle on the victory screen since 21 Nov, the user's; a lost run keeps its line.) */}
+                {!summary.won && (
+                    <p className="subtitle">
+                        {summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
+                    </p>
+                )}
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
                         const state = i < summary.defeated ? 'beaten' : name === summary.fellTo ? 'fell' : 'unmet';

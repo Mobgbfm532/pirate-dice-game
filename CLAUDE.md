@@ -425,7 +425,7 @@ one too, or saves only last until the server restarts, which on the free tier is
     Later (the user's "seamless", "a bit janky"): the mark burns in by opacity only (heat glowing up under it, a white-hot
     flash cooling off it, the heat breathing: `.fn-heat`, `.fn-flash`; an animated brightness filter repainted it every frame);
     the finale fades off over the victory screen (`leaving`, `FINALE_LEAVE_MS`), which a won crawl shows on the quay painting
-    (`.modal-backdrop.on-dock`) with "Champion of the Tavern Crawl, home to Waterdeep at dawn." (it said the final aboard the ship).
+    (`.modal-backdrop.on-dock`) and no subtitle (it said the final aboard the ship; then briefly "Champion of the Tavern Crawl...", taken out, the user's).
   - 20 Nov (the user's): **your dice**: a Tavern Crawl opponent's painted set for your own dice, once you've beaten them in
     any run ("Your dice" in the start screen's Play with friends panel under the tokens, invites too, since 21 Nov; it was under the Tavern Crawl and in a phone's Options; the Ivory die's pips centred and names wrapping only between words, 21 Nov; `DicePicker` in Hud, `localStorage.tavernDice`, sent as
     `dice` on `joinTavern`; the server keeps wins as "beat:<id>" beside who you've met, counts everyone before the furthest
