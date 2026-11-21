@@ -221,7 +221,7 @@ export interface Snapshot {
     yourTurnAt: number; // when play last came round to you (for the banner)
     introAt: number; // when the current Tavern Crawl opponent was introduced
     introShowing: boolean; // their entrance card is up, until it's tapped away
-    finale: { at: number; summary: TavernSummary } | null; // the homecoming after Jaguar, before the victory screen (21 Nov)
+    finale: { at: number; summary: TavernSummary; leaving?: boolean } | null; // the homecoming after Jaguar, before the victory screen (21 Nov)
     sailAt: number; // the Salty Swallow: Skipper Bren on the docks, then it sets sail, before Klarg's entrance card (0: none)
     sailStage: 'dock' | 'sail' | 'portal'; // which of the two is up (or the Yawning Portal's arrival, 17 Nov)
     ability: AbilityMoment | null;
@@ -888,6 +888,7 @@ socket.on('signatureMove', (data: { name: string; ability: string; text: string;
     if (flood) enqueueMoment(showFloodWave, FLOOD_WAVE_MS, () => momentGoneAt, FLOOD_WAVE_MS);
 });
 
+const FINALE_LEAVE_MS = 1100; // the finale fading off the victory screen (its CSS, .finale.leaving)
 const FLOOD_WAVE_MS = 2200; // (the server's too)
 
 // The aftermath ribbon (18 Nov, the user's: "a banner that tells the player what happens"), `delay` ms from now, as the
@@ -1257,9 +1258,11 @@ export const actions = {
     // The homecoming is over (or skipped): the victory screen, with the user's Victory fanfare (since 18 Nov).
     endFinale() {
         const f = snapshot.finale;
-        if (!f) return;
+        if (!f || f.leaving) return;
         playSound('crawlVictory');
-        update({ finale: null, modal: { type: 'tavernOver', summary: f.summary } });
+        // (21 Nov, the user's "seamless": the victory screen, on the same quay, comes up under the finale as it fades away.)
+        update({ finale: { ...f, leaving: true }, modal: { type: 'tavernOver', summary: f.summary } });
+        setTimeout(() => { if (snapshot.finale?.at === f.at) update({ finale: null }); }, FINALE_LEAVE_MS);
     },
     // Skipper Bren's welcome is done: "Climb aboard", and the ship sets sail.
     boardShip() { if (snapshot.sailAt) update({ sailAt: performance.now(), sailStage: 'sail' }); },

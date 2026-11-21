@@ -3118,7 +3118,7 @@ function evaluateTavernRound(roomCode) {
             room.tavernRun.runComplete = true;
             io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
             emitState(roomCode);
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final aboard the Salty Swallow! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
+            io.to(roomCode).emit('gameOver', { message: `${human.name} is champion of the Tavern Crawl, home to Waterdeep at dawn! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
         }
 

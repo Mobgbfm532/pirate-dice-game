@@ -422,6 +422,10 @@ one too, or saves only last until the server restarts, which on the free tier is
     `gameOver` with a won run starts it once the last moments have gone). Stills: `.git/finale-shots.mjs`, `previews/finale/`.
     Since the same evening the user's three paintings (`art/finale-*.jpg` → `art/finale/`, `ONLY=finale`) and sounds (lapping
     waves and the fire's crackle as scene loops `harbour`, `sigilFire`; `seaGull`); the line "The Salty Swallow returns."
+    Later (the user's "seamless", "a bit janky"): the mark burns in by opacity only (heat glowing up under it, a white-hot
+    flash cooling off it, the heat breathing: `.fn-heat`, `.fn-flash`; an animated brightness filter repainted it every frame);
+    the finale fades off over the victory screen (`leaving`, `FINALE_LEAVE_MS`), which a won crawl shows on the quay painting
+    (`.modal-backdrop.on-dock`) with "Champion of the Tavern Crawl, home to Waterdeep at dawn." (it said the final aboard the ship).
   - 20 Nov (the user's): **your dice**: a Tavern Crawl opponent's painted set for your own dice, once you've beaten them in
     any run ("Your dice" in the start screen's Play with friends panel under the tokens, invites too, since 21 Nov; it was under the Tavern Crawl and in a phone's Options; the Ivory die's pips centred and names wrapping only between words, 21 Nov; `DicePicker` in Hud, `localStorage.tavernDice`, sent as
     `dice` on `joinTavern`; the server keeps wins as "beat:<id>" beside who you've met, counts everyone before the furthest

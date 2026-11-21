@@ -1469,12 +1469,14 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
     // Your best on the board (the board keeps each name's best run).
     const mine = leaderboard.findIndex(e => e.name === summary.name);
     const board = leaderboard.slice(0, 8);
+    // A won crawl ends on the quay the finale left you on (21 Nov, the user's): its painting behind the victory screen.
+    const dock = summary.won ? { backgroundImage: `linear-gradient(rgba(8, 6, 4, 0.35), rgba(8, 6, 4, 0.55)), url("${import.meta.env.BASE_URL}art/finale/quay-dawn.webp")` } : undefined;
     return (
-        <div className="modal-backdrop">
+        <div className={`modal-backdrop${summary.won ? ' on-dock' : ''}`} style={dock}>
             <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
                 <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
                 <p className="subtitle">
-                    {summary.won ? 'You won the final aboard the Salty Swallow.' : summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
+                    {summary.won ? 'Champion of the Tavern Crawl, home to Waterdeep at dawn.' : summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
                 </p>
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
@@ -3056,7 +3058,7 @@ export const FINALE_MS = 18000;
 // The user's three paintings (21 Nov): the harbour at dawn, the empty quay, Kram's sigil burned into planks.
 const HARBOUR = { w: 1167, h: 912 }, QUAY = { w: 1167, h: 912 };
 const SIGIL = { x: 0.5, y: 0.8 }; // where the mark burns, in the quay painting (the clear boards in the middle)
-function Finale({ at }: { at: number }) {
+function Finale({ at, leaving }: { at: number; leaving: boolean }) {
     const [screen, setScreen] = useState({ W: window.innerWidth, H: window.innerHeight });
     useEffect(() => {
         const resume = holdMusic(); // (the boss's tune fades: the harbour is quiet; it comes back under the fanfare)
@@ -3084,7 +3086,7 @@ function Finale({ at }: { at: number }) {
     // The quay, pushing in on the boards where the mark burns.
     const quay = coverBox(W, H, QUAY.w / QUAY.h, SIGIL.x, 0.66);
     return createPortal(
-        <div className="finale" role="dialog" aria-label="Home to Waterdeep" onClick={() => actions.endFinale()}>
+        <div className={`finale${leaving ? ' leaving' : ''}`} role="dialog" aria-label="Home to Waterdeep" onClick={() => actions.endFinale()}>
             <div className="fn-shot fn-harbour">
                 <div className="fn-plate" style={{ ...from, '--pan': `${pan.toFixed(1)}px`, backgroundImage: `url("${art('finale/harbour-dawn.webp')}")` } as React.CSSProperties} />
                 <span className="fn-night" />
@@ -3093,7 +3095,9 @@ function Finale({ at }: { at: number }) {
             <div className="fn-shot fn-quay">
                 <div className="fn-plate" style={{ ...quay, transformOrigin: `${SIGIL.x * 100}% ${SIGIL.y * 100}%`, backgroundImage: `url("${art('finale/quay-dawn.webp')}")` }}>
                     <span className="fn-mark" style={{ left: `${SIGIL.x * 100}%`, top: `${SIGIL.y * 100}%` }}>
+                        <span className="fn-heat" />
                         <img src={art('finale/kram-sigil.webp')} alt="" draggable={false} />
+                        <span className="fn-flash" />
                         {Array.from({ length: 7 }, (_, i) => <i key={i} className="fn-smoke" style={{ left: `${18 + i * 11}%`, animationDelay: `${9.2 + (i * 0.37) % 1.6}s` }} />)}
                     </span>
                 </div>
@@ -3696,7 +3700,7 @@ export function Hud() {
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
-            {snap.finale && <Finale key={snap.finale.at} at={snap.finale.at} />}
+            {snap.finale && <Finale key={snap.finale.at} at={snap.finale.at} leaving={!!snap.finale.leaving} />}
             {snap.sailAt ? (snap.sailStage === 'dock' ? <DockScene /> : snap.sailStage === 'portal' ? <PortalArrival at={snap.sailAt} /> : <SetSail at={snap.sailAt} />) : <EncounterIntro snap={snap} />}
             {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
                 <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>
