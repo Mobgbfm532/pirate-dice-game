@@ -1942,6 +1942,7 @@ test('the Dice Den only appears when the purse covers its smallest bet', async (
 
 test('the Hooded Stranger finds you now and then, instead of the spots, until his keepsakes are yours', async () => {
     const { hero, room } = await betweenFights('Collector', { stage: 'choose', spots: ['shrine', 'thom'] });
+    room.tavernRun.encounterIndex = fightOf('duke'); // (after Danhausen: the thief may strike)
     const walks = n => {
         const seen = { pickpocket: 0, stranger: 0, darren: 0, choose: 0 };
         for (let i = 0; i < n; i++) {
@@ -2136,6 +2137,28 @@ test('keeping your last die waits for End Turn: until then a die kept this throw
     assert.equal(st.players[hero.id].score, 18);
 });
 
+test('no thief until Danhausen is beaten, and Thom always offered after Frak', async () => {
+    const { room } = await tavernTable('EarlyDays');
+    const run = room.tavernRun;
+    const walk = fight => { run.encounterIndex = fight; run.thieves = {}; run.purse = 200; server.startInterlude(room, { defeated: 'Someone', nextEnemy: 'Someone', gold: { win: 0, hearts: 0 } }); return run.interlude; };
+    // After McGrath and after Frak: never a thief.
+    for (const fight of [fightOf('frak'), fightOf('danhausen')]) {
+        for (let i = 0; i < 300; i++) assert.notEqual(walk(fight).stage, 'pickpocket');
+    }
+    // After Danhausen: the thief again, about as often as before.
+    let thieves = 0;
+    for (let i = 0; i < 400; i++) if (walk(fightOf('duke')).stage === 'pickpocket') thieves++;
+    assert.ok(thieves > 60 && thieves < 140, `thief after Danhausen ${thieves} in 400`);
+    // After Frak, Thom's cart is always one of the two spots; after the others, not always.
+    run.keepsakes = [];
+    run.encounterIndex = fightOf('danhausen');
+    for (let i = 0; i < 200; i++) assert.ok(server.pickSpots(room).includes('thom'), 'Thom after Frak');
+    run.encounterIndex = fightOf('duke');
+    let without = 0;
+    for (let i = 0; i < 200; i++) if (!server.pickSpots(room).includes('thom')) without++;
+    assert.ok(without > 0, 'after Danhausen Thom keeps his usual chance');
+});
+
 test('a thief strikes at most twice at any one place', async () => {
     const { room } = await tavernTable('Robbed');
     const run = room.tavernRun;
@@ -2149,7 +2172,7 @@ test('a thief strikes at most twice at any one place', async () => {
         }
         return seen;
     };
-    assert.equal(thievesAt(fightOf('frak')), 2, 'the Ghoul and Gourd');
+    assert.equal(thievesAt(fightOf('duke')), 2, 'the Ghoul and Gourd'); // (no thief before Danhausen is beaten: its own test)
     assert.equal(thievesAt(fightOf('vaelin')), 2, 'the Yawning Portal starts afresh');
 });
 

@@ -952,7 +952,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (since 30 Oct: the Ghoul and Gourd Thom, the Shrine, the hot tub, Johnny Elf Bar; the Yawning
   Portal Thom, the Shrine, the Bard, Johnny; the Salty Swallow Thom, the Shrine, Johnny, and since 6 Nov Jorvash and Yvesil; events:
   Darren at the Ghoul and Gourd, the Cult of Kram at the Yawning Portal, none of its own on the ship):
-  Thom's cart (opens `ThomShop`), the Shrine to the Lady (light a candle: a blessing at random,
+  Thom's cart (opens `ThomShop`; always one of the two after beating Frak, `thomAlwaysAfter`, `thomAlways` in pickSpots, 21 Nov, the user's), the Shrine to the Lady (light a candle: a blessing at random,
   her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
   the Dice Den (out of every place since 28 Oct, the user's call; its code stays: bet 5 or 10, only the bets the purse covers are offered, and below 5 gold the
@@ -960,7 +960,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   higher total doubles the bet, a tie rolls again). **A random event, then the spots** (21 Oct; from 18 Oct the event was the
   whole walk): after the thief, the Stranger or Darren, "Look around the tavern" (`lookAround`)
   brings the two spots, or "Or challenge X right away" skips them. The random events: about 1
-  walk in 4 a **pickpocket** strikes first, at most twice at any one place (`pickpocketMaxPerPlace`, `run.thieves`; 4 Nov, the user's call): roll one die, a 4+ catches the thief
+  walk in 4 a **pickpocket** strikes first, at most twice at any one place (`pickpocketMaxPerPlace`, `run.thieves`; 4 Nov, the user's call), and never before Danhausen is beaten (`pickpocketAfter`, `thiefMayStrike`; 21 Nov, the user's: time to build up gold): roll one die, a 4+ catches the thief
   (`pickpocketCatch`; the text, button and result say "spot them", 10 Nov), else they take half the purse (a quarter until 21 Oct). Else, 20% of the
   time (`strangerChance`), the **Hooded Stranger** finds you (a random event since 19 Oct, no
   longer a spot): one of two keepsakes, the next fight a heart short (on 2), or turn him

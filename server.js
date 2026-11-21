@@ -2767,6 +2767,15 @@ function unownedKeepsakes(room) {
 
 // Two different spots; the Dice Den only if the purse covers its smallest bet. With Thom's
 // Loyalty Card, his cart is always one of them.
+// The opponent just beaten, on a walk between fights (encounterIndex is already the next fight's).
+const justBeaten = room => TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1] || null;
+// Thom's cart is always offered after certain fights (after Frak, the user's call, 21 Nov).
+const thomAlways = room => { let b = justBeaten(room); return !!b && (INTERLUDE.thomAlwaysAfter || []).includes(b.id) && placeOf(room).spots.includes('thom'); };
+// No thief until a given opponent is beaten (Danhausen, the user's call, 21 Nov: time to build up gold first).
+function thiefMayStrike(room) {
+    let from = TAVERN_ENCOUNTERS.findIndex(e => e.id === INTERLUDE.pickpocketAfter);
+    return from < 0 || room.tavernRun.encounterIndex > from;
+}
 function pickSpots(room) {
     let purse = room.tavernRun.purse;
     let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
@@ -2774,7 +2783,7 @@ function pickSpots(room) {
     // gold since 21 Oct).
     let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'yvesil' || purse >= yvesilPrice(room.tavernRun)) && (id !== 'jorvash' || purse >= jorvashPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
-    if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
+    if ((hasKeepsake(room, 'loyaltyCard') || thomAlways(room)) && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
 }
 
@@ -2804,7 +2813,7 @@ function startInterlude(room, won) {
     run.thieves = run.thieves || {};
     if (PLACES[place] && PLACES[place].noEvents) {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
-    } else if (steal > 0 && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+    } else if (steal > 0 && thiefMayStrike(room) && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
         run.thieves[place] = (run.thieves[place] || 0) + 1;
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
     } else if (!pocketsFull(room) && unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
