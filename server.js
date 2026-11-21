@@ -197,7 +197,7 @@ function settleDice(roomCode, p) {
     if (ok) p.dice = p.diceWanted; else delete p.dice;
 }
 
-// The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
+// The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the doorman, then
 // the high-roller table), the Yawning Portal (five more, Brodor the boss), then the final aboard
 // the Salty Swallow (Klarg's crew). `place` is a key of PLACES. A boss drops a keepsake (`drops`)
 // and sends you on to the next place (the invitation). McGrath is the Molar renamed and keeps
@@ -210,7 +210,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🦷',
         lives: BALANCE.opponentLives.molar,
         ability: null,
-        blurb: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24.",
+        blurb: "Sperm McGrath, the Ghoul and Gourd's doorman, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24.",
         powers: []
     },
     {

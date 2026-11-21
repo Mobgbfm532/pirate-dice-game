@@ -2133,7 +2133,8 @@ function Interlude({ state }: { state: GameState }) {
                             <SpotPicture spot={spot} place={run.place} />
                             <strong>{SPOTS[spot].name}</strong>
                             <span className="line">{spot === 'thom' ? `"${thomSays(run, !run.thomMet)}"` : SPOTS[spot].line}</span>
-                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : spot === 'bard' && run.prices?.bard ? ` · ${coins(run.prices.bard)}` : spot === 'yvesil' && run.prices?.yvesil ? ` · ${coins(run.prices.yvesil)}` : spot === 'jorvash' && run.prices?.jorvash ? ` · ${coins(run.prices.jorvash)}` : ''}</span>
+                            {/* (No price here since 21 Nov, the user's: it shows once you go in, on the scene's own button.) */}
+                            <span className="offer">{SPOTS[spot].offer}</span>
                         </button>
                     ))}
                 </div>

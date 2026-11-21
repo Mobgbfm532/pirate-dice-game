@@ -40,7 +40,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 ### The Ghoul and Gourd
 
 **Sperm McGrath** (no ability)
-- Entrance card: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
+- Entrance card: "Sperm McGrath, the Ghoul and Gourd's doorman, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
 - Fight summary, after you beat him (a speech bubble): "Alright then, in you go"
 - Run-over screen, if he beats you: "You couldn't beat Sperm?" (everyone else: "[name] ended your run.")
 

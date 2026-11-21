@@ -167,7 +167,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | his revolver, The Ace of Spades |
 | Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
 | Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
-| Sperm McGrath | Grizzled grey-haired bouncer, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
+| Sperm McGrath | Grizzled grey-haired doorman, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
 | Frak | Portly half-elf sorcerer with pointed ears, balding with sideburns, purple rune-stitched vest over blue sleeves | sly smirk | a smoking cigar |
 | Danhausen | Wiry showman in white face paint with black markings, small curled horns, a high-collared black cape, white gloves | huge manic grin | a small purple gourd |
 | Duke Morrigan | Elegant purple-skinned tiefling with big curled ram's horns, a purple high-collared coat over a yellow shirt | sly smile | none (head and shoulders) |
@@ -325,7 +325,7 @@ behind a distant door, a creaking hanging sign, no music, 25 seconds.*
 **Narrator (optional; on screen as text for now).** A gravelly, older, unhurried storyteller, with a hint
 of a smile. A clip per line, `IntroLine1.mp3` to `IntroLine5.mp3`, the user's words: "Every town has a game." / "In this one, some
 play for gold, others play for glory." / "Few get past the Portal. Fewer still come back from the ship." / "Find a 2.
-Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
+Find a 4. Chase 24." / "But first, you have to get past the doorman..."
 
 ## Status
 
@@ -345,7 +345,7 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | Backdrop: outside the Ghoul and Gourd | Done | `art/ghoul-gourd-outside.jpg` → `ghoul-gourd-outside.webp` (1376×768), Sperm McGrath's fight; `SCENES` in `client/src/Backdrop.tsx` |
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
 | Jaguar Cantona, second painting | Done (27 Oct) | `art/bust-jaguar.jpg` (flat magenta, `cutOutFlat` with `holes` in two hair gaps and `fade: { right: 140 }`: his teal-and-gold cloak runs off the painting's right edge, so it fades out instead of ending in a straight line) → `jaguar.webp` (969×720); the first painting (a checkerboard) kept as `art/bust-jaguar-v1.jpg`. Same pose and head size as the first, so no `seat`; round frames at zoom 2 |
-| Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
+| Sperm McGrath (Ghoul and Gourd doorman) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
 | Frak (half-elf sorcerer) | Done; smoke cut out 23 Oct | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `noSmoke`: the painted cigar smoke is taken out, over the background and over his vest, because the game draws its own moving smoke from the tip; `ONLY=frak npm --prefix client run art` redoes just him) → `frak.webp` |
 | Danhausen | Done | `art/bust-danhausen.jpg` (flat magenta, `cutOutFlat`) → `danhausen.webp`; `seat: 1.6` behind the table (he shows more body) |
 | Duke Morrigan | Done | `art/bust-duke.jpg` (flat magenta, `cutOutFlat` with a low `tolerance` so his purple coat and skin stay, and `holes` for the background inside his curled horn) → `duke.webp` |
