@@ -77,3 +77,9 @@ screen plays." So idea 2 (home at dawn), with no crowd: no Jaguar beat, no faces
 Made from paintings already in the game. Wanted, if the user likes: a painting of the harbour at dawn (the two used are
 night scenes warmed by an overlay, the quay's crescent moon still up), a painting of the burned sigil, gulls and a dawn sound.
 Stills: `previews/finale/` (`.git/finale-shots.mjs <dir> [times] [sizes]`, against `client-dev-b` on :5175).
+
+**21 Nov, later: the user's paintings and sounds are in.** `art/finale-harbour-dawn.jpg`, `finale-quay-dawn.jpg` and
+`finale-kram-sigil.jpg` (`client/public/art/finale/`, `ONLY=finale npm --prefix client run art`; the sigil cut from its magenta,
+its planks faded into the quay's boards by a mask, searing in bright and cooling, its embers breathing). Sounds: `LappingWaves.mp3`
+all through and `FireCrackle.mp3` from the burn (scene loops `harbour`, `sigilFire`, stopped as the scene ends), `SeaGull.mp3`
+twice, Bren's bell. The second line is the user's "The Salty Swallow returns."

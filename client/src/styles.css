@@ -4556,16 +4556,13 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 @keyframes fn-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fn-out { to { opacity: 0; } }
 /* Kram's mark, burned into the boards: laid flat, its outline searing in, then glowing like embers, smoke rising. */
-.fn-mark { position: absolute; width: 13%; aspect-ratio: 100 / 120; transform: translate(-50%, -50%) perspective(380px) rotateX(64deg); }
-.fn-mark svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-/* Charred black in the wood, its edges still glowing: it sears in white-hot, then cools to embers. */
-.fn-k { fill: url(#fn-ember); fill-opacity: 0; stroke: #fff0c0; stroke-width: 3; stroke-linejoin: round; stroke-dasharray: 470; stroke-dashoffset: 470;
-    filter: drop-shadow(0 0 3px rgba(255, 120, 40, 0.95)) drop-shadow(0 0 9px rgba(255, 60, 10, 0.6));
-    animation: fn-sear 1.3s ease-in 8.6s forwards, fn-fill 1.2s ease-out 9.6s forwards, fn-cool 2.2s ease-out 9.9s forwards, fn-ember 1.6s ease-in-out 12.1s infinite alternate; }
-@keyframes fn-cool { to { stroke: #ff6a1c; } }
-@keyframes fn-sear { to { stroke-dashoffset: 0; } }
-@keyframes fn-fill { to { fill-opacity: 1; } }
-@keyframes fn-ember { from { opacity: 1; } to { opacity: 0.72; } }
+.fn-mark { position: absolute; width: 30%; aspect-ratio: 768 / 895; transform: translate(-50%, -50%) perspective(700px) rotateX(58deg); }
+/* The user's painting (21 Nov): its planks fade into the quay's boards; it sears in white-hot, cools, and the embers breathe. */
+.fn-mark img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0;
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 96%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 96%);
+    animation: fn-burn 1.6s ease-out 8.6s forwards, fn-glow 1.7s ease-in-out 10.3s infinite alternate; }
+@keyframes fn-burn { 0% { opacity: 0; transform: scale(0.9); filter: brightness(3) saturate(0.6); } 35% { opacity: 1; } 100% { opacity: 1; transform: none; filter: brightness(1) saturate(1); } }
+@keyframes fn-glow { from { opacity: 1; filter: brightness(1); } to { opacity: 1; filter: brightness(1.18); } }
 .fn-scorch { position: absolute; inset: -18% -26%; border-radius: 50%; opacity: 0;
     background: radial-gradient(ellipse at 50% 50%, rgba(10, 4, 2, 0.88) 30%, rgba(30, 10, 4, 0.55) 55%, transparent 72%);
     animation: fn-in 1.6s ease-out 8.7s forwards; }
@@ -4592,5 +4589,5 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 @keyframes fn-end { from { opacity: 0; transform: scale(1.08); letter-spacing: 6px; } to { opacity: 1; transform: none; letter-spacing: 1px; } }
 @media (prefers-reduced-motion: reduce) {
     .fn-harbour .fn-plate, .fn-quay .fn-plate, .fn-smoke { animation: none; }
-    .fn-k { animation: fn-fill 0.6s 9s forwards; stroke-dashoffset: 0; }
+    .fn-mark img { animation: fn-in 0.6s 9s forwards; }
 }

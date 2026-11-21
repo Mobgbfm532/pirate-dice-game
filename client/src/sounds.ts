@@ -64,6 +64,8 @@ const sfx = {
     tavernVictory: load('TavernCrawlVictory.mp3', 0.8),
     // The fanfare as a whole crawl is won, on the run-over screen (the user's Victory.mp3, 18 Nov; a fight's win keeps tavernVictory).
     crawlVictory: load('Victory.mp3', 0.8),
+    // The finale's gulls over the harbour at dawn (the user's, 21 Nov).
+    seaGull: load('SeaGull.mp3', 0.6),
     multiplayerVictory: load('MultiplayerVictory.mp3', 0.8),
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
     bardTune: load('BardTune.mp3', 0.8),
@@ -120,9 +122,9 @@ const ambience = load('Ambience.mp3', AMBIENCE_VOLUME, true);
 // The hot tub's and the Lady's shrine's own ambience (the user's, 27 Oct), looping while their
 // scene is up. Under the music switch, like the tavern's ambience, which fades down meanwhile.
 // (The Lady's music a little louder than the hot tub's bubbling: the user, 28 Oct.)
-const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.41, kram: 0.8, yvesil: 1, squall: 0.22 }; // (the wind is a loud recording: about the music's level at 0.22) // (Yvesil's theme is a quiet recording)
+const SCENE_VOLUME = { hotTub: 0.6, shrine: 0.85, thom: 0.6, bard: 0.41, kram: 0.8, yvesil: 1, squall: 0.22, harbour: 0.55, sigilFire: 0.6 }; // (the wind is a loud recording: about the music's level at 0.22) // (Yvesil's theme is a quiet recording)
 // (Thom's cart since 28 Oct: the user's loop; the Bard's lute and the Cult of Kram's chant too.)
-const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('BardAmbient.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true), squall: load('Wind.mp3', 0, true) };
+const sceneAmbience = { hotTub: load('HotTubAmbience.mp3', 0, true), shrine: load('LadyIntro.mp3', 0, true), thom: load('ThomAmbience.mp3', 0, true), bard: load('BardAmbient.mp3', 0, true), kram: load('Cult.mp3', 0, true), yvesil: load('YvesilTheme.mp3', 0, true), squall: load('Wind.mp3', 0, true), harbour: load('LappingWaves.mp3', 0, true), sigilFire: load('FireCrackle.mp3', 0, true) }; // (the finale's waves and Kram's burning mark: the user's, 21 Nov)
 // (The Squall's wind and rain, the user's, 10 Nov: loops for the whole round, the music only a little quieter under it.)
 const SCENE_DUCK: Partial<Record<keyof typeof sceneAmbience, number>> = { squall: 0.7 };
 // Jaguar's fight has its own music (the user's, 10 Nov): it takes over from the tavern tune as he sits

@@ -1107,6 +1107,17 @@ if (wanted('starry')) {
 }
 await introFilm();
 await portalDoors();
+// The finale after Jaguar (21 Nov, the user's paintings): the harbour at dawn, the empty quay, and Kram's sigil burned into
+// planks, cut from its magenta (the planks' edges kept as painted; the scene fades them into the quay's boards).
+// ONLY=finale redoes the three.
+if (wanted('finale')) {
+    for (const name of ['finale-harbour-dawn', 'finale-quay-dawn']) {
+        const info = await sharp(path.join(ART, `${name}.jpg`)).webp({ quality: 82 }).toFile(path.join(OUT, `finale/${name.replace('finale-', '')}.webp`));
+        console.log(`finale/${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
+    }
+}
+if (ONLY?.has('finale')) ONLY.add('finale/kram-sigil');
+await cutOutFlat('finale-kram-sigil.jpg', 'finale/kram-sigil', { maxHeight: 900, minPiece: 0.001 });
 if (!ONLY) {
     await surfaces();
     await backdrop();

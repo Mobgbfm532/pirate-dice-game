@@ -3052,51 +3052,47 @@ function PortalArrival({ at }: { at: number }) {
 // 0-6.6 s the harbour, from the lighthouses to the ship, night giving way to dawn; 6.6-13.4 s the empty quay, the sigil
 // burning in at 8.6 s; then the light swells, black, and the question (FINALE_MS in all).
 export const FINALE_MS = 18000;
-const SAILS = { w: 1584, h: 672 }, QUAY = { w: 1167, h: 912 };
-const SIGIL = { x: 0.26, y: 0.9 }; // where the mark burns, in the quay painting (on the boards between the barrels and the bollard)
+// The user's three paintings (21 Nov): the harbour at dawn, the empty quay, Kram's sigil burned into planks.
+const HARBOUR = { w: 1167, h: 912 }, QUAY = { w: 1167, h: 912 };
+const SIGIL = { x: 0.5, y: 0.8 }; // where the mark burns, in the quay painting (the clear boards in the middle)
 function Finale({ at }: { at: number }) {
     const [screen, setScreen] = useState({ W: window.innerWidth, H: window.innerHeight });
     useEffect(() => {
         const resume = holdMusic(); // (the boss's tune fades: the harbour is quiet; it comes back under the fanfare)
         const after = (ms: number, fn: () => void) => setTimeout(fn, Math.max(0, ms - (performance.now() - at)));
+        // The user's sounds (21 Nov): waves lapping all through, gulls, the bell, and the fire crackling as the mark burns in.
+        const stops: (() => void)[] = [startSceneAmbience('harbour')];
         const timers = [
             after(500, () => playShipBell(2, 0.9)),
-            after(1400, () => playSeaSwell('calm')),
+            after(1300, () => playSound('seaGull')),
+            after(7300, () => playSound('seaGull')),
+            after(8500, () => stops.push(startSceneAmbience('sigilFire'))),
             after(FINALE_MS, () => actions.endFinale())
         ];
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.endFinale(); };
         const onResize = () => setScreen({ W: window.innerWidth, H: window.innerHeight });
         window.addEventListener('keydown', onKey);
         window.addEventListener('resize', onResize);
-        return () => { timers.forEach(clearTimeout); resume(); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
+        return () => { timers.forEach(clearTimeout); stops.forEach(stop => stop()); resume(); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
     }, [at]);
     const art = (a: string) => `${import.meta.env.BASE_URL}art/${a}`;
     const { W, H } = screen;
     // The harbour: it starts on the lighthouses and the open sea and pans back to the ship coming in.
-    const from = coverBox(W, H, SAILS.w / SAILS.h, 0.9, 0.55), to = coverBox(W, H, SAILS.w / SAILS.h, 0.42, 0.55);
+    const from = coverBox(W, H, HARBOUR.w / HARBOUR.h, 0.92, 0.55), to = coverBox(W, H, HARBOUR.w / HARBOUR.h, 0.55, 0.55);
     const pan = Number(to.left) - Number(from.left);
     // The quay, pushing in on the boards where the mark burns.
-    const quay = coverBox(W, H, QUAY.w / QUAY.h, SIGIL.x, 0.62);
+    const quay = coverBox(W, H, QUAY.w / QUAY.h, SIGIL.x, 0.66);
     return createPortal(
         <div className="finale" role="dialog" aria-label="Home to Waterdeep" onClick={() => actions.endFinale()}>
             <div className="fn-shot fn-harbour">
-                <div className="fn-plate" style={{ ...from, '--pan': `${pan.toFixed(1)}px`, backgroundImage: `url("${art('salty-swallow-sets-sail.webp')}")` } as React.CSSProperties} />
+                <div className="fn-plate" style={{ ...from, '--pan': `${pan.toFixed(1)}px`, backgroundImage: `url("${art('finale/harbour-dawn.webp')}")` } as React.CSSProperties} />
                 <span className="fn-night" />
                 <span className="fn-dawn" />
             </div>
             <div className="fn-shot fn-quay">
-                <div className="fn-plate" style={{ ...quay, transformOrigin: `${SIGIL.x * 100}% ${SIGIL.y * 100}%`, backgroundImage: `url("${art('salty-swallow-quay.webp')}")` }}>
+                <div className="fn-plate" style={{ ...quay, transformOrigin: `${SIGIL.x * 100}% ${SIGIL.y * 100}%`, backgroundImage: `url("${art('finale/quay-dawn.webp')}")` }}>
                     <span className="fn-mark" style={{ left: `${SIGIL.x * 100}%`, top: `${SIGIL.y * 100}%` }}>
-                        <span className="fn-scorch" />
-                        <svg viewBox="0 0 100 120" aria-hidden="true">
-                            <defs>
-                                <linearGradient id="fn-ember" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0" stopColor="#3a1408" /><stop offset="0.5" stopColor="#1c0904" /><stop offset="1" stopColor="#4a160a" />
-                                </linearGradient>
-                            </defs>
-                            {/* Kram's K, jagged as on his emblem */}
-                            <path className="fn-k" d="M22 8 L44 10 L41 52 L70 9 L90 13 L60 58 L93 110 L70 112 L46 70 L41 74 L43 112 L20 110 L24 62 Z" />
-                        </svg>
+                        <img src={art('finale/kram-sigil.webp')} alt="" draggable={false} />
                         {Array.from({ length: 7 }, (_, i) => <i key={i} className="fn-smoke" style={{ left: `${18 + i * 11}%`, animationDelay: `${9.2 + (i * 0.37) % 1.6}s` }} />)}
                     </span>
                 </div>
@@ -3104,7 +3100,7 @@ function Finale({ at }: { at: number }) {
             </div>
             <span className="fn-light" />
             <p className="fn-line one">Waterdeep, at first light.</p>
-            <p className="fn-line two">The Salty Swallow comes home.</p>
+            <p className="fn-line two">The Salty Swallow returns.</p>
             <p className="fn-line three">No crowd. No cheering. No one waits on the quay…</p>
             <p className="fn-line four">…only the mark of Kram, burned into the harbour.</p>
             <p className="fn-end">To be continued?</p>
