@@ -252,6 +252,38 @@ flat solid **lime green** background: his violet magic and heart sit too close t
   worse face glowing), **Quickened Dice** (dice blurring with speed lines in a violet swirl), **Empowered Dice** (one die
   wreathed in violet fire), **Twinned Dice** (a die and its glowing mirror copy side by side).
 
+### The finale: home to Waterdeep at dawn (prompts 21 Nov; the scene is built from older paintings until these come)
+
+Three paintings. The scene (`Finale` in Hud) pans across the first, pushes in on the second, and burns the third into the
+second's boards, so the quay is painted empty and the sigil apart from it. Keep each main subject near the middle: an
+upright phone shows only the centre strip of a wide painting.
+
+- `art/finale-harbour-dawn.jpg` (wide, about 21:9, 1600×680 or larger; the camera pans from right to left across it):
+  *The pirate ship the Salty Swallow sailing home into a quiet harbour city at the first light of dawn, seen from the water
+  near the harbour mouth: two stone lighthouses on the right, their lamps still faintly burning, the open sea behind them
+  turning gold and rose where the sun is about to rise over the horizon; in the middle the ship gliding in on calm water
+  under shortened sails, a few tired crew at the rail, a lantern still lit at the stern; on the left the city of Waterdeep
+  climbing a hill, towers and tall timber-framed houses, rooftops catching the first pink light while the streets below
+  are still in blue shadow, a few windows lit. The sky deep indigo at the top fading to peach and gold at the horizon, a
+  fading morning star, long reflections on the still water, mist lying low on the harbour, gulls. Peaceful, a little
+  lonely, a homecoming. No text, no lettering. + style line*
+- `art/finale-quay-dawn.jpg` (16:9 or 4:3, 1600×900; the camera pushes in on the boards in the lower middle):
+  *An empty harbour quay at dawn, seen from low on the dock: wide weathered wooden boards filling the lower third of the
+  picture, clear and uncluttered in the middle (nothing standing on them), a few mooring bollards and coiled ropes at the
+  sides; the pirate ship the Salty Swallow tied up alongside, its sails furled; no people anywhere on the quay, no crowd,
+  no welcome, shuttered harbour buildings and stacked crates at the edges; soft pink and gold morning light coming in low
+  from the right, long shadows across the boards, a light mist over the water, a gull or two on a post. Quiet, eerie and
+  still. No text, no lettering. + style line*
+- `art/finale-kram-sigil.jpg` (square, 1024×1024; cut out and laid flat on the quay's boards, where it sears in):
+  *The sigil of the Cult of Kram, a bold jagged rune-like letter K, burned deep into old wooden planks: seen from straight
+  above, the K charred black and cracked, its edges still glowing orange and red like dying embers, a scorched dark ring
+  spreading around it into the wood grain, a few wisps of grey smoke rising, tiny sparks. Only the burned mark and the
+  scorched wood around it, the planks fading out to the edges. On a flat solid magenta background, no checkerboard, no
+  glow or shadow on the background, no text other than the K. + style line*
+
+Sounds, if wanted: gulls and gently lapping water at dawn (a loop of 20-30 s), and a low crackle and hiss as the sigil burns in
+(2-3 s).
+
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
 A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the
