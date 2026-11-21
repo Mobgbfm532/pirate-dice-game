@@ -65,6 +65,17 @@ if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER || START_PURSE !
     if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
     if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
     const after = START_AFTER && server.TAVERN_ENCOUNTERS.findIndex(e => e.id === START_AFTER);
+    // START_AFTER=jaguar (21 Nov): the whole crawl won, for the finale: Jaguar sits down, then a round he loses on his last
+    // heart ends the run the real way (the homecoming, then the victory screen), once the browser is at the table.
+    if (START_AFTER && after === server.TAVERN_ENCOUNTERS.length - 1) {
+        const G = require('../shared/balance').gold;
+        for (let i = 0; i < after; i++) r.tavernRun.purse += G.winFirst + G.winStep * i + 2 * G.perHeartLeft;
+        r.tavernRun.stats.encountersDefeated = after;
+        r.tavernRun.encounterIndex = after;
+        server.resetTavernEncounter(code, false, true);
+        setTimeout(() => COMMANDS['/crawl-won'](r, new URLSearchParams(), code), 4000);
+        return;
+    }
     // A boss: the gold of every fight up to and including theirs, 2 hearts left at each, then the invitation.
     if (START_AFTER && server.TAVERN_ENCOUNTERS[after].drops) {
         const G = require('../shared/balance').gold;
@@ -87,6 +98,18 @@ if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER || START_PURSE !
 };
 
 const COMMANDS = {
+    // The crawl won (21 Nov): Jaguar on his last heart loses this round to a 24, and the run ends as it would
+    // after the real final (the finale, then the victory screen). Any fight: it's taken to be Jaguar's.
+    '/crawl-won': (r, q, code) => {
+        const run = r.tavernRun, me = human(r), bot = r.players.BOT_MOLAR;
+        if (!me || !bot) return;
+        run.encounterIndex = server.TAVERN_ENCOUNTERS.length - 1;
+        run.roundEffect = null; run.interlude = null; run.shop = null;
+        r.turn = null;
+        me.score = 24; me.busted = false;
+        bot.lives = 1; bot.score = null; bot.busted = true;
+        server.evaluateTavernRound(code);
+    },
     '/shop': (r, q) => {
         r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean) };
         r.tavernRun.purse = Number(q.get('purse') || 200);
