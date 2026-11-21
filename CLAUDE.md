@@ -151,7 +151,7 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   purer red and the 6 a green leaning a touch to blue (the fire's light had yellowed it to olive), on every set: `clearPips`
   in textures.ts for the ivory dice, `VIVID` in process-art.mjs for the painted sets (a textured set's painted pips keep their
   shading); the ivory dice's black pips near-black (`DARK`), the ivory a little lighter (`#fcf4e8`), and the lacquer softer
-  (clearcoat 0.5, roughness 0.26: it glared across the faces). Before/after: `previews/pips/`. `test/shots.mjs` takes
+  (clearcoat 0.5, roughness 0.26: it glared across the faces). Before/after: `previews/pips/`. **The green toned down (21 Nov, the user's: "incredibly bright in places"):** the 6's green is a deeper `[18, 128, 68]` (it was `[10, 170, 82]`) in `clearPips` and `VIVID`, and a painted set's 6 is no longer lifted brighter than that green (Klarg's had come out lime); before/after `previews/green/`. `test/shots.mjs` takes
   `faces=1,6,1,6,6,1` to pin a throw. Klarg has a third bust the same day, the user's, with a crisp cloak
   (`art/bust-klarg.jpg`; the soft-shouldered second is `bust-klarg-v2.jpg`), cut at full size (830 px tall) with a `holes`
   seed between the die and his fingers; `fadeEdges` also takes `[start, length]`, and `cutOutFlat` logs its trim.

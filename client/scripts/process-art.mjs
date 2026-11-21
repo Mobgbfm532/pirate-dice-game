@@ -802,7 +802,7 @@ const PIP_MIN_R = { jaguar: 52 };
 const PIP_COLOUR = { jaguar: [58, 30, 10], sylvester: [24, 20, 20] }; // (Sylvester's brown pips near-black on his paler stone, 17 Nov)
 const CLEAN = { detail: 0.35, radius: 40 };
 // The 1's red and the 6's green on every set (14 Nov; textures.ts's clearPips uses the same for the ivory dice).
-const VIVID = { red: [222, 14, 26], green: [10, 170, 82], amount: 0.85 }; // how much of the painting's broad colour stays (0: one even colour), and how broad
+const VIVID = { red: [222, 14, 26], green: [18, 128, 68], amount: 0.85 }; // (the green deeper since 21 Nov, the user's: it was [10, 170, 82], "incredibly bright in places") // how much of the painting's broad colour stays (0: one even colour), and how broad
 const RING_ONE = { duke: [214, 172, 76], hangman: [226, 214, 186], vaelin: [236, 230, 218] }; // (Vaelin's repaint, 17 Nov: his painted white ring blurred into a halo; drawn crisp in his bone white) // the Duke's gold; the Hangman's bone (13 Nov: his dark red 1 sank into the black wood)
 const diceFile = id => `dice-${id === 'molar' ? 'mcgrath' : id}.jpg`;
 async function diceSheets() {
@@ -972,7 +972,7 @@ async function diceSheets() {
                     const lean = n === 0 ? px[0] - Math.max(px[1], px[2]) : px[1] - Math.max(px[0], px[2]);
                     const k = Math.min(1, Math.max(0, (lean - 3) / 22)) * VIVID.amount; // (the Hangman's dark green pips lean only a little)
                     if (k <= 0) continue;
-                    const scale = Math.min(1.3, Math.max(0.75, luma(px) / want)); // (a dark painted pip lifted, so it reads on a dark face)
+                    const scale = Math.min(n === 5 ? 1.0 : 1.3, Math.max(0.75, luma(px) / want)); // (a dark painted pip lifted, so it reads on a dark face; a 6 never lifted above its green since 21 Nov: it came out lime)
                     for (let c = 0; c < 3; c++) face[i + c] = Math.round(px[c] * (1 - k) + Math.min(255, vivid[c] * scale) * k);
                 }
             }
