@@ -1776,7 +1776,9 @@ function scheduleEmptyTableCleanup(roomCode) {
     }, delay(room.mode === 'tavern-crawl' ? CRAWL_TABLE_GRACE_MS : EMPTY_TABLE_GRACE_MS));
 }
 
-const BOT_WATCHES_THROW_MS = 2300; // about how long a throw takes to land on screen, beyond the 0.5 s performRoll allows
+// (21 Nov, the user's: 2.3 s made them "way too slow": the bot now decides a little before a typical throw lands on
+// screen, and the browser shows each keep as soon as the dice have settled, one after another: opponentPace in game.ts.)
+const BOT_WATCHES_THROW_MS = 600; // beyond the 0.5 s performRoll allows and the 1 s the bot thinks
 function runBotRoll(roomCode) {
     let room = rooms[roomCode];
     let key = room.turn.key;

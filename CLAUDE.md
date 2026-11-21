@@ -97,9 +97,10 @@ run incl. purse, shelf, shop), `turnState {turn, event}` (event `toggle`/`finali
   **An opponent's hand, paced (20 Nov, the user's: their last die "will not be locked before their turn ends"):** the server
   let a bot think 1.5 s after a throw that takes ~2.8 s to land on screen, so its keeps and End Turn were waiting as the
   dice landed and all played at once; and a last die thrown is kept by the rules as it lands, so it went straight to its slot
-  with the hand done. Now the bot watches its throw (`BOT_WATCHES_THROW_MS` 2300 in server.js), and the browser paces an
-  opponent's hand (`opponentPace`, `paceUntil` in game.ts): 0.7 s after a throw lands before the first keep, 0.45 s between
-  keeps, 1.1 s after a finished hand before anything else; a last die kept as it lands lies on the felt 0.7 s first.
+  with the hand done. Now the browser paces an opponent's hand (`opponentPace`, `paceUntil` in game.ts), and the bot decides
+  a little before a typical throw lands (`BOT_WATCHES_THROW_MS` 600 in server.js). Since 21 Nov (the user's: "way too slow";
+  it was 2.3 s, then 0.7 s, 0.45 s, 1.1 s) the first keep shows 0.15 s after the dice settle, 0.22 s between keeps, 0.8 s
+  after a finished hand; a last die kept as it lands lies on the felt 0.4 s first (`LAST_DIE_MS`).
   Also 20 Nov: an ability with its own moment (`ABILITY_MOMENTS`) no longer also gets the old text pop-up, which flashed
   up behind the moment as it left (Frak's and the rest); the aftermath ribbon stays only for the moves that send `after`.
 - `sounds.ts`: dice sound is **synthesized from physics impacts** (noise burst + falling body

@@ -591,7 +591,9 @@ socket.on('turnState', (data: { turn: TurnView | null; event: { type: string; ou
 // still tumbling, and then all showed at once as it landed, with the end of the turn right behind. Now a throw that
 // lands is looked at before the first keep, keeps come one at a time, and a finished hand stays a moment before
 // anything after it (the next turn, the round's result, the next throw).
-const LANDED_GAP_MS = 700, KEEP_GAP_MS = 450, HAND_DONE_MS = 1100;
+// (21 Nov, the user's: near instant once the dice settle; it was 0.7 s, 0.45 s and 1.1 s)
+const LANDED_GAP_MS = 150, KEEP_GAP_MS = 220, HAND_DONE_MS = 800;
+const LAST_DIE_MS = 400; // a last die kept as it lands: long enough to see it on the felt before it goes to its slot
 let paceUntil = 0;
 function opponentPace(ms: number) { paceUntil = Math.max(paceUntil, performance.now() + ms); }
 
@@ -664,7 +666,7 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
                     applyTurn(turn);
                     if (turn.playerId !== snapshot.myId) opponentPace(HAND_DONE_MS);
                     done();
-                }, LANDED_GAP_MS);
+                }, LAST_DIE_MS);
                 return;
             }
             applyTurn(turn);
