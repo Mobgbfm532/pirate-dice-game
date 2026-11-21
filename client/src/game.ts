@@ -221,6 +221,7 @@ export interface Snapshot {
     yourTurnAt: number; // when play last came round to you (for the banner)
     introAt: number; // when the current Tavern Crawl opponent was introduced
     introShowing: boolean; // their entrance card is up, until it's tapped away
+    finale: { at: number; summary: TavernSummary } | null; // the homecoming after Jaguar, before the victory screen (21 Nov)
     sailAt: number; // the Salty Swallow: Skipper Bren on the docks, then it sets sail, before Klarg's entrance card (0: none)
     sailStage: 'dock' | 'sail' | 'portal'; // which of the two is up (or the Yawning Portal's arrival, 17 Nov)
     ability: AbilityMoment | null;
@@ -306,6 +307,7 @@ let snapshot: Snapshot = {
     yourTurnAt: 0,
     introAt: 0,
     introShowing: false,
+    finale: null,
     sailAt: 0,
     sailStage: 'dock',
     ability: null,
@@ -1152,8 +1154,13 @@ socket.on('offerKeepsakes', (data: Omit<Extract<Modal, { type: 'keepsakes' }>, '
 });
 
 socket.on('gameOver', (data: { message: string; tavern?: TavernSummary; winnerId?: string | null }) => {
-    if (data.tavern) {
-        playSound(data.tavern.won ? 'crawlVictory' : 'aww'); // (the user's Victory fanfare since 18 Nov; Tavern Crawl Victory until then)
+    if (data.tavern && data.tavern.won) {
+        // The crawl won (21 Nov, the user's): the Salty Swallow comes home at dawn first (Finale in Hud), once the last
+        // round's moments have gone; then the victory screen and its fanfare (actions.endFinale).
+        const summary = data.tavern;
+        enqueueMoment(() => update({ finale: { at: performance.now(), summary } }), 0, () => momentGoneAt, 0);
+    } else if (data.tavern) {
+        playSound('aww');
         update({ modal: { type: 'tavernOver', summary: data.tavern } });
     } else {
         // (After the last round's result card has been read.)
@@ -1247,6 +1254,13 @@ export const actions = {
     },
     // The Salty Swallow's sailing scene is over (or skipped): Klarg's entrance card is under it.
     endSail() { if (snapshot.sailAt) update({ sailAt: 0 }); },
+    // The homecoming is over (or skipped): the victory screen, with the user's Victory fanfare (since 18 Nov).
+    endFinale() {
+        const f = snapshot.finale;
+        if (!f) return;
+        playSound('crawlVictory');
+        update({ finale: null, modal: { type: 'tavernOver', summary: f.summary } });
+    },
     // Skipper Bren's welcome is done: "Climb aboard", and the ship sets sail.
     boardShip() { if (snapshot.sailAt) update({ sailAt: performance.now(), sailStage: 'sail' }); },
     // The opponent's entrance card is tapped away: on with the fight.
@@ -1573,6 +1587,8 @@ export const preview = {
     aftermath(ability: string, after: string, thonic?: string, delay = 0) { showAftermath({ ability, after, thonic }, delay); },
     intro() { update({ introAt: performance.now(), introShowing: true }); },
     floodWave() { showFloodWave(); },
+    // The homecoming after Jaguar, then the victory screen (with a made-up champion's summary).
+    finale() { update({ finale: { at: performance.now(), summary: { won: true, name: 'Tester', defeated: 15, encounters: [], fellTo: null, points: 5000, gold: 120, breakdown: { fights: 0, hearts: 0, perfect: 0, reached: 0, champion: 2000, gold: 0, purse: 120, events: 0, spent: 0 }, stats: { encountersDefeated: 15, livesLost: 0, keepsakesActivated: 0, perfect24s: 0 }, keepsakes: [] } } }); },
     // The Salty Swallow sets sail (its scene alone; hold: freeze it that many ms in, for stills).
     sail(stage: 'dock' | 'sail' | 'portal' = 'sail') { update({ sailAt: performance.now(), sailStage: stage }); },
     // Aboard: a change of sea's moment, e.g. sea('starboard', 'calm'); hold keeps it up that much longer.

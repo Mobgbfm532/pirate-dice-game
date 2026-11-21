@@ -57,3 +57,23 @@ Then the run-over screen opens on the user's Victory fanfare. Ideas 4 and 6 coul
 - Who or what are the Can Garda to show: one hooded figure, a council, only a sigil?
 - Does Jaguar give you something (a keepsake for the next crawl)?
 - Victory.mp3 on the victory screen only, or starting on the homecoming and running into it?
+
+## Built (21 Nov, the user's pick)
+
+The user, 21 Nov: "the swallow coming back to waterdeep, nobody waiting to receive them except the cult of kram symbol
+burned into the harbour as the light of a new day starts dawn. The open question is, to be continued? And then the victory
+screen plays." So idea 2 (home at dawn), with no crowd: no Jaguar beat, no faces on the quay, no Can Garda tease yet.
+
+`Finale` in Hud (`FINALE_MS` 18 s; `snapshot.finale`, `actions.endFinale`; dev `preview.finale()`); a tap or Esc skips:
+- 0-6.6 s: the harbour painting (`salty-swallow-sets-sail.webp`) pans from the lighthouses back to the ship as night gives
+  way to dawn (a warm glow on the horizon); Bren's bell twice and a calm swell. "Waterdeep, at first light." "The Salty
+  Swallow comes home." The boss's tune fades out (`holdMusic`).
+- 6-13.6 s: the quay painting (`salty-swallow-quay.webp`), empty, pushing in on the boards. "No crowd. No cheering. No one
+  waits on the quay…" Kram's K sears in white-hot from 8.6 s, then cools to charred black with ember edges, smoke rising.
+  "…only the mark of Kram, burned into the harbour."
+- 13-14.6 s: the light of the new day swells, then black; "To be continued?" in gold.
+- Then the victory screen with the user's Victory fanfare.
+
+Made from paintings already in the game. Wanted, if the user likes: a painting of the harbour at dawn (the two used are
+night scenes warmed by an overlay, the quay's crescent moon still up), a painting of the burned sigil, gulls and a dawn sound.
+Stills: `previews/finale/` (`.git/finale-shots.mjs <dir> [times] [sizes]`, against `client-dev-b` on :5175).

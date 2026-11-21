@@ -416,6 +416,10 @@ one too, or saves only last until the server restarts, which on the free tier is
     Later: Rokr renamed **Røkr** on screen (the id stays `rokr`; PORTRAITS has both keys, Rokr for the classic avatar);
     Inkfire Blast's "6s"; the user's `Victory.mp3` as a won crawl's fanfare (`crawlVictory`); a finale after Jaguar
     brainstormed (`docs/finale-brainstorm.md`), and the Can Garda, a last set of opponents planned for later.
+    **The finale** (21 Nov, the user's): after Jaguar, before the victory screen, the Salty Swallow comes home to Waterdeep at
+    dawn and no one waits on the quay, only Kram's mark burned into the boards; "To be continued?", then the victory screen
+    and its fanfare (`Finale` in Hud, `FINALE_MS` 18 s, `snapshot.finale`, `actions.endFinale`, dev `preview.finale()`;
+    `gameOver` with a won run starts it once the last moments have gone). Stills: `.git/finale-shots.mjs`, `previews/finale/`.
   - 20 Nov (the user's): **your dice**: a Tavern Crawl opponent's painted set for your own dice, once you've beaten them in
     any run ("Your dice" in the start screen's Play with friends panel under the tokens, invites too, since 21 Nov; it was under the Tavern Crawl and in a phone's Options; the Ivory die's pips centred and names wrapping only between words, 21 Nov; `DicePicker` in Hud, `localStorage.tavernDice`, sent as
     `dice` on `joinTavern`; the server keeps wins as "beat:<id>" beside who you've met, counts everyone before the furthest

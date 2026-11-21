@@ -3046,6 +3046,74 @@ function PortalArrival({ at }: { at: number }) {
     );
 }
 
+// The homecoming after Jaguar (21 Nov, the user's): the Salty Swallow sails back into Waterdeep as day breaks. Nobody is
+// on the quay to meet her, only the mark of Kram burned into the boards. "To be continued?", then the victory screen and
+// its fanfare (actions.endFinale). Built from the harbour paintings already in the game; a tap or Esc skips it.
+// 0-6.6 s the harbour, from the lighthouses to the ship, night giving way to dawn; 6.6-13.4 s the empty quay, the sigil
+// burning in at 8.6 s; then the light swells, black, and the question (FINALE_MS in all).
+export const FINALE_MS = 18000;
+const SAILS = { w: 1584, h: 672 }, QUAY = { w: 1167, h: 912 };
+const SIGIL = { x: 0.26, y: 0.9 }; // where the mark burns, in the quay painting (on the boards between the barrels and the bollard)
+function Finale({ at }: { at: number }) {
+    const [screen, setScreen] = useState({ W: window.innerWidth, H: window.innerHeight });
+    useEffect(() => {
+        const resume = holdMusic(); // (the boss's tune fades: the harbour is quiet; it comes back under the fanfare)
+        const after = (ms: number, fn: () => void) => setTimeout(fn, Math.max(0, ms - (performance.now() - at)));
+        const timers = [
+            after(500, () => playShipBell(2, 0.9)),
+            after(1400, () => playSeaSwell('calm')),
+            after(FINALE_MS, () => actions.endFinale())
+        ];
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.endFinale(); };
+        const onResize = () => setScreen({ W: window.innerWidth, H: window.innerHeight });
+        window.addEventListener('keydown', onKey);
+        window.addEventListener('resize', onResize);
+        return () => { timers.forEach(clearTimeout); resume(); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
+    }, [at]);
+    const art = (a: string) => `${import.meta.env.BASE_URL}art/${a}`;
+    const { W, H } = screen;
+    // The harbour: it starts on the lighthouses and the open sea and pans back to the ship coming in.
+    const from = coverBox(W, H, SAILS.w / SAILS.h, 0.9, 0.55), to = coverBox(W, H, SAILS.w / SAILS.h, 0.42, 0.55);
+    const pan = Number(to.left) - Number(from.left);
+    // The quay, pushing in on the boards where the mark burns.
+    const quay = coverBox(W, H, QUAY.w / QUAY.h, SIGIL.x, 0.62);
+    return createPortal(
+        <div className="finale" role="dialog" aria-label="Home to Waterdeep" onClick={() => actions.endFinale()}>
+            <div className="fn-shot fn-harbour">
+                <div className="fn-plate" style={{ ...from, '--pan': `${pan.toFixed(1)}px`, backgroundImage: `url("${art('salty-swallow-sets-sail.webp')}")` } as React.CSSProperties} />
+                <span className="fn-night" />
+                <span className="fn-dawn" />
+            </div>
+            <div className="fn-shot fn-quay">
+                <div className="fn-plate" style={{ ...quay, transformOrigin: `${SIGIL.x * 100}% ${SIGIL.y * 100}%`, backgroundImage: `url("${art('salty-swallow-quay.webp')}")` }}>
+                    <span className="fn-mark" style={{ left: `${SIGIL.x * 100}%`, top: `${SIGIL.y * 100}%` }}>
+                        <span className="fn-scorch" />
+                        <svg viewBox="0 0 100 120" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="fn-ember" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stopColor="#3a1408" /><stop offset="0.5" stopColor="#1c0904" /><stop offset="1" stopColor="#4a160a" />
+                                </linearGradient>
+                            </defs>
+                            {/* Kram's K, jagged as on his emblem */}
+                            <path className="fn-k" d="M22 8 L44 10 L41 52 L70 9 L90 13 L60 58 L93 110 L70 112 L46 70 L41 74 L43 112 L20 110 L24 62 Z" />
+                        </svg>
+                        {Array.from({ length: 7 }, (_, i) => <i key={i} className="fn-smoke" style={{ left: `${18 + i * 11}%`, animationDelay: `${9.2 + (i * 0.37) % 1.6}s` }} />)}
+                    </span>
+                </div>
+                <span className="fn-dawn warm" />
+            </div>
+            <span className="fn-light" />
+            <p className="fn-line one">Waterdeep, at first light.</p>
+            <p className="fn-line two">The Salty Swallow comes home.</p>
+            <p className="fn-line three">No crowd. No cheering. No one waits on the quay…</p>
+            <p className="fn-line four">…only the mark of Kram, burned into the harbour.</p>
+            <p className="fn-end">To be continued?</p>
+            <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endFinale(); }}>Skip ›</button>
+        </div>,
+        document.body
+    );
+}
+
 const SAIL_MS = 6400;
 function SetSail({ at }: { at: number }) {
     useEffect(() => {
@@ -3631,6 +3699,7 @@ export function Hud() {
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
+            {snap.finale && <Finale key={snap.finale.at} at={snap.finale.at} />}
             {snap.sailAt ? (snap.sailStage === 'dock' ? <DockScene /> : snap.sailStage === 'portal' ? <PortalArrival at={snap.sailAt} /> : <SetSail at={snap.sailAt} />) : <EncounterIntro snap={snap} />}
             {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
                 <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>

@@ -37,8 +37,9 @@ day they happen, with what's been built marked as it lands.
 - **The voyage:** the dials are first guesses, never simulated. Is All In with a rogue wave two rounds in three
   too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Teach the opponents (and the simulator) that a wave is coming? The Cloak and All In
   are still working names (Smooth Talk became Smooth Talker, 18 Nov).
-- **The finale after Jaguar** (`docs/finale-brainstorm.md`, 18 Nov): which beats, Jaguar's line, the Can Garda's look and
-  line, the art and sounds. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
+- **The finale after Jaguar** (`docs/finale-brainstorm.md`): built 21 Nov the user's way (home to Waterdeep at dawn, Kram's
+  mark burned into the empty quay, "To be continued?"), from the paintings already in the game. Open: a dawn painting of the
+  harbour and of the burned sigil, a dawn sound, if wanted. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
 - **The start screen:** clear enough on a phone? The computer's title on the left: good? (The tavern tune plays from
   the first tap since 18 Nov, the user's.) The Hall of Legends' place and name, and its text on points? The hearts button for a new
