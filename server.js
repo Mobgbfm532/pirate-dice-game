@@ -66,7 +66,7 @@ app.get(['/classic', '/index.html'], (req, res) => {
 });
 
 app.get('/leaderboard', (req, res) => {
-    res.json(tavernLeaderboard);
+    res.json(topBoard());
 });
 
 let rooms = {};
@@ -76,31 +76,41 @@ let rooms = {};
 // database when there is one (db.js; on Render, Neon), else in leaderboard.json (not in git). The
 // server keeps it in memory and saves each change without waiting. An older entry with only gold
 // counts that gold as its points.
+// Each name's best run, and since 22 Nov (the user's: "average run points") how many runs they've finished and the
+// points of them all, so the board can show their average. An entry is one run (runs 1, total its points) or a name's
+// saved line (runs, total); entries of the same name add up. Every name is kept in memory; the board sent out is the top 20.
 function normalizeLeaderboard(entries) {
-    let bestByName = new Map();
+    let byName = new Map();
     entries.forEach(entry => {
         let name = String(entry.name || '').trim().substring(0, 20);
         let points = Math.max(0, parseInt(entry.points ?? entry.gold, 10) || 0);
         let gold = Math.max(0, parseInt(entry.gold, 10) || 0);
+        let runs = Math.max(0, parseInt(entry.runs, 10) || 0);
+        let total = Math.max(0, parseInt(entry.total, 10) || 0);
+        if (!runs) { runs = 1; total = points; } // (a run, or a line saved before runs were counted)
         if (!name) return;
-        let existing = bestByName.get(name);
-        if (!existing || points > existing.points) bestByName.set(name, { name, points, gold });
+        let e = byName.get(name);
+        if (!e) { byName.set(name, { name, points, gold, runs, total }); return; }
+        if (points > e.points) { e.points = points; e.gold = gold; }
+        e.runs += runs;
+        e.total += total;
     });
-    return Array.from(bestByName.values()).sort((a, b) => b.points - a.points).slice(0, 20);
+    return Array.from(byName.values()).sort((a, b) => b.points - a.points);
 }
+const topBoard = () => tavernLeaderboard.slice(0, 20).map(e => ({ ...e, average: Math.round(e.total / e.runs) }));
 
 let tavernLeaderboard = [];
 store.loadLeaderboard().then(entries => {
     // (a score submitted while it loaded is kept)
     tavernLeaderboard = normalizeLeaderboard([...entries, ...tavernLeaderboard]);
-    io.emit('leaderboardUpdate', tavernLeaderboard);
+    io.emit('leaderboardUpdate', topBoard());
 }).catch(error => console.warn('Could not load the leaderboard:', error.message));
 
 function submitTavernLeaderboardScore(name, points, gold) {
     tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, points, gold }]);
     store.saveLeaderboard(tavernLeaderboard, { name: String(name).trim().substring(0, 20), points, gold })
         .catch(error => console.warn('Could not save the leaderboard:', error.message));
-    return tavernLeaderboard;
+    return topBoard();
 }
 
 // The league (4 Nov, the user's call): at these multiplayer tables every finished game is counted,
@@ -3176,7 +3186,7 @@ const ROUND_PAUSE_MS = 2000;
 const asText = value => (typeof value === 'string' ? value : '');
 
 io.on('connection', (socket) => {
-    socket.emit('leaderboardUpdate', tavernLeaderboard);
+    socket.emit('leaderboardUpdate', topBoard());
     socket.emit('leagueBoards', leagueBoards());
 
     socket.on('checkRoom', (roomCode) => {
@@ -4021,4 +4031,4 @@ if (require.main === module) {
 
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
 const devHooks = {};
-module.exports = { beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { normalizeLeaderboard, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

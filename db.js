@@ -90,6 +90,8 @@ function postgresStore(url, Pool = require('pg').Pool) {
             gold INTEGER NOT NULL,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+        ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS runs INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS total_points BIGINT NOT NULL DEFAULT 0;
         CREATE TABLE IF NOT EXISTS met (
             player TEXT NOT NULL,
             who TEXT NOT NULL,
@@ -116,16 +118,22 @@ function postgresStore(url, Pool = require('pg').Pool) {
         kind: 'postgres',
         ready,
         async loadLeaderboard() {
-            let { rows } = await query('SELECT name, points, gold FROM leaderboard ORDER BY points DESC LIMIT 20');
-            return rows;
+            // (every name: the server works out the top 20, and each name's runs for its average, 22 Nov)
+            let { rows } = await query('SELECT name, points, gold, runs, total_points FROM leaderboard ORDER BY points DESC');
+            return rows.map(r => ({ name: r.name, points: r.points, gold: r.gold, runs: Number(r.runs) || 0, total: Number(r.total_points) || 0 }));
         },
-        // Each name keeps its best run: a lower score never replaces a higher one.
+        // Each name keeps its best run (a lower score never replaces a higher one), and since 22 Nov every run
+        // is counted with its points, for the average. A line saved before then starts its count from its best.
         async saveLeaderboard(board, entry) {
             if (!entry) return;
             await query(`
-                INSERT INTO leaderboard (name, points, gold) VALUES ($1, $2, $3)
-                ON CONFLICT (name) DO UPDATE SET points = EXCLUDED.points, gold = EXCLUDED.gold, updated_at = now()
-                WHERE leaderboard.points < EXCLUDED.points`, [entry.name, entry.points, entry.gold]);
+                INSERT INTO leaderboard (name, points, gold, runs, total_points) VALUES ($1, $2, $3, 1, $2)
+                ON CONFLICT (name) DO UPDATE SET
+                    runs = CASE WHEN leaderboard.runs = 0 THEN 2 ELSE leaderboard.runs + 1 END,
+                    total_points = CASE WHEN leaderboard.runs = 0 THEN leaderboard.points ELSE leaderboard.total_points END + EXCLUDED.points,
+                    gold = CASE WHEN leaderboard.points < EXCLUDED.points THEN EXCLUDED.gold ELSE leaderboard.gold END,
+                    points = CASE WHEN leaderboard.points < EXCLUDED.points THEN EXCLUDED.points ELSE leaderboard.points END,
+                    updated_at = now()`, [entry.name, entry.points, entry.gold]);
         },
         async loadMet(name) {
             let { rows } = await query('SELECT who FROM met WHERE player = $1', [playerKey(name)]);

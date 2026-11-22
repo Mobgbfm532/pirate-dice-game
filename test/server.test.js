@@ -2137,6 +2137,20 @@ test('keeping your last die waits for End Turn: until then a die kept this throw
     assert.equal(st.players[hero.id].score, 18);
 });
 
+test("the crawl leaderboard keeps each name's best and counts every run, for an average", () => {
+    // A name's saved line (runs and their total), then two more runs; and a line saved before runs were counted.
+    const board = server.normalizeLeaderboard([
+        { name: 'Ann', points: 900, gold: 40, runs: 3, total: 1500 },
+        { name: 'Ann', points: 400, gold: 10 },
+        { name: 'Ann', points: 1200, gold: 55 },
+        { name: 'Bo', points: 700, gold: 5 }
+    ]);
+    assert.deepEqual(board, [
+        { name: 'Ann', points: 1200, gold: 55, runs: 5, total: 3100 },
+        { name: 'Bo', points: 700, gold: 5, runs: 1, total: 700 }
+    ]);
+});
+
 test('no thief until Danhausen is beaten, and Thom always offered after Frak', async () => {
     const { room } = await tavernTable('EarlyDays');
     const run = room.tavernRun;
