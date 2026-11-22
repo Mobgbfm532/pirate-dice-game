@@ -17,9 +17,10 @@ test('the leaderboard keeps each name\'s best run, highest first', async () => {
     await store.saveLeaderboard(null, { name: 'Bo', points: 500, gold: 5 });
     await store.saveLeaderboard(null, { name: 'Ann', points: 200, gold: 90 }); // worse: ignored
     await store.saveLeaderboard(null, { name: 'Bo', points: 650, gold: 7 });  // better: replaces
+    // (and every run counted, for the average: 22 Nov)
     assert.deepEqual(await store.loadLeaderboard(), [
-        { name: 'Bo', points: 650, gold: 7 },
-        { name: 'Ann', points: 300, gold: 20 }
+        { name: 'Bo', points: 650, gold: 7, runs: 2, total: 1150 },
+        { name: 'Ann', points: 300, gold: 20, runs: 2, total: 500 }
     ]);
 });
 

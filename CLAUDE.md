@@ -933,7 +933,10 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   at the end at 1 point a gold piece; since 18 Nov (the user's, `docs/points-brainstorm.md`) 50 for each perfect hand
   (`perPerfect24`: a 24, or a cursed round's Perfect ...4?; `stats.perfect24s`) and 2,000 for winning the crawl
   (`champion`). Leaderboard entries are `{ name, points, gold }` (each
-  name's best; an older entry's gold counts as points). No made-up names: `leaderboard.json` is
+  name's best; an older entry's gold counts as points). Since 22 Nov (the user's: "average run points") every finished crawl
+  also counts: `runs` and `total_points` in the database (`saveLeaderboard`), `runs`/`total` in `normalizeLeaderboard`, which keeps
+  every name in memory and sends the top 20 with each `average` (`topBoard`); the boards show "avg" beside the best from two runs
+  (`AverageOf` in Hud). No made-up names: `leaderboard.json` is
   no longer in git and starts empty. The run-over screen shows the points and their parts.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart

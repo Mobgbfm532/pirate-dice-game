@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
+import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy, type LeaderboardEntry } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, startMusic, holdMusic, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
@@ -1453,6 +1453,13 @@ function useCountUp(target: number, ms = 1200) {
     return value;
 }
 
+// A player's average crawl (22 Nov, the user's: "a stat for average run points"), beside their best: every finished
+// crawl counts. Shown once they have two runs (with one, it's their best).
+function AverageOf({ e }: { e: LeaderboardEntry }) {
+    if (!e.runs || e.runs < 2 || e.average == null) return null;
+    return <span className="avg" title={`Average of ${e.runs} crawls`}>avg {e.average.toLocaleString()}</span>;
+}
+
 // The end of a Tavern Crawl: how far you got, the points, and the leaderboard (by points since
 // 23 Oct: the opponents beaten, the hearts spared, how far a lost run got, and the gold left).
 function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard']; met?: string[] }) {
@@ -1519,6 +1526,7 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
                                 <li key={e.name} className={i === mine ? 'me' : ''}>
                                     <span className="rank">{i + 1}</span>
                                     <span className="who">{e.name}</span>
+                                    <AverageOf e={e} />
                                     <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
                                 </li>
                             ))}
@@ -3425,12 +3433,13 @@ function HallOfLegends({ me, onClose }: { me: string; onClose: () => void }) {
                                     <li key={e.name} className={`${e.name.trim().toLowerCase() === mine ? 'me' : ''}${i < 3 ? ` top top${i + 1}` : ''}`}>
                                         <span className="rank">{i + 1}</span>
                                         <span className="who">{e.name}</span>
-                                        <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
+                                        <AverageOf e={e} />
+                                    <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
                                     </li>
                                 ))}
                             </ol>
                         )}
-                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, 50 for each perfect hand, 2,000 for winning the crawl, a little for how far a lost run got, and the gold you end with.</p>
+                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, 50 for each perfect hand, 2,000 for winning the crawl, a little for how far a lost run got, and the gold you end with. Beside it, “avg”: the average of all their crawls.</p>
                     </div>
                 ) : <LeagueTable rows={league.rows} room={league.room} me={me} />}
             </div>
