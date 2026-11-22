@@ -230,7 +230,11 @@ function playCrawl(url, n) {
             }
             if (r && (r.interlude || r.shop)) setTimeout(between, 5);
         });
+        const trail = []; const note = m => { trail.push(m); if (trail.length > 24) trail.shift(); };
+        const dz = t => t ? t.dice.map(d => d.status[0] + d.value + (d.mustRoll ? '!' : '')).join(',') + ` r${t.rollCount} L${t.locksThisRoll}${t.finalized ? ' F' : ''}${t.complete ? ' C' : ''}${t.canRoll ? ' canRoll' : ''}` : '-';
+        if (process.env.STALLS) { const emit = socket.emit.bind(socket); socket.emit = (ev, ...a) => { if (['rollDice', 'toggleDie', 'endTurn', 'drinkThonic', 'gildDie', 'inspiringSong'].includes(ev)) note(`> ${ev} ${a.length ? JSON.stringify(a[0]) : ''}`); return emit(ev, ...a); }; socket.on('signatureMove', m => note(`! ${m.ability}`)); }
         socket.on('turnState', ({ turn, event }) => {
+            note(`turnState ${event ? event.type : ''} ${turn && turn.playerId === socket.id ? 'me' : 'bot'} ${dz(turn)}`);
             latest = turn;
             if (turn && turn.key !== (latest && latest.key)) drankThisTurn = new Set();
             if (event && event.type === 'toggle') return;
@@ -238,6 +242,7 @@ function playCrawl(url, n) {
         });
         let lastTurnKey = '';
         socket.on('diceRolled', ({ turn, animationMs }) => {
+            note(`diceRolled ${turn.playerId === socket.id ? 'me' : 'bot'} ${dz(turn)}`);
             latest = turn;
             if (turn.key !== lastTurnKey) { lastTurnKey = turn.key; drankThisTurn = new Set(); }
             busy = true;
@@ -254,12 +259,14 @@ function playCrawl(url, n) {
         });
         const watchdog = setInterval(() => {
             // (stuck: no throw for 30 s, or a crawl past 25 minutes, e.g. caught in a loop between fights)
-            if (Date.now() - lastMove > 30000 || Date.now() - began > 1500000) { log.stalled = true; log.stage = run() && run().interlude && run().interlude.stage; finish(null); return; }
+            if (Date.now() - lastMove > 30000 || Date.now() - began > Number(process.env.CRAWL_CAP_MS || 1500000)) { log.stalled = true; log.stage = run() && run().interlude && run().interlude.stage; const t = latest, r = run() || {}; log.trail = trail.slice(); { const room = server.rooms[`TVRN-X${n}`]; const st = room && room.turn; log.server = st && { player: st.playerId === socket.id ? 'me' : st.playerId, key: st.key, dice: st.dice.map(d => d.status[0] + d.value).join(','), rolls: st.rollCount, locks: st.locksThisRoll, finalized: st.finalized, complete: st.complete, freeRoll: st.freeRoll, mustRollId: st.mustRollId, mindDieId: st.mindDieId, busyFor: st.busyUntil - Date.now(), canRoll: require('../shared/rules').canRoll(st), momentsLeft: room.momentsLeft, botPaused: room.botPaused }; } log.where = { enemy: r.enemy && r.enemy.name, place: r.place, sea: r.sea, effect: r.roundEffect && r.roundEffect.kind, phase: r.jaguarPhase, shop: !!r.shop, mine: !!t && t.playerId === socket.id, turn: t && { finalized: t.finalized, complete: t.complete, hasRolled: t.hasRolled, locks: t.locksThisRoll, canRoll: t.canRoll, rolls: t.rollCount, mustKeep: t.mustKeep, maxThrows: t.maxThrows, dice: t.dice.map(d => d.status[0] + d.value + (d.mustRoll ? '!' : '')).join(','), freeRoll: t.freeRoll, key: t.key } }; finish(null); return; }
             const t = latest;
             if (run() && (run().interlude || run().shop)) { handledKey = ''; between(); return; }
             if (!t || t.playerId !== socket.id || busy) return;
             if (t.finalized || t.complete) socket.emit('endTurn');
-            else if (!t.hasRolled || t.locksThisRoll > 0) socket.emit('rollDice');
+            else if (!t.hasRolled || (t.locksThisRoll > 0 && t.canRoll !== false)) socket.emit('rollDice');
+            // (A Squall wants two dice kept from a throw: one more, the best left. 22 Nov: three crawls in 57 were stuck here.)
+            else if (t.locksThisRoll > 0) { const more = t.dice.filter(d => d.status === 'active').sort((x, y) => y.value - x.value)[0]; if (more) socket.emit('toggleDie', more.id); }
             else act(t);
         }, 120);
         socket.on('connect', () => socket.emit('joinTavern', { name: `Expert${n}`, roomCode: `TVRN-X${n}`, avatar: 'Shield of Fuckery', token: `expert-${n}-${Math.random()}`, startingLives: 3 }));
@@ -305,5 +312,7 @@ function playCrawl(url, n) {
     ok.forEach(r => r.spots.forEach(s => { spots[s] = (spots[s] || 0) + 1; }));
     out.push('spots chosen per crawl: ' + Object.entries(spots).sort((a, b) => b[1] - a[1]).map(([id, c]) => `${id} ${(c / ok.length).toFixed(1)}`).join(', '));
     // (Exit only once it's written: on Windows a pipe or file is written later, and exiting first loses it.)
+    // (Where each stuck crawl stopped: STALLS=1 prints them.)
+    if (process.env.STALLS) results.filter(r => r.stalled).forEach(r => out.push('stalled: ' + JSON.stringify({ stage: r.stage, ...r.where }) + ' SERVER ' + JSON.stringify(r.server) + String.fromCharCode(10) + '   ' + (r.trail || []).join(String.fromCharCode(10) + '   ')));
     process.stdout.write(out.join('\n') + '\n', () => process.exit(0));
 })();

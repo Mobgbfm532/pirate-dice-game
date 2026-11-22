@@ -301,3 +301,15 @@ nothing changes, the results are kept for now. (A test of 4 hearts, Brodor on 3 
 Brodor 48 → 53% and Klarg 27 → 35%, on too few fights to trust: `previews/expert/tuned.txt`, gitignored.) Possible
 reasons the expert does worse than the user: it keeps blind under Starry Form and in fog, never drinks Second Thoughts or
 Elf Bars, and shops simply.
+
+## 22 Nov: a play-through after the merge
+
+Whole crawls with the expert, on the real server: 60 from the start, 120 from Klarg (one won, the finale's path whole),
+360 from Sylvester. Nothing in the game was found stuck. Three things the tool itself got wrong, now fixed in
+`expert-crawl.js`: in a Squall it kept one die and pressed Roll (the game rightly wants two); `STALLS=1` prints where each
+stuck crawl stopped, with the last 24 messages and the server's own view of the hand; `CRAWL_CAP_MS` sets how long a crawl
+may run before it counts as stuck (25 minutes otherwise). **At the default speed-up (`GAME_TIME_SCALE` 0.002) a crawl
+against Sylvester sticks about 1 time in 60:** the punched die's re-roll lands and is kept a millisecond after its throw
+is sent, and the two messages can arrive the other way round, so the expert sees a loose die the server has already kept.
+In real play they are half a second apart; at 0.02, 240 crawls from Sylvester had none stuck. Use 0.02 when a stuck
+crawl matters. The expert's numbers are as before (the Portal reached 23% of crawls from the start, 21% on 18 Nov).
