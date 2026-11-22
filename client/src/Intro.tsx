@@ -374,7 +374,7 @@ export function IntroFilm({ onDone }: { onDone: () => void }) {
                         <span className="film-word" style={vars({ '--at': `${THROW_AT[1]}s` })}>Find a 4. </span>
                         <span className="film-word gold" style={vars({ '--at': `${THROW_AT[2]}s` })}>Chase 24.</span>
                     </p></Timed>
-                    <Timed clock={clock} from={WINDOWS.lineDoor[0]} to={WINDOWS.lineDoor[1]}><Line at={[25.1, 26.5]} out={28.3} text="But first, you have to get past the bouncer..." /></Timed>
+                    <Timed clock={clock} from={WINDOWS.lineDoor[0]} to={WINDOWS.lineDoor[1]}><Line at={[25.1, 26.5]} out={28.3} text="But first, you have to get past the doorman..." /></Timed>
 
                     {/* Through the door: its light floods the screen, then black. */}
                     <Timed clock={clock} from={WINDOWS.flood[0]} to={WINDOWS.flood[1]}><i className="film-floodlight" style={vars({ '--at': `${T(28.3)}s` })} /></Timed>

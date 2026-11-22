@@ -11,7 +11,7 @@ module.exports = {
     // the Stranger's price and Pruney Fingers count from these.
     fightHearts: {},
     // The opponents' lives, in the order you meet them (20 Oct, the user's, for now; balancing
-    // later): the Ghoul and Gourd (McGrath the bouncer, who is the Molar renamed and keeps the id
+    // later): the Ghoul and Gourd (McGrath the doorman, who is the Molar renamed and keeps the id
     // 'molar', then the high-roller table), the Yawning Portal (five more, Brodor the boss), then
     // aboard the Salty Swallow (Klarg's four).
     opponentLives: {
@@ -140,6 +140,8 @@ module.exports = {
         pickpocketShare: 0.5,   // of the purse, if they get away (half since 21 Oct, the user's call; it was a quarter)
         pickpocketCatch: 4,     // roll this or higher on one die to catch them
         pickpocketMaxPerPlace: 2, // a thief strikes at most this often at any one place (the user's call, 4 Nov)
+        pickpocketAfter: 'danhausen', // no thief until this opponent is beaten: time to build up gold (the user's call, 21 Nov)
+        thomAlwaysAfter: ['frak'], // Thom's cart is always one of the two spots after beating these (the user's call, 21 Nov)
         shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
         shrinePrice: 10,        // a candle for the Lady (rising, priceRise)
         hotTubPrice: 5,         // a soak (rising, priceRise)

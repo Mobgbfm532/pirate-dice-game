@@ -167,7 +167,7 @@ Use the same **style line** at the end of every prompt so the set stays consiste
 | The Hangman | Lean gunslinger in a wide-brimmed hat and duster | cold squint | his revolver, The Ace of Spades |
 | Jaguar Cantona | Charming rogue with a jaguar-pelt cloak and sunglasses | effortless smile | a goblet of wine |
 | Thom (shopkeeper) | Cheerful travelling potion seller, weathered face, bushy sideburns, patched travelling coat, a leather bandolier of small corked bottles | a salesman's wink and a broad grin | a small bubbling bottle of glowing green tonic |
-| Sperm McGrath | Grizzled grey-haired bouncer, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
+| Sperm McGrath | Grizzled grey-haired doorman, scarred, short grey beard, open-collared embroidered shirt, a coil of rope at his hip | stern scowl | arms folded on a wooden club |
 | Frak | Portly half-elf sorcerer with pointed ears, balding with sideburns, purple rune-stitched vest over blue sleeves | sly smirk | a smoking cigar |
 | Danhausen | Wiry showman in white face paint with black markings, small curled horns, a high-collared black cape, white gloves | huge manic grin | a small purple gourd |
 | Duke Morrigan | Elegant purple-skinned tiefling with big curled ram's horns, a purple high-collared coat over a yellow shirt | sly smile | none (head and shoulders) |
@@ -252,6 +252,38 @@ flat solid **lime green** background: his violet magic and heart sit too close t
   worse face glowing), **Quickened Dice** (dice blurring with speed lines in a violet swirl), **Empowered Dice** (one die
   wreathed in violet fire), **Twinned Dice** (a die and its glowing mirror copy side by side).
 
+### The finale: home to Waterdeep at dawn (prompts 21 Nov; the scene is built from older paintings until these come)
+
+Three paintings. The scene (`Finale` in Hud) pans across the first, pushes in on the second, and burns the third into the
+second's boards, so the quay is painted empty and the sigil apart from it. Keep each main subject near the middle: an
+upright phone shows only the centre strip of a wide painting.
+
+- `art/finale-harbour-dawn.jpg` (wide, about 21:9, 1600×680 or larger; the camera pans from right to left across it):
+  *The pirate ship the Salty Swallow sailing home into a quiet harbour city at the first light of dawn, seen from the water
+  near the harbour mouth: two stone lighthouses on the right, their lamps still faintly burning, the open sea behind them
+  turning gold and rose where the sun is about to rise over the horizon; in the middle the ship gliding in on calm water
+  under shortened sails, a few tired crew at the rail, a lantern still lit at the stern; on the left the city of Waterdeep
+  climbing a hill, towers and tall timber-framed houses, rooftops catching the first pink light while the streets below
+  are still in blue shadow, a few windows lit. The sky deep indigo at the top fading to peach and gold at the horizon, a
+  fading morning star, long reflections on the still water, mist lying low on the harbour, gulls. Peaceful, a little
+  lonely, a homecoming. No text, no lettering. + style line*
+- `art/finale-quay-dawn.jpg` (16:9 or 4:3, 1600×900; the camera pushes in on the boards in the lower middle):
+  *An empty harbour quay at dawn, seen from low on the dock: wide weathered wooden boards filling the lower third of the
+  picture, clear and uncluttered in the middle (nothing standing on them), a few mooring bollards and coiled ropes at the
+  sides; the pirate ship the Salty Swallow tied up alongside, its sails furled; no people anywhere on the quay, no crowd,
+  no welcome, shuttered harbour buildings and stacked crates at the edges; soft pink and gold morning light coming in low
+  from the right, long shadows across the boards, a light mist over the water, a gull or two on a post. Quiet, eerie and
+  still. No text, no lettering. + style line*
+- `art/finale-kram-sigil.jpg` (square, 1024×1024; cut out and laid flat on the quay's boards, where it sears in):
+  *The sigil of the Cult of Kram, a bold jagged rune-like letter K, burned deep into old wooden planks: seen from straight
+  above, the K charred black and cracked, its edges still glowing orange and red like dying embers, a scorched dark ring
+  spreading around it into the wood grain, a few wisps of grey smoke rising, tiny sparks. Only the burned mark and the
+  scorched wood around it, the planks fading out to the edges. On a flat solid magenta background, no checkerboard, no
+  glow or shadow on the background, no text other than the K. + style line*
+
+Sounds, if wanted: gulls and gently lapping water at dawn (a loop of 20-30 s), and a low crackle and hiss as the sigil burns in
+(2-3 s).
+
 ### The intro cinematic (built 5 Nov with the user's paintings and sounds; the prompts stay here for repaints)
 
 A skippable, 25-second painted film before the first crawl. Keep each painting's main subject in the
@@ -293,7 +325,7 @@ behind a distant door, a creaking hanging sign, no music, 25 seconds.*
 **Narrator (optional; on screen as text for now).** A gravelly, older, unhurried storyteller, with a hint
 of a smile. A clip per line, `IntroLine1.mp3` to `IntroLine5.mp3`, the user's words: "Every town has a game." / "In this one, some
 play for gold, others play for glory." / "Few get past the Portal. Fewer still come back from the ship." / "Find a 2.
-Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
+Find a 4. Chase 24." / "But first, you have to get past the doorman..."
 
 ## Status
 
@@ -313,7 +345,7 @@ Find a 4. Chase 24." / "But first, you have to get past the bouncer..."
 | Backdrop: outside the Ghoul and Gourd | Done | `art/ghoul-gourd-outside.jpg` → `ghoul-gourd-outside.webp` (1376×768), Sperm McGrath's fight; `SCENES` in `client/src/Backdrop.tsx` |
 | Opponent busts | Done | Molar, Klarg, Rokr, Hangman, Jaguar: `art/bust-*.jpg` → `*.webp` |
 | Jaguar Cantona, second painting | Done (27 Oct) | `art/bust-jaguar.jpg` (flat magenta, `cutOutFlat` with `holes` in two hair gaps and `fade: { right: 140 }`: his teal-and-gold cloak runs off the painting's right edge, so it fades out instead of ending in a straight line) → `jaguar.webp` (969×720); the first painting (a checkerboard) kept as `art/bust-jaguar-v1.jpg`. Same pose and head size as the first, so no `seat`; round frames at zoom 2 |
-| Sperm McGrath (Ghoul and Gourd bouncer) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
+| Sperm McGrath (Ghoul and Gourd doorman) | Done | `art/bust-mcgrath.jpg` (flat magenta, `cutOutFlat`) → `mcgrath.webp` |
 | Frak (half-elf sorcerer) | Done; smoke cut out 23 Oct | `art/bust-frak.jpg` (flat magenta, `cutOutFlat` with `noSmoke`: the painted cigar smoke is taken out, over the background and over his vest, because the game draws its own moving smoke from the tip; `ONLY=frak npm --prefix client run art` redoes just him) → `frak.webp` |
 | Danhausen | Done | `art/bust-danhausen.jpg` (flat magenta, `cutOutFlat`) → `danhausen.webp`; `seat: 1.6` behind the table (he shows more body) |
 | Duke Morrigan | Done | `art/bust-duke.jpg` (flat magenta, `cutOutFlat` with a low `tolerance` so his purple coat and skin stay, and `holes` for the background inside his curled horn) → `duke.webp` |

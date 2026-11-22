@@ -40,7 +40,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 ### The Ghoul and Gourd
 
 **Sperm McGrath** (no ability)
-- Entrance card: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
+- Entrance card: "Sperm McGrath, the Ghoul and Gourd's doorman, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
 - Fight summary, after you beat him (a speech bubble): "Alright then, in you go"
 - Run-over screen, if he beats you: "You couldn't beat Sperm?" (everyone else: "[name] ended your run.")
 
@@ -182,7 +182,8 @@ here too. Where: `MULTIPLAYER_CALLOUTS` and `showSeatFlash` in `client/src/game.
 - "The Early Ross!": after the first throw, a 2 or a 4 is kept together with a 1, 3, 5 or 6.
 - "Didn't Bite!": after the first throw, just a 2 or a 4 is kept while a 6 is left to roll again.
 - "Dirty 20!": a hand finishes on exactly 20.
-- "Perfect 24!" when a hand finishes on 24 (with the player's name when it isn't you).
+- A hand finishing on 24: the celebration logo "2 FOUR 2 TWENTY-FOUR" since 20 Nov (it was "Perfect 24!"), with the player's name when it isn't you.
+- Your dice (on the start screen, in the Play with friends panel since 21 Nov): "Your dice: [set] ✎"; the picker's line "Beat an opponent in a Tavern Crawl, and you may throw their dice.", "Ivory" for the plain set, each beaten opponent's name, "???" for the rest.
 - The round's result card: "Round result", then each player with their score or "Dust", "−1 ♥" for whoever loses a life or "tied", and "Sudden death: [names]" or "No lives lost" under it.
 - At table JUGS: "JUGS league", with "Won" and "Played" columns ("No games finished yet." before the first).
 - The reactions have names only as tooltips on their coins: Cheers, Ha!, Ooh, Smug, Woe.

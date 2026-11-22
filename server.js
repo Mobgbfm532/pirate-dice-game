@@ -197,7 +197,7 @@ function settleDice(roomCode, p) {
     if (ok) p.dice = p.diceWanted; else delete p.dice;
 }
 
-// The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the bouncer, then
+// The opponents, in the order you meet them: the Ghoul and Gourd (a qualifier: the doorman, then
 // the high-roller table), the Yawning Portal (five more, Brodor the boss), then the final aboard
 // the Salty Swallow (Klarg's crew). `place` is a key of PLACES. A boss drops a keepsake (`drops`)
 // and sends you on to the next place (the invitation). McGrath is the Molar renamed and keeps
@@ -210,7 +210,7 @@ const TAVERN_ENCOUNTERS = [
         avatar: '🦷',
         lives: BALANCE.opponentLives.molar,
         ability: null,
-        blurb: "Sperm McGrath, the Ghoul and Gourd's bouncer, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24.",
+        blurb: "Sperm McGrath, the Ghoul and Gourd's doorman, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24.",
         powers: []
     },
     {
@@ -1776,11 +1776,17 @@ function scheduleEmptyTableCleanup(roomCode) {
     }, delay(room.mode === 'tavern-crawl' ? CRAWL_TABLE_GRACE_MS : EMPTY_TABLE_GRACE_MS));
 }
 
+// (21 Nov, the user's: 2.3 s made them "way too slow": the bot now decides a little before a typical throw lands on
+// screen, and the browser shows each keep as soon as the dice have settled, one after another: opponentPace in game.ts.)
+const BOT_WATCHES_THROW_MS = 600; // beyond the 0.5 s performRoll allows and the 1 s the bot thinks
 function runBotRoll(roomCode) {
     let room = rooms[roomCode];
     let key = room.turn.key;
     let animationMs = performRoll(roomCode);
-    if (animationMs) botLater(roomCode, key, animationMs + 1000, () => runBotDecision(roomCode));
+    // (20 Nov, the user's: an opponent's last die was sometimes never seen kept. The throw on screen lasts about 2.8 s, the
+    // server allowed 0.5, so its keeps and End Turn were already waiting as the dice landed, and all played at once. Now it
+    // watches its throw land first; the browser paces what it shows too: opponentPace in game.ts.)
+    if (animationMs) botLater(roomCode, key, animationMs + 1000 + BOT_WATCHES_THROW_MS, () => runBotDecision(roomCode));
     // A refused roll (dice still busy) must never leave the bot stuck: think again shortly.
     else if (!room.turn.finalized) botLater(roomCode, key, 1000, () => runBotDecision(roomCode));
 }
@@ -2763,6 +2769,15 @@ function unownedKeepsakes(room) {
 
 // Two different spots; the Dice Den only if the purse covers its smallest bet. With Thom's
 // Loyalty Card, his cart is always one of them.
+// The opponent just beaten, on a walk between fights (encounterIndex is already the next fight's).
+const justBeaten = room => TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1] || null;
+// Thom's cart is always offered after certain fights (after Frak, the user's call, 21 Nov).
+const thomAlways = room => { let b = justBeaten(room); return !!b && (INTERLUDE.thomAlwaysAfter || []).includes(b.id) && placeOf(room).spots.includes('thom'); };
+// No thief until a given opponent is beaten (Danhausen, the user's call, 21 Nov: time to build up gold first).
+function thiefMayStrike(room) {
+    let from = TAVERN_ENCOUNTERS.findIndex(e => e.id === INTERLUDE.pickpocketAfter);
+    return from < 0 || room.tavernRun.encounterIndex > from;
+}
 function pickSpots(room) {
     let purse = room.tavernRun.purse;
     let canBet = purse >= Math.min(...INTERLUDE.diceDenBets);
@@ -2770,7 +2785,7 @@ function pickSpots(room) {
     // gold since 21 Oct).
     let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'yvesil' || purse >= yvesilPrice(room.tavernRun)) && (id !== 'jorvash' || purse >= jorvashPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
-    if (hasKeepsake(room, 'loyaltyCard') && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
+    if ((hasKeepsake(room, 'loyaltyCard') || thomAlways(room)) && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
     return spots;
 }
 
@@ -2800,7 +2815,7 @@ function startInterlude(room, won) {
     run.thieves = run.thieves || {};
     if (PLACES[place] && PLACES[place].noEvents) {
         run.interlude = { stage: 'choose', spots: pickSpots(room) };
-    } else if (steal > 0 && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
+    } else if (steal > 0 && thiefMayStrike(room) && (run.thieves[place] || 0) < (INTERLUDE.pickpocketMaxPerPlace ?? 2) && crypto.randomInt(0, 100) < INTERLUDE.pickpocketChance) {
         run.thieves[place] = (run.thieves[place] || 0) + 1;
         run.interlude = { stage: 'pickpocket', steal, catchOn: INTERLUDE.pickpocketCatch };
     } else if (!pocketsFull(room) && unownedKeepsakes(room).length > 0 && crypto.randomInt(0, 100) < INTERLUDE.strangerChance) {
@@ -3103,7 +3118,7 @@ function evaluateTavernRound(roomCode) {
             room.tavernRun.runComplete = true;
             io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
             emitState(roomCode);
-            io.to(roomCode).emit('gameOver', { message: `${human.name} wins the final aboard the Salty Swallow! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
+            io.to(roomCode).emit('gameOver', { message: `${human.name} is champion of the Tavern Crawl, home to Waterdeep at dawn! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
         }
 

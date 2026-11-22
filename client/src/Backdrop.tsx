@@ -18,7 +18,7 @@ const TAVERN: Scene = {
         fire: [0.215, 0.53], fireWidth: 0.05 // (the top of the flames: embers show only once clear of them)
     }
 };
-// Outside the Ghoul and Gourd: the bouncer's fight, by the front door.
+// Outside the Ghoul and Gourd: the doorman's fight, by the front door.
 const OUTSIDE: Scene = { file: 'ghoul-gourd-outside.webp', floor: 0.75, aspect: 1376 / 768, center: 0.6 };
 // The other two places (the user's paintings, 26 Oct): the Yawning Portal's hall, its glowing
 // well in the middle and its fireplace on the left; the Salty Swallow's gun deck, a stove on the left.

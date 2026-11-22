@@ -11,15 +11,14 @@ day they happen, with what's been built marked as it lands.
 
 (Tidied 17 Nov, again 18 Nov evening and 20 Nov evening: what was done moved to "Settled" below; what's left is here, most pressing first.)
 
-### Going live
-1. **The live Render service's settings (the user's to do, before the merge, or the live game breaks):** the build
-   command `npm install && npm run build` (without it `/next` doesn't exist: `client/dist` isn't in git), a
-   `SAVE_SECRET` (without it a restart loses every saved crawl), and a `DATABASE_URL` (without it the leaderboard
-   lives in a file the free plan wipes at every sleep). The same Neon database as the test site (with its test
-   scores), or a clean one?
-2. **The new game at `/`:** done 20 Nov, the user's word: `/` sends you on to `/next/`, the classic page is at `/classic`.
-3. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
-   server restart; whether the leaderboard and the JUGS league survive a deploy of the test site.
+### Going live (live since 20 Nov)
+1. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
+   server restart; whether the leaderboard and the JUGS league survive a deploy (the live site and the test site share
+   one Neon database now, so a deploy of either is a test).
+2. **The test service (`pirate-dice-next`):** keep it for trying changes before they go live (the branch
+   `phase-2-3d-prototype` deploys there; a pull request to `main` takes it live), or delete it? It shares the live
+   site's Neon database, so scores set there show on the live Legends board.
+3. **The classic page's old code** (`public/index.html`, at `/classic`): retire it when the user says.
 
 ### Questions waiting on the user's word
 - **The start screen, better still** (20 Nov, Claude's review): a music button on the start screen (music switched off in
@@ -38,8 +37,9 @@ day they happen, with what's been built marked as it lands.
 - **The voyage:** the dials are first guesses, never simulated. Is All In with a rogue wave two rounds in three
   too cruel? Starry Form in a becalmed round: too harsh (option: none while becalmed)? Teach the opponents (and the simulator) that a wave is coming? The Cloak and All In
   are still working names (Smooth Talk became Smooth Talker, 18 Nov).
-- **The finale after Jaguar** (`docs/finale-brainstorm.md`, 18 Nov): which beats, Jaguar's line, the Can Garda's look and
-  line, the art and sounds. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
+- **The finale after Jaguar** (`docs/finale-brainstorm.md`): built 21 Nov the user's way (home to Waterdeep at dawn, Kram's
+  mark burned into the empty quay, "To be continued?"), from the paintings already in the game. Its paintings and sounds are the
+  user's since the same evening. The Can Garda: a last set of opponents, later (the user's, 18 Nov).
 - **The interface:** should the turn score move into your chip? The hearts drawn in CSS, or a painted heart?
 - **The start screen:** clear enough on a phone? The computer's title on the left: good? (The tavern tune plays from
   the first tap since 18 Nov, the user's.) The Hall of Legends' place and name, and its text on points? The hearts button for a new
@@ -92,6 +92,12 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 21 Nov: "Your dice" moved to the start screen's Play with friends panel only (invite links too; the user's), as the set shows
+  at friends' tables; the picker's Ivory die centred and its names wrapping only between words.
+- 20 Nov: **the new game is live** at https://two-4-24.onrender.com. The user set the live Render service's build
+  command, `SAVE_SECRET` and `DATABASE_URL` (the same Neon database as the test site) and merged PR #1; PR #2 made the
+  main address open the new game (`/` sends you on to `/next/`, invites too) with the classic page at `/classic`. MOB's
+  and Rossatron's crawl scores were deleted from the leaderboard before launch (the user's; War Daddy's kept).
 - 18 Nov evening: the start screen plays the Ghoul and Gourd's tavern tune from the first tap (it was silent until you sat
   down), fading out under the intro film. Martha's letter has the user's words and comes by flying snake. The phone's
   strip fits one line; the turn score's plaque is slimmer; Yvesil's omens are heard over her theme; Divine Smite's

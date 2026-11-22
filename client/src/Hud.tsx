@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
 import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy } from './game';
@@ -96,6 +96,7 @@ function JoinScreen() {
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [forgetArmed, setForgetArmed] = useState(false);
     const [diceOpen, setDiceOpen] = useState(false); // Your dice (20 Nov)
+    const [dicePick, setDicePick] = useState(readDiceChoice);
     // The name: a box the first time, then a line ("Playing as Ada ✎") tapped to change it.
     const [editingName, setEditingName] = useState<'first' | 'tap' | null>(prefs.name.trim() ? null : 'first');
 
@@ -181,6 +182,12 @@ function JoinScreen() {
                                 <button key={id} className={`avatar ${id === avatar ? 'selected' : ''}`} style={avatarStyle(portraitFor(id))} onClick={() => { setAvatar(id); playSound('click'); }} aria-label={id} />
                             ))}
                         </div>
+                        {/* Your dice (21 Nov, the user's: here only, as the set shows at a friends' table; invites too). */}
+                        <p className="dice-choice">Your dice:{' '}
+                            <button className="link-button" onClick={() => { setDiceOpen(true); playSound('click'); }}>
+                                <strong>{diceLabel(dicePick)}</strong> <span aria-hidden="true">✎</span>
+                            </button>
+                        </p>
                         {invite ? (
                             <button className="primary" onClick={() => join(invite)}>Join table {invite}</button>
                         ) : (
@@ -255,8 +262,6 @@ function JoinScreen() {
                                                 onClick={() => { saveIntroChoice(!playIntro); setChoice(!playIntro); playSound('click'); }}>
                                                 Intro before a crawl: {playIntro ? 'on' : 'off'}
                                             </button>
-                                            <span aria-hidden="true">·</span>
-                                            <button className="link-button" onClick={() => { setDiceOpen(true); playSound('click'); }}>Your dice</button>
                                         </div>
                                     )}
                                 </section>
@@ -283,7 +288,6 @@ function JoinScreen() {
                                         <span>Play the intro before a crawl</span>
                                         <i className={`switch${playIntro ? ' on' : ''}`} aria-hidden="true" />
                                     </button>
-                                    <button className="secondary" onClick={() => { setOptionsOpen(false); setDiceOpen(true); playSound('click'); }}>Your dice</button>
                                     {continuing && <button className="secondary" onClick={() => { setOptionsOpen(false); setFilm('watch'); }}>Watch the intro</button>}
                                     {continuing && (
                                         <button className={`forget-save${forgetArmed ? ' armed' : ''}`}
@@ -300,7 +304,7 @@ function JoinScreen() {
                     </>
                 );
             })()}
-            {diceOpen && <DicePicker name={name} onClose={() => setDiceOpen(false)} />}
+            {diceOpen && <DicePicker name={name} onClose={() => { setDiceOpen(false); setDicePick(readDiceChoice()); }} />}
             {/* While the browser keeps it silent: a quiet note that a tap brings the music (any tap does). */}
             {silent && !film && <button type="button" className="music-hint" aria-label="Tap for music"><span aria-hidden="true">♪</span> Tap for music</button>}
             <LegendsPlaque onOpen={() => { setLegendsOpen(true); playSound('click'); }} />
@@ -311,6 +315,9 @@ function JoinScreen() {
 
 // Your dice (20 Nov, the user's): throw the dice of a Tavern Crawl opponent you've beaten, in any run; the rest are
 // "???" until you have. (McGrath throws the ivory dice, so he has no set of his own.) The server checks the choice.
+// A name in the picker wraps only between words, or after the slash in "Martha/Mystery" (never mid-word).
+const breakable = (who: string): React.ReactNode[] => who.split('/').map((part, i) => i ? <Fragment key={i}>/<wbr />{part}</Fragment> : part);
+const diceLabel = (id: string | null) => (id && DICE_RIVALS.find(([d]) => d === id)?.[1]) || 'Ivory';
 const DICE_RIVALS: [string, string][] = [
     ['frak', 'Frak'], ['danhausen', 'Danhausen'], ['duke', 'Duke Morrigan'], ['martha', 'Martha/Mystery'],
     ['sylvester', 'Sylvester Stonefist'], ['vaelin', 'Vaelin Inkhand'], ['stason', 'Stason Jatham'], ['ridgeler', 'The Ridgeler'], ['brodor', 'Brodor'],
@@ -338,7 +345,7 @@ function DicePicker({ name, onClose }: { name: string; onClose: () => void }) {
                         return won ? (
                             <button key={id} className={`dice-pick${pick === id ? ' selected' : ''}`} onClick={() => choose(id)} aria-pressed={pick === id}>
                                 <span className="dice-face" style={faces(id)} aria-hidden="true" />
-                                <span className="dice-name">{who}</span>
+                                <span className="dice-name">{breakable(who)}</span>
                             </button>
                         ) : (
                             <span key={id} className="dice-pick locked" aria-label="Not beaten yet">
@@ -1462,13 +1469,18 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
     // Your best on the board (the board keeps each name's best run).
     const mine = leaderboard.findIndex(e => e.name === summary.name);
     const board = leaderboard.slice(0, 8);
+    // A won crawl ends on the quay the finale left you on (21 Nov, the user's): its painting behind the victory screen.
+    const dock = summary.won ? { backgroundImage: `linear-gradient(rgba(8, 6, 4, 0.35), rgba(8, 6, 4, 0.55)), url("${import.meta.env.BASE_URL}art/finale/quay-dawn.webp")` } : undefined;
     return (
-        <div className="modal-backdrop">
+        <div className={`modal-backdrop${summary.won ? ' on-dock' : ''}`} style={dock}>
             <div className={`panel run-over ${summary.won ? 'won' : 'lost'}`}>
                 <h1>{summary.won ? 'Victory!' : 'Run over'}</h1>
-                <p className="subtitle">
-                    {summary.won ? 'You won the final aboard the Salty Swallow.' : summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
-                </p>
+                {/* (No subtitle on the victory screen since 21 Nov, the user's; a lost run keeps its line.) */}
+                {!summary.won && (
+                    <p className="subtitle">
+                        {summary.fellTo === 'Sperm McGrath' ? "You couldn't beat Sperm?" : `${summary.fellTo} ended your run.`}
+                    </p>
+                )}
                 <ol className="crawl-path" aria-label="Opponents">
                     {summary.encounters.map((name, i) => {
                         const state = i < summary.defeated ? 'beaten' : name === summary.fellTo ? 'fell' : 'unmet';
@@ -2126,7 +2138,8 @@ function Interlude({ state }: { state: GameState }) {
                             <SpotPicture spot={spot} place={run.place} />
                             <strong>{SPOTS[spot].name}</strong>
                             <span className="line">{spot === 'thom' ? `"${thomSays(run, !run.thomMet)}"` : SPOTS[spot].line}</span>
-                            <span className="offer">{SPOTS[spot].offer}{spot === 'shrine' && run.prices?.shrine ? ` · ${coins(run.prices.shrine)}` : spot === 'hotTub' && run.prices?.hotTub ? ` · ${coins(run.prices.hotTub)}` : spot === 'bard' && run.prices?.bard ? ` · ${coins(run.prices.bard)}` : spot === 'yvesil' && run.prices?.yvesil ? ` · ${coins(run.prices.yvesil)}` : spot === 'jorvash' && run.prices?.jorvash ? ` · ${coins(run.prices.jorvash)}` : ''}</span>
+                            {/* (No price here since 21 Nov, the user's: it shows once you go in, on the scene's own button.) */}
+                            <span className="offer">{SPOTS[spot].offer}</span>
                         </button>
                     ))}
                 </div>
@@ -2661,7 +2674,8 @@ function DarrenRoll({ interlude, setRevealed, next }: { interlude: Extract<Inter
         const timer = setTimeout(() => {
             setRolling(false);
             setRevealed(true);
-            playSound(interlude.outcome === 'smash' ? 'aww' : 'yay');
+            // (A Thonic smashing has its own sound, the user's, 22 Nov; paying for the glass off an empty shelf keeps the aww.)
+            playSound(interlude.outcome === 'smash' ? (interlude.smashed ? 'thonicSmash' : 'aww') : 'yay');
             if (interlude.outcome === 'catch') playCoins(5);
         }, DIE_ROLL_MS);
         return () => clearTimeout(timer);
@@ -3034,6 +3048,72 @@ function PortalArrival({ at }: { at: number }) {
                 <span>{PORTAL_LINE}</span>
             </div>
             <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endSail(); }}>Skip ›</button>
+        </div>,
+        document.body
+    );
+}
+
+// The homecoming after Jaguar (21 Nov, the user's): the Salty Swallow sails back into Waterdeep as day breaks. Nobody is
+// on the quay to meet her, only the mark of Kram burned into the boards. "To be continued?", then the victory screen and
+// its fanfare (actions.endFinale). Built from the harbour paintings already in the game; a tap or Esc skips it.
+// 0-6.6 s the harbour, from the lighthouses to the ship, night giving way to dawn; 6.6-13.4 s the empty quay, the sigil
+// burning in at 8.6 s; then the light swells, black, and the question (FINALE_MS in all).
+export const FINALE_MS = 18000;
+// The user's three paintings (21 Nov): the harbour at dawn, the empty quay, Kram's sigil burned into planks.
+const HARBOUR = { w: 1167, h: 912 }, QUAY = { w: 1167, h: 912 };
+const SIGIL = { x: 0.5, y: 0.8 }; // where the mark burns, in the quay painting (the clear boards in the middle)
+function Finale({ at, leaving }: { at: number; leaving: boolean }) {
+    const [screen, setScreen] = useState({ W: window.innerWidth, H: window.innerHeight });
+    useEffect(() => {
+        const resume = holdMusic(); // (the boss's tune fades: the harbour is quiet; it comes back under the fanfare)
+        const after = (ms: number, fn: () => void) => setTimeout(fn, Math.max(0, ms - (performance.now() - at)));
+        // The user's sounds (21 Nov): waves lapping all through, gulls, the bell, and the fire crackling as the mark burns in.
+        const stops: (() => void)[] = [startSceneAmbience('harbour')];
+        const timers = [
+            after(500, () => playShipBell(2, 0.9)),
+            after(1300, () => playSound('seaGull')),
+            after(7300, () => playSound('seaGull')),
+            after(8500, () => stops.push(startSceneAmbience('sigilFire'))),
+            after(FINALE_MS, () => actions.endFinale())
+        ];
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.endFinale(); };
+        const onResize = () => setScreen({ W: window.innerWidth, H: window.innerHeight });
+        window.addEventListener('keydown', onKey);
+        window.addEventListener('resize', onResize);
+        return () => { timers.forEach(clearTimeout); stops.forEach(stop => stop()); resume(); window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
+    }, [at]);
+    const art = (a: string) => `${import.meta.env.BASE_URL}art/${a}`;
+    const { W, H } = screen;
+    // The harbour: it starts on the lighthouses and the open sea and pans back to the ship coming in.
+    const from = coverBox(W, H, HARBOUR.w / HARBOUR.h, 0.92, 0.55), to = coverBox(W, H, HARBOUR.w / HARBOUR.h, 0.55, 0.55);
+    const pan = Number(to.left) - Number(from.left);
+    // The quay, pushing in on the boards where the mark burns.
+    const quay = coverBox(W, H, QUAY.w / QUAY.h, SIGIL.x, 0.66);
+    return createPortal(
+        <div className={`finale${leaving ? ' leaving' : ''}`} role="dialog" aria-label="Home to Waterdeep" onClick={() => actions.endFinale()}>
+            <div className="fn-shot fn-harbour">
+                <div className="fn-plate" style={{ ...from, '--pan': `${pan.toFixed(1)}px`, backgroundImage: `url("${art('finale/harbour-dawn.webp')}")` } as React.CSSProperties} />
+                <span className="fn-night" />
+                <span className="fn-dawn" />
+            </div>
+            <div className="fn-shot fn-quay">
+                <div className="fn-plate" style={{ ...quay, transformOrigin: `${SIGIL.x * 100}% ${SIGIL.y * 100}%`, backgroundImage: `url("${art('finale/quay-dawn.webp')}")` }}>
+                    <span className="fn-mark" style={{ left: `${SIGIL.x * 100}%`, top: `${SIGIL.y * 100}%` }}>
+                        <span className="fn-heat" />
+                        <img src={art('finale/kram-sigil.webp')} alt="" draggable={false} />
+                        <span className="fn-flash" />
+                        {Array.from({ length: 7 }, (_, i) => <i key={i} className="fn-smoke" style={{ left: `${18 + i * 11}%`, animationDelay: `${9.2 + (i * 0.37) % 1.6}s` }} />)}
+                    </span>
+                </div>
+                <span className="fn-dawn warm" />
+            </div>
+            <span className="fn-light" />
+            <p className="fn-line one">Waterdeep, at first light.</p>
+            <p className="fn-line two">The Salty Swallow returns.</p>
+            <p className="fn-line three">No crowd. No cheering. No one waits on the quay…</p>
+            <p className="fn-line four">…only the mark of Kram, burned into the harbour.</p>
+            <p className="fn-end">To be continued?</p>
+            <button className="sail-skip" onClick={e => { e.stopPropagation(); actions.endFinale(); }}>Skip ›</button>
         </div>,
         document.body
     );
@@ -3624,6 +3704,7 @@ export function Hud() {
             {state && multiplayer && <Rivals snap={snap} state={state} />}
             {state && <ReactionBursts snap={snap} />}
             {state && botAcross && !introShowing && <OpponentPlate state={state} onInfo={() => { setInfoOpen(true); playSound('click'); }} />}
+            {snap.finale && <Finale key={snap.finale.at} at={snap.finale.at} leaving={!!snap.finale.leaving} />}
             {snap.sailAt ? (snap.sailStage === 'dock' ? <DockScene /> : snap.sailStage === 'portal' ? <PortalArrival at={snap.sailAt} /> : <SetSail at={snap.sailAt} />) : <EncounterIntro snap={snap} />}
             {infoOpen && state?.tavernRun && !state.tavernRun.interlude && !state.tavernRun.shop && (
                 <button className="intro-veil info" onClick={() => setInfoOpen(false)} autoFocus>

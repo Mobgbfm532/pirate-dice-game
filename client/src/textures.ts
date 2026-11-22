@@ -142,7 +142,8 @@ function clearPips(ctx: CanvasRenderingContext2D, size: number) {
     // (14 Nov, the user: "the greens greener and the reds redder") A purer red, and a green leaning a touch to
     // blue: the fire's warm light yellowed the old one to olive on the table. Shared with the painted sets
     // (VIVID in process-art.mjs).
-    const RED = [222, 14, 26], GREEN = [10, 170, 82], DARK = [20, 14, 10];
+    // (21 Nov, the user's: the green "incredibly bright in places": a deeper, calmer green; it was [10, 170, 82])
+    const RED = [222, 14, 26], GREEN = [18, 128, 68], DARK = [20, 14, 10];
     for (let i = 0; i < d.length; i += 4) {
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const red = Math.min(1, Math.max(0, (r - Math.max(g, b) - 40) / 50));
