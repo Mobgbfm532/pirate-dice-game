@@ -2674,7 +2674,8 @@ function DarrenRoll({ interlude, setRevealed, next }: { interlude: Extract<Inter
         const timer = setTimeout(() => {
             setRolling(false);
             setRevealed(true);
-            playSound(interlude.outcome === 'smash' ? 'aww' : 'yay');
+            // (A Thonic smashing has its own sound, the user's, 22 Nov; paying for the glass off an empty shelf keeps the aww.)
+            playSound(interlude.outcome === 'smash' ? (interlude.smashed ? 'thonicSmash' : 'aww') : 'yay');
             if (interlude.outcome === 'catch') playCoins(5);
         }, DIE_ROLL_MS);
         return () => clearTimeout(timer);

@@ -66,6 +66,8 @@ const sfx = {
     crawlVictory: load('Victory.mp3', 0.8),
     // The finale's gulls over the harbour at dawn (the user's, 21 Nov).
     seaGull: load('SeaGull.mp3', 0.6),
+    // A Thonic smashing on the floor when Darren Snakehands knocks into you (the user's, 22 Nov).
+    thonicSmash: load('ThonicSmash.mp3', 0.8),
     multiplayerVictory: load('MultiplayerVictory.mp3', 0.8),
     // The Bard's song working in a fight, Cutting Words or Inspiring Song (the user's, 3 Nov).
     bardTune: load('BardTune.mp3', 0.8),
