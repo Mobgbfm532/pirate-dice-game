@@ -92,6 +92,15 @@ all fifty effects and the film's three clips; pictures 2.4 MB; code 0.4 MB).
   talking), and two free services awake all month would pass the 750 free hours they share.
 
 ## Settled
+- 23 Nov: **players' feedback, built (the user's list):** (a tap on a back-shelf keepsake for its full description was built and
+  taken out the same day, the user's; Thom's scene has a 👁 Items button instead, to see your strip); a warning before anything is replaced ("Leave X behind for Y? It's gone for good.",
+  with the Potion Belt's Thonic named), and you pick what goes: keepsakes on Thom's shelf and a boss's drop, Thonics and
+  Elf Bars on a full shelf (Thom, Johnny; it used to say "Shelf full"); "Throw away" on any item's panel, asked twice; your
+  shelf and keepsakes seen from Thom's cart (the 👁 Items button); how long a buff lasts, a tag on its strip icon (⌛1 this fight, ⌛3 fights left,
+  a pink dot until used) and a line on its panel, the hot tub's surge now on the strip too; the Gambler's Charm's note
+  over the felt each time it works ("threw 5 and 2: kept 5"), a ghost even on a tie, clearer text; **interest**: 1 gold
+  for every 10 in the purse at each win, for everyone (the user's pick; the Miser's Purse still adds its 1 per 5 on top);
+  no heart back from a perfect hand for the Duke, Martha and the Hangman (his Ace of Spades too).
 - 21 Nov: "Your dice" moved to the start screen's Play with friends panel only (invite links too; the user's), as the set shows
   at friends' tables; the picker's Ivory die centred and its names wrapping only between words.
 - 20 Nov: **the new game is live** at https://two-4-24.onrender.com. The user set the live Render service's build

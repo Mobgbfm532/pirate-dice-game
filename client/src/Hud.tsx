@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type Enemy, type LeaderboardEntry } from './game';
+import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type TavernRun, type Enemy, type LeaderboardEntry } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, startMusic, holdMusic, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
@@ -956,22 +956,45 @@ function TavernStrip({ snap, state }: { snap: Snapshot; state: GameState }) {
             <Shelf snap={snap} state={state} />
             {/* Keepsakes as small round pictures, not names, so a few fit beside your chip
                 (the user, 21 Oct). Tap one for its info panel; it dims once spent this fight. */}
-            {(run.keepsakes.length > 0 || run.ladysGrace || run.bard?.words || run.bard?.song || run.kram?.now || run.omen || run.notaro || run.seaWard) && (
+            {(run.keepsakes.length > 0 || run.ladysGrace || run.bard?.words || run.bard?.song || run.kram?.now || run.omen || run.notaro || run.seaWard || run.tubSurge) && (
                 <span className="keepsake-row">
                     {run.keepsakes.map(k => k.id === 'marthasMask'
                         ? <MaskKeepsake key={k.id} snap={snap} state={state} />
                         : k.id === 'mysteryFlavour' ? <MysteryKeepsake key={k.id} snap={snap} state={state} />
                         : k.id === 'gildedDie' ? <GildedKeepsake key={k.id} snap={snap} state={state} />
-                        : <KeepsakeIcon key={k.id} icon={keepsakeIcon(k.id)} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)} />)}
-                    {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you." kind="A blessing" blessing />}
-                    {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} kind="A song" blessing />}
+                        : <KeepsakeIcon key={k.id} icon={keepsakeIcon(k.id)} name={k.name} text={k.text} spent={!!run.encounterKeepsakeUses?.[k.id] && ONCE_A_FIGHT.has(k.id)}
+                            fired={k.id === 'gamblersCharm' ? snap.charm?.at ?? 0 : 0} discard={() => actions.discardItem({ keepsake: k.id })} />)}
+                    {run.tubSurge && <KeepsakeIcon icon={keepsakeIcon('hotTub')} name={run.tubSurge.name} text={run.tubSurge.id === 'pruney' ? 'From the Wild Magic Hot Tub: you started this fight a heart short.' : `From the Wild Magic Hot Tub: ${SURGE_HINTS[run.tubSurge.id] ?? run.tubSurge.text}. It's the aqua die.`} kind="A wild surge" blessing lasts="fight" />}
+                    {run.ladysGrace && <KeepsakeIcon icon={keepsakeIcon('ladysGrace')} name="The Lady's Grace" text="The next time you'd lose a heart to dust, the Lady saves you. It stays with you, fight after fight, until then." kind="A blessing" blessing lasts="used" />}
+                    {run.bard?.words && <KeepsakeIcon icon={keepsakeIcon('cuttingWords')} name="Cutting Words" text={`The Bard's song: ${run.enemy.name}'s first hand that counts this fight scores 3 less.`} kind="A song" blessing lasts="fight" />}
                     {run.bard?.song && <SongKeepsake snap={snap} state={state} />}
-                    {run.omen && <KeepsakeIcon icon={keepsakeIcon(run.omen.id)} name={run.omen.name} text={run.omen.text.replace(' next fight', ' this fight')} kind={run.omen.good ? 'A good omen' : 'A bad omen'} blessing />}
-                    {run.notaro && <KeepsakeIcon icon={keepsakeIcon('notaroRed')} name="Notaro Red" text="Your first hand that counts this fight scores 2 more." kind="A refreshment" blessing />}
-                    {run.seaWard && <KeepsakeIcon icon={keepsakeIcon('ebonShield')} name="Water of the Ebon Shield" text="The sea die can't touch you this fight: your dice never list, and no squall, wave, fog or calm holds you back." kind="A refreshment" blessing />}
-                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={(run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.') + (run.kram.markup ? ` While you wear his emblem, every spot charges you ${run.kram.markup}% more.` : '')} kind="Fealty" blessing />}
+                    {run.omen && <KeepsakeIcon icon={keepsakeIcon(run.omen.id)} name={run.omen.name} text={run.omen.text.replace(' next fight', ' this fight')} kind={run.omen.good ? 'A good omen' : 'A bad omen'} blessing lasts="fight" />}
+                    {run.notaro && <KeepsakeIcon icon={keepsakeIcon('notaroRed')} name="Notaro Red" text="Your first hand that counts this fight scores 2 more." kind="A refreshment" blessing lasts="fight" />}
+                    {run.seaWard && <KeepsakeIcon icon={keepsakeIcon('ebonShield')} name="Water of the Ebon Shield" text="The sea die can't touch you this fight: your dice never list, and no squall, wave, fog or calm holds you back." kind="A refreshment" blessing lasts="fight" />}
+                    {run.kram?.now && <KeepsakeIcon icon={keepsakeIcon('kram')} name="Sworn to Kram" text={(run.kram.more ? `Your dice never land on 1, this fight and the next${run.kram.more > 1 ? ` ${run.kram.more}` : ''}.` : 'Your dice never land on 1 this fight.') + (run.kram.markup ? ` While you wear his emblem, every spot charges you ${run.kram.markup}% more.` : '')} kind="Fealty" blessing lasts={1 + (run.kram.more || 0)} />}
                 </span>
             )}
+        </div>
+    );
+}
+
+// The Gambler's Charm at work (23 Nov, the user's, from players: "make it more obvious"): your last die was thrown
+// twice; a small note over the felt says both throws and which was kept, as the ghost of the other rises.
+const CHARM_NOTE_MS = 2600;
+function CharmNote({ snap }: { snap: Snapshot }) {
+    const charm = snap.charm;
+    const [shown, setShown] = useState<typeof charm>(null);
+    useEffect(() => {
+        if (!charm) return;
+        setShown(charm);
+        const timer = setTimeout(() => setShown(null), CHARM_NOTE_MS);
+        return () => clearTimeout(timer);
+    }, [charm?.at]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!shown) return null;
+    return (
+        <div key={shown.at} className="charm-note" aria-live="polite">
+            <span className="charm-icon" aria-hidden="true">{keepsakeIcon('gamblersCharm')}</span>
+            <span><b>Gambler's Charm</b> {shown.kept === shown.lost ? `threw ${shown.kept} twice` : `threw ${shown.kept} and ${shown.lost}: kept ${shown.kept}`}</span>
         </div>
     );
 }
@@ -982,7 +1005,9 @@ const ONCE_A_FIGHT = new Set(['bentCopper', 'luckySeat', 'velvetCushion', 'marth
 // Any item's info panel, opened by a tap on it (6 Nov, the user's: like an opponent's card, and it
 // replaces the toast that went away by itself). An item that can be used now has its button here.
 interface ItemAction { label: string; note?: string; run: () => void }
-function ItemInfo({ icon, kind, name, text, status, actions: buttons = [], onClose }: { icon: React.ReactNode; kind: string; name: string; text: React.ReactNode; status?: string; actions?: ItemAction[]; onClose: () => void }) {
+// discard: "Throw away" (23 Nov, the user's, from players), asked twice, as it's gone for good.
+function ItemInfo({ icon, kind, name, text, status, actions: buttons = [], discard, onClose }: { icon: React.ReactNode; kind: string; name: string; text: React.ReactNode; status?: string; actions?: ItemAction[]; discard?: () => void; onClose: () => void }) {
+    const [armed, setArmed] = useState(false);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', onKey);
@@ -1001,6 +1026,16 @@ function ItemInfo({ icon, kind, name, text, status, actions: buttons = [], onClo
                         {b.label}{b.note && <small>{b.note}</small>}
                     </button>
                 ))}
+                {discard && !armed && <button className="item-discard" onClick={e => { e.stopPropagation(); setArmed(true); }}>Throw away</button>}
+                {discard && armed && (
+                    <div className="item-discard-ask" onClick={e => e.stopPropagation()}>
+                        <span>Throw away {name} for good?</span>
+                        <span className="row">
+                            <button className="item-discard yes" onClick={() => { onClose(); discard(); }}>Yes, throw it away</button>
+                            <button className="item-discard" onClick={() => setArmed(false)}>Keep it</button>
+                        </span>
+                    </div>
+                )}
                 <span className="tap">Tap to close</span>
             </div>
         </div>,
@@ -1008,15 +1043,26 @@ function ItemInfo({ icon, kind, name, text, status, actions: buttons = [], onClo
     );
 }
 
-function KeepsakeIcon({ icon, name, text, spent = false, blessing = false, kind = 'A keepsake' }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean; kind?: string }) {
+// lasts (23 Nov, the user's, from players: "a timer or indicator on one-fight buffs"): a small tag on the icon
+// and a line on its panel. 'fight': this fight only; 'used': until it's used; a number: fights left, this one too.
+type Lasts = 'fight' | 'used' | number;
+const LASTS_TAG = (l: Lasts) => (l === 'fight' ? '1' : l === 'used' ? '1×' : String(l));
+const LASTS_LINE = (l: Lasts) => (l === 'fight' ? 'This fight only' : l === 'used' ? 'Lasts until it’s used' : l === 1 ? 'This fight only' : `This fight and ${l - 1} more`);
+function LastsTag({ lasts }: { lasts?: Lasts }) {
+    if (lasts === undefined) return null;
+    return <i className={`lasts ${lasts === 'used' ? 'used' : ''}`} aria-hidden="true">{lasts === 'used' ? '' : '⌛'}{LASTS_TAG(lasts)}</i>;
+}
+function KeepsakeIcon({ icon, name, text, spent = false, blessing = false, kind = 'A keepsake', lasts, discard, fired = 0 }: { icon: React.ReactNode; name: string; text: string; spent?: boolean; blessing?: boolean; kind?: string; lasts?: Lasts; discard?: () => void; fired?: number }) {
     const [open, setOpen] = useState(false);
     const close = useCallback(() => setOpen(false), []);
+    const status = [spent ? 'Used this fight' : '', lasts !== undefined ? LASTS_LINE(lasts) : ''].filter(Boolean).join(' · ') || undefined;
     return (
         <>
-            <button className={`keepsake-icon ${spent ? 'spent' : ''} ${blessing ? 'blessing' : ''}`} aria-label={`About ${name}`} onClick={() => { playSound('click'); setOpen(true); }}>
+            <button key={fired} className={`keepsake-icon ${spent ? 'spent' : ''} ${blessing ? 'blessing' : ''} ${fired ? 'fired' : ''}`} aria-label={`About ${name}`} onClick={() => { playSound('click'); setOpen(true); }}>
                 <span aria-hidden="true">{icon}</span>
+                <LastsTag lasts={lasts} />
             </button>
-            {open && <ItemInfo icon={icon} kind={kind} name={name} text={text} status={spent ? 'Used this fight' : undefined} onClose={close} />}
+            {open && <ItemInfo icon={icon} kind={kind} name={name} text={text} status={status} discard={discard} onClose={close} />}
         </>
     );
 }
@@ -1075,7 +1121,7 @@ function MysteryKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) 
                 <span aria-hidden="true">{mysteryIcon(flavour)}</span>
             </button>
             {open && (
-                <ItemInfo icon={mysteryIcon(flavour)} kind="A keepsake" name="Mystery Flavour" status={mystery?.ready ? undefined : 'Puffed this fight'} onClose={close}
+                <ItemInfo icon={mysteryIcon(flavour)} kind="A keepsake" name="Mystery Flavour" status={mystery?.ready ? undefined : 'Puffed this fight'} onClose={close} discard={() => actions.discardItem({ keepsake: 'mysteryFlavour' })}
                     text={<>
                         <p>Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random.</p>
                         <p><b>This fight: {ELF_BAR_NAMES[flavour]}.</b> {taste[0].toUpperCase() + taste.slice(1)}.</p>
@@ -1100,7 +1146,7 @@ function mysteryIcon(flavour?: string) {
 // The Bard's Inspiring Song: right after your first throw of the fight, before you keep a die,
 // it lights up; a tap opens its panel, with "Throw again" while it can be.
 // The Gilded Die (17 Nov, the user's; docs/economy-brainstorm.md): after a throw, pay gold to throw one loose
-// die again, up to three times a fight, dearer each time. Lit when it can be used; its panel's button names the
+// die again (5 gold a time, as often as you like, since 23 Nov). Lit when it can be used; its panel's button names the
 // price, then a tap on a loose die throws it (actions.startGild; the dice ring the ones it can take).
 function GildedKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
@@ -1108,18 +1154,18 @@ function GildedKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
     const gilded = run.gilded;
     const [open, setOpen] = useState(false);
     const close = useCallback(() => setOpen(false), []);
-    const left = gilded ? gilded.max - gilded.uses : 0;
+    const left = !gilded ? 0 : gilded.max == null ? Infinity : gilded.max - gilded.uses;
     const loose = !!turn && turn.dice.some(d => d.status === 'active');
     const usable = !!gilded && left > 0 && run.purse >= gilded.price && snap.isMyTurn && !!turn && turn.hasRolled && !turn.finalized && !snap.rolling && loose;
-    const text = 'After a throw, pay gold to throw one loose die again: up to three times a fight, dearer each time.';
-    const status = !gilded ? undefined : left <= 0 ? 'Used three times this fight'
-        : `Next: ${gilded.price} gold · ${left} left this fight${run.purse < gilded.price ? ' · not enough gold' : ''}`;
+    const text = `After a throw, pay ${gilded?.price ?? 5} gold to throw one loose die again, as often as you like.`;
+    const status = !gilded ? undefined : left <= 0 ? `Used ${gilded.max} times this fight`
+        : `${gilded.price} gold a throw${left !== Infinity ? ` · ${left} left this fight` : ''}${run.purse < gilded.price ? ' · not enough gold' : ''}`;
     return (
         <>
             <button className={`keepsake-icon ${left <= 0 ? 'spent' : ''} ${usable ? 'usable' : ''}`} aria-label="About the Gilded Die" onClick={() => { playSound('click'); if (snap.gildPick) actions.cancelGild(); setOpen(true); }}>
                 <span aria-hidden="true">{keepsakeIcon('gildedDie')}</span>
             </button>
-            {open && <ItemInfo icon={keepsakeIcon('gildedDie')} kind="A keepsake" name="Gilded Die" text={text} status={status} onClose={close}
+            {open && <ItemInfo icon={keepsakeIcon('gildedDie')} kind="A keepsake" name="Gilded Die" text={text} status={status} onClose={close} discard={() => actions.discardItem({ keepsake: 'gildedDie' })}
                 actions={usable ? [{ label: `Throw a die again · ${gilded!.price} gold`, run: actions.startGild }] : []} />}
         </>
     );
@@ -1137,8 +1183,9 @@ function SongKeepsake({ snap, state }: { snap: Snapshot; state: GameState }) {
         <>
             <button className={`keepsake-icon blessing ${usable ? 'usable' : ''}`} aria-label="About Inspiring Song" onClick={() => { playSound('click'); setOpen(true); }}>
                 <span aria-hidden="true">{keepsakeIcon('inspiringSong')}</span>
+                <LastsTag lasts="fight" />
             </button>
-            {open && <ItemInfo icon={keepsakeIcon('inspiringSong')} kind="A song" name="Inspiring Song" text={text} onClose={close} actions={usable ? [{ label: 'Throw again', run: actions.inspiringSong }] : []} />}
+            {open && <ItemInfo icon={keepsakeIcon('inspiringSong')} kind="A song" name="Inspiring Song" text={text} status={LASTS_LINE('fight')} onClose={close} actions={usable ? [{ label: 'Throw again', run: actions.inspiringSong }] : []} />}
         </>
     );
 }
@@ -1253,7 +1300,8 @@ function drinkable(t: Thonic, snap: Snapshot, state: GameState) {
     switch (t.id) {
         case 'healing': return !turn.hasRolled && me.lives < state.startingLives;
         case 'clearEye': return !turn.hasRolled && !!run.enemy.ability && !!run.abilityLeft && !run.clearEye;
-        case 'fizzy': return turn.hasRolled && !turn.finalized && turn.dice.some(d => d.status === 'active' && !d.hidden && d.value === 1);
+        // (and, once the hand is finished, a 1 kept from its last throw: 23 Nov, as Second Thoughts reopens one)
+        case 'fizzy': return turn.hasRolled && turn.dice.some(d => !d.hidden && d.value === 1 && (d.status === 'active' || ((turn.finalized || handComplete(turn)) && d.status === 'lockedThisTurn')));
         // (Becalmed: not once the hand's throws are used up, as on the server.)
         case 'secondThoughts': return !(turn.maxThrows && turn.rollCount >= turn.maxThrows) && turn.dice.some(d => canPutBack(turn, d.status));
         case 'steady': return !turn.steady;
@@ -1309,7 +1357,7 @@ function Shelf({ snap, state }: { snap: Snapshot; state: GameState }) {
                 );
             })}
             {open && openSlot !== null && (
-                <ItemInfo icon={itemPicture(open)} kind={open.elf ? 'An Elf Bar' : 'A Thonic'} name={open.name} text={open.text} onClose={close}
+                <ItemInfo icon={itemPicture(open)} kind={open.elf ? 'An Elf Bar' : 'A Thonic'} name={open.name} text={open.text} onClose={close} discard={() => actions.discardItem({ thonic: openSlot })}
                     status={open.elf ? `${open.puffs} puff${open.puffs === 1 ? '' : 's'} left${open.puffed ? ', puffed this fight' : ''}` : undefined}
                     actions={canUse ? [{ label: open.elf ? 'Puff' : 'Drink', run: () => { if (open.id === 'secondThoughts') actions.startPutBack(openSlot); else actions.drinkThonic(openSlot); } }] : []} />
             )}
@@ -1397,7 +1445,9 @@ const KEEPSAKE_ICONS: Record<string, string> = {
     watermelonHindsight: '🍉',
     // 17 Nov (their emoji, until the user paints them).
     gildedDie: '🎲',
-    brensCompass: '🧭'
+    brensCompass: '🧭',
+    // The hot tub's surge, on the strip during its fight (23 Nov).
+    hotTub: '🫧'
 };
 
 // After beating an opponent: three keepsakes dealt as cards. Tap one to pick it up, then
@@ -1977,15 +2027,85 @@ function AbilityMomentView({ snap }: { snap: Snapshot }) {
 // next opponent; the scene fades out first.
 const LEAVE_MS = 450;
 
+// Making room (23 Nov, the user's, from players: "a warning before replacing items", "pick items to replace"):
+// pick which of yours to leave, then say yes to it, as it's gone for good.
+interface SwapOption { key: string; icon: React.ReactNode; name: string; warn?: string }
+function SwapPicker({ gain, full, options, onPick, onClose }: { gain: string; full: string; options: SwapOption[]; onPick: (key: string) => void; onClose: () => void }) {
+    const [chosen, setChosen] = useState<SwapOption | null>(null);
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return createPortal(
+        <div className="item-veil" role="dialog" aria-label={`Make room for ${gain}`} onClick={onClose}>
+            <div className="item-card swap-card" onClick={e => e.stopPropagation()}>
+                {!chosen ? (
+                    <>
+                        <span className="item-kind">{full}</span>
+                        <span className="item-name swap-ask">Make room for {gain}</span>
+                        <span className="item-text">Which will you leave behind?</span>
+                        <div className="swap-list">
+                            {options.map(o => (
+                                <button key={o.key} className="swap-option" onClick={() => { playSound('click'); setChosen(o); }}>
+                                    <span className="icon" aria-hidden="true">{o.icon}</span>
+                                    <strong>{o.name}</strong>
+                                </button>
+                            ))}
+                        </div>
+                        <button className="item-discard" onClick={onClose}>Back</button>
+                    </>
+                ) : (
+                    <>
+                        <span className="item-picture" aria-hidden="true">{chosen.icon}</span>
+                        <span className="item-kind">Are you sure?</span>
+                        <span className="item-name swap-ask">Leave {chosen.name} behind for {gain}?</span>
+                        <span className="item-text">It's gone for good.{chosen.warn ? ` ${chosen.warn}` : ''}</span>
+                        <button className="primary item-use" onClick={() => { onClose(); onPick(chosen.key); }}>Yes, swap</button>
+                        <button className="item-discard" onClick={() => setChosen(null)}>Back</button>
+                    </>
+                )}
+            </div>
+        </div>,
+        document.body
+    );
+}
+const shelfOptions = (run: TavernRun): SwapOption[] => run.shelf.map((t, i) => ({
+    key: String(i), icon: itemPicture(t), name: t.name,
+    warn: t.elf && t.puffs ? `${t.puffs} puff${t.puffs === 1 ? '' : 's'} left in it.` : undefined
+}));
+const keepsakeOptions = (run: TavernRun): SwapOption[] => run.keepsakes.map(k => ({
+    key: k.id, icon: keepsakeIcon(k.id), name: k.name,
+    warn: k.id === 'potionBelt' && run.shelf.length >= run.shelfSize ? 'The Thonic in its slot goes with it.' : undefined
+}));
+
+// A Thonic's or an Elf Bar's buy button: with a full shelf it becomes "Swap", and asks which to pour away.
+function ShelfBuy({ run, name, label, disabled, onBuy }: { run: TavernRun; name: string; label: string; disabled: boolean; onBuy: (giveUp?: number) => void }) {
+    const [picking, setPicking] = useState(false);
+    const close = useCallback(() => setPicking(false), []);
+    const full = run.shelf.length >= run.shelfSize;
+    return (
+        <>
+            <button className="buy" disabled={disabled} onClick={() => (full ? setPicking(true) : onBuy())}>{full && !disabled ? label.replace(/^Buy/, 'Swap').replace(/^Free$/, 'Swap · free') : label}</button>
+            {picking && <SwapPicker gain={name} full="Your shelf is full" options={shelfOptions(run)} onPick={k => onBuy(Number(k))} onClose={close} />}
+        </>
+    );
+}
+
 function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     const run = state.tavernRun!;
     const shop = run.shop!;
     const arrival = snap.shopArrival;
-    const shelfFull = run.shelf.length >= run.shelfSize;
     const pocketsFull = run.keepsakes.length >= (run.maxKeepsakes ?? 5); // five keepsakes at most
     const [leaving, setLeaving] = useState(false);
     // Pockets full: buying a keepsake means choosing one of yours to leave behind (17 Nov, the user's).
     const [swapFor, setSwapFor] = useState<string | null>(null);
+    // Thom's scene put aside (23 Nov, the user's): the table's strip shows underneath, your shelf and keepsakes
+    // a tap from their panels (and from throwing them away), until "Back to Thom".
+    // peek: where the eye sat on Thom's counter, so the eye that brings him back sits in the same place (23 Nov, the user's).
+    const [peek, setPeek] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+    // (While peeking, the table's turn controls are hidden: there's no throw between fights.)
+    useEffect(() => { document.body.classList.toggle('thom-peeking', !!peek); return () => document.body.classList.remove('thom-peeking'); }, [peek]);
     const leave = () => {
         if (leaving) return;
         setLeaving(true);
@@ -1994,7 +2114,15 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
     // Thom's cart has its own ambience while it's up (the user's loop, 28 Oct).
     useEffect(() => startSceneAmbience('thom'), []);
     return (
-        <div className={`thom-scene ${leaving ? 'leaving' : ''}`} role="dialog" aria-label={`Thom's Thonics. Thom: ${thomSays(state.tavernRun!, !!shop.first)}`}>
+        <>
+        {peek && createPortal(
+            <button className="peek-eye back" style={{ position: 'fixed', zIndex: 21, left: peek.left, top: peek.top, width: peek.width, height: peek.height }}
+                onClick={() => { playSound('click'); setPeek(null); }} aria-label="Back to Thom" title="Back to Thom">
+                <span aria-hidden="true">👁</span><small>Thom</small>
+            </button>,
+            document.body
+        )}
+        <div className={`thom-scene ${leaving ? 'leaving' : ''} ${peek ? 'peeking' : ''}`} aria-hidden={!!peek} role="dialog" aria-label={`Thom's Thonics. Thom: ${thomSays(state.tavernRun!, !!shop.first)}`}>
             <div className="thom-stage" aria-hidden="true" style={stageVars(SPOT_PORTRAITS.thom)}>
                 <div className="thom-lantern" />
                 <div className="thom-speech">{thomSays(state.tavernRun!, !!shop.first)}</div>
@@ -2020,9 +2148,8 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                 <Bottle thonic={t} />
                                 <strong>{t.name}</strong>
                                 <span className="text">{t.text}</span>
-                                <button className="buy" disabled={short || shelfFull} onClick={() => actions.buyThonic(t.id)}>
-                                    {shelfFull ? 'Shelf full' : shop.free ? 'Free' : short ? coins(t.price) : `Buy · ${coins(t.price)}`}
-                                </button>
+                                <ShelfBuy run={run} name={t.name} disabled={short} onBuy={giveUp => actions.buyThonic(t.id, giveUp)}
+                                    label={shop.free ? 'Free' : short ? coins(t.price) : `Buy · ${coins(t.price)}`} />
                             </div>
                         );
                     })}
@@ -2037,23 +2164,10 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                                     <div key={k.id} className="keepsake-ware" style={{ animationDelay: `${1.3 + i * 0.15}s` }}>
                                         <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
                                         <span className="about"><strong>{k.name}</strong><span className="text">{k.text}</span></span>
-                                        <button className="buy" disabled={short} onClick={() => (pocketsFull ? setSwapFor(swapFor === k.id ? null : k.id) : actions.buyKeepsake(k.id))}>
+                                        <button className="buy" disabled={short} onClick={() => (pocketsFull ? setSwapFor(k.id) : actions.buyKeepsake(k.id))}>
                                             {short ? coins(k.price) : pocketsFull ? `Swap · ${coins(k.price)}` : `Buy · ${coins(k.price)}`}
                                         </button>
-                                        {swapFor === k.id && (
-                                            <div className="swap-pick">
-                                                <p className="fine">Pockets full: which will you leave behind for <strong>{k.name}</strong>?</p>
-                                                <div className="drop-swap">
-                                                    {run.keepsakes.map(own => (
-                                                        <button key={own.id} className="keepsake-ware swap" onClick={() => { setSwapFor(null); actions.buyKeepsake(k.id, own.id); }}>
-                                                            <span className="icon" aria-hidden="true">{keepsakeIcon(own.id)}</span>
-                                                            <span className="about"><strong>{own.name}</strong></span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <button className="link-button" onClick={() => setSwapFor(null)}>Back</button>
-                                            </div>
-                                        )}
+                                        {swapFor === k.id && <SwapPicker gain={k.name} full={`Your pockets are full (${run.maxKeepsakes ?? 5} keepsakes)`} options={keepsakeOptions(run)} onPick={own => actions.buyKeepsake(k.id, own)} onClose={() => setSwapFor(null)} />}
                                     </div>
                                 );
                             })}
@@ -2061,17 +2175,22 @@ function ThomShop({ snap, state }: { snap: Snapshot; state: GameState }) {
                     </div>
                 )}
                 <div className="shop-footer">
+                    {/* Your items (23 Nov, the user's): Thom's scene steps aside to show your strip. */}
+                    <button className="peek-eye" onClick={e => { playSound('click'); const r = e.currentTarget.getBoundingClientRect(); setPeek({ left: r.left, top: r.top, width: r.width, height: r.height }); }} aria-label="See your items" title="See your items">
+                        <span aria-hidden="true">👁</span><small>Items</small>
+                    </button>
                     <div className="shop-shelf" aria-label="Your shelf">
                         {Array.from({ length: Math.max(run.shelfSize, run.shelf.length) }, (_, i) => run.shelf.at(i) ?? null).map((t, i) => (
                             <span key={i} className="shelf-slot" title={t ? t.name : 'Empty'}><Bottle thonic={t} /></span>
                         ))}
                     </div>
-                    <button className="primary onward" onClick={leave} disabled={leaving}>
+                    <button className="primary onward wraps" onClick={leave} disabled={leaving}>
                         Challenge {arrival?.nextEnemy ?? run.enemy.name}
                     </button>
                 </div>
             </div>
         </div>
+        </>
     );
 }
 
@@ -2236,18 +2355,7 @@ function Invitation({ state, interlude, next, leaving, onMoveOn }: { state: Game
                         </>
                     )}
                     {claim === 'open' && swapping && (
-                        <>
-                            <p className="mask-text">Which will you leave behind for <strong>{drop.name}</strong>?</p>
-                            <div className="drop-swap">
-                                {run.keepsakes.map(k => (
-                                    <button key={k.id} className="keepsake-ware swap" onClick={() => actions.claimDrop(true, k.id)}>
-                                        <span className="icon" aria-hidden="true">{keepsakeIcon(k.id)}</span>
-                                        <span className="about"><strong>{k.name}</strong></span>
-                                    </button>
-                                ))}
-                            </div>
-                            <button className="link-button" onClick={() => setSwapping(false)}>Back</button>
-                        </>
+                        <SwapPicker gain={drop.name} full="Your pockets are full" options={keepsakeOptions(run)} onPick={own => actions.claimDrop(true, own)} onClose={() => setSwapping(false)} />
                     )}
                 </div>
                 </div>
@@ -2442,7 +2550,6 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
 
     // Johnny Elf Bar: Elf Bars for the shelf (not one you already carry).
     if (interlude.stage === 'elfKid') {
-        const shelfFull = run.shelf.length >= run.shelfSize;
         return (
             <>
                 <p className="scene-text">Each Elf Bar sits on your shelf with <strong>{interlude.puffs} puffs</strong>, one a fight.</p>
@@ -2456,9 +2563,8 @@ function SceneCounter({ state, next, onMoveOn, onLookAround, setRevealed }: { st
                                 <Bottle thonic={t} />
                                 <strong>{t.name.replace(/ Elf Bar$/, '')}</strong>
                                 <span className="text">{t.text}</span>
-                                <button className="buy" disabled={short || shelfFull || carried} onClick={() => actions.buyElfBar(t.id)}>
-                                    {carried ? 'On your shelf' : shelfFull ? 'Shelf full' : short ? coins(price) : `Buy · ${coins(price)}`}
-                                </button>
+                                <ShelfBuy run={run} name={t.name.replace(/ Elf Bar$/, '')} disabled={short || carried} onBuy={giveUp => actions.buyElfBar(t.id, giveUp)}
+                                    label={carried ? 'On your shelf' : short ? coins(price) : `Buy · ${coins(price)}`} />
                             </div>
                         );
                     })}
@@ -2798,9 +2904,10 @@ function FightWon({ state, won, onLeaving, onNext }: { state: GameState; won: Sh
     const rows = [
         { key: 'win', label: `Beating ${won.defeated}`, detail: won.place ? `opponent ${won.place}` : '', amount: gold.win },
         ...(gold.hearts > 0 ? [{ key: 'hearts', label: 'Hearts left', detail: gold.perHeart ? `${heartsLeft} × ${coins(gold.perHeart)}` : '', amount: gold.hearts }] : []),
-        ...(gold.miser ? [{ key: 'miser', label: "Miser's Purse", detail: '1 for every 5 in your purse', amount: gold.miser }] : [])
+        ...(gold.interest ? [{ key: 'interest', label: 'Interest', detail: `1 for every ${gold.interestEvery ?? 10} in your purse`, amount: gold.interest }] : []),
+        ...(gold.miser ? [{ key: 'miser', label: "Miser's Purse", detail: '1 more for every 5 in your purse', amount: gold.miser }] : [])
     ];
-    const total = gold.win + gold.hearts + (gold.miser ?? 0);
+    const total = gold.win + gold.hearts + (gold.interest ?? 0) + (gold.miser ?? 0);
     const [before] = useState(() => Math.max(0, run.purse - total));
     // step: how many rows are showing; one more than the rows = the purse counts up.
     const [step, setStep] = useState(0);
@@ -3729,6 +3836,7 @@ export function Hud() {
             <FogBank snap={snap} />
             <PlaceMusic snap={snap} />
             <Celebration snap={snap} />
+            <CharmNote snap={snap} />
             <DevilSixes snap={snap} />
             {snap.waiting && <WaitingCard snap={snap} />}
             {/* (Not over an opponent's entrance card: the card comes first.) */}

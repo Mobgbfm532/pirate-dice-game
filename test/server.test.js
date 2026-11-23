@@ -1039,7 +1039,7 @@ test('a Tavern Crawl run plays through to the end', async () => {
     assert.equal(t.fellTo, t.won ? null : t.encounters[t.defeated]);
     // (Walking straight on lets a pickpocket keep what they took: that's in `events`.)
     const { fights, hearts, perfect, reached, gold, purse, events, spent } = t.breakdown;
-    assert.equal(t.stats.winGold + t.stats.heartGold + t.stats.perfectGold + events - spent, purse);
+    assert.equal(t.stats.winGold + t.stats.heartGold + t.stats.perfectGold + (t.stats.interestGold || 0) + (t.stats.miserGold || 0) + events - spent, purse);
     assert.equal(purse, t.gold);
     assert.equal(fights + hearts + perfect + reached + gold, t.points, 'the leaderboard ranks by these points');
 });
@@ -2039,7 +2039,7 @@ test('full runs through the spots between fights keep the books straight', async
         })).tavern;
         const { fights, hearts, perfect, reached, gold, events, spent } = t.breakdown;
         const st = room.tavernRun.stats;
-        assert.equal(st.winGold + st.heartGold + st.perfectGold + events - spent, t.gold, 'purse = earned + events - spent');
+        assert.equal(st.winGold + st.heartGold + st.perfectGold + (st.interestGold || 0) + (st.miserGold || 0) + events - spent, t.gold, 'purse = earned + interest + events - spent');
         assert.equal(t.gold, room.tavernRun.purse);
         assert.equal(fights + hearts + perfect + reached + gold, t.points, 'the points add up');
         assert.equal(gold, t.gold * BALANCE.points.perGold, 'gold left, converted');
@@ -2091,6 +2091,32 @@ test('Fizzy Thomic rerolls the 1s after a roll, once, and only then', async () =
     hero.emit('drinkThonic', 0); // no 1s showing now
     await sleep(50);
     assert.equal(room.tavernRun.shelf.length, 1, 'kept when there are no 1s');
+});
+
+test('Fizzy Thomic on a last die kept as it landed on a 1: it goes back in play and is thrown again (23 Nov)', async () => {
+    const { hero, room } = await tavernTable('LastFizz');
+    room.tavernRun.shelf = ['fizzy', 'steady'];
+    await rollWith(hero, room, [2, 3, 6, 6, 6, 6]);
+    await keep(hero, [0, 2, 3, 4, 5]); // the 2 and four 6s: still needing the 4
+    await rollWith(hero, room, [undefined, 1]);
+    await sleep(60);
+    assert.equal(room.turn.dice[1].status, 'lockedThisTurn', 'kept as it landed');
+    assert.ok(room.turn.finalized, 'the hand is finished (dust, for now)');
+    const unpin = pinFaces([4]);
+    const thrown = waitFor(hero, 'diceRolled', d => Array.isArray(d.rerolled));
+    hero.emit('drinkThonic', 0);
+    const again = await thrown;
+    unpin();
+    assert.deepEqual(again.rerolled, [1]);
+    assert.equal(room.turn.dice[1].value, 4);
+    assert.equal(room.turn.dice[1].status, 'active', 'loose again, to be kept by a tap');
+    assert.deepEqual(shelfOf(room), ['steady']);
+    await sleep(again.animationMs * 0.01 + 20);
+    await keep(hero, [1]);
+    const ended = waitFor(hero, 'turnState', d => d.event && d.event.type === 'finalized', 3000);
+    hero.emit('endTurn');
+    await ended;
+    assert.equal(room.turn.outcome ? room.turn.outcome.score : room.players[hero.id].score, 24);
 });
 
 test('Second Thoughts puts back a kept die, which may then be rolled without keeping another', async () => {
@@ -2310,13 +2336,13 @@ test('Clear-Eye stops the Hangman\'s Ace of Spades', async () => {
         await playHand(hang, hroom, [2, 4, 1, 1, 1, 1]); // the player scores 4
         await result;
         assert.equal(ace, !clear, clear ? 'no Ace this round' : 'the Ace without Clear-Eye');
-        assert.equal(hroom.players.BOT_MOLAR.lives, clear ? 1 : 2, 'the Ace of Spades wins him a heart back (20 Nov)');
+        assert.equal(hroom.players.BOT_MOLAR.lives, 1, 'the Ace of Spades wins him no heart back (23 Nov)');
     }
 });
 
-test('a rolled 24 from an opponent restores a life, up to their lives for the fight', async () => {
-    for (const [lives, after] of [[1, 2], [3, 3]]) {
-        const hang = await tavernAgainst(fightOf('hangman'), `Hang24-${lives}`);
+test('a rolled 24 from an opponent restores a life, up to their lives for the fight; never the Duke, Martha or the Hangman', async () => {
+    for (const [who, lives, after] of [['vaelin', 1, 2], ['vaelin', 3, 3], ['hangman', 1, 1], ['duke', 1, 1], ['martha', 2, 2]]) {
+        const hang = await tavernAgainst(fightOf(who), `Heal24-${who}-${lives}`);
         const room = server.rooms[Object.keys(server.rooms).find(c => server.rooms[c].players[hang.id])];
         room.tavernRun.abilityRound = 99; // no Ace: a 24 of his own
         room.players.BOT_MOLAR.lives = lives;
@@ -2326,7 +2352,7 @@ test('a rolled 24 from an opponent restores a life, up to their lives for the fi
         const result = waitFor(hang, 'roundResult', () => true, 4000);
         await playHand(hang, room, [2, 4, 1, 1, 1, 1]); // the player scores 4 and loses the round
         await result;
-        assert.equal(room.players.BOT_MOLAR.lives, after, lives === 1 ? 'one life back' : 'never above his 3');
+        assert.equal(room.players.BOT_MOLAR.lives, after, who + ' on ' + lives);
     }
 });
 
@@ -3430,7 +3456,57 @@ test("the Miser's Purse: a win pays 1 more gold for every 5 in the purse", async
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     const offer = await won;
     assert.equal(offer.gold.miser, 9); // (47 gold: nine 5s)
-    assert.equal(room.tavernRun.purse, 47 + 9 + offer.gold.win + offer.gold.hearts);
+    assert.equal(offer.gold.interest, 4); // (and everyone's interest, 23 Nov: four 10s)
+    assert.equal(room.tavernRun.purse, 47 + 9 + 4 + offer.gold.win + offer.gold.hearts);
+});
+
+test('interest: a win pays 1 gold for every 10 in the purse (23 Nov)', async () => {
+    const hero = await tavernAgainst(1, 'Interest');
+    const room = roomOf(hero);
+    room.tavernRun.purse = 39;
+    room.players.BOT_MOLAR.lives = 1;
+    room.tavernRun.abilityRound = 99;
+    room.tavernRun.roundEffect = null;
+    opponentAlwaysDusts(hero, room);
+    const won = waitFor(hero, 'offerShop', () => true, 6000);
+    await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
+    const offer = await won;
+    assert.equal(offer.gold.interest, 3);
+    assert.equal(offer.gold.miser, undefined);
+    assert.equal(room.tavernRun.purse, 39 + 3 + offer.gold.win + offer.gold.hearts);
+});
+
+test('a full shelf: a Thonic bought pours one of yours away, named by its slot; items thrown away (23 Nov)', async () => {
+    const { hero, room } = await tavernTable('Swapper');
+    const run = room.tavernRun;
+    run.shelf = ['steady', 'fizzy'];
+    run.purse = 100;
+    run.shop = { stock: ['healing'], keepsakes: [] };
+    hero.emit('buyThonic', 'healing'); // full, none named: nothing sold
+    await sleep(40);
+    assert.deepEqual(run.shelf, ['steady', 'fizzy']);
+    assert.equal(run.purse, 100);
+    hero.emit('buyThonic', 'healing', 0);
+    await nextState(hero, s => runOf(s).shelf.some(t => t.id === 'healing'));
+    assert.deepEqual(run.shelf, ['fizzy', 'healing']);
+    assert.ok(run.purse < 100);
+    hero.emit('buyThonic', 'healing', 7); // no such slot
+    await sleep(40);
+    assert.deepEqual(run.shelf, ['fizzy', 'healing']);
+    // Thrown away: a Thonic by its slot, a keepsake by its id (the Potion Belt's Thonic goes with it).
+    hero.emit('discardItem', { thonic: 0 });
+    await nextState(hero, s => runOf(s).shelf.length === 1);
+    assert.deepEqual(run.shelf, ['healing']);
+    run.keepsakes = [{ id: 'potionBelt', name: 'Potion Belt', text: '' }, { id: 'velvetCushion', name: 'Velvet Cushion', text: '' }];
+    run.shelf = ['healing', 'steady', 'fizzy'];
+    hero.emit('discardItem', { keepsake: 'potionBelt' });
+    await nextState(hero, s => runOf(s).keepsakes.length === 1);
+    assert.deepEqual(run.keepsakes.map(k => k.id), ['velvetCushion']);
+    assert.deepEqual(run.shelf, ['healing', 'steady']);
+    hero.emit('discardItem', { keepsake: 'nothing' });
+    hero.emit('discardItem', 'junk');
+    await sleep(40);
+    assert.equal(run.keepsakes.length, 1);
 });
 
 test("the Gambler's Charm: the last die is thrown twice and the better kept", async () => {
@@ -3442,7 +3518,7 @@ test("the Gambler's Charm: the last die is thrown twice and the better kept", as
     let t = last([2, 6, 6, 6, 6]);
     assert.equal(server.rollFaceFor(room, t)(t.dice[5]), 4);
     unpin();
-    assert.deepEqual(t.ghosts, [{ die: 5, kept: 4, lost: 3, kind: 'plain' }]);
+    assert.deepEqual(t.ghosts, [{ die: 5, kept: 4, lost: 3, kind: 'charm' }]);
     // Both kept: the higher.
     unpin = pinFaces([2, 5]);
     t = last([2, 4, 6, 6, 6]);
@@ -3516,7 +3592,7 @@ test('prices follow the place: x1 at the Ghoul and Gourd, x1.5 at the Yawning Po
     assert.deepEqual(priced, [[c, k, sh], [Math.ceil(c * 1.5), Math.ceil(k * 1.5), Math.ceil(sh * 1.5)], [c * 2, k * 2, sh * 2]]);
 });
 
-test('the Gilded Die: pay gold to throw one loose die again, dearer each time, three a fight', async () => {
+test('the Gilded Die: pay 5 gold to throw one loose die again, as often as you like (23 Nov)', async () => {
     const { hero, room } = await tavernTable('Gilded');
     const run = room.tavernRun;
     run.keepsakes = [keepsakeObj('gildedDie')];
@@ -3526,7 +3602,7 @@ test('the Gilded Die: pay gold to throw one loose die again, dearer each time, t
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
     unpin();
     await sleep(rolled.animationMs * 0.01 + 30);
-    const step = BALANCE.keepsakes.gildedStep;
+    const price = BALANCE.keepsakes.gildedPrice; // (5 a throw, as often as you like, since 23 Nov)
     const paid = [];
     for (const face of [2, 4, 6]) {
         unpin = pinFaces([face]);
@@ -3540,11 +3616,14 @@ test('the Gilded Die: pay gold to throw one loose die again, dearer each time, t
         paid.push(before - run.purse);
         await sleep(thrown.animationMs * 0.01 + 30);
     }
-    assert.deepEqual(paid, [step, step * 2, step * 3]);
+    assert.deepEqual(paid, [price, price, price]);
+    unpin = pinFaces([5]);
+    const fourth = waitFor(hero, 'diceRolled', d => d.rerolled);
     hero.emit('gildDie', 1);
-    await sleep(40);
-    assert.equal(room.turn.dice[1].value, 1, 'three a fight');
-    assert.equal(run.purse, 100 - step * 6);
+    await fourth;
+    unpin();
+    assert.equal(room.turn.dice[1].value, 5, 'a fourth: no cap');
+    assert.equal(run.purse, 100 - price * 4);
 });
 
 test('the Gilded Die: never a kept die, never without the gold', async () => {

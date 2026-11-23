@@ -35,6 +35,7 @@ export interface TurnView {
     suspense: Suspense;
     callout: string | null;
     finalized: boolean;
+    complete?: boolean; // every die kept, waiting for End Turn (a player's hand, 4 Nov)
     outcome: TurnOutcome | null;
     canRoll: boolean;
     steady?: boolean; // a Steady Thonic was drunk: dust this turn counts as 0

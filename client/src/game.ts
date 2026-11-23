@@ -59,7 +59,7 @@ export interface TavernRun {
     devilCap?: number | null; // null: no cap (since 21 Oct)
     maskReady?: boolean; // Martha's mask can be worn this fight (nothing gives it since 4 Nov)
     mystery?: { flavour: string; ready: boolean } | null; // Mystery Flavour, Martha's Elf Bar: this fight's flavour
-    gilded?: { uses: number; max: number; price: number } | null; // the Gilded Die (17 Nov): uses this fight, the next one's price
+    gilded?: { uses: number; max: number | null; price: number } | null; // the Gilded Die (17 Nov): uses this fight, the cap (null: none, since 23 Nov), the price
     enemy: Enemy;
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;
@@ -103,7 +103,8 @@ export interface TavernRun {
 }
 
 // A roll that lost, risen from its die as a ghost: kind 'tub' (aqua, Double Bubble) or 'plain'.
-export interface Ghost { die: number; kept: number; lost: number; kind: 'tub' | 'plain' }
+// 'charm': the Gambler's Charm's other throw of your last die (23 Nov: sent every time, a tie too).
+export interface Ghost { die: number; kept: number; lost: number; kind: 'tub' | 'plain' | 'charm' }
 
 // The Wild Magic Hot Tub's surges (server.js HOT_TUB_SURGES); die: the die it works on.
 export interface TubSurge { id: 'noOnes' | 'twin' | 'lucky' | 'scalding' | 'soggy' | 'pruney'; name: string; text: string; good: boolean; die: number }
@@ -172,7 +173,7 @@ export interface AbilityMoment { who?: string; name: string; ability: string; te
 // A fight won (server.js): what it paid, shown on the summary before the next event (`at`: once).
 export interface ShopArrival {
     defeated: string; nextEnemy: string; place?: number; at?: number; resumed?: boolean; drop?: Keepsake | null; // drop: a boss's keepsake
-    gold: { win: number; hearts: number; heartsLeft?: number; perHeart?: number; perPlace?: number; miser?: number }; // miser: the Miser's Purse
+    gold: { win: number; hearts: number; heartsLeft?: number; perHeart?: number; perPlace?: number; miser?: number; interest?: number; interestEvery?: number }; // miser: the Miser's Purse
 }
 
 export interface GameState {
@@ -235,6 +236,8 @@ export interface Snapshot {
     // The rolls that lost (Double Bubble on the hot tub's aqua die, Stason's Flourish on all of
     // his), shown as ghost dice once the dice stop.
     ghosts: { dice: Ghost[]; at: number } | null;
+    // The Gambler's Charm just threw your last die twice (23 Nov): the two throws, for its note over the felt.
+    charm: { kept: number; lost: number; at: number } | null;
     putBackSlot: number | null; // a Second Thoughts Thonic is waiting for a kept die to be tapped
     gildPick: boolean; // the Gilded Die is waiting for a loose die to be tapped (17 Nov)
     // A perfect hand's celebration (since 23 Oct): a 24, or in a cursed round (lowest wins) the
@@ -315,6 +318,7 @@ let snapshot: Snapshot = {
     shopArrival: null,
     betweenShown: false,
     ghosts: null,
+    charm: null,
     putBackSlot: null,
     gildPick: false,
     celebration: null,
@@ -657,7 +661,9 @@ socket.on('diceRolled', (data: { sea?: number; turn: TurnView; preRollCallout: s
             // A crawl round's first throw landing a perfect 24 (20 Nov, the user's): the logo, in place of the three 6s.
             if (naturalFirstThrow(turn)) { naturalKey = turn.key; celebrate('logo', turn); }
             else if (data.devil) showDevil(turn);
-            update({ rolling: false, ...(data.ghosts ? { ghosts: { dice: data.ghosts, at: performance.now() } } : {}) });
+            // The Gambler's Charm (23 Nov): a note over the felt says what it threw, unless the die landed hidden.
+            const charm = data.ghosts?.find(g => g.kind === 'charm' && !turn.dice.find(d => d.id === g.die)?.hidden);
+            update({ rolling: false, ...(data.ghosts ? { ghosts: { dice: data.ghosts, at: performance.now() } } : {}), ...(charm ? { charm: { kept: charm.kept, lost: charm.lost, at: performance.now() } } : {}) });
             // A last die thrown (or a becalmed hand's last throw) is kept as it lands, by the rules. It lies where it landed
             // a moment first, then goes to its slot (20 Nov, the user's: an opponent's last die was never seen kept).
             // (Only an opponent's: a die of yours tapped in that moment would be let go by the server.)
@@ -1329,9 +1335,15 @@ export const actions = {
             update({ turn: withPendingTaps(serverTurn) });
         }, PENDING_MS + 50);
     },
-    buyThonic(id: string) {
+    // giveUp: with a full shelf, the slot of the Thonic poured away for it (23 Nov).
+    buyThonic(id: string, giveUp?: number) {
         playSound('potionSelect');
-        socket.emit('buyThonic', id);
+        socket.emit('buyThonic', id, giveUp);
+    },
+    // Throw an item away for good (23 Nov): a Thonic or Elf Bar by its shelf slot, or a keepsake by its id.
+    discardItem(what: { thonic: number } | { keepsake: string }) {
+        playSound('click');
+        socket.emit('discardItem', what);
     },
     leaveShop() {
         actions.moveOn();
@@ -1419,9 +1431,9 @@ export const actions = {
         socket.emit('diceRoll');
     },
     // Johnny Elf Bar: an Elf Bar for the shelf.
-    buyElfBar(id: string) {
+    buyElfBar(id: string, giveUp?: number) {
         playSound('potionSelect');
-        socket.emit('buyElfBar', id);
+        socket.emit('buyElfBar', id, giveUp);
     },
     // The Bard: a song for the next fight (null: walk away).
     bardPick(id: string | null) {

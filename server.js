@@ -367,7 +367,7 @@ const TAVERN_ENCOUNTERS = [
         ability: 'penitentStare',
         abilities: ['penitentStare', 'deadeye24'], // Penitent Stare (6 Nov), and his Ace kept for his last stand
         blurb: "The Hangman seals your fate with the Ace of Spades.", // (the user's, 13 Nov)
-        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a heart, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "On his last heart, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart." }]
+        powers: [{ name: "Penitent Stare", text: "Once a fight, after he's lost a heart, when it would save him the round: your finished hand scores 2 less for each heart you've taken from him." }, { name: "The Ace of Spades", text: "On his last heart, he shoots a die into a 6: his own 18 or higher becomes a perfect 24." }]
     },
     {
         id: 'jaguar',
@@ -420,12 +420,12 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'misersPurse',
         name: "Miser's Purse",
-        text: 'Each win pays 1 more gold for every 5 in your purse.'
+        text: 'Each win pays 1 more gold for every 5 in your purse, on top of the usual interest.'
     },
     {
         id: 'gamblersCharm',
         name: "Gambler's Charm",
-        text: 'When only one die is left to throw, it is thrown twice and you keep the better.'
+        text: 'Whenever you throw a single die (your last one left), it is thrown twice and you keep the better: a 2 or 4 you still need, else the higher. The other rises as a ghost.'
     },
     {
         id: 'bottomlessFlask',
@@ -436,7 +436,7 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'gildedDie',
         name: 'Gilded Die',
-        text: 'After a throw, pay gold to throw one loose die again: up to three times a fight, dearer each time.',
+        text: 'After a throw, pay 5 gold to throw one loose die again, as often as you like.',
         from: 'yawningPortal'
     },
     {
@@ -450,6 +450,8 @@ const KEEPSAKE_NUMBERS = BALANCE.keepsakes;
 // You carry at most this many keepsakes (the user's call, 30 Oct): with full pockets Thom's back
 // shelf won't sell, the Stranger stays away, and a boss's keepsake means leaving one behind.
 const MAX_KEEPSAKES = BALANCE.maxKeepsakes || 5;
+// Opponents whose perfect hand never wins a heart back (23 Nov, the user's).
+const NO_HEAL_ON_24 = new Set(['duke', 'martha', 'hangman']);
 const pocketsFull = room => room.tavernRun.keepsakes.length >= MAX_KEEPSAKES;
 
 // Martha's mask: Martha's drop until 4 Nov (the user's call: her Elf Bar instead). Nothing gives
@@ -574,9 +576,11 @@ function noteBought(run, id) {
     run.bought[id] = (run.bought[id] || 0) + 1;
 }
 const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
-// The Gilded Die (17 Nov): each throw again this fight costs gildedStep more (x the place), at most gildedMax a fight.
+// The Gilded Die (17 Nov): each throw again costs gildedPrice (5 since 23 Nov, the user's: flat, not by place), and since
+// then as many a fight as you can pay for (gildedMax null; a number caps it).
 const gildedUses = run => (run.encounterKeepsakeUses && run.encounterKeepsakeUses.gildedDie) || 0;
-const gildedPrice = run => Math.ceil((KEEPSAKE_NUMBERS.gildedStep ?? 3) * (gildedUses(run) + 1) * placePrice(run));
+const gildedPrice = () => KEEPSAKE_NUMBERS.gildedPrice ?? 5;
+const gildedMax = () => (Number.isInteger(KEEPSAKE_NUMBERS.gildedMax) ? KEEPSAKE_NUMBERS.gildedMax : null);
 const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
 const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
 const bardPrice = run => risingPrice(run, 'bard', INTERLUDE.bardPrice || 0);
@@ -617,6 +621,15 @@ function dropBeltThonics(room) {
     let shelf = room.tavernRun.shelf;
     if (shelf.length > shelfSizeOf(room)) shelf.splice(shelfSizeOf(room));
 }
+// A full shelf, buying more (23 Nov, the user's, from players): the Thonic or Elf Bar in slot giveUp is poured away
+// to make room. True when there's room for one more.
+function makeShelfRoom(room, giveUp) {
+    let shelf = room.tavernRun.shelf;
+    if (shelf.length < shelfSizeOf(room)) return true;
+    if (!Number.isInteger(giveUp) || giveUp < 0 || giveUp >= shelf.length) return false;
+    shelf.splice(giveUp, 1);
+    return true;
+}
 function shelfSizeOf(room) {
     return SHELF_SIZE + (hasKeepsake(room, 'potionBelt') ? KEEPSAKE_NUMBERS.beltSlots : 0);
 }
@@ -645,7 +658,8 @@ function rollFaceFor(room, turn) {
         let pick = cursed ? Math.min(a, b) : Math.max(a, b);
         for (let need of [2, 4]) if (!kept.includes(need) && (a === need || b === need)) { pick = need; break; }
         let lost = pick === a ? b : a;
-        if (lost !== pick) turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'plain' });
+        // (23 Nov, players couldn't always tell it worked: a ghost every time, a tie too, marked as the charm's.)
+        turn.ghosts.push({ die: d.id, kept: pick, lost, kind: 'charm' });
         return pick;
     });
 }
@@ -901,7 +915,7 @@ function getTavernRunState(room) {
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
         // Mystery Flavour: this fight's flavour (an Elf Bar id) and whether it can still be puffed.
-        gilded: hasKeepsake(room, 'gildedDie') ? { uses: gildedUses(room.tavernRun), max: KEEPSAKE_NUMBERS.gildedMax ?? 3, price: gildedPrice(room.tavernRun) } : null,
+        gilded: hasKeepsake(room, 'gildedDie') ? { uses: gildedUses(room.tavernRun), max: gildedMax(), price: gildedPrice() } : null,
         mystery: hasKeepsake(room, MYSTERY_FLAVOUR.id) ? { flavour: mysteryFlavourOf(room.tavernRun), ready: !room.tavernRun.encounterKeepsakeUses.mysteryFlavour } : null,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
@@ -1534,7 +1548,7 @@ function performRoll(roomCode) {
         return leadMs + animationMs;
     }
     // The last die has nothing to choose: once it lands it goes into its slot by itself.
-    // The player still presses End Turn.
+    // The player still presses End Turn. (A Fizzy Thomic can still throw it again if it shows a 1: Rules.rerollOnes.)
     if (stillActive.length === 1) {
         let lastDieId = stillActive[0].id;
         setTimeout(() => {
@@ -1602,7 +1616,7 @@ function performEndTurn(roomCode) {
             aceFired = true; // (20 Nov, the user's: from 18, and it heals him like any 24)
             let was = room.players[currentId].score;
             room.players[currentId].score = 24;
-            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman shoots a die into a 6. Perfect 24.', after: `The Hangman shoots a die into a 6: his ${was} becomes a perfect 24, and he wins back a heart.` });
+            fogHeld(roomCode, room, 'signatureMove', { name: encounter.name, ability: 'The Ace of Spades', text: 'The Hangman shoots a die into a 6. Perfect 24.', after: `The Hangman shoots a die into a 6: his ${was} becomes a perfect 24.` });
             if (!fogForYou(room)) io.to(roomCode).emit('displayMessage', { text: 'The Hangman fires the Ace of Spades.', color: "#ffd54f" });
         }
         // The Bard's Cutting Words: the opponent's first hand that counts this fight loses some
@@ -1662,12 +1676,16 @@ function performEndTurn(roomCode) {
     // Spades makes one too, and since 20 Nov it heals him (the user's).
     let maxLives = room.mode === 'tavern-crawl' && currentId === BOT_ID ? TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].lives : room.startingLives;
     let natural = currentId !== BOT_ID || score === 24 || aceFired;
+    // No heart back for the Duke, Martha and the Hangman (23 Nov, the user's, from players: their Devil and
+    // Ace make 24s too easily). Their 24 still wins the round.
+    let noHeal = currentId === BOT_ID && room.mode === 'tavern-crawl' && NO_HEAL_ON_24.has(TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id);
+    if (noHeal) natural = false;
     // Brodor's Sunglasses: your finished 23 heals too.
     let shades = currentId !== BOT_ID && room.players[currentId].score === 23 && !busted && hasKeepsake(room, BRODORS_SUNGLASSES.id);
     // A cursed round's perfect hand, the Perfect ...4? (the 2, the 4 and four 1s), heals too (20 Nov, the user's), either side.
     let roundCursed = room.mode === 'tavern-crawl' && !!room.tavernRun.roundEffect && room.tavernRun.roundEffect.kind === 'curse';
     let perfect4 = roundCursed && !busted && room.players[currentId].score === 4;
-    if ((perfect4 || (natural && (room.players[currentId].score === 24 || shades))) && room.players[currentId].lives < maxLives) {
+    if (((perfect4 && !noHeal) || (natural && (room.players[currentId].score === 24 || shades))) && room.players[currentId].lives < maxLives) {
         room.players[currentId].lives = Math.min(maxLives, room.players[currentId].lives + 1);
         if (shades) emitKeepsakeActivated(roomCode, room, BRODORS_SUNGLASSES.id, 'A 23 restores a heart.');
         io.to(roomCode).emit('displayMessage', { text: '+1 heart restored!', color: "#aed581" });
@@ -3113,8 +3131,11 @@ function evaluateTavernRound(roomCode) {
         let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
         // The Miser's Purse: 1 more gold for every miserEvery (5 since 18 Nov, the user's; it was 10) in the purse (before this win's gold).
         let miserGold = hasKeepsake(room, 'misersPurse') ? Math.floor(room.tavernRun.purse / (KEEPSAKE_NUMBERS.miserEvery ?? 5)) : 0;
+        // Interest (23 Nov, the user's): 1 gold for every interestEvery (10) in the purse, for everyone, on the same purse.
+        let interestGold = GOLD.interestEvery ? Math.floor(room.tavernRun.purse / GOLD.interestEvery) : 0;
         stats.miserGold = (stats.miserGold || 0) + miserGold;
-        room.tavernRun.purse += miserGold;
+        stats.interestGold = (stats.interestGold || 0) + interestGold;
+        room.tavernRun.purse += miserGold + interestGold;
         stats.encountersDefeated++;
         meet(room, 'beat:' + TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id); // (beaten, in any run: their dice are yours to choose, 20 Nov)
         stats.winGold += winGold;
@@ -3137,7 +3158,7 @@ function evaluateTavernRound(roomCode) {
             defeated: enemy.name,
             nextEnemy: TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].name,
             place: room.tavernRun.encounterIndex,
-            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, ...(miserGold ? { miser: miserGold } : {}) },
+            gold: { win: winGold, hearts: heartGold, heartsLeft: Math.max(0, human.lives), perHeart: GOLD.perHeartLeft, ...(interestGold ? { interest: interestGold, interestEvery: GOLD.interestEvery } : {}), ...(miserGold ? { miser: miserGold } : {}) },
             at: Date.now()
         };
         let beaten = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1];
@@ -3465,6 +3486,24 @@ io.on('connection', (socket) => {
         return room;
     };
 
+    // Throw an item away for good (23 Nov, the user's, from players): a Thonic or Elf Bar by its shelf slot,
+    // or a keepsake by its id.
+    socket.on('discardItem', (what) => {
+        let room = tavernPlayer();
+        if (!room || !what || typeof what !== 'object' || room.tavernRun.runComplete) return;
+        let run = room.tavernRun;
+        if (Number.isInteger(what.thonic)) {
+            if (what.thonic < 0 || what.thonic >= run.shelf.length) return;
+            run.shelf.splice(what.thonic, 1);
+        } else if (typeof what.keepsake === 'string') {
+            let index = run.keepsakes.findIndex(k => k.id === what.keepsake);
+            if (index < 0) return;
+            run.keepsakes.splice(index, 1);
+            dropBeltThonics(room);
+        } else return;
+        emitState(socket.roomCode);
+    });
+
     // Martha's mask: once a fight, wear Danhausen's Curse (before you roll) or the Duke's Devil
     // (any time in your turn with three or more dice to throw: the next throw lands three 6s;
     // the user's call, 21 Oct) for the round (not in a round that already has one).
@@ -3502,13 +3541,14 @@ io.on('connection', (socket) => {
         emitState(socket.roomCode);
     });
 
-    socket.on('buyThonic', (thonicId) => {
+    socket.on('buyThonic', (thonicId, giveUp) => {
         let room = tavernPlayer();
         if (!room || !room.tavernRun.shop) return;
         let run = room.tavernRun;
         if (typeof thonicId !== 'string' || !run.shop.stock.includes(thonicId) || !THONICS[thonicId]) return;
         let price = run.shop.free ? 0 : thonicPrice(run, thonicId);
-        if (run.purse < price || run.shelf.length >= shelfSizeOf(room)) return;
+        if (run.purse < price || (run.shelf.length >= shelfSizeOf(room) && !Number.isInteger(giveUp))) return;
+        if (!makeShelfRoom(room, giveUp)) return;
         run.shop.free = false;
         noteBought(run, thonicId); // (the Loyalty Card's free one counts too)
         run.purse -= price;
@@ -3633,7 +3673,7 @@ io.on('connection', (socket) => {
             run.interlude = null;
             // Thom's Loyalty Card: the first Thonic of the visit is free.
             // first: your first visit this run (Thom greets you with "Vim, vigour, vitality!").
-            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room), first: !run.thomMet };
+            run.shop = { stock: (devHooks.thomStock || (s => s))(pickThomStock(placeOf(room))), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room), first: !run.thomMet };
             run.thomMet = true;
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine' };
@@ -3762,12 +3802,13 @@ io.on('connection', (socket) => {
     });
 
     // Johnny Elf Bar: an Elf Bar for the shelf (not one you already carry), full of puffs.
-    socket.on('buyElfBar', (id) => {
+    socket.on('buyElfBar', (id, giveUp) => {
         let room = interludeAt('elfKid');
         if (!room || typeof id !== 'string' || !ELF_BARS.includes(id)) return;
         let run = room.tavernRun;
         let price = thonicPrice(run, id);
-        if (run.purse < price || run.shelf.length >= shelfSizeOf(room) || run.shelf.includes(id)) return;
+        if (run.purse < price || run.shelf.includes(id) || (run.shelf.length >= shelfSizeOf(room) && !Number.isInteger(giveUp))) return;
+        if (!makeShelfRoom(room, giveUp)) return;
         noteBought(run, id);
         run.purse -= price;
         run.stats.spent += price;
@@ -3867,16 +3908,15 @@ io.on('connection', (socket) => {
         emitState(roomCode);
     });
 
-    // The Gilded Die (17 Nov): after a throw, pay gold to throw one loose die again (dieId), up to
-    // gildedMax times a fight, each dearer than the last (gildedPrice).
+    // The Gilded Die (17 Nov): after a throw, pay gildedPrice to throw one loose die again (dieId), as often as the purse allows.
     socket.on('gildDie', dieId => {
         let room = tavernPlayer();
         if (!room || !Number.isInteger(dieId)) return;
         let roomCode = socket.roomCode;
         let run = room.tavernRun, turn = room.turn;
         if (!hasKeepsake(room, 'gildedDie') || !isTurnPlayable(roomCode) || !isMyTurn() || Date.now() < turn.busyUntil) return;
-        let uses = gildedUses(run), price = gildedPrice(run);
-        if (uses >= (KEEPSAKE_NUMBERS.gildedMax ?? 3) || run.purse < price) return;
+        let uses = gildedUses(run), price = gildedPrice();
+        if ((gildedMax() != null && uses >= gildedMax()) || run.purse < price) return;
         let die = turn.dice.find(d => d.id === dieId);
         let was = die && die.value;
         let rerolled = Rules.rerollDie(turn, dieId, rollFaceFor(room, turn));
@@ -4029,6 +4069,7 @@ if (require.main === module) {
     start();
 }
 
-// For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
+// For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown;
+// thomStock(stock) may change what Thom's cart offers (23 Nov).
 const devHooks = {};
 module.exports = { normalizeLeaderboard, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

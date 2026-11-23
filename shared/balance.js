@@ -100,6 +100,7 @@ module.exports = {
         winFirst: 10,
         winStep: 2,
         perHeartLeft: 2,    // for each heart still standing when you win a fight
+        interestEvery: 10,  // interest (23 Nov, the user's, from a player's idea): each win pays 1 gold for every 10 in the purse (the Miser's Purse adds its own on top)
         perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct); it still restores a heart
         consolation: 0      // (the consolation for a lost run is in points now: points.reachedPerPlace)
     },
@@ -210,7 +211,7 @@ module.exports = {
         beltThonic: 'healing',  // ...and the Thonic it comes with
         miserEvery: 5,          // the Miser's Purse: a win adds 1 gold for every this many in the purse (18 Nov, the user's; it was 10)
         flaskChance: 50,        // the Bottomless Flask: percent the first Thonic each fight stays
-        gildedStep: 3,          // the Gilded Die: a throw again costs 3, 6, 9 gold in a fight (x placePrice)...
-        gildedMax: 3            // ...at most this many a fight
+        gildedPrice: 5,         // the Gilded Die: a throw again costs 5 gold, every time, anywhere (23 Nov, the user's; it was 3, 6, 9 x the place)...
+        gildedMax: null         // ...as many times a fight as the purse allows (a number would cap it; it was 3)
     }
 };

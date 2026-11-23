@@ -1474,6 +1474,7 @@ footer {
     z-index: 20;
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr); /* never wider than the screen (23 Nov: a full belt and a long name pushed it) */
     overflow: hidden;
     pointer-events: auto;
     background:
@@ -4612,3 +4613,81 @@ body.screen-quake #root { animation: screen-quake 1.65s cubic-bezier(.36,.07,.19
 /* A player's average crawl on the boards, beside their best (22 Nov, the user's). */
 .leaderboard .avg { flex: none; font-size: 0.78em; opacity: 0.72; font-style: italic; align-self: center; white-space: nowrap; }
 .leaderboard .gold-amount { flex: none; min-width: 3.2em; text-align: right; }
+
+/* ---- Players' feedback (23 Nov) ---- */
+/* How long a buff lasts: a small tag on its strip icon (⌛1 this fight, ⌛3 fights left, a dot: until it's used). */
+.keepsake-icon { position: relative; }
+.keepsake-icon .lasts {
+    position: absolute; right: -5px; bottom: -4px; min-width: 13px; height: 13px; padding: 0 2px; box-sizing: border-box;
+    display: grid; place-items: center; border-radius: 7px; pointer-events: none;
+    font: 700 8px/1 Georgia, serif; font-style: normal; color: #1b0f05; background: #ffd54f; border: 1px solid #5d3a12;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); white-space: nowrap;
+}
+.keepsake-icon .lasts.used { background: #f8bbd0; }
+/* A keepsake that just worked (the Gambler's Charm) flares once. */
+.keepsake-icon.fired { animation: keepsake-fired 1.4s ease-out both; }
+@keyframes keepsake-fired {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 213, 79, 0); }
+    20% { transform: scale(1.35); box-shadow: 0 0 18px 6px rgba(129, 199, 132, 0.95); }
+    100% { transform: scale(1); box-shadow: 0 0 6px rgba(255, 213, 79, 0.35); }
+}
+/* Throwing an item away, asked twice; and the swap picker's quiet buttons. */
+.item-discard {
+    margin-top: 8px; padding: 6px 14px; min-height: 36px; border-radius: 10px; cursor: pointer;
+    font: inherit; font-size: 0.9rem; color: #5d3a1a; background: rgba(93, 58, 26, 0.08); border: 1px solid rgba(93, 58, 26, 0.45);
+}
+.item-discard.yes { color: #fff3e0; background: linear-gradient(#a93226, #7b1f17); border-color: #4e1009; }
+.item-discard-ask { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 8px; font-family: var(--read, inherit); color: #3b2a1a; }
+.item-discard-ask .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.item-discard-ask .item-discard { margin-top: 4px; }
+.item-card.swap-card { cursor: default; max-height: calc(100% - 8px); overflow-y: auto; }
+.item-name.swap-ask { font-size: clamp(1.15rem, 5.5vw, 1.5rem); }
+.swap-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; width: 100%; margin-top: 8px; }
+.swap-option {
+    display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 5px 8px; border-radius: 10px; cursor: pointer; text-align: left;
+    font: inherit; font-size: 0.9rem; color: var(--parchment, #f1e2c2); background: rgba(29, 18, 10, 0.92); border: 1px solid rgba(184, 134, 11, 0.7);
+}
+.swap-option .icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; font-size: 1.3rem; }
+.swap-option .icon img, .swap-option .icon .bottle, .swap-option .icon .mystery-art { max-width: 34px; max-height: 34px; }
+.swap-option:active { transform: scale(0.97); }
+/* Thom's scene put aside to see your strip (the user's, 23 Nov). */
+/* (an animation, not opacity: the scene's own fade-in holds its opacity; back from a peek it fades in again) */
+.thom-scene.peeking { animation: thom-peek 0.3s ease forwards; pointer-events: none; }
+@keyframes thom-peek { to { opacity: 0; visibility: hidden; } }
+body.thom-peeking footer .controls { visibility: hidden; }
+/* (nor anyone across the table: between fights nobody sits there; your own nameplate and hearts stay) */
+body.thom-peeking footer .player:not(.me) { display: none; } /* (gone, not just hidden, so yours sits in the middle, clear of the eye) */
+/* The eye beside your shelf bottles, at the foot of Thom's counter. */
+.peek-eye {
+    flex: none; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border-radius: 10px; cursor: pointer;
+    font-size: 1.1rem; line-height: 1; color: #f0e2c2; background: linear-gradient(rgba(44, 28, 14, 0.85), rgba(24, 14, 6, 0.9)); border: 1px solid rgba(224, 180, 76, 0.7);
+}
+.peek-eye small { font-family: 'Almendra', Georgia, serif; font-size: 0.62rem; margin-top: 2px; }
+.peek-eye:active { transform: scale(0.95); }
+/* The same eye, in the same place, while Thom's scene is put aside: lit, to bring him back. */
+.peek-eye.back { color: #1b0f05; background: linear-gradient(#ffe082, #c9a040); border-color: #5d3a12; box-shadow: 0 0 12px rgba(255, 213, 79, 0.8); }
+/* The Gambler's Charm's note, over the felt. */
+.charm-note {
+    position: fixed; left: var(--table-x, 50%); top: calc(var(--felt-y, 45%) - 70px); transform: translateX(-50%); z-index: 6;
+    display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 5px; pointer-events: none; white-space: nowrap;
+    font-family: var(--read, Georgia, serif); font-size: 0.92rem; color: #1b2a12;
+    background: linear-gradient(#e8f5e1, #c5e1a5); border: 1px solid #33691e; border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 14px rgba(129, 199, 132, 0.55);
+    animation: charm-note 2.6s ease-out both;
+}
+.charm-note .charm-icon { display: grid; place-items: center; width: 26px; height: 26px; font-size: 1rem; }
+.charm-note .charm-icon img { width: 26px; height: 26px; object-fit: contain; }
+@keyframes charm-note {
+    0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
+    12% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, -4px); }
+    100% { opacity: 0; transform: translate(-50%, -14px); }
+}
+/* Upright phones: Thom keeps his room (23 Nov, the user's: the counter had grown over him). The bottles at the foot
+   are smaller, so the Challenge button needs fewer lines. */
+@media (orientation: portrait) and (max-width: 600px) {
+    .thom-scene .shop-footer { gap: 8px; }
+    .thom-scene .shop-shelf { gap: 3px; }
+    .thom-scene .shop-shelf .shelf-slot { width: 34px; height: 40px; }
+    .thom-scene .peek-eye { width: 40px; height: 40px; }
+}

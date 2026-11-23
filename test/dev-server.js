@@ -60,8 +60,23 @@ const START_KEEPSAKES = (process.env.START_KEEPSAKES || '').split(',').filter(Bo
 const START_AFTER = process.env.START_AFTER || '';
 // START_PURSE=60 (env, 17 Nov): the purse a new run has once it is set up (after START_AFTER's win).
 const START_PURSE = process.env.START_PURSE ? Number(process.env.START_PURSE) : null;
+// START_RUN='{"ladysGrace":true,"nextFightSurge":"twin"}' (env, 23 Nov): anything else set on a new run (JSON merged into tavernRun),
+// e.g. buffs waiting for the next fight: nextFightSurge, nextFightSong, kramFights, ladysGrace.
+const START_RUN = process.env.START_RUN ? JSON.parse(process.env.START_RUN) : null;
+// THOM_ALWAYS="fizzy" (env, 23 Nov): Thonics always on Thom's cart (each takes the place of one drawn at random, never the Healing).
+const THOM_ALWAYS = (process.env.THOM_ALWAYS || '').split(',').filter(Boolean);
+if (THOM_ALWAYS.length) server.devHooks.thomStock = stock => {
+    const out = [...stock];
+    for (const id of THOM_ALWAYS) {
+        if (out.includes(id)) continue;
+        const at = out.findIndex((s, i) => i > 0 && s !== 'healing' && !THOM_ALWAYS.includes(s));
+        if (at >= 0) out[at] = id; else out.push(id);
+    }
+    return out;
+};
 // (Applied as the run is made, before it's first shown: server.devHooks.newRun.)
-if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER || START_PURSE != null) server.devHooks.newRun = (code, r) => {
+if (START_SHELF.length || START_KEEPSAKES.length || START_AFTER || START_PURSE != null || START_RUN) server.devHooks.newRun = (code, r) => {
+    if (START_RUN) Object.assign(r.tavernRun, START_RUN);
     if (START_KEEPSAKES.length) r.tavernRun.keepsakes = keepsakesOf(START_KEEPSAKES);
     if (START_SHELF.length) r.tavernRun.shelf = [...START_SHELF];
     const after = START_AFTER && server.TAVERN_ENCOUNTERS.findIndex(e => e.id === START_AFTER);
@@ -111,7 +126,7 @@ const COMMANDS = {
         server.evaluateTavernRound(code);
     },
     '/shop': (r, q) => {
-        r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean) };
+        r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean), keepsakes: (q.get('keepsakes') || '').split(',').filter(Boolean).map(id => server.TAVERN_KEEPSAKES.find(k => k.id === id)).filter(Boolean) }; // keepsakes: Thom's back shelf (23 Nov)
         r.tavernRun.purse = Number(q.get('purse') || 200);
         r.roundPlayers = [];
     },
