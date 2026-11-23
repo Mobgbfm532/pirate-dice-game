@@ -3456,11 +3456,11 @@ test("the Miser's Purse: a win pays 1 more gold for every 5 in the purse", async
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     const offer = await won;
     assert.equal(offer.gold.miser, 9); // (47 gold: nine 5s)
-    assert.equal(offer.gold.interest, 4); // (and everyone's interest, 23 Nov: four 10s)
-    assert.equal(room.tavernRun.purse, 47 + 9 + 4 + offer.gold.win + offer.gold.hearts);
+    assert.equal(offer.gold.interest, 9); // (and everyone's interest, 23 Nov: nine 5s too)
+    assert.equal(room.tavernRun.purse, 47 + 9 + 9 + offer.gold.win + offer.gold.hearts);
 });
 
-test('interest: a win pays 1 gold for every 10 in the purse (23 Nov)', async () => {
+test('interest: a win pays 1 gold for every 5 in the purse (23 Nov)', async () => {
     const hero = await tavernAgainst(1, 'Interest');
     const room = roomOf(hero);
     room.tavernRun.purse = 39;
@@ -3471,9 +3471,9 @@ test('interest: a win pays 1 gold for every 10 in the purse (23 Nov)', async () 
     const won = waitFor(hero, 'offerShop', () => true, 6000);
     await playHand(hero, room, [2, 4, 5, 5, 5, 5]);
     const offer = await won;
-    assert.equal(offer.gold.interest, 3);
+    assert.equal(offer.gold.interest, 7);
     assert.equal(offer.gold.miser, undefined);
-    assert.equal(room.tavernRun.purse, 39 + 3 + offer.gold.win + offer.gold.hearts);
+    assert.equal(room.tavernRun.purse, 39 + 7 + offer.gold.win + offer.gold.hearts);
 });
 
 test('a full shelf: a Thonic bought pours one of yours away, named by its slot; items thrown away (23 Nov)', async () => {
