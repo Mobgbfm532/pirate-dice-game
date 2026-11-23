@@ -3131,7 +3131,7 @@ function evaluateTavernRound(roomCode) {
         let heartGold = Math.max(0, human.lives) * GOLD.perHeartLeft;
         // The Miser's Purse: 1 more gold for every miserEvery (5 since 18 Nov, the user's; it was 10) in the purse (before this win's gold).
         let miserGold = hasKeepsake(room, 'misersPurse') ? Math.floor(room.tavernRun.purse / (KEEPSAKE_NUMBERS.miserEvery ?? 5)) : 0;
-        // Interest (23 Nov, the user's): 1 gold for every interestEvery (5) in the purse, for everyone, on the same purse.
+        // Interest (23 Nov, the user's): 1 gold for every interestEvery (10) in the purse, for everyone, on the same purse.
         let interestGold = GOLD.interestEvery ? Math.floor(room.tavernRun.purse / GOLD.interestEvery) : 0;
         stats.miserGold = (stats.miserGold || 0) + miserGold;
         stats.interestGold = (stats.interestGold || 0) + interestGold;

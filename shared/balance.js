@@ -100,7 +100,7 @@ module.exports = {
         winFirst: 10,
         winStep: 2,
         perHeartLeft: 2,    // for each heart still standing when you win a fight
-        interestEvery: 5,   // interest (23 Nov, the user's, from a player's idea): each win pays 1 gold for every 5 in the purse, as the Miser's Purse does, which adds its own on top (it was every 10 the same day)
+        interestEvery: 10,  // interest (23 Nov, the user's, from a player's idea): each win pays 1 gold for every 10 in the purse; the Miser's Purse adds its 1 per 5 on top (tried at every 5 the same day, back to 10)
         perfect24: 0,       // a perfect 24 pays no gold (the user's call, 19 Oct); it still restores a heart
         consolation: 0      // (the consolation for a lost run is in points now: points.reachedPerPlace)
     },

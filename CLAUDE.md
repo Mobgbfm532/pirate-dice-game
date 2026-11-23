@@ -921,7 +921,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `place`, `gold.heartsLeft/perHeart/perPlace` and `at`; shown once, `localStorage.tavernWinSeen`;
   not after a resume). The event scenes show only the purse now.
 - **Players' feedback (23 Nov, the user's list; `docs/open-questions.md`, Settled):** **interest**, each win pays 1 gold for
-  every `gold.interestEvery` (5, the same day; it was 10) in the purse, before the win's gold (`interestGold`, `lastWin.gold.interest`, a row on the
+  every `gold.interestEvery` (10; tried at 5 the same day, back to 10) in the purse, before the win's gold (`interestGold`, `lastWin.gold.interest`, a row on the
   fight summary; the Miser's Purse adds its own on top); a full shelf swaps (`buyThonic` / `buyElfBar` take a `giveUp` slot,
   `makeShelfRoom`), and every swap goes through `SwapPicker` in Hud (pick, then "Yes, swap"; `ShelfBuy`, `keepsakeOptions`);
   `discardItem({ thonic: slot } | { keepsake: id })` throws an item away (`ItemInfo`'s `discard`, asked twice); Thom's counter
