@@ -203,7 +203,7 @@ function TwinGhost({ index, geometry, materials, meshes }: { index: number; geom
     const mesh = useRef<THREE.Mesh>(null);
     // Fresh see-through copies for each ghost (by then the painted faces have loaded): aqua for
     // the hot tub's die, plain ivory for Stason's.
-    const faces = useMemo(() => (ghost?.kind === 'plain' ? materials.faces : materials.tub).map(m => {
+    const faces = useMemo(() => (ghost?.kind === 'plain' || ghost?.kind === 'charm' ? materials.faces : materials.tub).map(m => {
         const copy = m.clone();
         copy.transparent = true;
         copy.depthWrite = false;

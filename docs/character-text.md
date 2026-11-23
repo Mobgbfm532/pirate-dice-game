@@ -93,7 +93,7 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 - (Written in the Stars, dormant since 6 Nov.) Badge: "Next throw binds [faces]", then "Bound: [faces]. Next: [faces]"
 
 **The Hangman**: Dead Eye, and The Ace of Spades (his revolver)
-- Entrance card: "The Hangman seals your fate with the Ace of Spades. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, he shoots a die into a 6: his own 18 or higher becomes a perfect 24, and he wins back a heart."
+- Entrance card: "The Hangman seals your fate with the Ace of Spades. Dead Eye: once a fight he shoots your best die as you finish and it rolls again. At one life, he shoots a die into a 6: his own 18 or higher becomes a perfect 24" (no heart back since 23 Nov, the user's).
 
 **Jaguar Cantona**: Smooth Talker, then The Cloak, then All In
 - Entrance card: "Jaguar Cantona, Captain of the Salty Swallow and finest rogue in the realm. Smooth Talker: twice a fight, after a round he loses a heart, he demands one of your Thonics as the next begins and drinks it. If your shelf is empty, he talks you into scoring 3 less at a round's end, when that saves him. At two lives, The Cloak. At his last, All In."
@@ -166,8 +166,8 @@ Where: `server.js` (`TAVERN_KEEPSAKES`, `MYSTERY_FLAVOUR`, `BRODORS_SUNGLASSES`)
 - **Loaded Die:** "One of your dice lands only on a 2 or a 4 until you've kept both; after that, only on 4, 5 or 6." (offered from the Yawning Portal on)
 - **Potion Belt:** "Your shelf holds one more Thonic. Comes with a Healing Thonic."
 - **Thom's Loyalty Card:** "Thom's cart is always one of the spots, and your first Thonic each visit is free."
-- **Miser's Purse:** "Each win pays 1 more gold for every 5 in your purse." On the fight summary: "Miser's Purse · 1 for every 5 in your purse".
-- **Gambler's Charm:** "When only one die is left to throw, it is thrown twice and you keep the better."
+- **Miser's Purse:** "Each win pays 1 more gold for every 5 in your purse, on top of the usual interest." On the fight summary: "Miser's Purse · 1 more for every 5 in your purse" (under "Interest · 1 for every 10 in your purse", everyone's since 23 Nov).
+- **Gambler's Charm:** "Whenever you throw a single die (your last one left), it is thrown twice and you keep the better: a 2 or 4 you still need, else the higher. The other rises as a ghost." When it works, a note over the felt: "Gambler's Charm threw 5 and 2: kept 5" (23 Nov).
 - **Bottomless Flask:** "The first Thonic you drink each fight has a 1 in 2 chance of staying on your shelf." When it works: "Your [Thonic] fills up again."
 - **Mystery Flavour** (Martha's drop): "Martha's own Elf Bar. It never runs out: one puff a fight, and each fight is a different flavour at random." Tapped: "Martha's Elf Bar. One puff a fight; this fight it tastes of [flavour]: [what it does]." When it works: "Martha's Elf Bar", "Mystery Flavour", "Tastes of [flavour]: [what happened]".
 - **Martha's Mask:** not in the game since 4 Nov (nothing gives it, though it's still one of the start screen's icons).

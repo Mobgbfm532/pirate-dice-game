@@ -111,7 +111,7 @@ const COMMANDS = {
         server.evaluateTavernRound(code);
     },
     '/shop': (r, q) => {
-        r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean) };
+        r.tavernRun.shop = { stock: (q.get('stock') || 'healing,secondThoughts,clearEye').split(',').filter(Boolean), keepsakes: (q.get('keepsakes') || '').split(',').filter(Boolean).map(id => server.TAVERN_KEEPSAKES.find(k => k.id === id)).filter(Boolean) }; // keepsakes: Thom's back shelf (23 Nov)
         r.tavernRun.purse = Number(q.get('purse') || 200);
         r.roundPlayers = [];
     },
