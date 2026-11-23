@@ -59,7 +59,7 @@ export interface TavernRun {
     devilCap?: number | null; // null: no cap (since 21 Oct)
     maskReady?: boolean; // Martha's mask can be worn this fight (nothing gives it since 4 Nov)
     mystery?: { flavour: string; ready: boolean } | null; // Mystery Flavour, Martha's Elf Bar: this fight's flavour
-    gilded?: { uses: number; max: number; price: number } | null; // the Gilded Die (17 Nov): uses this fight, the next one's price
+    gilded?: { uses: number; max: number | null; price: number } | null; // the Gilded Die (17 Nov): uses this fight, the cap (null: none, since 23 Nov), the price
     enemy: Enemy;
     keepsakes: Keepsake[];
     pendingKeepsakeChoices: Keepsake[] | null;

@@ -124,16 +124,18 @@ function postgresStore(url, Pool = require('pg').Pool) {
         },
         // Each name keeps its best run (a lower score never replaces a higher one), and since 22 Nov every run
         // is counted with its points, for the average. A line saved before then starts its count from its best.
+        // (The points go in twice, $2 and $4: one parameter for both an INTEGER and a BIGINT column is refused by Postgres,
+        // "inconsistent types deduced for parameter", which pg-mem lets through. Every save failed so from 22 to 23 Nov.)
         async saveLeaderboard(board, entry) {
             if (!entry) return;
             await query(`
-                INSERT INTO leaderboard (name, points, gold, runs, total_points) VALUES ($1, $2, $3, 1, $2)
+                INSERT INTO leaderboard (name, points, gold, runs, total_points) VALUES ($1, $2, $3, 1, $4)
                 ON CONFLICT (name) DO UPDATE SET
                     runs = CASE WHEN leaderboard.runs = 0 THEN 2 ELSE leaderboard.runs + 1 END,
                     total_points = CASE WHEN leaderboard.runs = 0 THEN leaderboard.points ELSE leaderboard.total_points END + EXCLUDED.points,
                     gold = CASE WHEN leaderboard.points < EXCLUDED.points THEN EXCLUDED.gold ELSE leaderboard.gold END,
                     points = CASE WHEN leaderboard.points < EXCLUDED.points THEN EXCLUDED.points ELSE leaderboard.points END,
-                    updated_at = now()`, [entry.name, entry.points, entry.gold]);
+                    updated_at = now()`, [entry.name, entry.points, entry.gold, entry.points]);
         },
         async loadMet(name) {
             let { rows } = await query('SELECT who FROM met WHERE player = $1', [playerKey(name)]);

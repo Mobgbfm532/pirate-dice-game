@@ -276,10 +276,20 @@
 
     // Fizzy Thomic: every active die showing a 1 is rolled again, once. Returns their ids, or
     // null if there were none (then nothing changes).
+    // (23 Nov, the user's, from a player: a last die kept as it landed on a 1 couldn't be helped. Once a hand is finished
+    // or held complete, the 1s kept from its last throw go back into play and roll again, and the hand opens up, as with
+    // Second Thoughts; they're then kept by a tap, as ever. The caller checks the turn hasn't been ended.)
     function rerollOnes(turn, rollFace = defaultRollFace) {
-        if (!turn.hasRolled || turn.finalized) return null;
-        const ones = turn.dice.filter(d => isActive(d) && d.value === 1);
+        if (!turn.hasRolled) return null;
+        const done = turn.finalized || turn.complete;
+        const held = done ? turn.dice.filter(d => d.status === STATUS.LOCKED_THIS_ROLL && d.value === 1 && !d.hidden) : [];
+        const ones = [...turn.dice.filter(d => isActive(d) && d.value === 1), ...held];
         if (ones.length === 0) return null;
+        held.forEach(d => { d.status = STATUS.ACTIVE; turn.locksThisRoll--; });
+        if (held.length) {
+            turn.complete = false;
+            if (turn.finalized) { turn.finalized = false; turn.outcome = null; turn.callout = null; }
+        }
         ones.forEach(d => { d.value = rollFace(d); });
         settleTurn(turn);
         return ones.map(d => d.id);

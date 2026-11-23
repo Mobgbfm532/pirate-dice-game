@@ -2093,6 +2093,32 @@ test('Fizzy Thomic rerolls the 1s after a roll, once, and only then', async () =
     assert.equal(room.tavernRun.shelf.length, 1, 'kept when there are no 1s');
 });
 
+test('Fizzy Thomic on a last die kept as it landed on a 1: it goes back in play and is thrown again (23 Nov)', async () => {
+    const { hero, room } = await tavernTable('LastFizz');
+    room.tavernRun.shelf = ['fizzy', 'steady'];
+    await rollWith(hero, room, [2, 3, 6, 6, 6, 6]);
+    await keep(hero, [0, 2, 3, 4, 5]); // the 2 and four 6s: still needing the 4
+    await rollWith(hero, room, [undefined, 1]);
+    await sleep(60);
+    assert.equal(room.turn.dice[1].status, 'lockedThisTurn', 'kept as it landed');
+    assert.ok(room.turn.finalized, 'the hand is finished (dust, for now)');
+    const unpin = pinFaces([4]);
+    const thrown = waitFor(hero, 'diceRolled', d => Array.isArray(d.rerolled));
+    hero.emit('drinkThonic', 0);
+    const again = await thrown;
+    unpin();
+    assert.deepEqual(again.rerolled, [1]);
+    assert.equal(room.turn.dice[1].value, 4);
+    assert.equal(room.turn.dice[1].status, 'active', 'loose again, to be kept by a tap');
+    assert.deepEqual(shelfOf(room), ['steady']);
+    await sleep(again.animationMs * 0.01 + 20);
+    await keep(hero, [1]);
+    const ended = waitFor(hero, 'turnState', d => d.event && d.event.type === 'finalized', 3000);
+    hero.emit('endTurn');
+    await ended;
+    assert.equal(room.turn.outcome ? room.turn.outcome.score : room.players[hero.id].score, 24);
+});
+
 test('Second Thoughts puts back a kept die, which may then be rolled without keeping another', async () => {
     const { hero, room } = await tavernTable('Rethinker');
     room.tavernRun.shelf = ['secondThoughts'];
@@ -3566,7 +3592,7 @@ test('prices follow the place: x1 at the Ghoul and Gourd, x1.5 at the Yawning Po
     assert.deepEqual(priced, [[c, k, sh], [Math.ceil(c * 1.5), Math.ceil(k * 1.5), Math.ceil(sh * 1.5)], [c * 2, k * 2, sh * 2]]);
 });
 
-test('the Gilded Die: pay gold to throw one loose die again, dearer each time, three a fight', async () => {
+test('the Gilded Die: pay 5 gold to throw one loose die again, as often as you like (23 Nov)', async () => {
     const { hero, room } = await tavernTable('Gilded');
     const run = room.tavernRun;
     run.keepsakes = [keepsakeObj('gildedDie')];
@@ -3576,7 +3602,7 @@ test('the Gilded Die: pay gold to throw one loose die again, dearer each time, t
     const rolled = await waitFor(hero, 'diceRolled', d => d.turn.playerId === hero.id);
     unpin();
     await sleep(rolled.animationMs * 0.01 + 30);
-    const step = BALANCE.keepsakes.gildedStep;
+    const price = BALANCE.keepsakes.gildedPrice; // (5 a throw, as often as you like, since 23 Nov)
     const paid = [];
     for (const face of [2, 4, 6]) {
         unpin = pinFaces([face]);
@@ -3590,11 +3616,14 @@ test('the Gilded Die: pay gold to throw one loose die again, dearer each time, t
         paid.push(before - run.purse);
         await sleep(thrown.animationMs * 0.01 + 30);
     }
-    assert.deepEqual(paid, [step, step * 2, step * 3]);
+    assert.deepEqual(paid, [price, price, price]);
+    unpin = pinFaces([5]);
+    const fourth = waitFor(hero, 'diceRolled', d => d.rerolled);
     hero.emit('gildDie', 1);
-    await sleep(40);
-    assert.equal(room.turn.dice[1].value, 1, 'three a fight');
-    assert.equal(run.purse, 100 - step * 6);
+    await fourth;
+    unpin();
+    assert.equal(room.turn.dice[1].value, 5, 'a fourth: no cap');
+    assert.equal(run.purse, 100 - price * 4);
 });
 
 test('the Gilded Die: never a kept die, never without the gold', async () => {

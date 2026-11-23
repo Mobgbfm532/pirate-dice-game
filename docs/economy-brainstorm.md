@@ -87,7 +87,7 @@ Flask, Loyalty Card), dice (Loaded Die, Gambler's Charm), gold (Miser's Purse), 
 Brodor's Sunglasses). **Nothing spends gold during a fight**, so gold only matters at the 12 stops between fights.
 
 1. **The Gilded Die** (gold into throws; **Built**, from the Yawning Portal on): once you've thrown, pay gold to throw one loose die again. 3 gold the first
-   time in a fight, 6 the next, then 9 (at most three a fight; ×place). Gold earned aboard becomes help in every fight
+   time in a fight, 6 the next, then 9 (at most three a fight; ×place). **Since 23 Nov (the user's): 5 gold every time, anywhere, as often as you like.** Gold earned aboard becomes help in every fight
    aboard. It's the clearest sink: small, often, your choice each throw. *Recommended.*
 2. **The Fixer's Purse** (gold into hearts): once a fight, when a round would cost you a heart, pay 15 gold to keep it
    (+5 each time in a run). A Shield you pay for each time: worse early, better aboard. It overlaps the Shield, so one

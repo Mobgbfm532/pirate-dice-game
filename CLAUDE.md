@@ -925,7 +925,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   fight summary; the Miser's Purse adds its own on top); a full shelf swaps (`buyThonic` / `buyElfBar` take a `giveUp` slot,
   `makeShelfRoom`), and every swap goes through `SwapPicker` in Hud (pick, then "Yes, swap"; `ShelfBuy`, `keepsakeOptions`);
   `discardItem({ thonic: slot } | { keepsake: id })` throws an item away (`ItemInfo`'s `discard`, asked twice); Thom's counter
-  shows what you carry (`Carried`) and his back shelf's keepsakes open their panel; strip icons carry how long they last
+  has a 👁 Items button beside your shelf bottles that puts his scene aside to show your strip (`peek`, `.peek-eye`, "Back to Thom"); strip icons carry how long they last
   (`lasts` on `KeepsakeIcon`: 'fight', 'used' or fights left); the Gambler's Charm's ghost is kind `charm`, sent every time,
   and `snapshot.charm` shows `CharmNote` over the felt and flares its strip icon. Dev: `/shop?keepsakes=bentCopper,luckySeat`.
 - **Money (since 23 Oct, the user's calls: nearer D&D's prices, all in whole gold):** a tenth of
@@ -1055,7 +1055,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   | Miser's Purse (30 Oct) | each win pays 1 more gold for every 5 in the purse (on top of everyone's interest since 23 Nov) (`miserEvery`, 5 since 18 Nov, the user's; it was 10; `lastWin.gold.miser`, a row on the fight summary) | not yet measured | 16 |
   | Gambler's Charm (30 Oct) | the last die left to throw is thrown twice, the better kept (a needed 2/4, else higher; lower in a cursed round), the other a ghost (`rollFaceFor`) | not yet measured | 20 |
   | Bottomless Flask (30 Oct) | the first Thonic drunk each fight stays on the shelf 1 time in 2 (`flaskChance`; `encounterKeepsakeUses.bottomlessFlask`) | not yet measured | 16 |
-  | Gilded Die (17 Nov; from the Yawning Portal) | after a throw, pay gold to throw one loose die again: 3, 6, 9 gold (x the place) a fight, three at most (`gildDie` handler, `Rules.rerollDie`, `gildedStep`, `gildedMax`; client `GildedKeepsake`, `actions.startGild`, `gildPick`: then a tap on a loose die) | not yet measured | 20 |
+  | Gilded Die (17 Nov; from the Yawning Portal) | after a throw, pay 5 gold to throw one loose die again, as often as you like (23 Nov, the user's: flat and uncapped; it was 3, 6, 9 x the place, three a fight; `gildDie` handler, `Rules.rerollDie`, `gildedPrice`, `gildedMax` null; client `GildedKeepsake`, `actions.startGild`, `gildPick`: then a tap on a loose die) | not yet measured | 20 |
   | Bren's Compass (17 Nov; sold aboard only, `from: 'saltySwallow'`) | once a fight, a sea die landing on anything but calm or starboard is rolled again (in `setSea`; not under the Ebon Shield; a second `seaChange` with `compass`) | not yet measured | 15 |
 
   **Since 30 Oct (the user's calls):** at most `maxKeepsakes` (5) carried (`pocketsFull`: since 17 Nov, the user's, Thom's back shelf still sells, as a swap: "Swap · 12 gold", then which of yours to leave behind, `buyKeepsake(id, giveUp)`, `.swap-pick`; the Stranger stays away); the Shield and the Loaded Die are only
@@ -1082,8 +1082,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   `turn.lastThrown`, any kept since put back, thrown again). Puffed through `drinkThonic`; the
   moment is `keepsakeActivated` with `who: 'Elf Bar'`, a cloud of vapour billowing out of the vape in the flavour's colour (17 Nov, the user's; Martha's in this fight's flavour: `vapour` on the moment, `.vape-cloud`, soft discs with no blur filter) and the user's `Vape.mp3` (4 Nov; it borrowed Martha's puff before). Jaguar's Smooth
   Talk never takes one. The shelf draws them as slim vapes with a dot per puff (`Vape` in Hud). Since 29 Oct Johnny is framed like Thom (big, cropped at the counter), and on upright phones his four Elf Bars are compact rows (`.elf-cards`) so his stage stays as big as Thom's.
-- **Known limits:** if your last die lands on a 1 it is kept at once, so Fizzy can't reroll a
-  single last die (Second Thoughts can reopen the hand).
+- **A last die on a 1 (23 Nov, the user's, from a player):** it is still kept as it lands, but a Fizzy Thomic now throws a
+  1 kept from the hand's last throw again, reopening the finished hand as Second Thoughts does (`Rules.rerollOnes`); the die
+  is then loose, to be kept by a tap.
 
 ## Next steps (in order)
 

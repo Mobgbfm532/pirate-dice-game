@@ -211,7 +211,7 @@ module.exports = {
         beltThonic: 'healing',  // ...and the Thonic it comes with
         miserEvery: 5,          // the Miser's Purse: a win adds 1 gold for every this many in the purse (18 Nov, the user's; it was 10)
         flaskChance: 50,        // the Bottomless Flask: percent the first Thonic each fight stays
-        gildedStep: 3,          // the Gilded Die: a throw again costs 3, 6, 9 gold in a fight (x placePrice)...
-        gildedMax: 3            // ...at most this many a fight
+        gildedPrice: 5,         // the Gilded Die: a throw again costs 5 gold, every time, anywhere (23 Nov, the user's; it was 3, 6, 9 x the place)...
+        gildedMax: null         // ...as many times a fight as the purse allows (a number would cap it; it was 3)
     }
 };

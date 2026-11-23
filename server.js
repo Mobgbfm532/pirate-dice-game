@@ -436,7 +436,7 @@ const TAVERN_KEEPSAKES = [
     {
         id: 'gildedDie',
         name: 'Gilded Die',
-        text: 'After a throw, pay gold to throw one loose die again: up to three times a fight, dearer each time.',
+        text: 'After a throw, pay 5 gold to throw one loose die again, as often as you like.',
         from: 'yawningPortal'
     },
     {
@@ -576,9 +576,11 @@ function noteBought(run, id) {
     run.bought[id] = (run.bought[id] || 0) + 1;
 }
 const thonicPrice = (run, id) => risingPrice(run, id, THONICS[id].price);
-// The Gilded Die (17 Nov): each throw again this fight costs gildedStep more (x the place), at most gildedMax a fight.
+// The Gilded Die (17 Nov): each throw again costs gildedPrice (5 since 23 Nov, the user's: flat, not by place), and since
+// then as many a fight as you can pay for (gildedMax null; a number caps it).
 const gildedUses = run => (run.encounterKeepsakeUses && run.encounterKeepsakeUses.gildedDie) || 0;
-const gildedPrice = run => Math.ceil((KEEPSAKE_NUMBERS.gildedStep ?? 3) * (gildedUses(run) + 1) * placePrice(run));
+const gildedPrice = () => KEEPSAKE_NUMBERS.gildedPrice ?? 5;
+const gildedMax = () => (Number.isInteger(KEEPSAKE_NUMBERS.gildedMax) ? KEEPSAKE_NUMBERS.gildedMax : null);
 const shrinePrice = run => risingPrice(run, 'shrine', INTERLUDE.shrinePrice || 0);
 const hotTubPrice = run => risingPrice(run, 'hotTub', INTERLUDE.hotTubPrice || 0);
 const bardPrice = run => risingPrice(run, 'bard', INTERLUDE.bardPrice || 0);
@@ -913,7 +915,7 @@ function getTavernRunState(room) {
         devilCap: BALANCE.devilCap,
         maskReady: hasKeepsake(room, 'marthasMask') && !room.tavernRun.encounterKeepsakeUses.marthasMask,
         // Mystery Flavour: this fight's flavour (an Elf Bar id) and whether it can still be puffed.
-        gilded: hasKeepsake(room, 'gildedDie') ? { uses: gildedUses(room.tavernRun), max: KEEPSAKE_NUMBERS.gildedMax ?? 3, price: gildedPrice(room.tavernRun) } : null,
+        gilded: hasKeepsake(room, 'gildedDie') ? { uses: gildedUses(room.tavernRun), max: gildedMax(), price: gildedPrice() } : null,
         mystery: hasKeepsake(room, MYSTERY_FLAVOUR.id) ? { flavour: mysteryFlavourOf(room.tavernRun), ready: !room.tavernRun.encounterKeepsakeUses.mysteryFlavour } : null,
         keepsakes: room.tavernRun.keepsakes,
         pendingKeepsakeChoices: room.tavernRun.pendingKeepsakeChoices,
@@ -1546,7 +1548,7 @@ function performRoll(roomCode) {
         return leadMs + animationMs;
     }
     // The last die has nothing to choose: once it lands it goes into its slot by itself.
-    // The player still presses End Turn.
+    // The player still presses End Turn. (A Fizzy Thomic can still throw it again if it shows a 1: Rules.rerollOnes.)
     if (stillActive.length === 1) {
         let lastDieId = stillActive[0].id;
         setTimeout(() => {
@@ -3671,7 +3673,7 @@ io.on('connection', (socket) => {
             run.interlude = null;
             // Thom's Loyalty Card: the first Thonic of the visit is free.
             // first: your first visit this run (Thom greets you with "Vim, vigour, vitality!").
-            run.shop = { stock: pickThomStock(placeOf(room)), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room), first: !run.thomMet };
+            run.shop = { stock: (devHooks.thomStock || (s => s))(pickThomStock(placeOf(room))), free: hasKeepsake(room, 'loyaltyCard'), keepsakes: pickThomKeepsakes(room), first: !run.thomMet };
             run.thomMet = true;
         } else if (spot === 'shrine') {
             run.interlude = { stage: 'shrine' };
@@ -3906,16 +3908,15 @@ io.on('connection', (socket) => {
         emitState(roomCode);
     });
 
-    // The Gilded Die (17 Nov): after a throw, pay gold to throw one loose die again (dieId), up to
-    // gildedMax times a fight, each dearer than the last (gildedPrice).
+    // The Gilded Die (17 Nov): after a throw, pay gildedPrice to throw one loose die again (dieId), as often as the purse allows.
     socket.on('gildDie', dieId => {
         let room = tavernPlayer();
         if (!room || !Number.isInteger(dieId)) return;
         let roomCode = socket.roomCode;
         let run = room.tavernRun, turn = room.turn;
         if (!hasKeepsake(room, 'gildedDie') || !isTurnPlayable(roomCode) || !isMyTurn() || Date.now() < turn.busyUntil) return;
-        let uses = gildedUses(run), price = gildedPrice(run);
-        if (uses >= (KEEPSAKE_NUMBERS.gildedMax ?? 3) || run.purse < price) return;
+        let uses = gildedUses(run), price = gildedPrice();
+        if ((gildedMax() != null && uses >= gildedMax()) || run.purse < price) return;
         let die = turn.dice.find(d => d.id === dieId);
         let was = die && die.value;
         let rerolled = Rules.rerollDie(turn, dieId, rollFaceFor(room, turn));
@@ -4068,6 +4069,7 @@ if (require.main === module) {
     start();
 }
 
-// For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown.
+// For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown;
+// thomStock(stock) may change what Thom's cart offers (23 Nov).
 const devHooks = {};
 module.exports = { normalizeLeaderboard, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
