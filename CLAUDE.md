@@ -629,7 +629,7 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   scenes between fights, `sceneFileOf` for a fight's summary): the Yawning Portal's hall with its
   glowing well, the Salty Swallow's gun deck; the ship has Thom, the Shrine (its own painting aboard since 10 Nov, the user's: `art/shrine-ship.jpg` → `shrine-ship.webp`, the statue below decks; `spotPortrait(spot, place)` in portraits.ts), Jorvash and Yvesil (Johnny Elf Bar stays ashore since 9 Nov, the user's) and no events of its
   own (to workshop). Vaelin Inkhand is the Vaelin avatar (new art). Your hearts reset each fight (20 Oct): 3 everywhere since 5 Nov, the user's (`fightHearts` is empty now, it gave the Ghoul and Gourd's first four 2 from 3 Nov; the Lady's Favour +1, the Stranger and Pruney
-  Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 3, 3, 3 (since 5 Nov,
+  Fingers -1, counted from it: `heartsFor`/`nextHearts` in server.js); the opponents have 1, 2, 2, 2, 3 (since 23 Nov, the user's: Danhausen and the Duke 2, they were 3; from 5 Nov 1, 2, 3, 3, 3,
   the user's: McGrath 1, Frak 2, the rest 3) | 3, 3, 3, 3, 4 | 3, 3, 3, 3, 4 lives (`shared/balance.js`,
   the user's for now, balancing later). Gold for a win is 10, 12, 14 … (2 more each fight, Jaguar 38 since Áéd joined; since 28 Oct, it was 10 x the fight's number). **Turns alternate**
   (player first in odd rounds, opponent in even). Each opponent gets an entrance (bust rises,

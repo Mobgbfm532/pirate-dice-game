@@ -11,6 +11,12 @@ day they happen, with what's been built marked as it lands.
 
 (Tidied 17 Nov, again 18 Nov evening and 20 Nov evening: what was done moved to "Settled" below; what's left is here, most pressing first.)
 
+### Difficulty (23 Nov)
+1. **Players want the crawl easier, without taking lives off the Ghoul and Gourd's opponents.** Which levers? Eight ideas
+   and their measured effects in `docs/difficulty-brainstorm.md`; Claude's pick: 4 hearts in the Ghoul and Gourd only, and
+   soften Brodor and Klarg, measured with the expert first.
+   **Done 23 Nov (the user's): Danhausen and the Duke down to 2 hearts** (McGrath 1, Frak 2, Martha 3 unchanged).
+
 ### Going live (live since 20 Nov)
 1. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
    server restart; whether the leaderboard and the JUGS league survive a deploy (the live site and the test site share

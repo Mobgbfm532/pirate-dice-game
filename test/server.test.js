@@ -1360,14 +1360,14 @@ test('play again cannot restart a run while Thom\'s cart is open', async () => {
     assert.equal(room.tavernRun.purse, 300);
 });
 
-test('the Ghoul and Gourd: you on 3 hearts against McGrath 1, Frak 2, the rest 3; Brodor 4', async () => {
+test('the Ghoul and Gourd: you on 3 hearts against McGrath 1, Frak, Danhausen and the Duke 2, Martha 3; Brodor 4', async () => {
     const roomCode = `TVRN-H${++tavernTables}`;
     const hero = await join('Hearty', roomCode);
     await waitFor(hero, 'gameStateUpdate', s => s.playerOrder.includes(hero.id));
     const room = server.rooms[roomCode];
     assert.equal(room.players[hero.id].lives, 3, 'McGrath: you on 3');
     assert.equal(room.players.BOT_MOLAR.lives, 1, 'and him on 1');
-    for (const [id, you, them] of [['frak', 3, 2], ['danhausen', 3, 3], ['duke', 3, 3], ['martha', 3, 3], ['sylvester', 3, 3], ['brodor', 3, 4]]) {
+    for (const [id, you, them] of [['frak', 3, 2], ['danhausen', 3, 2], ['duke', 3, 2], ['martha', 3, 3], ['sylvester', 3, 3], ['brodor', 3, 4]]) {
         room.tavernRun.encounterIndex = fightOf(id);
         server.resetTavernEncounter(roomCode);
         assert.equal(room.players[hero.id].lives, you, `${id}: you`);
@@ -2365,7 +2365,7 @@ test("the run is fifteen fights: the Ghoul and Gourd, the Yawning Portal, then t
     assert.deepEqual(names, ['Sperm McGrath', 'Frak', 'Danhausen', 'Duke Morrigan', 'Martha/Mystery',
         'Sylvester Stonefist', 'Vaelin Inkhand', 'Stason Jatham', 'The Ridgeler', 'Brodor',
         'Klarg', 'Røkr', 'Áéd', 'The Hangman', 'Jaguar Cantona']);
-    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 3, 3, 4]);
+    assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.lives), [1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 3, 3, 3, 3, 4]);
     assert.deepEqual(server.TAVERN_ENCOUNTERS.map(e => e.place), [...Array(5).fill('ghoulAndGourd'), ...Array(5).fill('yawningPortal'), ...Array(5).fill('saltySwallow')]);
     const { hero, roomCode } = await tavernTable('Placed');
     const next = nextState(hero);
