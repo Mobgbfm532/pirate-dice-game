@@ -2302,6 +2302,9 @@ function getRandomAbilityRound(encounter) {
     // Jaguar's Smooth Talker belongs to his first phase (4 and 3 lives): ready from the first round, or a
     // fight that took him to 2 lives inside two rounds never saw it (13 Nov).
     if (encounter.ability === 'jaguarPhases') return 1;
+    // A fixed first round (BALANCE.abilityFromRound): Danhausen's You are Cursed! from round 1 (23 Nov, the user's).
+    let from = (BALANCE.abilityFromRound || {})[encounter.ability];
+    if (from) return from;
     return Math.floor(Math.random() * 3) + 1;
 }
 

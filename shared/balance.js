@@ -23,6 +23,9 @@ module.exports = {
     // disguises: Martha's, each time Frak's, Danhausen's or the Duke's ability at random.
     // The Yawning Portal's five: 1 each (first guesses, 20 Oct; Inkfire at 2 cost Vaelin's fight 19 points).
     // Stason's Flourish 2 since 3 Nov (the user's call).
+    // The round an ability is first ready, for those that don't wait for a random round 1-3 (23 Nov, the user's):
+    // Danhausen curses the fight's first two rounds (his two uses).
+    abilityFromRound: { cursed: 1 },
     abilityUses: {
         mindWhip: 1, cursed: 2, devil: 1, disguises: 2,
         suckerPunch: 1, inkfire: 1, flourish: 2, divineSmite: 1, astralFlood: 1,

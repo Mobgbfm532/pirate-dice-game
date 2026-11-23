@@ -2406,6 +2406,18 @@ test("Frak's Mind Whip: your first throw, he makes you keep one of your dice at 
     assert.ok(room.turn.locksThisRoll >= 1 && Rules.canRoll(room.turn), "it is the throw's keep: you may roll again");
 });
 
+test("Danhausen's Curse comes in the fight's first two rounds (23 Nov)", async () => {
+    const hero = await tavernAgainst(fightOf('danhausen'), 'CurseEarly');
+    const room = roomOf(hero);
+    for (let n = 0; n < 10; n++) {
+        server.resetTavernEncounter(codeOf(hero), false, true);
+        assert.equal(room.tavernRun.abilityRound, 1, 'ready from round 1, every fight');
+    }
+    room.tavernRun.encounterIndex = fightOf('duke');
+    const rounds = new Set(Array.from({ length: 30 }, () => { server.resetTavernEncounter(codeOf(hero), false, true); return room.tavernRun.abilityRound; }));
+    assert.ok(rounds.size > 1, 'the others still draw a round 1-3');
+});
+
 test("Danhausen's Curse: the lowest valid score wins the round", async () => {
     const hero = await tavernAgainst(2, 'Cursed');
     const room = roomOf(hero);
