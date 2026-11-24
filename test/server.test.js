@@ -1961,10 +1961,9 @@ test('the Hooded Stranger finds you now and then, instead of the spots, until hi
     // Then, at the Ghoul and Gourd, Darren 15% of what is left (9%).
     assert.ok(Math.abs(share('darren') - 0.09) < 0.03, `Darren ${share('darren')}`);
 
-    // Take a keepsake from him five times: then your pockets are full, and he stops coming. (At the
-    // Ghoul and Gourd he never has the Shield or the Loaded Die.)
+    // Take a keepsake from him five times: then your pockets are full, and he stops coming. (Since 24 Nov every
+    // keepsake is on offer from the start, the Shield and the Loaded Die too.)
     for (let i = 0; i < 5; i++) {
-        assert.ok(server.strangerOffer(room).offers.every(k => k.id !== 'bentCopper' && k.id !== 'loadedDie'));
         room.tavernRun.interlude = server.strangerOffer(room);
         hero.emit('strangerPick', room.tavernRun.interlude.offers[0].id);
         await nextState(hero, s => runOf(s).interlude.stage === 'done');
@@ -2197,6 +2196,26 @@ test('no thief until Danhausen is beaten, and Thom always offered after Frak', a
     let without = 0;
     for (let i = 0; i < 200; i++) if (!server.pickSpots(room).includes('thom')) without++;
     assert.ok(without > 0, 'after Danhausen Thom keeps his usual chance');
+});
+
+test('Thom at least once in the Yawning Portal\'s first two stops, after Sylvester or after Vaelin (24 Nov)', async () => {
+    const { room } = await tavernTable('PortalThom');
+    const run = room.tavernRun;
+    run.keepsakes = [];
+    run.purse = 200; // (every spot affordable)
+    let thomEither = 0, thomAfterSylvester = 0;
+    for (let i = 0; i < 200; i++) {
+        run.thomOffered = [];
+        run.encounterIndex = fightOf('vaelin'); // (Sylvester just beaten)
+        const first = server.pickSpots(room).includes('thom');
+        if (first) thomAfterSylvester++;
+        run.encounterIndex = fightOf('stason'); // (Vaelin just beaten)
+        const second = server.pickSpots(room).includes('thom');
+        if (first || second) thomEither++;
+        if (!first) assert.ok(second, 'missed after Sylvester: there after Vaelin');
+    }
+    assert.equal(thomEither, 200);
+    assert.ok(thomAfterSylvester > 0 && thomAfterSylvester < 200, 'after Sylvester he keeps his usual chance');
 });
 
 test('a thief strikes at most twice at any one place', async () => {
@@ -3443,16 +3462,20 @@ test("with five keepsakes, a boss's means leaving one behind; Thom's back shelf 
     assert.equal(run.purse, 200 - Math.ceil(BALANCE.keepsakePrices.gamblersCharm * BALANCE.placePrice.yawningPortal)); // (after Martha: the Portal's prices)
 });
 
-test('the Shield and the Loaded Die are only offered from the Yawning Portal on', async () => {
+test('every keepsake is on offer from the start (24 Nov); with keepsakesFromStart off, the Shield waits for the Portal', async () => {
     const { room } = await betweenFights('Places', { stage: 'choose', spots: [] }, 500);
-    const offered = () => new Set(Array.from({ length: 200 }, () => server.strangerOffer(room).offers.map(k => k.id)).flat());
+    const offered = () => new Set(Array.from({ length: 300 }, () => server.strangerOffer(room).offers.map(k => k.id)).flat());
     room.tavernRun.encounterIndex = fightOf('frak');
     let ids = offered();
-    assert.ok(!ids.has('bentCopper') && !ids.has('loadedDie'));
-    assert.ok(ids.has('misersPurse') && ids.has('gamblersCharm') && ids.has('bottomlessFlask'));
-    room.tavernRun.encounterIndex = fightOf('vaelin');
-    ids = offered();
-    assert.ok(ids.has('bentCopper') && ids.has('loadedDie'));
+    for (const id of ['bentCopper', 'loadedDie', 'gildedDie', 'brensCompass', 'misersPurse']) assert.ok(ids.has(id), id + ' at the Ghoul and Gourd');
+    BALANCE.keepsakesFromStart = false;
+    try {
+        ids = offered();
+        assert.ok(!ids.has('bentCopper') && !ids.has('loadedDie') && !ids.has('brensCompass'));
+        room.tavernRun.encounterIndex = fightOf('vaelin');
+        ids = offered();
+        assert.ok(ids.has('bentCopper') && ids.has('loadedDie'));
+    } finally { BALANCE.keepsakesFromStart = true; }
 });
 
 test("the Miser's Purse: a win pays 1 more gold for every 5 in the purse", async () => {
@@ -3679,8 +3702,10 @@ test("Bren's Compass: once a fight, rough weather and the sea die is rolled agai
     assert.equal(room.tavernRun.sea, 'port');
 });
 
-test("Bren's Compass is sold only aboard, the Gilded Die from the Yawning Portal on", async () => {
+test("Bren's Compass is sold only aboard, the Gilded Die from the Yawning Portal on (with keepsakesFromStart off)", async t => {
     const { room } = await betweenFights('Wares', { stage: 'choose', spots: [] }, 500);
+    BALANCE.keepsakesFromStart = false;
+    t.after(() => { BALANCE.keepsakesFromStart = true; });
     const offered = () => new Set(Array.from({ length: 200 }, () => server.strangerOffer(room).offers.map(k => k.id)).flat());
     room.tavernRun.encounterIndex = fightOf('frak');
     let ids = offered();

@@ -42,7 +42,9 @@ The entrance card (and the `i` on the nameplate) shows the line about them, then
 **Sperm McGrath** (no ability)
 - Entrance card: "Sperm McGrath, the Ghoul and Gourd's doorman, lets no one into the tournament who doesn't know the house game: find a 2, find a 4, then chase 24."
 - Fight summary, after you beat him (a speech bubble): "Alright then, in you go"
-- Run-over screen, if he beats you: "You couldn't beat Sperm?" (everyone else: "[name] ended your run.")
+- Run-over screen, if he beats you: "You couldn't beat Sperm?" (everyone else: "[name] ended your run."), and in his speech
+  bubble under the row of faces, one at random (24 Nov, the user's): "Nah, not tonight pal." or "Go take a walk up the street
+  and have a coffee." (`LOST_LINES` in Hud)
 
 **Frak**: Mind Whip
 - Entrance card: "Frak, a repugnant ne'er-do-well, slimes into place. Mind Whip: on your first throw he makes you keep one of your dice, at random."

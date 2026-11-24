@@ -2790,9 +2790,11 @@ function shuffled(list) {
     return out;
 }
 
-// Keepsakes you don't have that are offered where the run is now (some only from a later place on).
+// Keepsakes you don't have that are offered where the run is now (some only from a later place on; since 24 Nov,
+// the user's, every one from the start: BALANCE.keepsakesFromStart, the `from` places kept for if that changes back).
 function unownedKeepsakes(room) {
     let owned = new Set(room.tavernRun.keepsakes.map(k => k.id));
+    if (BALANCE.keepsakesFromStart) return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id));
     let order = Object.keys(PLACES);
     let here = order.indexOf(TAVERN_ENCOUNTERS[Math.min(room.tavernRun.encounterIndex, TAVERN_ENCOUNTERS.length - 1)].place);
     return TAVERN_KEEPSAKES.filter(k => !owned.has(k.id) && (!k.from || order.indexOf(k.from) <= here));
@@ -2804,6 +2806,14 @@ function unownedKeepsakes(room) {
 const justBeaten = room => TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex - 1] || null;
 // Thom's cart is always offered after certain fights (after Frak, the user's call, 21 Nov).
 const thomAlways = room => { let b = justBeaten(room); return !!b && (INTERLUDE.thomAlwaysAfter || []).includes(b.id) && placeOf(room).spots.includes('thom'); };
+// Thom at least once in a run of stops (24 Nov, the user's: once in the Yawning Portal's first two, after Sylvester or
+// after Vaelin; INTERLUDE.thomOnceAfter): at the last stop of a run, if he hasn't been offered at the others, he is.
+function thomOwed(room) {
+    let b = justBeaten(room);
+    if (!b || !placeOf(room).spots.includes('thom')) return false;
+    let group = (INTERLUDE.thomOnceAfter || []).find(ids => ids[ids.length - 1] === b.id);
+    return !!group && !group.slice(0, -1).some(id => (room.tavernRun.thomOffered || []).includes(id));
+}
 // No thief until a given opponent is beaten (Danhausen, the user's call, 21 Nov: time to build up gold first).
 function thiefMayStrike(room) {
     let from = TAVERN_ENCOUNTERS.findIndex(e => e.id === INTERLUDE.pickpocketAfter);
@@ -2816,7 +2826,9 @@ function pickSpots(room) {
     // gold since 21 Oct).
     let affordable = id => (id !== 'diceDen' || canBet) && (id !== 'shrine' || purse >= shrinePrice(room.tavernRun)) && (id !== 'hotTub' || purse >= hotTubPrice(room.tavernRun)) && (id !== 'bard' || purse >= bardPrice(room.tavernRun)) && (id !== 'yvesil' || purse >= yvesilPrice(room.tavernRun)) && (id !== 'jorvash' || purse >= jorvashPrice(room.tavernRun)) && (id !== 'elfKid' || purse >= Math.min(...ELF_BARS.map(e => thonicPrice(room.tavernRun, e))));
     let spots = shuffled(placeOf(room).spots.filter(affordable)).slice(0, 2);
-    if ((hasKeepsake(room, 'loyaltyCard') || thomAlways(room)) && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
+    if ((hasKeepsake(room, 'loyaltyCard') || thomAlways(room) || thomOwed(room)) && !spots.includes('thom')) spots[crypto.randomInt(0, 2)] = 'thom';
+    let beaten = justBeaten(room);
+    if (beaten && spots.includes('thom')) room.tavernRun.thomOffered = [...(room.tavernRun.thomOffered || []), beaten.id];
     return spots;
 }
 

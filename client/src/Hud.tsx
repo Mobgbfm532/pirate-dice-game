@@ -1526,6 +1526,7 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
     // Your best on the board (the board keeps each name's best run).
     const mine = leaderboard.findIndex(e => e.name === summary.name);
     const board = leaderboard.slice(0, 8);
+    const [lostLine] = useState(() => { const lines = summary.won ? null : LOST_LINES[summary.fellTo ?? '']; return lines ? lines[Math.floor(Math.random() * lines.length)] : null; });
     // A won crawl ends on the quay the finale left you on (21 Nov, the user's): its painting behind the victory screen.
     const dock = summary.won ? { backgroundImage: `linear-gradient(rgba(8, 6, 4, 0.35), rgba(8, 6, 4, 0.55)), url("${import.meta.env.BASE_URL}art/finale/quay-dawn.webp")` } : undefined;
     return (
@@ -1558,6 +1559,7 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
                         );
                     })}
                 </ol>
+                {lostLine && <p className="won-speech lost-speech">{lostLine}</p>}
                 <div className="gold">
                     <span className="coin" aria-hidden="true">🏆</span>
                     <span className="amount">{points.toLocaleString()}</span>
@@ -2890,6 +2892,8 @@ function DiceDenTable({ bet, throws, won, setRevealed, next }: { bet: number; th
 // device); a resumed run's last win was shown before it was saved.
 // What an opponent says on the summary, once you've beaten them (the user's, 5 Nov).
 const WON_LINES: Record<string, string> = { 'Sperm McGrath': 'Alright then, in you go' };
+// ...and what he says when he ends your run at the door (24 Nov, the user's), one at random.
+const LOST_LINES: Record<string, string[]> = { 'Sperm McGrath': ['Nah, not tonight pal.', 'Go take a walk up the street and have a coffee.'] };
 const WIN_STEP_MS = 700;
 const HEART_TALLY_MS = 160; // between the coin tallies for each heart left
 const winKey = (won: ShopArrival) => String(won.at ?? won.defeated);
