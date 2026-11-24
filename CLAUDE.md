@@ -916,7 +916,9 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   shows an empty table and then the next opponent's entrance. The summary fades straight into
   the event underneath (Modals renders both while it leaves).
 - **After each win** a summary screen (`FightWon` in Hud, before the event or the invitation):
-  the opponent's portrait (Sperm McGrath says "Alright then, in you go" in a bubble under his, `WON_LINES`, 5 Nov), the gold for the win and for each heart left, one line at a time with
+  the opponent's portrait (Sperm McGrath says "Alright then, in you go" in a bubble under his, `WON_LINES`, 5 Nov; and if he
+  ends your run, the run-over screen has his bubble, "Nah, not tonight pal." or "Go take a walk up the street and have a coffee.",
+  `LOST_LINES`, 24 Nov), the gold for the win and for each heart left, one line at a time with
   the user's coin tally (once for the win, once per heart left), Tavern Crawl Victory as it opens, the purse counting up, then "Next" (`lastWin` carries
   `place`, `gold.heartsLeft/perHeart/perPlace` and `at`; shown once, `localStorage.tavernWinSeen`;
   not after a resume). The event scenes show only the purse now.
@@ -975,7 +977,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   (since 30 Oct: the Ghoul and Gourd Thom, the Shrine, the hot tub, Johnny Elf Bar; the Yawning
   Portal Thom, the Shrine, the Bard, Johnny; the Salty Swallow Thom, the Shrine, Johnny, and since 6 Nov Jorvash and Yvesil; events:
   Darren at the Ghoul and Gourd, the Cult of Kram at the Yawning Portal, none of its own on the ship):
-  Thom's cart (opens `ThomShop`; always one of the two after beating Frak, `thomAlwaysAfter`, `thomAlways` in pickSpots, 21 Nov, the user's), the Shrine to the Lady (light a candle: a blessing at random,
+  Thom's cart (opens `ThomShop`; always one of the two after beating Frak, `thomAlwaysAfter`, `thomAlways` in pickSpots, 21 Nov, the user's; and
+  at least once in the Yawning Portal's first two stops, after Sylvester or after Vaelin, `thomOnceAfter`, `thomOwed`, `run.thomOffered`, 24 Nov), the Shrine to the Lady (light a candle: a blessing at random,
   her Favour, the next fight on 5 hearts, or her Grace, `ladysGrace`, the next dust that would
   cost a heart doesn't, kept until used; `blessingUsed` event; not given twice),
   the Dice Den (out of every place since 28 Oct, the user's call; its code stays: bet 5 or 10, only the bets the purse covers are offered, and below 5 gold the
@@ -1059,7 +1062,8 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   | Bren's Compass (17 Nov; sold aboard only, `from: 'saltySwallow'`) | once a fight, a sea die landing on anything but calm or starboard is rolled again (in `setSea`; not under the Ebon Shield; a second `seaChange` with `compass`) | not yet measured | 15 |
 
   **Since 30 Oct (the user's calls):** at most `maxKeepsakes` (5) carried (`pocketsFull`: since 17 Nov, the user's, Thom's back shelf still sells, as a swap: "Swap · 12 gold", then which of yours to leave behind, `buyKeepsake(id, giveUp)`, `.swap-pick`; the Stranger stays away); the Shield and the Loaded Die are only
-  offered from the Yawning Portal on (`from` on each keepsake, `unownedKeepsakes`); a boss's keepsake
+  offered from the Yawning Portal on (`from` on each keepsake, `unownedKeepsakes`; **since 24 Nov, the user's, every keepsake is on
+  offer from the start**, `BALANCE.keepsakesFromStart`, the `from` places kept); a boss's keepsake
   is no longer automatic: the invitation offers it to take or leave (`claimDrop`, `interlude.claim`
   'open'/'took'/'refused', `run.refusedDrops` saved with the run), and with full pockets taking
   it means choosing one of yours to leave behind. The three new ones have the user's paintings (`art/keepsake-<id>.jpg`, same folder); prices are first guesses, not yet simulated.

@@ -26,6 +26,9 @@ module.exports = {
     // The round an ability is first ready, for those that don't wait for a random round 1-3 (23 Nov, the user's):
     // Danhausen curses the fight's first two rounds (his two uses).
     abilityFromRound: { cursed: 1 },
+    // Every keepsake on offer from the first place (24 Nov, the user's): the Shield, the Loaded Die and the Gilded Die
+    // waited for the Yawning Portal, Bren's Compass for the ship (each keepsake's `from` in server.js).
+    keepsakesFromStart: true,
     abilityUses: {
         mindWhip: 1, cursed: 2, devil: 1, disguises: 2,
         suckerPunch: 1, inkfire: 1, flourish: 2, divineSmite: 1, astralFlood: 1,
@@ -146,6 +149,9 @@ module.exports = {
         pickpocketMaxPerPlace: 2, // a thief strikes at most this often at any one place (the user's call, 4 Nov)
         pickpocketAfter: 'danhausen', // no thief until this opponent is beaten: time to build up gold (the user's call, 21 Nov)
         thomAlwaysAfter: ['frak'], // Thom's cart is always one of the two spots after beating these (the user's call, 21 Nov)
+        // Thom at least once in each of these runs of stops (after the listed fights; 24 Nov, the user's): the Yawning
+        // Portal's first two, after Sylvester and after Vaelin.
+        thomOnceAfter: [['sylvester', 'vaelin']],
         shrineGifts: ['favour', 'grace'], // the Shrine to the Lady: one blessing at random (see server.js)
         shrinePrice: 10,        // a candle for the Lady (rising, priceRise)
         hotTubPrice: 5,         // a soak (rising, priceRise)
