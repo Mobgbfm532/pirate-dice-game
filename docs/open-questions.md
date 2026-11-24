@@ -17,6 +17,12 @@ day they happen, with what's been built marked as it lands.
    soften Brodor and Klarg, measured with the expert first.
    **Done 23 Nov (the user's): Danhausen and the Duke down to 2 hearts** (McGrath 1, Frak 2, Martha 3 unchanged).
 
+### The leaderboard's stats (24 Nov)
+1. **Which stats to add to the leaderboard?** Twelve ideas in `docs/leaderboard-stats-brainstorm.md`. Claude's pick:
+   furthest reached, crawls won, a Graveyard of who ends the most runs, and a weekly board.
+   **Done 24 Nov (the user's): furthest reached, crawls won and a nemesis.** Still open, if wanted: the Graveyard, a
+   weekly board and the other ideas.
+
 ### Going live (live since 20 Nov)
 1. **Not yet tried:** an iPhone (sound starting, the screen's height, the 3D table); a save replayed after a
    server restart; whether the leaderboard and the JUGS league survive a deploy (the live site and the test site share

@@ -146,7 +146,7 @@ export type Interlude =
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
 // Each name's best run: its points, and the gold it ended with.
-export interface LeaderboardEntry { name: string; points: number; gold: number; runs?: number; average?: number } // (runs and average since 22 Nov: every finished crawl counts)
+export interface LeaderboardEntry { name: string; points: number; gold: number; runs?: number; average?: number; wins?: number; furthest?: string | null; nemesis?: { name: string; times: number } | null } // (runs and average since 22 Nov: every finished crawl counts)
 
 export interface TavernSummary {
     won: boolean;

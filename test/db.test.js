@@ -19,8 +19,8 @@ test('the leaderboard keeps each name\'s best run, highest first', async () => {
     await store.saveLeaderboard(null, { name: 'Bo', points: 650, gold: 7 });  // better: replaces
     // (and every run counted, for the average: 22 Nov)
     assert.deepEqual(await store.loadLeaderboard(), [
-        { name: 'Bo', points: 650, gold: 7, runs: 2, total: 1150 },
-        { name: 'Ann', points: 300, gold: 20, runs: 2, total: 500 }
+        { name: 'Bo', points: 650, gold: 7, runs: 2, total: 1150, wins: 0 },
+        { name: 'Ann', points: 300, gold: 20, runs: 2, total: 500, wins: 0 }
     ]);
 });
 
@@ -52,4 +52,21 @@ test('a used save is kept once, so a restart still knows it (20 Nov)', async () 
     await store.addUsedSave('b2');
     await store.addUsedSave('a1');
     assert.deepEqual((await store.loadUsedSaves()).sort(), ['a1', 'b2']);
+});
+
+test('crawls won add up, and the opponents who ended runs are counted per player (24 Nov)', async () => {
+    const store = freshStore();
+    await store.saveLeaderboard(null, { name: 'Ann', points: 300, gold: 20 });
+    await store.saveLeaderboard(null, { name: 'Ann', points: 4000, gold: 90, won: true });
+    await store.saveLeaderboard(null, { name: 'Ann', points: 3500, gold: 90, won: true });
+    assert.equal((await store.loadLeaderboard())[0].wins, 2);
+    await store.addFallen('Ann', 'klarg');
+    await store.addFallen(' ann', 'klarg');
+    await store.addFallen('Bo', 'brodor');
+    assert.deepEqual(await store.loadFallen(), { ann: { klarg: 2 }, bo: { brodor: 1 } });
+    await store.addMet('Ann', 'molar');
+    await store.addMet('Bo', 'frak');
+    const met = await store.loadAllMet();
+    assert.deepEqual(Object.keys(met).sort(), ['ann', 'bo']);
+    assert.deepEqual(met.bo, ['frak']);
 });

@@ -1510,6 +1510,21 @@ function AverageOf({ e }: { e: LeaderboardEntry }) {
     return <span className="avg" title={`Average of ${e.runs} crawls`}>avg {e.average.toLocaleString()}</span>;
 }
 
+// A name on the leaderboard and, under it (24 Nov, the user's), the crawls they've won (a crown) or else the furthest
+// they've reached, and their nemesis: the opponent who has ended most of their lost crawls.
+function Legend({ e }: { e: LeaderboardEntry }) {
+    const bits: React.ReactNode[] = [];
+    if (e.wins) bits.push(<span key="w" className="legend-crown" title={`Won the Tavern Crawl ${e.wins === 1 ? 'once' : `${e.wins} times`}`}>👑 Champion{e.wins > 1 ? ` ×${e.wins}` : ''}</span>);
+    else if (e.furthest) bits.push(<span key="f" title="The furthest they've reached">Reached {e.furthest}</span>);
+    if (e.nemesis) bits.push(<span key="n" title={`Ended ${e.nemesis.times === 1 ? 'one' : e.nemesis.times} of their crawls`}>Nemesis: {e.nemesis.name}{e.nemesis.times > 1 ? ` ×${e.nemesis.times}` : ''}</span>);
+    return (
+        <span className="who legend">
+            <span className="legend-name">{e.name}</span>
+            {bits.length > 0 && <span className="legend-line">{bits}</span>}
+        </span>
+    );
+}
+
 // The end of a Tavern Crawl: how far you got, the points, and the leaderboard (by points since
 // 23 Oct: the opponents beaten, the hearts spared, how far a lost run got, and the gold left).
 function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; leaderboard: Snapshot['leaderboard']; met?: string[] }) {
@@ -1577,7 +1592,7 @@ function TavernOver({ summary, leaderboard, met }: { summary: TavernSummary; lea
                             {board.map((e, i) => (
                                 <li key={e.name} className={i === mine ? 'me' : ''}>
                                     <span className="rank">{i + 1}</span>
-                                    <span className="who">{e.name}</span>
+                                    <Legend e={e} />
                                     <AverageOf e={e} />
                                     <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
                                 </li>
@@ -3543,14 +3558,14 @@ function HallOfLegends({ me, onClose }: { me: string; onClose: () => void }) {
                                 {board.map((e, i) => (
                                     <li key={e.name} className={`${e.name.trim().toLowerCase() === mine ? 'me' : ''}${i < 3 ? ` top top${i + 1}` : ''}`}>
                                         <span className="rank">{i + 1}</span>
-                                        <span className="who">{e.name}</span>
+                                        <Legend e={e} />
                                         <AverageOf e={e} />
                                     <span className="gold-amount">{(e.points ?? 0).toLocaleString()}</span>
                                     </li>
                                 ))}
                             </ol>
                         )}
-                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, 50 for each perfect hand, 2,000 for winning the crawl, a little for how far a lost run got, and the gold you end with. Beside it, “avg”: the average of all their crawls.</p>
+                        <p className="fine legends-how">Each player's best crawl, by points: 100 × each rival's place for beating them, 25 for every heart left after a win, 50 for each perfect hand, 2,000 for winning the crawl, a little for how far a lost run got, and the gold you end with. Beside it, “avg”: the average of all their crawls. Under each name, a crown for every crawl won, or the furthest they’ve reached, and their nemesis: the rival who has ended most of their crawls.</p>
                     </div>
                 ) : <LeagueTable rows={league.rows} room={league.room} me={me} />}
             </div>

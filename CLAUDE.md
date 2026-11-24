@@ -595,7 +595,7 @@ one too, or saves only last until the server restarts, which on the free tier is
 - **`main` = the live game: Phase 1 and 2 are live since 20 Nov** (PR #1 merged by the user). The live service is
   https://two-4-24.onrender.com: the new game at `/next`; since 20 Nov (the user's word) `/` sends visitors on to `/next/` (an invite's
   `?table=` too) and the classic page is at `/classic` (`index: false` on the public folder; the service worker keeps
-  `/classic`, cache v65; the manifest starts at `/next/`). Since 22 Nov the new game's page links that manifest and the icon too (`client/index.html`): until then only `/classic` did, so a phone on `/next` offered no "Install app" (Chrome: "no-manifest"); checked with Chrome's installability check, `.git/install-check.mjs <url>`.
+  `/classic`, cache v65; the manifest starts at `/next/`). Since 22 Nov the new game's page links that manifest and the icon too (`client/index.html`): until then only `/classic` did, so a phone on `/next` offered no "Install app" (Chrome: "no-manifest"); checked with Chrome's installability check, `.git/install-check.mjs <url>`. Since 24 Nov (the user's: "whitespace at the 4 corners") the icon's white corners are gone: `icon-192/512.png` see-through there (`purpose: any`), `icon-maskable-192/512.png` filled with the frame's dark wood for Android's shapes, `apple-touch-icon.png` (180) filled for iOS; made from the old icon by `.git/fix-icon.cjs`; cache v66.
   Its `DATABASE_URL` is the same Neon database as the test site (the Legends plaque shows the same board). Also 20 Nov,
   the user's: MOB's and Rossatron's crawl leaderboard rows deleted from Neon (War Daddy's kept). On 22 Nov (the user's) every crawl leaderboard row was deleted (War Daddy 1988, MOB 921, Tester 214; kept in `previews/neon/leaderboard-backup-2026-11-22.json`, gitignored); the servers' in-memory board empties as each restarts.
 - **Render:** the existing live service sits in "My project". The test service
@@ -947,7 +947,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   name's best; an older entry's gold counts as points). Since 22 Nov (the user's: "average run points") every finished crawl
   also counts: `runs` and `total_points` in the database (`saveLeaderboard`), `runs`/`total` in `normalizeLeaderboard`, which keeps
   every name in memory and sends the top 20 with each `average` (`topBoard`); the boards show "avg" beside the best from two runs
-  (`AverageOf` in Hud). No made-up names: `leaderboard.json` is
+  (`AverageOf` in Hud). Since 24 Nov (the user's, `docs/leaderboard-stats-brainstorm.md`) a line under each name (`Legend` in
+  Hud, `legendOf` in server.js): a crown for crawls won (`wins` in the database, counted since then; a champion from before,
+  `beat:jaguar` in `met`, counts as one), else the furthest reached (the last opponent in `met`, so older runs count too: every
+  `met` row is loaded at start, `loadAllMet`), and the nemesis, whoever ended most of their lost crawls (table `fallen`,
+  `recordFall`, `fallen.json` without a database; counted since then; a tie goes to the opponent further on). No made-up names: `leaderboard.json` is
   no longer in git and starts empty. The run-over screen shows the points and their parts.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart
