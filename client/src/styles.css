@@ -4693,3 +4693,12 @@ body.thom-peeking footer .player:not(.me) { display: none; } /* (gone, not just 
 }
 /* Sperm McGrath's line when he ends your run (24 Nov): his bubble under the row of faces, his first. */
 .run-over .lost-speech { margin: 2px auto 10px; }
+
+/* The leaderboard's line under a name (24 Nov): crawls won or the furthest reached, and the nemesis. */
+.leaderboard .who.legend { display: flex; flex-direction: column; min-width: 0; white-space: normal; }
+.leaderboard .legend-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard .legend-line { display: flex; flex-wrap: wrap; column-gap: 0.8em; font-size: 0.72em; font-weight: 400; opacity: 0.8; line-height: 1.25; }
+.leaderboard .legend-line > span { white-space: nowrap; }
+.leaderboard .legend-crown { color: #8a5a00; font-weight: 700; }
+.leaderboard li:has(.legend) { align-items: center; min-width: 0; }
+.leaderboard ol:has(.legend) { grid-template-columns: minmax(0, 1fr); }

@@ -87,17 +87,39 @@ function normalizeLeaderboard(entries) {
         let gold = Math.max(0, parseInt(entry.gold, 10) || 0);
         let runs = Math.max(0, parseInt(entry.runs, 10) || 0);
         let total = Math.max(0, parseInt(entry.total, 10) || 0);
+        let wins = Math.max(0, parseInt(entry.wins, 10) || 0); // (crawls won, 24 Nov)
         if (!runs) { runs = 1; total = points; } // (a run, or a line saved before runs were counted)
         if (!name) return;
         let e = byName.get(name);
-        if (!e) { byName.set(name, { name, points, gold, runs, total }); return; }
+        if (!e) { byName.set(name, { name, points, gold, runs, total, wins }); return; }
         if (points > e.points) { e.points = points; e.gold = gold; }
         e.runs += runs;
         e.total += total;
+        e.wins += wins;
     });
     return Array.from(byName.values()).sort((a, b) => b.points - a.points);
 }
-const topBoard = () => tavernLeaderboard.slice(0, 20).map(e => ({ ...e, average: Math.round(e.total / e.runs) }));
+// Beside each name since 24 Nov (the user's): the furthest they've reached, the crawls they've won and their nemesis.
+const topBoard = () => tavernLeaderboard.slice(0, 20).map(e => ({ ...e, average: Math.round(e.total / e.runs), ...legendOf(e.name, e.wins) }));
+// Furthest reached comes from who they've met (kept since 3 Nov, so it covers runs from before the leaderboard
+// counted it): the last opponent they sat down with, or "champion" once they've beaten the last. Crawls won are
+// counted since 24 Nov; a champion from before then counts as one. The nemesis: whoever has ended most of their lost
+// crawls (counted since 24 Nov; a tie goes to the opponent further on).
+function legendOf(name, wins) {
+    let key = playerKey(name);
+    let met = metByPlayer.get(key) || new Set();
+    let last = TAVERN_ENCOUNTERS[TAVERN_ENCOUNTERS.length - 1];
+    let champion = met.has('beat:' + last.id);
+    let furthest = null;
+    TAVERN_ENCOUNTERS.forEach(enc => { if (met.has(enc.id)) furthest = enc.name; });
+    let fell = fallenBy.get(key) || {};
+    let nemesis = null;
+    TAVERN_ENCOUNTERS.forEach(enc => {
+        let times = fell[enc.id] || 0;
+        if (times && (!nemesis || times >= nemesis.times)) nemesis = { name: enc.name, times };
+    });
+    return { furthest: champion ? 'champion' : furthest, wins: Math.max(wins || 0, champion ? 1 : 0), nemesis };
+}
 
 let tavernLeaderboard = [];
 store.loadLeaderboard().then(entries => {
@@ -106,9 +128,9 @@ store.loadLeaderboard().then(entries => {
     io.emit('leaderboardUpdate', topBoard());
 }).catch(error => console.warn('Could not load the leaderboard:', error.message));
 
-function submitTavernLeaderboardScore(name, points, gold) {
-    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, points, gold }]);
-    store.saveLeaderboard(tavernLeaderboard, { name: String(name).trim().substring(0, 20), points, gold })
+function submitTavernLeaderboardScore(name, points, gold, won = false) {
+    tavernLeaderboard = normalizeLeaderboard([...tavernLeaderboard, { name, points, gold, wins: won ? 1 : 0 }]);
+    store.saveLeaderboard(tavernLeaderboard, { name: String(name).trim().substring(0, 20), points, gold, won })
         .catch(error => console.warn('Could not save the leaderboard:', error.message));
     return topBoard();
 }
@@ -189,6 +211,30 @@ function meet(room, who) {
     met.add(who);
     store.addMet(human.name, who).catch(error => console.warn('Could not save who has been met:', error.message));
 }
+
+// Which opponent ended each player's lost crawls (24 Nov, for their nemesis on the leaderboard): player key -> id -> times.
+const fallenBy = new Map();
+function recordFall(name, who) {
+    let key = playerKey(name);
+    let row = fallenBy.get(key) || {};
+    row[who] = (row[who] || 0) + 1;
+    fallenBy.set(key, row);
+    store.addFallen(name, who).catch(error => console.warn('Could not save who ended the run:', error.message));
+}
+// Everyone's meetings and falls, loaded once, for the leaderboard (a player's own meetings still load as they join).
+Promise.all([store.loadAllMet(), store.loadFallen()]).then(([met, fallen]) => {
+    Object.entries(met).forEach(([key, ids]) => {
+        let set = metByPlayer.get(key) || new Set();
+        ids.forEach(id => set.add(id));
+        metByPlayer.set(key, set);
+    });
+    Object.entries(fallen).forEach(([key, row]) => {
+        let now = fallenBy.get(key) || {};
+        Object.entries(row).forEach(([id, times]) => { now[id] = (now[id] || 0) + times; });
+        fallenBy.set(key, now);
+    });
+    io.emit('leaderboardUpdate', topBoard());
+}).catch(error => console.warn('Could not load the leaderboard\'s furthest and nemeses:', error.message));
 
 // The opponents a player has beaten, in any run (20 Nov, the user's: you may throw their dice once you have).
 // Kept as "beat:<id>" beside who you've met; before 20 Nov nothing was kept, so meeting an opponent counts every one
@@ -3134,6 +3180,7 @@ function evaluateTavernRound(roomCode) {
         let scoreSummary = getTavernScoreSummary(room);
         room.roundPlayers = [];
         room.tavernRun.runComplete = true;
+        recordFall(human.name, TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id);
         io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
         emitState(roomCode);
         io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached fight ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
@@ -3162,7 +3209,7 @@ function evaluateTavernRound(roomCode) {
             let scoreSummary = getTavernScoreSummary(room, true);
             room.roundPlayers = [];
             room.tavernRun.runComplete = true;
-            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
+            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold, true));
             emitState(roomCode);
             io.to(roomCode).emit('gameOver', { message: `${human.name} is champion of the Tavern Crawl, home to Waterdeep at dawn! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
@@ -4087,4 +4134,4 @@ if (require.main === module) {
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown;
 // thomStock(stock) may change what Thom's cart offers (23 Nov).
 const devHooks = {};
-module.exports = { normalizeLeaderboard, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { normalizeLeaderboard, topBoard, legendOf, recordFall, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

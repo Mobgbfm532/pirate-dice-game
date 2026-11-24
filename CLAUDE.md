@@ -947,7 +947,11 @@ https://claude.ai/code/artifact/62ce683b-44ba-43a1-b71b-9dbe3b33d094
   name's best; an older entry's gold counts as points). Since 22 Nov (the user's: "average run points") every finished crawl
   also counts: `runs` and `total_points` in the database (`saveLeaderboard`), `runs`/`total` in `normalizeLeaderboard`, which keeps
   every name in memory and sends the top 20 with each `average` (`topBoard`); the boards show "avg" beside the best from two runs
-  (`AverageOf` in Hud). No made-up names: `leaderboard.json` is
+  (`AverageOf` in Hud). Since 24 Nov (the user's, `docs/leaderboard-stats-brainstorm.md`) a line under each name (`Legend` in
+  Hud, `legendOf` in server.js): a crown for crawls won (`wins` in the database, counted since then; a champion from before,
+  `beat:jaguar` in `met`, counts as one), else the furthest reached (the last opponent in `met`, so older runs count too: every
+  `met` row is loaded at start, `loadAllMet`), and the nemesis, whoever ended most of their lost crawls (table `fallen`,
+  `recordFall`, `fallen.json` without a database; counted since then; a tie goes to the opponent further on). No made-up names: `leaderboard.json` is
   no longer in git and starts empty. The run-over screen shows the points and their parts.
 - **Thom's Thonics:** one of the spots between fights: a full-screen scene (`.thom-scene`; Thom's bust from
   `art/bust-thom.jpg`, cut out by `cutOutFlat`) where Thom says "What ya havin'?". His cart

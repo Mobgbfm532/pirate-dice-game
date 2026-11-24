@@ -2171,9 +2171,27 @@ test("the crawl leaderboard keeps each name's best and counts every run, for an 
         { name: 'Bo', points: 700, gold: 5 }
     ]);
     assert.deepEqual(board, [
-        { name: 'Ann', points: 1200, gold: 55, runs: 5, total: 3100 },
-        { name: 'Bo', points: 700, gold: 5, runs: 1, total: 700 }
+        { name: 'Ann', points: 1200, gold: 55, runs: 5, total: 3100, wins: 0 },
+        { name: 'Bo', points: 700, gold: 5, runs: 1, total: 700, wins: 0 }
     ]);
+});
+
+test('the leaderboard shows the furthest reached, crawls won and a nemesis (24 Nov)', () => {
+    // Reached Brodor (met him); his crawls ended by Brodor twice and Vaelin once.
+    ['molar', 'frak', 'sylvester', 'brodor'].forEach(id => server.metOf('LegendA').add(id));
+    server.recordFall('LegendA', 'vaelin');
+    server.recordFall('LegendA', 'brodor');
+    server.recordFall('legenda ', 'brodor');
+    assert.deepEqual(server.legendOf('LegendA', 0), { furthest: 'Brodor', wins: 0, nemesis: { name: 'Brodor', times: 2 } });
+    // A champion from before wins were counted counts as one; a tie goes to the opponent further on.
+    ['molar', 'jaguar', 'beat:jaguar'].forEach(id => server.metOf('LegendB').add(id));
+    server.recordFall('LegendB', 'frak');
+    server.recordFall('LegendB', 'klarg');
+    assert.deepEqual(server.legendOf('LegendB', 0), { furthest: 'champion', wins: 1, nemesis: { name: 'Klarg', times: 1 } });
+    assert.equal(server.legendOf('LegendB', 3).wins, 3);
+    assert.deepEqual(server.legendOf('Nobody', 0), { furthest: null, wins: 0, nemesis: null });
+    // Winning the crawl counts on the board.
+    assert.equal(server.normalizeLeaderboard([{ name: 'C', points: 5, gold: 0, wins: 1 }, { name: 'C', points: 9, gold: 0, wins: 1 }])[0].wins, 2);
 });
 
 test('no thief until Danhausen is beaten, and Thom always offered after Frak', async () => {

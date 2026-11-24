@@ -15,6 +15,8 @@ const MET_PATH = path.join(__dirname, 'met.json');
 const LEAGUE_PATH = path.join(__dirname, 'league.json');
 // Saved Tavern Crawl runs already opened (20 Nov, no save scumming): a save opens once, even after a restart.
 const USED_SAVES_PATH = path.join(__dirname, 'used-saves.json');
+// Which opponent ended each player's lost crawls, counted (24 Nov: their nemesis on the leaderboard).
+const FALLEN_PATH = path.join(__dirname, 'fallen.json');
 const readonly = () => !!process.env.LEADERBOARD_READONLY;
 
 // A player's key: their name as typed, trimmed and in lower case ("Ann" and "ann " are the same).
@@ -43,6 +45,7 @@ function fileStore() {
     let met = readJson(MET_PATH, {});
     let league = readJson(LEAGUE_PATH, {}); // room -> player key -> { name, wins, games }
     let used = readJson(USED_SAVES_PATH, []);
+    let fallen = readJson(FALLEN_PATH, {}); // player key -> opponent id -> times
     return {
         kind: 'files',
         ready: Promise.resolve(),
@@ -50,6 +53,14 @@ function fileStore() {
         // The server passes the whole board (each name's best, already sorted).
         async saveLeaderboard(board) { writeJson(LEADERBOARD_PATH, board); },
         async loadMet(name) { return met[playerKey(name)] || []; },
+        // Everyone's (player key -> ids), for the leaderboard's furthest reached.
+        async loadAllMet() { return JSON.parse(JSON.stringify(met)); },
+        async loadFallen() { return JSON.parse(JSON.stringify(fallen)); },
+        async addFallen(name, who) {
+            let row = fallen[playerKey(name)] = fallen[playerKey(name)] || {};
+            row[who] = (row[who] || 0) + 1;
+            writeJson(FALLEN_PATH, fallen);
+        },
         async addMet(name, who) {
             let key = playerKey(name);
             met[key] = [...new Set([...(met[key] || []), who])];
@@ -92,6 +103,13 @@ function postgresStore(url, Pool = require('pg').Pool) {
         );
         ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS runs INTEGER NOT NULL DEFAULT 0;
         ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS total_points BIGINT NOT NULL DEFAULT 0;
+        ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS wins INTEGER NOT NULL DEFAULT 0;
+        CREATE TABLE IF NOT EXISTS fallen (
+            player TEXT NOT NULL,
+            who TEXT NOT NULL,
+            times INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (player, who)
+        );
         CREATE TABLE IF NOT EXISTS met (
             player TEXT NOT NULL,
             who TEXT NOT NULL,
@@ -119,8 +137,8 @@ function postgresStore(url, Pool = require('pg').Pool) {
         ready,
         async loadLeaderboard() {
             // (every name: the server works out the top 20, and each name's runs for its average, 22 Nov)
-            let { rows } = await query('SELECT name, points, gold, runs, total_points FROM leaderboard ORDER BY points DESC');
-            return rows.map(r => ({ name: r.name, points: r.points, gold: r.gold, runs: Number(r.runs) || 0, total: Number(r.total_points) || 0 }));
+            let { rows } = await query('SELECT name, points, gold, runs, total_points, wins FROM leaderboard ORDER BY points DESC');
+            return rows.map(r => ({ name: r.name, points: r.points, gold: r.gold, runs: Number(r.runs) || 0, total: Number(r.total_points) || 0, wins: Number(r.wins) || 0 }));
         },
         // Each name keeps its best run (a lower score never replaces a higher one), and since 22 Nov every run
         // is counted with its points, for the average. A line saved before then starts its count from its best.
@@ -129,17 +147,35 @@ function postgresStore(url, Pool = require('pg').Pool) {
         async saveLeaderboard(board, entry) {
             if (!entry) return;
             await query(`
-                INSERT INTO leaderboard (name, points, gold, runs, total_points) VALUES ($1, $2, $3, 1, $4)
+                INSERT INTO leaderboard (name, points, gold, runs, total_points, wins) VALUES ($1, $2, $3, 1, $4, $5)
                 ON CONFLICT (name) DO UPDATE SET
+                    wins = leaderboard.wins + EXCLUDED.wins,
                     runs = CASE WHEN leaderboard.runs = 0 THEN 2 ELSE leaderboard.runs + 1 END,
                     total_points = CASE WHEN leaderboard.runs = 0 THEN leaderboard.points ELSE leaderboard.total_points END + EXCLUDED.points,
                     gold = CASE WHEN leaderboard.points < EXCLUDED.points THEN EXCLUDED.gold ELSE leaderboard.gold END,
                     points = CASE WHEN leaderboard.points < EXCLUDED.points THEN EXCLUDED.points ELSE leaderboard.points END,
-                    updated_at = now()`, [entry.name, entry.points, entry.gold, entry.points]);
+                    updated_at = now()`, [entry.name, entry.points, entry.gold, entry.points, entry.won ? 1 : 0]);
         },
         async loadMet(name) {
             let { rows } = await query('SELECT who FROM met WHERE player = $1', [playerKey(name)]);
             return rows.map(r => r.who);
+        },
+        async loadAllMet() {
+            let { rows } = await query('SELECT player, who FROM met');
+            let all = {};
+            rows.forEach(r => { (all[r.player] = all[r.player] || []).push(r.who); });
+            return all;
+        },
+        async loadFallen() {
+            let { rows } = await query('SELECT player, who, times FROM fallen');
+            let all = {};
+            rows.forEach(r => { (all[r.player] = all[r.player] || {})[r.who] = Number(r.times) || 0; });
+            return all;
+        },
+        async addFallen(name, who) {
+            await query(`
+                INSERT INTO fallen (player, who, times) VALUES ($1, $2, 1)
+                ON CONFLICT (player, who) DO UPDATE SET times = fallen.times + 1`, [playerKey(name), who]);
         },
         async addMet(name, who) {
             await query('INSERT INTO met (player, who) VALUES ($1, $2) ON CONFLICT DO NOTHING', [playerKey(name), who]);
