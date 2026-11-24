@@ -5,7 +5,7 @@
 // tried to store the live connection's requests too. Now it keeps only the classic page's own few
 // files, for playing offline, and leaves every other request alone: the new game (/next), its sounds
 // and pictures, the server's connection (/socket.io) and anything that isn't a plain GET.
-const CACHE_NAME = '2424-cache-v65'; // (a new name: activating it deletes the old, overgrown cache)
+const CACHE_NAME = '2424-cache-v66'; // (a new name: activating it deletes the old, overgrown cache)
 const urlsToCache = [
   '/classic',
   '/index.html',
