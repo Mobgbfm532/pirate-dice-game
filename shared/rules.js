@@ -412,7 +412,7 @@
             locksThisRoll: turn.locksThisRoll,
             hasRolled: turn.hasRolled,
             blurActive: turn.blurActive,
-            suspense: turn.fogged ? 'none' : turn.suspense,
+            suspense: cloaked ? 'none' : turn.suspense, // (a hidden hand gives nothing away)
             callout: turn.callout,
             finalized: turn.finalized,
             // Every die kept by the player's own taps: End Turn fixes it (finishTurn); until then a

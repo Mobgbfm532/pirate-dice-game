@@ -105,20 +105,25 @@ const topBoard = () => tavernLeaderboard.slice(0, 20).map(e => ({ ...e, average:
 // counted it): the last opponent they sat down with, or "champion" once they've beaten the last. Crawls won are
 // counted since 24 Nov; a champion from before then counts as one. The nemesis: whoever has ended most of their lost
 // crawls (counted since 24 Nov; a tie goes to the opponent further on).
+// [Redacted] (24 Nov, the user's): an opponent only one player has reached is hidden from everyone else on the board,
+// so the first to get that far keeps the secret. `alone` marks it; the browser shows the name only to that player.
+const reachedByOthers = (key, id) => [...metByPlayer].some(([other, set]) => other !== key && set.has(id));
 function legendOf(name, wins) {
     let key = playerKey(name);
     let met = metByPlayer.get(key) || new Set();
     let last = TAVERN_ENCOUNTERS[TAVERN_ENCOUNTERS.length - 1];
     let champion = met.has('beat:' + last.id);
-    let furthest = null;
-    TAVERN_ENCOUNTERS.forEach(enc => { if (met.has(enc.id)) furthest = enc.name; });
+    let furthest = null, furthestId = null;
+    TAVERN_ENCOUNTERS.forEach(enc => { if (met.has(enc.id)) { furthest = enc.name; furthestId = enc.id; } });
     let fell = fallenBy.get(key) || {};
     let nemesis = null;
     TAVERN_ENCOUNTERS.forEach(enc => {
         let times = fell[enc.id] || 0;
-        if (times && (!nemesis || times >= nemesis.times)) nemesis = { name: enc.name, times };
+        if (times && (!nemesis || times >= nemesis.times)) nemesis = { name: enc.name, times, id: enc.id };
     });
-    return { furthest: champion ? 'champion' : furthest, wins: Math.max(wins || 0, champion ? 1 : 0), nemesis };
+    if (nemesis) nemesis = { name: nemesis.name, times: nemesis.times, alone: !reachedByOthers(key, nemesis.id) };
+    let alone = !champion && !!furthestId && !reachedByOthers(key, furthestId);
+    return { furthest: champion ? 'champion' : furthest, furthestAlone: alone, wins: Math.max(wins || 0, champion ? 1 : 0), nemesis };
 }
 
 let tavernLeaderboard = [];
@@ -1074,6 +1079,9 @@ function syncTurn(roomCode) {
 function emitTurn(roomCode, event = null) {
     let room = rooms[roomCode];
     if (!room) return;
+    // A hand finished in a fog bank says nothing of how it went (24 Nov, the user's): the browser picks its yay, aww
+    // or dust sound from the outcome, which gave his hidden hand away.
+    if (event && event.outcome && room.turn && room.turn.fogged) event = { type: event.type };
     io.to(roomCode).emit('turnState', { turn: Rules.viewTurn(room.turn), event });
 }
 
@@ -1565,7 +1573,7 @@ function performRoll(roomCode) {
     let abilitySixes = !!turn.abilitySixes;
     // (No three 6s moment on hidden dice, Starry Form or the Cloak: it would show what they are. 10 Nov.)
     turn.abilitySixes = false;
-    let thrown = { sea: (!seaWarded(room, turn) && seaShift(room)) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let thrown = { sea: (!seaWarded(room, turn) && seaShift(room)) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged || turn.cloaked ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1902,7 +1910,9 @@ function stareOff(room) {
 function stareTurnsRound(roomCode, room, human, enemy) {
     let off = stareOff(room);
     if (!off || human.busted || enemy.busted || !(human.score > 0) || enemy.score > human.score) return;
-    if (human.score - off > enemy.score) return; // (it wouldn't save him)
+    // (It wouldn't save him: then he keeps it, unless the round ends the fight against him: on his last heart he stares
+    // anyway, so it is always seen once he's lost a heart and his last round is a hand against a hand; 24 Nov, the user's.)
+    if (human.score - off > enemy.score && enemy.lives > 1) return;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     if (!fireTavernAbility(roomCode, room, encounter, 'penitentStare')) return; // (a Clear-Eye saw it coming)
     let was = human.score;
@@ -4134,4 +4144,4 @@ if (require.main === module) {
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown;
 // thomStock(stock) may change what Thom's cart offers (23 Nov).
 const devHooks = {};
-module.exports = { normalizeLeaderboard, topBoard, legendOf, recordFall, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+module.exports = { normalizeLeaderboard, topBoard, legendOf, recordFall, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, emitTurn, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

@@ -1512,11 +1512,18 @@ function AverageOf({ e }: { e: LeaderboardEntry }) {
 
 // A name on the leaderboard and, under it (24 Nov, the user's), the crawls they've won (a crown) or else the furthest
 // they've reached, and their nemesis: the opponent who has ended most of their lost crawls.
+// An opponent only this player has reached is [Redacted] to everyone else (24 Nov, the user's): the server marks it
+// `alone`, and the name shows only on the device of the player it belongs to.
+function viewerName() {
+    try { return (localStorage.getItem('tavernName') ?? '').trim().toLowerCase(); } catch { return ''; }
+}
+const REDACTED = <span className="redacted" title="No one else has got this far">[Redacted]</span>;
 function Legend({ e }: { e: LeaderboardEntry }) {
+    const mine = viewerName() === e.name.trim().toLowerCase();
     const bits: React.ReactNode[] = [];
     if (e.wins) bits.push(<span key="w" className="legend-crown" title={`Won the Tavern Crawl ${e.wins === 1 ? 'once' : `${e.wins} times`}`}>👑 Champion{e.wins > 1 ? ` ×${e.wins}` : ''}</span>);
-    else if (e.furthest) bits.push(<span key="f" title="The furthest they've reached">Reached {e.furthest}</span>);
-    if (e.nemesis) bits.push(<span key="n" title={`Ended ${e.nemesis.times === 1 ? 'one' : e.nemesis.times} of their crawls`}>Nemesis: {e.nemesis.name}{e.nemesis.times > 1 ? ` ×${e.nemesis.times}` : ''}</span>);
+    else if (e.furthest) bits.push(<span key="f" title="The furthest they've reached">Reached {e.furthestAlone && !mine ? REDACTED : e.furthest}</span>);
+    if (e.nemesis) bits.push(<span key="n" title={`Ended ${e.nemesis.times === 1 ? 'one' : e.nemesis.times} of their crawls`}>Nemesis: {e.nemesis.alone && !mine ? REDACTED : e.nemesis.name}{e.nemesis.times > 1 ? ` ×${e.nemesis.times}` : ''}</span>);
     return (
         <span className="who legend">
             <span className="legend-name">{e.name}</span>
