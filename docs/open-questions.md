@@ -17,6 +17,16 @@ day they happen, with what's been built marked as it lands.
    soften Brodor and Klarg, measured with the expert first.
    **Done 23 Nov (the user's): Danhausen and the Duke down to 2 hearts** (McGrath 1, Frak 2, Martha 3 unchanged).
 
+### Making it more of a roguelite (24 Nov)
+1. **Which roguelite ideas, and in what order?** Sixteen ideas in `docs/roguelite-brainstorm.md`. Claude's pick: a map
+   with forks and elite fights first, then unlocks into the pool with a journal, then heat levels. Smaller questions
+   (choices per fork, what a new player starts with, one board or one per heat level) are listed there.
+
+   **24 Nov, the user:** work out the map with forks and elite fights in detail, in the tournament's terms. Written:
+   `docs/tournament-ladder.md`, the tournament ladder. Its own questions (rounds per house, McGrath at the door, High
+   Stakes per house, never-met rivals on the board, Grudge Matches, the boards' art, showing difficulty, the names)
+   are listed at its end.
+
 ### The leaderboard's stats (24 Nov)
 1. **Which stats to add to the leaderboard?** Twelve ideas in `docs/leaderboard-stats-brainstorm.md`. Claude's pick:
    furthest reached, crawls won, a Graveyard of who ends the most runs, and a weekly board.

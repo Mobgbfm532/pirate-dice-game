@@ -4702,3 +4702,4 @@ body.thom-peeking footer .player:not(.me) { display: none; } /* (gone, not just 
 .leaderboard .legend-crown { color: #8a5a00; font-weight: 700; }
 .leaderboard li:has(.legend) { align-items: center; min-width: 0; }
 .leaderboard ol:has(.legend) { grid-template-columns: minmax(0, 1fr); }
+.leaderboard .redacted { background: #1b130c; color: #e8d9b8; padding: 0 0.3em; letter-spacing: 0.04em; font-family: ui-monospace, monospace; font-size: 0.95em; }

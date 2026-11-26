@@ -66,7 +66,7 @@ app.get(['/classic', '/index.html'], (req, res) => {
 });
 
 app.get('/leaderboard', (req, res) => {
-    res.json(topBoard());
+    res.json(boardFor(''));
 });
 
 let rooms = {};
@@ -105,27 +105,49 @@ const topBoard = () => tavernLeaderboard.slice(0, 20).map(e => ({ ...e, average:
 // counted it): the last opponent they sat down with, or "champion" once they've beaten the last. Crawls won are
 // counted since 24 Nov; a champion from before then counts as one. The nemesis: whoever has ended most of their lost
 // crawls (counted since 24 Nov; a tie goes to the opponent further on).
+// (Each player is sent the board through boardFor, which hides the opponents they haven't reached themselves.)
 function legendOf(name, wins) {
     let key = playerKey(name);
     let met = metByPlayer.get(key) || new Set();
     let last = TAVERN_ENCOUNTERS[TAVERN_ENCOUNTERS.length - 1];
     let champion = met.has('beat:' + last.id);
-    let furthest = null;
-    TAVERN_ENCOUNTERS.forEach(enc => { if (met.has(enc.id)) furthest = enc.name; });
+    let furthest = null, furthestId = null;
+    TAVERN_ENCOUNTERS.forEach(enc => { if (met.has(enc.id)) { furthest = enc.name; furthestId = enc.id; } });
     let fell = fallenBy.get(key) || {};
     let nemesis = null;
     TAVERN_ENCOUNTERS.forEach(enc => {
         let times = fell[enc.id] || 0;
-        if (times && (!nemesis || times >= nemesis.times)) nemesis = { name: enc.name, times };
+        if (times && (!nemesis || times >= nemesis.times)) nemesis = { name: enc.name, times, id: enc.id };
     });
-    return { furthest: champion ? 'champion' : furthest, wins: Math.max(wins || 0, champion ? 1 : 0), nemesis };
+    return { furthest: champion ? 'champion' : furthest, furthestId: champion ? null : furthestId, wins: Math.max(wins || 0, champion ? 1 : 0), nemesis };
+}
+// The board as one player may see it (26 Nov, the user's: no one is spoiled on where others have got to): an opponent
+// further on than this player has reached themselves is sent as hidden (the browser shows [Redacted]), never by name.
+// Their own line shows in full, and so does a champion's crown. `viewer` is the name the browser plays under ('' for
+// someone who hasn't chosen one: everything hidden). No opponent's id or name leaves the server for a hidden one.
+function boardFor(viewer) {
+    let key = viewer ? playerKey(viewer) : '';
+    let seen = (key && metByPlayer.get(key)) || new Set();
+    return topBoard().map(({ furthestId, ...e }) => {
+        let own = !!key && playerKey(e.name) === key;
+        if (!own && furthestId && !seen.has(furthestId)) { e.furthest = null; e.furthestHidden = true; }
+        if (e.nemesis) {
+            let { id, ...nemesis } = e.nemesis;
+            e.nemesis = own || seen.has(id) ? nemesis : { name: null, times: nemesis.times, hidden: true };
+        }
+        return e;
+    });
+}
+// Every browser gets its own board.
+function sendBoards() {
+    for (const socket of io.sockets.sockets.values()) socket.emit('leaderboardUpdate', boardFor(socket.data.viewer));
 }
 
 let tavernLeaderboard = [];
 store.loadLeaderboard().then(entries => {
     // (a score submitted while it loaded is kept)
     tavernLeaderboard = normalizeLeaderboard([...entries, ...tavernLeaderboard]);
-    io.emit('leaderboardUpdate', topBoard());
+    sendBoards();
 }).catch(error => console.warn('Could not load the leaderboard:', error.message));
 
 function submitTavernLeaderboardScore(name, points, gold, won = false) {
@@ -233,7 +255,7 @@ Promise.all([store.loadAllMet(), store.loadFallen()]).then(([met, fallen]) => {
         Object.entries(row).forEach(([id, times]) => { now[id] = (now[id] || 0) + times; });
         fallenBy.set(key, now);
     });
-    io.emit('leaderboardUpdate', topBoard());
+    sendBoards();
 }).catch(error => console.warn('Could not load the leaderboard\'s furthest and nemeses:', error.message));
 
 // The opponents a player has beaten, in any run (20 Nov, the user's: you may throw their dice once you have).
@@ -1074,6 +1096,9 @@ function syncTurn(roomCode) {
 function emitTurn(roomCode, event = null) {
     let room = rooms[roomCode];
     if (!room) return;
+    // A hand finished in a fog bank says nothing of how it went (24 Nov, the user's): the browser picks its yay, aww
+    // or dust sound from the outcome, which gave his hidden hand away.
+    if (event && event.outcome && room.turn && room.turn.fogged) event = { type: event.type };
     io.to(roomCode).emit('turnState', { turn: Rules.viewTurn(room.turn), event });
 }
 
@@ -1565,7 +1590,7 @@ function performRoll(roomCode) {
     let abilitySixes = !!turn.abilitySixes;
     // (No three 6s moment on hidden dice, Starry Form or the Cloak: it would show what they are. 10 Nov.)
     turn.abilitySixes = false;
-    let thrown = { sea: (!seaWarded(room, turn) && seaShift(room)) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
+    let thrown = { sea: (!seaWarded(room, turn) && seaShift(room)) || undefined, turn: Rules.viewTurn(turn), preRollCallout, suspense: turn.fogged || turn.cloaked ? 'none' : result.suspense, devil: result.devil && !abilitySixes && !turn.blurActive && !turn.cloaked && !turn.fogged, animationMs, throwSeed: crypto.randomInt(0, 2 ** 31), ghosts: turn.ghosts && turn.ghosts.length ? turn.ghosts : undefined };
     let afterMoments = (ms, fn) => (ms > 0 ? setTimeout(fn, ms) : fn());
     afterMoments(lead, () => {
         if (rooms[roomCode] !== room || !room.turn || room.turn.key !== key) return;
@@ -1902,7 +1927,9 @@ function stareOff(room) {
 function stareTurnsRound(roomCode, room, human, enemy) {
     let off = stareOff(room);
     if (!off || human.busted || enemy.busted || !(human.score > 0) || enemy.score > human.score) return;
-    if (human.score - off > enemy.score) return; // (it wouldn't save him)
+    // (It wouldn't save him: then he keeps it, unless the round ends the fight against him: on his last heart he stares
+    // anyway, so it is always seen once he's lost a heart and his last round is a hand against a hand; 24 Nov, the user's.)
+    if (human.score - off > enemy.score && enemy.lives > 1) return;
     let encounter = TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex];
     if (!fireTavernAbility(roomCode, room, encounter, 'penitentStare')) return; // (a Clear-Eye saw it coming)
     let was = human.score;
@@ -3181,7 +3208,8 @@ function evaluateTavernRound(roomCode) {
         room.roundPlayers = [];
         room.tavernRun.runComplete = true;
         recordFall(human.name, TAVERN_ENCOUNTERS[room.tavernRun.encounterIndex].id);
-        io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold));
+        submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold);
+        sendBoards();
         emitState(roomCode);
         io.to(roomCode).emit('gameOver', { message: `Game Over\n\nYou reached fight ${reached} of ${TAVERN_ENCOUNTERS.length} before falling at ${enemy.name}'s table.\n\n${scoreSummary.lines.join('\n')}\n\nWill you ever master the game?`, tavern: getTavernOverSummary(room, human.name, scoreSummary, false) });
         return;
@@ -3209,7 +3237,8 @@ function evaluateTavernRound(roomCode) {
             let scoreSummary = getTavernScoreSummary(room, true);
             room.roundPlayers = [];
             room.tavernRun.runComplete = true;
-            io.emit('leaderboardUpdate', submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold, true));
+            submitTavernLeaderboardScore(human.name, scoreSummary.points, scoreSummary.totalGold, true);
+            sendBoards();
             emitState(roomCode);
             io.to(roomCode).emit('gameOver', { message: `${human.name} is champion of the Tavern Crawl, home to Waterdeep at dawn! From peasant to king, every 2, 4, 24 player will know this run.\n\n${scoreSummary.lines.join('\n')}`, tavern: getTavernOverSummary(room, human.name, scoreSummary, true) });
             return;
@@ -3269,7 +3298,11 @@ const ROUND_PAUSE_MS = 2000;
 const asText = value => (typeof value === 'string' ? value : '');
 
 io.on('connection', (socket) => {
-    socket.emit('leaderboardUpdate', topBoard());
+    // The name this browser plays under, for its own view of the leaderboard (sent on connecting and as it changes).
+    const setViewer = name => { socket.data.viewer = asText(name).trim().substring(0, 20); };
+    setViewer(socket.handshake.auth && socket.handshake.auth.viewer);
+    socket.emit('leaderboardUpdate', boardFor(socket.data.viewer));
+    socket.on('viewer', name => { setViewer(name); socket.emit('leaderboardUpdate', boardFor(socket.data.viewer)); });
     socket.emit('leagueBoards', leagueBoards());
 
     socket.on('checkRoom', (roomCode) => {
@@ -4134,4 +4167,5 @@ if (require.main === module) {
 // For the dev test server (test/dev-server.js): newRun(roomCode, room) sets a fresh run up before it's first shown;
 // thomStock(stock) may change what Thom's cart offers (23 Nov).
 const devHooks = {};
-module.exports = { normalizeLeaderboard, topBoard, legendOf, recordFall, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };
+const __setBoard = rows => { if (rows) { __setBoard.kept = tavernLeaderboard; tavernLeaderboard = rows; } else tavernLeaderboard = __setBoard.kept || tavernLeaderboard; }; // (tests)
+module.exports = { __setBoard, normalizeLeaderboard, topBoard, boardFor, legendOf, recordFall, beatenBy, settleDice, metOf, getTavernScoreSummary, punchWorthIt, flourishWorthIt, mindWhipWorthIt, heartTakeable, aedMayCast, aedNeedGain, devHooks, start, http, io, rooms, emitState, getRoomState, pickSpots, startInterlude, strangerOffer, BARD_SONGS, REFRESHMENTS, OMENS, ELF_BARS, MYSTERY_FLAVOUR, rollFaceFor, sealSave, openSave, beginTavernRound, evaluateTavernRound, emitTurn, fogHeld, fireTavernAbility, getTavernScoreToBeat, resetTavernEncounter, invitation, BOSS_DROPS, TAVERN_ENCOUNTERS, TAVERN_KEEPSAKES, PLACES };

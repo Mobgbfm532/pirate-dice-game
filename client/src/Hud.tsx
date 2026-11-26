@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { screenInsets } from './layout';
-import { readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type TavernRun, type Enemy, type LeaderboardEntry } from './game';
+import { tellViewer, readDiceChoice, saveDiceChoice, beatenList, tableCover, AFTERMATH_MS, BOTTLE_FLIGHT_MS, dismissAftermath, type Aftermath, CELEBRATION_MS, DEVIL_MS, MOMENT_SHOW_MS, MULTIPLAYER_CALLOUTS, actions, canPutBack, handComplete, heartFromHand, readSavedRun, trailerWanted, klargStealing, SEA_SHOW_MS, SEA_HOLD_MS, SEA_LAND_MS, WAVE_SHOW_MS, type SeaState, type SeaRoll, type LeagueRow, type RoundResultRow, showToast, store, BOT_ID, type GameState, type DiceThrow, type Keepsake, type Interlude, type ShopArrival, type Snapshot, type Spot, type TavernSummary, type Thonic, type TavernRun, type Enemy, type LeaderboardEntry } from './game';
 import { Rules, coins, keepsNeeded, type TurnView } from './rules';
 import { areSoundsOff, isMusicOff, playCoins, playDiceImpacts, playSound, setMusicOff, setSoundsOff, startSceneAmbience, duckScenes, startMusic, holdMusic, playShipBell, playSeaSwell, setMusicFor, type Tune } from './sounds';
 import { simulateRoll } from './physics';
@@ -50,6 +50,7 @@ function readPrefs() {
 
 function savePrefs(name: string, avatar: string, code: string) {
     try {
+        if (localStorage.getItem('tavernName') !== name) tellViewer(name);
         localStorage.setItem('tavernName', name);
         localStorage.setItem('tavernAvatar', avatar);
         localStorage.setItem('tavernRoom', code);
@@ -1512,11 +1513,14 @@ function AverageOf({ e }: { e: LeaderboardEntry }) {
 
 // A name on the leaderboard and, under it (24 Nov, the user's), the crawls they've won (a crown) or else the furthest
 // they've reached, and their nemesis: the opponent who has ended most of their lost crawls.
+// An opponent further on than you've reached yourself is [Redacted] (26 Nov, the user's): the server sends it hidden,
+// without its name (boardFor in server.js).
+const REDACTED = <span className="redacted" title="Further than you've reached">[Redacted]</span>;
 function Legend({ e }: { e: LeaderboardEntry }) {
     const bits: React.ReactNode[] = [];
     if (e.wins) bits.push(<span key="w" className="legend-crown" title={`Won the Tavern Crawl ${e.wins === 1 ? 'once' : `${e.wins} times`}`}>👑 Champion{e.wins > 1 ? ` ×${e.wins}` : ''}</span>);
-    else if (e.furthest) bits.push(<span key="f" title="The furthest they've reached">Reached {e.furthest}</span>);
-    if (e.nemesis) bits.push(<span key="n" title={`Ended ${e.nemesis.times === 1 ? 'one' : e.nemesis.times} of their crawls`}>Nemesis: {e.nemesis.name}{e.nemesis.times > 1 ? ` ×${e.nemesis.times}` : ''}</span>);
+    else if (e.furthest || e.furthestHidden) bits.push(<span key="f" title="The furthest they've reached">Reached {e.furthestHidden ? REDACTED : e.furthest}</span>);
+    if (e.nemesis) bits.push(<span key="n" title={`Ended ${e.nemesis.times === 1 ? 'one' : e.nemesis.times} of their crawls`}>Nemesis: {e.nemesis.hidden ? REDACTED : e.nemesis.name}{e.nemesis.times > 1 ? ` ×${e.nemesis.times}` : ''}</span>);
     return (
         <span className="who legend">
             <span className="legend-name">{e.name}</span>

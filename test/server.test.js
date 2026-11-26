@@ -749,17 +749,35 @@ test("the Hangman's Penitent Stare: hidden until both hands are done, used only 
     server.evaluateTavernRound(codeOf(hero));
     assert.equal((await move).extra, '20 → 16');
     assert.equal(room.tavernRun.abilityUsed.penitentStare, 1);
-    // Not when he's winning anyway, nor when it wouldn't save him, nor before he's lost a heart.
-    for (const [name, mine, his, taken] of [['StareAhead', 18, 21, 2], ['StareShort', 24, 17, 2], ['StareFresh', 20, 19, 0]]) {
+    // Not when he's winning anyway, nor when it wouldn't save him (but for his last heart), nor before he's lost a heart.
+    for (const [name, mine, his, taken] of [['StareAhead', 18, 21, 1], ['StareShort', 24, 17, 1], ['StareFresh', 20, 19, 0]]) {
         ({ hero, room } = await setUp(name, mine, his, taken));
         server.evaluateTavernRound(codeOf(hero));
         assert.ok(!room.tavernRun.abilityUsed.penitentStare, name);
     }
+    // On his last heart he stares even when it can't save him (24 Nov, the user's: it's always seen).
+    ({ hero, room } = await setUp('StareLast', 24, 17, 2));
+    move = waitFor(hero, 'signatureMove', m => m.ability === 'Penitent Stare', 4000);
+    server.evaluateTavernRound(codeOf(hero));
+    assert.equal((await move).extra, '24 → 20');
     // A Clear-Eye stops it.
     ({ hero, room } = await setUp('StareClear', 20, 17, 2, ['clearEye']));
     const cancelled = waitFor(hero, 'signatureMove', m => m.ability === 'Penitent Stare', 4000);
     server.evaluateTavernRound(codeOf(hero));
     assert.equal((await cancelled).cancelled, true);
+});
+
+test('a hand finished in a fog bank sends no outcome (its sounds gave it away)', async () => {
+    const hero = await tavernAgainst(fightOf('hangman'), 'FogQuiet');
+    const room = roomOf(hero);
+    room.turn.fogged = true;
+    room.turn.outcome = { busted: true, score: 0, suspense: 'survival' };
+    const got = waitFor(hero, 'turnState', d => d.event && d.event.type === 'finalized', 2000);
+    server.emitTurn(codeOf(hero), { type: 'finalized', outcome: room.turn.outcome });
+    const data = await got;
+    assert.equal(data.event.outcome, undefined);
+    assert.equal(data.turn.outcome, null);
+    assert.equal(data.turn.suspense, 'none');
 });
 
 test('Yvesil reads an omen for the next fight, Jorvash pours a refreshment; both are the ship\'s only', async () => {
@@ -2182,16 +2200,47 @@ test('the leaderboard shows the furthest reached, crawls won and a nemesis (24 N
     server.recordFall('LegendA', 'vaelin');
     server.recordFall('LegendA', 'brodor');
     server.recordFall('legenda ', 'brodor');
-    assert.deepEqual(server.legendOf('LegendA', 0), { furthest: 'Brodor', wins: 0, nemesis: { name: 'Brodor', times: 2 } });
+    const plain = l => ({ furthest: l.furthest, wins: l.wins, nemesis: l.nemesis && { name: l.nemesis.name, times: l.nemesis.times } });
+    assert.deepEqual(plain(server.legendOf('LegendA', 0)), { furthest: 'Brodor', wins: 0, nemesis: { name: 'Brodor', times: 2 } });
     // A champion from before wins were counted counts as one; a tie goes to the opponent further on.
     ['molar', 'jaguar', 'beat:jaguar'].forEach(id => server.metOf('LegendB').add(id));
     server.recordFall('LegendB', 'frak');
     server.recordFall('LegendB', 'klarg');
-    assert.deepEqual(server.legendOf('LegendB', 0), { furthest: 'champion', wins: 1, nemesis: { name: 'Klarg', times: 1 } });
+    assert.deepEqual(plain(server.legendOf('LegendB', 0)), { furthest: 'champion', wins: 1, nemesis: { name: 'Klarg', times: 1 } });
     assert.equal(server.legendOf('LegendB', 3).wins, 3);
-    assert.deepEqual(server.legendOf('Nobody', 0), { furthest: null, wins: 0, nemesis: null });
+    assert.deepEqual(plain(server.legendOf('Nobody', 0)), { furthest: null, wins: 0, nemesis: null });
     // Winning the crawl counts on the board.
     assert.equal(server.normalizeLeaderboard([{ name: 'C', points: 5, gold: 0, wins: 1 }, { name: 'C', points: 9, gold: 0, wins: 1 }])[0].wins, 2);
+});
+
+test('each player sees only the opponents they have reached themselves on the board (26 Nov)', () => {
+    const board = server.normalizeLeaderboard([{ name: 'FarGone', points: 99999, gold: 0 }, { name: 'Kingpin', points: 99998, gold: 0, wins: 1 }]);
+    ['molar', 'frak', 'sylvester', 'klarg'].forEach(id => server.metOf('FarGone').add(id));
+    server.recordFall('FarGone', 'klarg');
+    ['molar', 'jaguar', 'beat:jaguar'].forEach(id => server.metOf('Kingpin').add(id));
+    server.metOf('Peeker').add('molar'); server.metOf('Peeker').add('frak'); server.metOf('Peeker').add('sylvester');
+    const lineOf = (viewer, name) => {
+        const rows = server.boardFor(viewer).filter(e => e.name === name);
+        return rows[0];
+    };
+    server.__setBoard(board);
+    try {
+        const peek = lineOf('Peeker', 'FarGone');
+        assert.equal(peek.furthest, null);
+        assert.equal(peek.furthestHidden, true);
+        assert.deepEqual(peek.nemesis, { name: null, times: 1, hidden: true });
+        assert.ok(!JSON.stringify(server.boardFor('Peeker')).includes('Klarg'), 'no hidden name is sent');
+        assert.ok(!JSON.stringify(server.boardFor('Peeker')).includes('furthestId'));
+        // Their own line in full; someone who has got as far sees it; nobody (incognito) sees nothing.
+        assert.equal(lineOf('fargone ', 'FarGone').furthest, 'Klarg');
+        assert.equal(lineOf('FarGone', 'FarGone').nemesis.name, 'Klarg');
+        server.metOf('Follower2').add('klarg');
+        assert.equal(lineOf('Follower2', 'FarGone').furthest, 'Klarg');
+        assert.equal(lineOf('', 'FarGone').furthestHidden, true);
+        // A champion's crown is no spoiler.
+        assert.equal(lineOf('', 'Kingpin').furthest, 'champion');
+        assert.equal(lineOf('', 'Kingpin').wins, 1);
+    } finally { server.__setBoard(null); }
 });
 
 test('no thief until Danhausen is beaten, and Thom always offered after Frak', async () => {
