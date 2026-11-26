@@ -146,7 +146,7 @@ export type Interlude =
 
 // The end of a Tavern Crawl run, won or lost (sent with gameOver).
 // Each name's best run: its points, and the gold it ended with.
-export interface LeaderboardEntry { name: string; points: number; gold: number; runs?: number; average?: number; wins?: number; furthest?: string | null; furthestAlone?: boolean; nemesis?: { name: string; times: number; alone?: boolean } | null } // (runs and average since 22 Nov: every finished crawl counts)
+export interface LeaderboardEntry { name: string; points: number; gold: number; runs?: number; average?: number; wins?: number; furthest?: string | null; furthestHidden?: boolean; nemesis?: { name: string | null; times: number; hidden?: boolean } | null } // (runs and average since 22 Nov: every finished crawl counts)
 
 export interface TavernSummary {
     won: boolean;
@@ -282,7 +282,11 @@ export const table = {
     diceSet: null as string | null // development: every die shows this opponent's set (preview.dice)
 };
 
-const socket = io({ transports: ['websocket', 'polling'] });
+// (auth.viewer: the name this browser plays under, so the server sends it only the leaderboard names it may see.)
+const viewerName = () => { try { return localStorage.getItem('tavernName') ?? ''; } catch { return ''; } };
+const socket = io({ transports: ['websocket', 'polling'], auth: cb => cb({ viewer: viewerName() }) });
+// The player's name changed: their own view of the leaderboard (26 Nov, the user's: no spoilers of how far others got).
+export function tellViewer(name: string) { socket.emit('viewer', name); }
 
 let snapshot: Snapshot = {
     joined: false,

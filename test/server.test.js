@@ -2207,25 +2207,40 @@ test('the leaderboard shows the furthest reached, crawls won and a nemesis (24 N
     server.recordFall('LegendB', 'frak');
     server.recordFall('LegendB', 'klarg');
     assert.deepEqual(plain(server.legendOf('LegendB', 0)), { furthest: 'champion', wins: 1, nemesis: { name: 'Klarg', times: 1 } });
-    assert.equal(server.legendOf('LegendB', 0).furthestAlone, false, 'a champion is never redacted');
     assert.equal(server.legendOf('LegendB', 3).wins, 3);
-    assert.deepEqual(server.legendOf('Nobody', 0), { furthest: null, furthestAlone: false, wins: 0, nemesis: null });
-    // [Redacted]: an opponent only one player has reached is marked alone, until someone else reaches them too.
-    ['molar', 'frak', 'zz-only-mine'].forEach(id => server.metOf('LoneWolf').add(id));
-    server.TAVERN_ENCOUNTERS.push({ id: 'zz-only-mine', name: 'Nobody Else' });
-    try {
-        server.recordFall('LoneWolf', 'zz-only-mine');
-        let lone = server.legendOf('LoneWolf', 0);
-        assert.equal(lone.furthest, 'Nobody Else');
-        assert.equal(lone.furthestAlone, true);
-        assert.equal(lone.nemesis.alone, true);
-        server.metOf('Follower').add('zz-only-mine');
-        lone = server.legendOf('LoneWolf', 0);
-        assert.equal(lone.furthestAlone, false);
-        assert.equal(lone.nemesis.alone, false);
-    } finally { server.TAVERN_ENCOUNTERS.pop(); }
+    assert.deepEqual(plain(server.legendOf('Nobody', 0)), { furthest: null, wins: 0, nemesis: null });
     // Winning the crawl counts on the board.
     assert.equal(server.normalizeLeaderboard([{ name: 'C', points: 5, gold: 0, wins: 1 }, { name: 'C', points: 9, gold: 0, wins: 1 }])[0].wins, 2);
+});
+
+test('each player sees only the opponents they have reached themselves on the board (26 Nov)', () => {
+    const board = server.normalizeLeaderboard([{ name: 'FarGone', points: 99999, gold: 0 }, { name: 'Kingpin', points: 99998, gold: 0, wins: 1 }]);
+    ['molar', 'frak', 'sylvester', 'klarg'].forEach(id => server.metOf('FarGone').add(id));
+    server.recordFall('FarGone', 'klarg');
+    ['molar', 'jaguar', 'beat:jaguar'].forEach(id => server.metOf('Kingpin').add(id));
+    server.metOf('Peeker').add('molar'); server.metOf('Peeker').add('frak'); server.metOf('Peeker').add('sylvester');
+    const lineOf = (viewer, name) => {
+        const rows = server.boardFor(viewer).filter(e => e.name === name);
+        return rows[0];
+    };
+    server.__setBoard(board);
+    try {
+        const peek = lineOf('Peeker', 'FarGone');
+        assert.equal(peek.furthest, null);
+        assert.equal(peek.furthestHidden, true);
+        assert.deepEqual(peek.nemesis, { name: null, times: 1, hidden: true });
+        assert.ok(!JSON.stringify(server.boardFor('Peeker')).includes('Klarg'), 'no hidden name is sent');
+        assert.ok(!JSON.stringify(server.boardFor('Peeker')).includes('furthestId'));
+        // Their own line in full; someone who has got as far sees it; nobody (incognito) sees nothing.
+        assert.equal(lineOf('fargone ', 'FarGone').furthest, 'Klarg');
+        assert.equal(lineOf('FarGone', 'FarGone').nemesis.name, 'Klarg');
+        server.metOf('Follower2').add('klarg');
+        assert.equal(lineOf('Follower2', 'FarGone').furthest, 'Klarg');
+        assert.equal(lineOf('', 'FarGone').furthestHidden, true);
+        // A champion's crown is no spoiler.
+        assert.equal(lineOf('', 'Kingpin').furthest, 'champion');
+        assert.equal(lineOf('', 'Kingpin').wins, 1);
+    } finally { server.__setBoard(null); }
 });
 
 test('no thief until Danhausen is beaten, and Thom always offered after Frak', async () => {
