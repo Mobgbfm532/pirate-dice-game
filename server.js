@@ -127,7 +127,12 @@ function legendOf(name, wins) {
 // someone who hasn't chosen one: everything hidden). No opponent's id or name leaves the server for a hidden one.
 function boardFor(viewer) {
     let key = viewer ? playerKey(viewer) : '';
-    let seen = (key && metByPlayer.get(key)) || new Set();
+    let met = (key && metByPlayer.get(key)) || new Set();
+    // Everyone up to the furthest they've reached counts as seen (27 Nov, the user's: Kram sees all before Vaelin),
+    // even one their meetings missed (meetings are counted since 3 Nov); a champion sees them all.
+    let upTo = met.has('beat:' + TAVERN_ENCOUNTERS[TAVERN_ENCOUNTERS.length - 1].id) ? TAVERN_ENCOUNTERS.length - 1
+        : TAVERN_ENCOUNTERS.reduce((far, enc, i) => (met.has(enc.id) ? i : far), -1);
+    let seen = { has: id => { let i = TAVERN_ENCOUNTERS.findIndex(enc => enc.id === id); return i >= 0 && i <= upTo; } };
     return topBoard().map(({ furthestId, ...e }) => {
         let own = !!key && playerKey(e.name) === key;
         if (!own && furthestId && !seen.has(furthestId)) { e.furthest = null; e.furthestHidden = true; }
