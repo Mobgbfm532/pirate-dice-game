@@ -2214,7 +2214,7 @@ test('the leaderboard shows the furthest reached, crawls won and a nemesis (24 N
 });
 
 test('each player sees only the opponents they have reached themselves on the board (26 Nov)', () => {
-    const board = server.normalizeLeaderboard([{ name: 'FarGone', points: 99999, gold: 0 }, { name: 'Kingpin', points: 99998, gold: 0, wins: 1 }]);
+    const board = server.normalizeLeaderboard([{ name: 'FarGone', points: 99999, gold: 0 }, { name: 'Kingpin', points: 99998, gold: 0, wins: 1 }, { name: 'EarlyBird', points: 99997, gold: 0 }]);
     ['molar', 'frak', 'sylvester', 'klarg'].forEach(id => server.metOf('FarGone').add(id));
     server.recordFall('FarGone', 'klarg');
     ['molar', 'jaguar', 'beat:jaguar'].forEach(id => server.metOf('Kingpin').add(id));
@@ -2237,6 +2237,13 @@ test('each player sees only the opponents they have reached themselves on the bo
         server.metOf('Follower2').add('klarg');
         assert.equal(lineOf('Follower2', 'FarGone').furthest, 'Klarg');
         assert.equal(lineOf('', 'FarGone').furthestHidden, true);
+        // Everyone before the furthest they've reached counts as seen, met or not (Peeker met Sylvester: Frak's line shows).
+        server.metOf('EarlyBird').add('molar'); server.metOf('EarlyBird').add('frak');
+        server.recordFall('EarlyBird', 'frak');
+        server.metOf('Skipper2').add('sylvester');
+        assert.equal(lineOf('Skipper2', 'EarlyBird').furthest, 'Frak');
+        assert.equal(lineOf('Skipper2', 'EarlyBird').nemesis.name, 'Frak');
+        assert.equal(lineOf('Kingpin', 'FarGone').furthest, 'Klarg', 'a champion sees them all');
         // A champion's crown is no spoiler.
         assert.equal(lineOf('', 'Kingpin').furthest, 'champion');
         assert.equal(lineOf('', 'Kingpin').wins, 1);
